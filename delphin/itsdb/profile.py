@@ -1,18 +1,17 @@
 import os
 import re
 from collections import defaultdict
-import delphin.mrs
 
 ##############################################################################
 ### Global variables
 
 _relations_filename = 'relations'
-_field_delimeter = '@'
+_field_delimiter = '@'
 
 ##############################################################################
 ### Non-class (i.e. static) functions
 
-def get_relations(profile_directory, relations_filename=_relations_filename):
+def get_relations(path):
     """
     Parse the relations file and return a dictionary describing the database
     structure.
@@ -24,7 +23,7 @@ def get_relations(profile_directory, relations_filename=_relations_filename):
 
     relations = defaultdict(list)
     relations_table_re = re.compile(r'^(\w.+):$')
-    f = open(os.path.join(profile_directory, relations_filename))
+    f = open(path)
     current_table = None
     for line in f:
         table_match = relations_table_re.search(line)
@@ -59,11 +58,15 @@ class TsdbTable:
         """
         Iterate through the rows in the Tsdb table.
         """
-        f = open(os.path.join(self.profile.root, self.name))
+        tbl_filename = os.path.join(self.profile.root, self.name)
+        # Don't crash if table doesn't exist, just yield nothing
+        if not os.path.exists(tbl_filename):
+            raise StopIteration
+        f = open(tbl_filename)
         for line in f:
             #line = unicode(line, 'utf-8')
             yield dict(zip(self.profile.relations[self.name],
-                           line.strip().split(_field_delimeter)))
+                           line.strip().split(_field_delimiter)))
         f.close()
 
 class TsdbProfile:
@@ -74,11 +77,12 @@ class TsdbProfile:
         database structure and prepare for reading.
 
         @param root_directory: The directory where the profile files are
-                               stored.
+            stored.
         """
 
         self.root = root_directory
-        self.relations = get_relations(self.root)
+        self.relations = get_relations(os.path.join(self.root,
+                                                    _relations_filename))
 
     def get_table(self, table_name):
         """
@@ -87,3 +91,31 @@ class TsdbProfile:
         """
 
         return TsdbTable(self, table_name)
+
+    def write_profile(self, profile_directory, relations_filename=None):
+        """
+        Using self.relations as a schema, write the profile data out to
+        the specified profile directory.
+
+        @param profile_directory: The directory where the profile will
+            be written.
+        @param relations_file: If specified, provides an alternative
+            relations file for the profile to be written.
+        """
+        import shutil
+        if relations_filename:
+            relations = get_relations(relations_filename)
+        else:
+            relations = self.relations
+        shutil.copyfile(relations_filename, os.path.join(profile_directory,
+                                                         _relations_filename))
+        for tbl_name in relations.keys():
+            # don't create new empty files if they didn't already exist
+            # (likely was a skeleton rather than a profile)
+            if not os.path.exists(os.path.join(self.root, tbl_name)):
+                continue
+            tbl = open(os.path.join(profile_directory, tbl_name), 'w')
+            for row in self.get_table(tbl_name).rows():
+                print >>tbl, _field_delimiter.join(
+                    row.get(f, '') for f in relations[tbl_name])
+            tbl.close()
