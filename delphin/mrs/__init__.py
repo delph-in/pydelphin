@@ -1,3 +1,3 @@
-from mrs import Mrs
+from .mrs import Mrs, isomorphic
 
-__all__ = ['Mrs']
+__all__ = ['Mrs','isomorphic']
