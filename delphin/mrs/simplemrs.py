@@ -1,6 +1,14 @@
 
+# SimpleMRS codec
+# Summary: This module implements serialization and deserialization of
+#          the SimpleMRS encoding of Minimal Recusion Semantics. It
+#          provides the standard Pickle API calls of load, loads, dump,
+#          and dumps.
+# Author: Michael Wayne Goodman <goodmami@uw.edu>
+
 import re
-from delphin.mrs import mrs
+from . import mrs
+from .mrserrors import MrsDecodeError
 
 _left_bracket = r'['
 _right_bracket = r']'
@@ -31,6 +39,8 @@ _valid_hcons_rels = [_qeq, _lheq, _outscopes]
 ### Pickle-API methods
 
 def load(fh):
+    if isinstance(fh, str):
+        return loads(open(fh,'r').read())
     return loads(fh.read())
 
 def loads(s):
@@ -108,7 +118,7 @@ def read_variable(tokens, variable_name=None):
     validate_token(tokens.pop(0), _colon)
     var = tokens.pop(0)
     vartype, props = read_props(tokens)
-    return name, mrs.MrsVariable(var, vartype, props)
+    return name, mrs.MrsVariable(name=var, sort=vartype, props=props)
 
 def read_props(tokens):
     """Read and return a dictionary of variable properties."""
@@ -130,7 +140,7 @@ def read_props(tokens):
     return vartype, props
 
 def read_rels(tokens):
-    """Read and return a RELS set of ElementaryPredicates."""
+    """Read and return a RELS set of ElementaryPredications."""
     # RELS: < ep* >
     rels = []
     validate_tokens(tokens, [_rels, _colon, _left_angle])
@@ -140,15 +150,14 @@ def read_rels(tokens):
     return rels
 
 def read_ep(tokens):
-    """Read and return an ElementaryPredicate."""
+    """Read and return an ElementaryPredication."""
     # [ pred LBL : lbl ARG : variable-or-handle ... ]
     # or [ pred < span-from : span-to > ...
     validate_token(tokens.pop(0), _left_bracket)
-    pred = tokens.pop(0)
-    lnk, lnktype = read_lnk(tokens)
+    pred = mrs.Pred(tokens.pop(0))
+    lnk = read_lnk(tokens)
     label = read_handle(tokens, _lbl)
-    ep = mrs.ElementaryPredicate(label=label, relation=pred,
-                                 link=lnk, linktype=lnktype)
+    ep = mrs.ElementaryPredication(pred=pred, label=label, link=lnk)
     while tokens[0] != _right_bracket:
         if tokens[0] in _scargs:
             scarg = tokens.pop(0)
@@ -173,26 +182,26 @@ def read_lnk(tokens):
         # edge link: ['@', EDGE, ...]
         elif tokens[0] == _at:
             tokens.pop(0) # remove the @
-            lnktype = mrs.ElementaryPredicate.edge_link
+            lnktype = mrs.Link.EDGE
             lnk = int(tokens.pop(0)) # edge links only have one number
         # character span link: [FROM, ':', TO, ...]
         elif tokens[1] == _colon:
-            lnktype = mrs.ElementaryPredicate.charspan_link
+            lnktype = mrs.Link.CHARSPAN
             lnk = (int(tokens.pop(0)), int(tokens.pop(1)))
             tokens.pop(0) # this should be the colon
         # chart vertex range link: [FROM, '#', TO, ...]
         elif tokens[1] == _hash:
-            lnktype = mrs.ElementaryPredicate.chartspan_link
+            lnktype = mrs.Link.CHARTSPAN
             lnk = (int(tokens.pop(0)), int(tokens.pop(1)))
             tokens.pop(0) # this should be the hash
         # tokens link: [(TOK,)+ ...]
         else:
-            lnktype = mrs.ElementaryPredicate.tokens_link
+            lnktype = mrs.Link.TOKENS
             lnk = []
             while tokens[0] != _right_angle:
                 lnk.append(int(tokens.pop(0)))
         validate_token(tokens.pop(0), _right_angle)
-    return (lnk, lnktype)
+    return mrs.Link(lnk, lnktype)
 
 def read_hcons(tokens):
     # HCONS:< HANDLE (qeq|lheq|outscopes) HANDLE ... >
@@ -204,11 +213,11 @@ def read_hcons(tokens):
         # rels are case-insensitive and the convention is lower-case
         rel = tokens.pop(0).lower()
         if rel == _qeq:
-            rel = mrs.HandleConstraint.qeq
+            rel = mrs.HandleConstraint.QEQ
         elif rel == _lheq:
-            rel = mrs.HandleConstraint.lheq
+            rel = mrs.HandleConstraint.LHEQ
         elif rel == _outscopes:
-            rel = mrs.HandleConstraint.outscopes
+            rel = mrs.HandleConstraint.OUTSCOPES
         else:
             invalid_token_error(rel, '('+'|'.join(_valid_hcons_rels)+')')
         rh = tokens.pop(0)
@@ -222,17 +231,6 @@ def read_hcons(tokens):
 
 def unexpected_termination_error():
     raise MrsDecodeError('Invalid MRS: Unexpected termination.')
-
-class MrsDecodeError(Exception):
-
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
-
-    def __repr__(self):
-        return self.__str__()
 
 ##############################################################################
 ##############################################################################
@@ -261,7 +259,7 @@ def encode_variable(name, var, listed_vars):
     toks = [name + _colon, var.name]
     # only encode the variable properties if they haven't been already
     if var.name not in listed_vars and var.props:
-        toks += [_left_bracket, var.type]
+        toks += [_left_bracket, var.sort]
         for propkey, propval in var.props.items():
             toks += [propkey + _colon, propval]
         toks += [_right_bracket]
@@ -277,9 +275,9 @@ def encode_rels(rels, listed_vars):
     return ' '.join(toks)
 
 def encode_ep(ep, listed_vars):
-    """Encode an Elementary Predicate into the SimpleMRS encoding."""
+    """Encode an Elementary Predication into the SimpleMRS encoding."""
     toks = [_left_bracket]
-    toks += [ep.relation + encode_lnk(ep.link, ep.linktype)]
+    toks += [ep.pred.string + encode_lnk(ep.link)]
     toks += [encode_handle(_lbl, ep.label)]
     # the values of Scalar Args can only be handles
     for scarg, handle in ep.scargs.items():
@@ -290,22 +288,22 @@ def encode_ep(ep, listed_vars):
     toks += [_right_bracket]
     return ' '.join(toks)
 
-def encode_lnk(link, linktype):
-    """Encode a predicate link to surface form into the SimpleMRS
+def encode_lnk(link):
+    """Encode a predication link to surface form into the SimpleMRS
        encoding."""
     s = ""
-    if link is not None and linktype is not None:
+    if link is not None:
         s = _left_angle
-        if linktype == mrs.ElementaryPredicate.charspan_link:
-            cfrom, cto = link
+        if link.type == mrs.Link.CHARSPAN:
+            cfrom, cto = link.data
             s += ''.join([str(cfrom), _colon, str(cto)])
-        elif linktype == mrs.ElementaryPredicate.chartspan_link:
-            cfrom, cto = link
+        elif link.type == mrs.Link.CHARTSPAN:
+            cfrom, cto = link.data
             s += ''.join([str(cfrom), _hash, str(cto)])
-        elif linktype == mrs.ElementaryPredicate.tokens_link:
-            s += ' '.join([str(t) for t in link])
-        elif linktype == mrs.ElementaryPredicate.edge_link:
-            s += ''.join([_at, str(link)])
+        elif link.type == mrs.Link.TOKENS:
+            s += ' '.join([str(t) for t in link.data])
+        elif link.type == mrs.Link.EDGE:
+            s += ''.join([_at, str(link.data)])
         s += _right_angle
     return s
 
@@ -313,11 +311,11 @@ def encode_hcons(hcons):
     """Encode a Handle Constraint into the SimpleMRS encoding."""
     toks = [_hcons + _colon, _left_angle]
     for hcon in hcons:
-        if hcon.relation == mrs.HandleConstraint.qeq:
+        if hcon.relation == mrs.HandleConstraint.QEQ:
             rel = _qeq
-        elif hcon.relation == mrs.HandleConstraint.lheq:
+        elif hcon.relation == mrs.HandleConstraint.LHEQ:
             rel = _lheq
-        elif hcon.relation == mrs.HandleConstraint.outscopes:
+        elif hcon.relation == mrs.HandleConstraint.OUTSCOPES:
             rel = _outscopes
         toks += [hcon.lhandle, rel, hcon.rhandle]
     toks += [_right_angle]

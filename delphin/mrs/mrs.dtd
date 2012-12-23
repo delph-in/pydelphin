@@ -1,0 +1,54 @@
+<!ELEMENT mrs-list (mrs)*>
+
+<!ELEMENT mrs (label, var, (ep|hcons)*)>
+<!ATTLIST mrs
+          cfrom CDATA #IMPLIED
+          cto   CDATA #IMPLIED 
+          surface   CDATA #IMPLIED 
+          ident     CDATA #IMPLIED >
+
+<!ELEMENT ep ((pred|spred|realpred), label, fvpair*)>
+<!ATTLIST ep
+          cfrom CDATA #IMPLIED
+          cto   CDATA #IMPLIED 
+          surface   CDATA #IMPLIED
+	  base      CDATA #IMPLIED >
+
+<!ELEMENT pred (#PCDATA)>
+
+<!ELEMENT spred (#PCDATA)>
+
+<!ELEMENT realpred EMPTY>
+
+<!ATTLIST realpred
+          lemma CDATA #REQUIRED
+          pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
+          sense CDATA #IMPLIED >
+
+<!ELEMENT label (extrapair*)>
+<!ATTLIST label 
+          vid CDATA #REQUIRED >
+
+<!ELEMENT var (extrapair*)>
+<!ATTLIST var
+          vid  CDATA #REQUIRED 
+          sort (x|e|h|u|l|i) #IMPLIED >
+
+<!ELEMENT extrapair (path,value)>
+
+<!ELEMENT path (#PCDATA)>
+
+<!ELEMENT value (#PCDATA)>
+
+<!ELEMENT fvpair (rargname, (var|constant))>
+
+<!ELEMENT rargname (#PCDATA)>
+
+<!ELEMENT constant (#PCDATA)>
+
+<!ELEMENT hcons (hi, lo)>
+<!ATTLIST hcons 
+          hreln (qeq|lheq|outscopes) #REQUIRED >
+
+<!ELEMENT hi (var)>
+<!ELEMENT lo (label|var)>

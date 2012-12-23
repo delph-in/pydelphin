@@ -1,4 +1,5 @@
 from collections import defaultdict
+import re
 
 ##############################################################################
 ##############################################################################
@@ -8,17 +9,31 @@ class Mrs(object):
     """Minimal Recursion Semantics class containing a top handle, a bag
        of ElementaryPredications, and a bag of handle constraints."""
 
-    def __init__(self, ltop=None, index=None, rels=None, hcons=None):
+    TOP_HANDLE = 'ltop'
+    MAIN_EVENT_VAR = 'index'
+
+    def __init__(self, ltop=None, index=None, rels=None, hcons=None,
+                 link=None, surface=None, identifier=None):
         # consider enclosing ltop, ltop, index, etc. in a hook object
         # self.hook = {'ltop': ltop}
-        self._ltop = ltop
-        self._index = index
+        self.ltop = ltop   # the global top handle
+        self.index = index # the main event index
         # RELS and HCONS are technically unordered bags, but I use lists
         # here to keep track of order for encoding purposes. During
         # operations like MRS comparison, they should be treated as
         # unordered
-        self._rels = rels if rels is not None else []
-        self._hcons = hcons if hcons is not None else []
+        # RELS is the list of relations, or Elementary Predications
+        self.rels = rels if rels is not None else []
+        # HCONS is the list of handle constraints
+        self.hcons = hcons if hcons is not None else []
+        # MRS objects can have Links to surface structure just like
+        # EPs, but it spans the whole input
+        self.link = link
+        # The surface form can be stored for convenience, but it
+        # shouldn't affect the semantics
+        self.surface = surface
+        # An independent identifier can be assigned, as well
+        self.identifier = identifier
         # vars should not be provided as a parameter, but taken from
         # those in index and in EPs in rels. They are unified in the
         # resolve() method.
@@ -32,61 +47,18 @@ class Mrs(object):
         # resolve the structure after its properties have been assigned
         self.resolve()
 
-    @property
-    def ltop(self):
-        """The global top handle."""
-        return self._ltop
-
-    @ltop.setter
-    def ltop(self, value):
-        self._ltop = value
-
-    @property
-    def index(self):
-        """The main event index."""
-        return self._index
-
-    @index.setter
-    def index(self, value):
-        self._index = value
-
-    @property
-    def rels(self):
-        """The bag of relations, or elementary predicates."""
-        return self._rels
-
-    @rels.setter
-    def rels(self, value):
-        self._rels = value
-
-    @property
-    def hcons(self):
-        """The bag of handle constraints."""
-        return self._hcons
-
-    @hcons.setter
-    def hcons(self, value):
-        self._hcons = value
-
+    # I use properties to get the internal variables _handles and _vars
+    # because, ideally, they will not be set by the user, but generated
+    # automatically in a call to resolve()
     @property
     def handles(self):
         """The handles (e.g. h1, h3) used in the MRS."""
         return self._handles
 
-    # Maybe this shouldn't be settable.
-    #@handles.setter
-    #def handles(self, value):
-    #    self._handles = value
-
     @property
     def variables(self):
         """The variables (e.g. e2, x4) used in the MRS."""
         return self._vars
-
-    # Maybe this shouldn't be settable.
-    #@variables.setter
-    #def variables(self, value):
-    #    self._vars = value
 
     def resolve(self):
         """Using the structures that have been declared, complete the
@@ -112,6 +84,7 @@ class Mrs(object):
 
     def resolve_variables(self):
         """Unify the variables that exist in INDEX and the EPs."""
+        # variables without a name need to be compared using vid
         self._vars = {}
         if self.index is not None:
             self._vars[self.index.name] = self.index
@@ -129,10 +102,10 @@ class Mrs(object):
     def unify_var_props(self, var):
         """Merge var's properties with those already stored, and raise a
            ValueError if there's a conflict. Exact-match is required."""
-        if var.type and var.type != self._vars[var.name].type:
+        if var.sort and var.sort != self._vars[var.name].sort:
             raise ValueError(str.format("Variable {0} has conflicting " +\
                                         "types: {1}, {2}", var.name,
-                                        self._vars[var.name].type, var.type))
+                                        self._vars[var.name].sort, var.sort))
         for prop in var.props:
             val = var.props[prop]
             props = self._vars[var.name].props
@@ -147,13 +120,13 @@ class Mrs(object):
         """Create a mapping from each handle or predicate to the
            contexts in which they occur."""
         self._role_map = defaultdict(set)
-        self._role_map[self.ltop].add('ltop')
-        self._role_map[self.index].add('index')
+        self._role_map[self.ltop].add(Mrs.TOP_HANDLE)
+        self._role_map[self.index].add(Mrs.MAIN_EVENT_VAR)
         for ep in self.rels:
             for scarg, h in ep.scargs.items():
-                self._role_map[h].add((ep.relation, scarg))
+                self._role_map[h].add((str(ep.pred), scarg))
             for arg, v in ep.args.items():
-                self._role_map[v].add((ep.relation, arg))
+                self._role_map[v].add((str(ep.pred), arg))
 
     #def ep_conjunctions(self):
 
@@ -166,133 +139,63 @@ class Mrs(object):
     #       the RELS list."""
     #    return len(self.rels)
 
-class ElementaryPredicate(object):
-    """An elementary predicate (EP) is a single relation."""
+class ElementaryPredication(object):
+    """An elementary predication (EP) is a single relation."""
 
-    def __init__(self, label=None, relation=None, args=None, scargs=None,
-                 link=None, linktype=None):
-        self._label = label
-        self._relation = relation
-        self._args = args if args is not None else {}
-        self._scargs = scargs if scargs is not None else {}
-        self._link = link
-        self._linktype = linktype
-
-    @property
-    def label(self):
-        """The handle of the EP."""
-        return self._label
-
-    @label.setter
-    def label(self, value):
-        self._label = value
-
-    @property
-    def relation(self):
-        """The relation (e.g. pred name) of the EP."""
-        return self._relation
-
-    @relation.setter
-    def relation(self, value):
-        self._relation = value
-
-    @property
-    def args(self):
-        """The list of regular arguments."""
-        return self._args
-
-    @args.setter
-    def args(self, value):
-        self._args = value
-
-    @property
-    def scargs(self):
-        """The list of scopal arguments."""
-        return self._scargs
-
-    @scargs.setter
-    def scargs(self, value):
-        self._scargs = value
-
-    # link types
-    charspan_link  = 'charspan'  # Character span; a pair of offsets
-    chartspan_link = 'chartspan' # Chart vertex span: a pair of indices
-    tokens_link    = 'tokens'    # Token numbers: a list of indices
-    edge_link      = 'edge'      # An edge identifier: a number
-
-    @property
-    def link(self):
-        """The link from the predicate to the surface form. The link
-           type is specified by the linktype property, and this
-           determines the data type of link. For charspan and chartspan
-           it will be a tuple of ints (cfrom, cto), for tokens it will
-           be a list of ints [tok1, tok2, ...], and for edge it will be
-           a single int."""
-        return self._link
-
-    @link.setter
-    def link(self, value):
-        self._link = value
-
-    @property
-    def linktype(self):
-        """The type of link from a predicate to the surface form."""
-        return self._linktype
-
-    @linktype.setter
-    def linktype(self, value):
-        self._linktype = value
+    def __init__(self, pred=None, label=None, scargs=None, args=None,
+                 link=None, surface=None, base=None):
+        self.label = label
+        self.pred = pred # mrs.Pred object
+        self.args = args if args is not None else {}
+        self.scargs = scargs if scargs is not None else {}
+        self.link = link # mrs.Link object
+        self.surface = surface
+        self.base = base # here for compatibility with the DTD
 
     def __len__(self):
         """Return the length of the EP, which is the number of args and
            scargs it contains."""
         # should this be cached?
-        return len(self._args) + len(self._scargs)
+        return len(self.args) + len(self.scargs)
 
     def __repr__(self):
-        return 'ElementaryPredicate(' + self.relation + ')'
+        return 'ElementaryPredication(' + str(self.pred) + ')'
 
     def __str__(self):
         return self.__repr__()
 
+sort_vid_re = re.compile(r'(\w*\D)(\d+)')
+def sort_vid_split(vs):
+    return sort_vid_re.match(vs).groups()
+
 class MrsVariable(object):
     """A variable has a variable type and properties."""
 
-    def __init__(self, name=None, type=None, props=None):
-        self._name = name
-        self._type = type
+    def __init__(self, name=None, vid=None, sort=None, props=None):
+        self.name = name # name is the sort + vid (e.g. x4, h1)
+        self.vid = vid   # vid is the number of the name (e.g. 1)
+        self.sort = sort # sort is the letter(s) of the name (e.g. h)
         # Consider making _props a list if order is important
-        self._props = props if props is not None else {}
+        self.props = props if props is not None else {}
+        self.resolve()
 
-    @property
-    def name(self):
-        """The name of the variable (e.g. x1, e2, etc)."""
-        return self._name
+    def resolve(self):
+        if self.name is not None:
+            _vid, _sort = sort_vid_split(self.name)
+            if self.vid is None:
+                self.vid = _vid
+            if self.sort is None:
+                self.sort is _sort
+        # only create the name if both vid and sort are given
+        elif self.vid is not None and self.sort is not None:
+            self.name = self.sort + str(self.vid)
 
-    @name.setter
-    def name(self, value):
-        self._name = value
-
-    @property
-    def type(self):
-        """The type of the variable (e.g. x, e, etc)."""
-        return self._type
-
-    @type.setter
-    def type(self, value):
-        self._type = value
-
-    @property
-    def props(self):
-        """The properties of the variable (e.g. {PERS: 3})."""
-        return self._props
-
-    @props.setter
-    def props(self, value):
-        self._props = value
 
     def __repr__(self):
-        return "MrsVariable(" + self._name + ")"
+        if self.name is not None:
+            return "MrsVariable(" + self.name + ")"
+        else:
+            return "MrsVariable(vid=" + self.vid + ")"
 
     def __str__(self):
         return self.__repr__()
@@ -300,9 +203,9 @@ class MrsVariable(object):
 class HandleConstraint(object):
     """A relation between two handles."""
 
-    qeq       = 'qeq'
-    lheq      = 'lheq'
-    outscopes = 'outscopes'
+    QEQ       = 'qeq'
+    LHEQ      = 'lheq'
+    OUTSCOPES = 'outscopes'
 
     def __init__(self, lhandle, relation, rhandle):
         self.lhandle = lhandle
@@ -313,6 +216,79 @@ class HandleConstraint(object):
         return self.lhandle == other.lhandle and\
                self.relation == other.relation and\
                self.rhandle == other.rhandle
+
+class Link(object):
+    # link types
+    # These types determine how a link on an EP or MRS are to be interpreted,
+    # and thus determine the data type/structure of the link data
+    CHARSPAN  = 'charspan'  # Character span; a pair of offsets
+    CHARTSPAN = 'chartspan' # Chart vertex span: a pair of indices
+    TOKENS    = 'tokens'    # Token numbers: a list of indices
+    EDGE      = 'edge'      # An edge identifier: a number
+
+    def __init__(self, data, type):
+        self.type = type
+        # consider type-checking the data based on the type
+        self.data = data
+
+realpred_re = re.compile(r'_([^_\\]*(?:\\.[^_\\]*)*)')
+class Pred(object):
+    GPRED    = 'grammarpred' # only a string allowed
+    REALPRED = 'realpred'    # may explicitly define lemma, pos, sense
+    SPRED    = 'stringpred'  # string-form of realpred
+
+    def __init__(self, string=None, lemma=None, pos=None, sense=None):
+        # SPREDs have an internal structure (defined here:
+        # http://moin.delph-in.net/RmrsPos), but basically:
+        #   _lemma_pos(_sense)?_rel
+        # Note that sense is optional, but the initial underscore is meaningful
+        self.string = string # required for GPRED or SPRED
+        # If a string is given, lemma, pos, and sense will be overwritten
+        self.lemma = lemma
+        self.pos = pos
+        self.sense = sense
+        # The type is easily inferable
+        self.type = None
+        self.resolve()
+
+    def __eq__(self, other):
+        if isinstance(other, Pred):
+            other = other.string
+        return self.string.strip('"') == other.strip('"')
+
+    def __str__(self):
+        return self.string
+
+    def resolve(self):
+        predstr = None if self.string is None else self.string.strip('"')
+        if predstr is not None:
+            if not predstr.lower().endswith('_rel'):
+                raise ValueError('Predicate strings must end with "_rel"')
+            # the easiest case is gpreds
+            if not predstr.startswith('_'):
+                self.type = Pred.GPRED
+                self.lemma = self.pos = self.sense = None
+            # string pred
+            else:
+                self.type = Pred.SPRED
+                # _lemma_pos(_sense)?_rel
+                fields = realpred_re.findall(predstr)
+                if len(fields) == 3:
+                    self.lemma, self.pos, _ = fields
+                    self.sense = None
+                elif len(fields) == 4:
+                    self.lemma, self.pos, self.sense, _ = fields
+                else:
+                    raise ValueError('Unexpected predicate string: ' + predstr)
+        elif self.lemma is not None or self.pos is not None:
+            self.type = Pred.REALPRED
+            if None in (self.lemma, self.pos):
+                raise TypeError('If lemma is specified, pos must be ' +\
+                                'specified as well.')
+            toks = ['', self.lemma, self.pos]
+            if self.sense is not None:
+                toks += [self.sense]
+            self.string = '_'.join(toks + ['rel'])
 
 ###############################################################################
 ###############################################################################
@@ -454,7 +430,7 @@ def validate_eps(mrs1, mrs2, lhs, rhs):
     in order to be mappable. This property must apply to all
     attributes in both EPs.
     """
-    if lhs.relation != rhs.relation or len(lhs) != len(rhs):
+    if lhs.pred != rhs.pred or len(lhs) != len(rhs):
         return False
     try:
         for s in lhs.scargs:
