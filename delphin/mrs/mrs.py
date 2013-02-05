@@ -5,7 +5,25 @@ import re
 ##############################################################################
 ### Main MRS classes
 
-class Mrs(object):
+class LinkedObject(object):
+    """LinkedObject class is inherited by other structures, such as
+       Mrs and ElementaryPredication, that can have a Link to surface
+       structure."""
+    @property
+    def cfrom(self):
+        if self.link is not None and self.link.type == Link.CHARSPAN:
+            return self.link.data[0]
+        else:
+            return -1
+
+    @property
+    def cto(self):
+        if self.link is not None and self.link.type == Link.CHARSPAN:
+            return self.link.data[1]
+        else:
+            return -1
+
+class Mrs(LinkedObject):
     """Minimal Recursion Semantics class containing a top handle, a bag
        of ElementaryPredications, and a bag of handle constraints."""
 
@@ -139,7 +157,7 @@ class Mrs(object):
     #       the RELS list."""
     #    return len(self.rels)
 
-class ElementaryPredication(object):
+class ElementaryPredication(LinkedObject):
     """An elementary predication (EP) is a single relation."""
 
     def __init__(self, pred=None, label=None, scargs=None, args=None,

@@ -185,9 +185,9 @@ def decode_link(cfrom, cto):
 
 def encode(m):
     attributes = {}
-    if m.link is not None and m.link.type == 'charspan':
-        attributes['cfrom'] = str(sm.link.data[0])
-        attributes['cto'] = str(sm.link.data[1])
+    if m.link is not None and m.link.type == mrs.Link.CHARSPAN:
+        attributes['cfrom'] = str(m.link.data[0])
+        attributes['cto'] = str(m.link.data[1])
     if m.surface is not None:
         attributes['surface'] = m.surface
     if m.identifier is not None:
@@ -230,7 +230,7 @@ def encode_extrapair(key, value):
 
 def encode_ep(ep, listed_vars):
     attributes = {}
-    if ep.link is not None and ep.link.type == 'charspan':
+    if ep.link is not None and ep.link.type == mrs.Link.CHARSPAN:
         attributes['cfrom'] = str(ep.link.data[0])
         attributes['cto'] = str(ep.link.data[1])
     if ep.surface is not None:
