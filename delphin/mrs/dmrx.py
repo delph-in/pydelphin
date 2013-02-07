@@ -9,6 +9,8 @@
 #
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
+from collections import OrderedDict
+import re
 from . import mrs
 from .mrserrors import MrsDecodeError
 
@@ -57,8 +59,8 @@ def decode_dmrs(elem):
     # <!ELEMENT dmrs (node|link)*>
     # <!ATTLIST dmrs
     #           cfrom CDATA #REQUIRED
-    #           cto   CDATA #REQUIRED 
-    #           surface   CDATA #IMPLIED 
+    #           cto   CDATA #REQUIRED
+    #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
     elem = elem.find('.') # in case elem is an ElementTree rather than Element
     return mrs.Mrs(ltop = decode_label(elem.find('label')),
@@ -73,23 +75,31 @@ def decode_dmrs(elem):
 ##############################################################################
 ### Decoding
 
-def encode_dmrs(m, strict=False):
-    attributes = {'cfrom':str(m.cfrom), 'cto':str(m.cto)}
+_strict = False
+
+def encode_dmrs(m, strict=False, pretty_print=False):
+    _strict = strict
+    attributes = OrderedDict([('cfrom',str(m.cfrom)), ('cto',str(m.cto))])
     if m.surface is not None:
         attributes['surface'] = m.surface
     if m.identifier is not None:
         attributes['ident'] = m.identifier
-    if not strict:
-        attributes['ltop'] = m.ltop
-        attributes['index'] = m.index.name
+    if not _strict:
+        attributes['ltop'] = mrs.sort_vid_split(m.ltop)[1]
+        attributes['index'] = m.index.vid
     e = etree.Element('dmrs', attrib=attributes)
     for ep in m.rels:
         e.append(encode_node(ep))
-    return etree.tostring(e).decode('utf-8')
+    #for link in m.
+    if pretty_print in ('LKB', 'lkb', 'Lkb'):
+        lkb_pprint_re = re.compile(r'(<dmrs[^>]+>|</node>|</link>|</dmrs>)')
+        string = etree.tostring(e, pretty_print=False, encoding='utf-8')
+        return lkb_pprint_re.sub(r'\1\n', string)
+    return etree.tostring(e, pretty_print=pretty_print, encoding='utf-8')
 
 def encode_node(ep):
-    attributes = {'nodeid':str(mrs.sort_vid_split(ep.label)[1]),
-                  'cfrom':str(ep.cfrom), 'cto':str(ep.cto)}
+    attributes = OrderedDict([('nodeid',str(mrs.sort_vid_split(ep.label)[1])),
+                              ('cfrom',str(ep.cfrom)), ('cto',str(ep.cto))])
     if ep.surface is not None:
         attributes['surface'] = ep.surface
     if ep.base is not None:
@@ -100,12 +110,39 @@ def encode_node(ep):
         attributes['carg'] = next(carg)
     e = etree.Element('node', attrib=attributes)
     e.append(encode_pred(ep.pred))
-    # e.append(encode_sortinfo())
+    e.append(encode_sortinfo(ep))
     return e
 
 def encode_pred(pred):
-    name = pred.string.strip('"\'')
     if pred.type == mrs.Pred.GPRED:
-        return etree.Element('gpred', name=name)
+        e = etree.Element('gpred')
+        e.text = pred.string.strip('"\'')
     elif pred.type in (mrs.Pred.REALPRED, mrs.Pred.SPRED):
-        return etree.Element('realpred', name=name)
+        attributes = {'lemma':pred.lemma, 'pos':pred.pos}
+        if pred.sense is not None:
+            attributes['sense'] = pred.sense
+        e = etree.Element('realpred', attrib=attributes)
+    return e
+
+def encode_sortinfo(ep):
+    attributes = OrderedDict()
+    if ep_is_quantifier(ep):
+        return etree.Element('sortinfo') # return empty <sortinfo/>
+    attributes['cvarsort'] = ep.cv.sort
+    if ep.properties:
+        if not _strict:
+            for k, v in ep.properties.items():
+                attributes[k.lower()] = v
+        else:
+            pass #TODO add strict sortinfo
+    e = etree.Element('sortinfo', attrib=attributes or None)
+    return e
+
+def encode_links(link):
+    pass
+
+def ep_is_quantifier(ep):
+    """Return True if the ep is a quantifier, otherwise False. Assumes
+       a quantifier has a non-empty scopal-argument list, and
+       non-quantifiers have an empty scopal-argument list."""
+    return len(ep.scargs) > 0

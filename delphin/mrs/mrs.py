@@ -5,25 +5,25 @@ import re
 ##############################################################################
 ### Main MRS classes
 
-class LinkedObject(object):
-    """LinkedObject class is inherited by other structures, such as
-       Mrs and ElementaryPredication, that can have a Link to surface
+class LnkObject(object):
+    """LnkObject class is inherited by other structures, such as
+       Mrs and ElementaryPredication, that can have a lnk to surface
        structure."""
     @property
     def cfrom(self):
-        if self.link is not None and self.link.type == Link.CHARSPAN:
-            return self.link.data[0]
+        if self.lnk is not None and self.lnk.type == Lnk.CHARSPAN:
+            return self.lnk.data[0]
         else:
             return -1
 
     @property
     def cto(self):
-        if self.link is not None and self.link.type == Link.CHARSPAN:
-            return self.link.data[1]
+        if self.lnk is not None and self.lnk.type == Lnk.CHARSPAN:
+            return self.lnk.data[1]
         else:
             return -1
 
-class Mrs(LinkedObject):
+class Mrs(LnkObject):
     """Minimal Recursion Semantics class containing a top handle, a bag
        of ElementaryPredications, and a bag of handle constraints."""
 
@@ -31,7 +31,7 @@ class Mrs(LinkedObject):
     MAIN_EVENT_VAR = 'index'
 
     def __init__(self, ltop=None, index=None, rels=None, hcons=None,
-                 link=None, surface=None, identifier=None):
+                 lnk=None, surface=None, identifier=None):
         # consider enclosing ltop, ltop, index, etc. in a hook object
         # self.hook = {'ltop': ltop}
         self.ltop = ltop   # the global top handle
@@ -44,9 +44,9 @@ class Mrs(LinkedObject):
         self.rels = rels if rels is not None else []
         # HCONS is the list of handle constraints
         self.hcons = hcons if hcons is not None else []
-        # MRS objects can have Links to surface structure just like
+        # MRS objects can have Lnks to surface structure just like
         # EPs, but it spans the whole input
-        self.link = link
+        self.lnk = lnk
         # The surface form can be stored for convenience, but it
         # shouldn't affect the semantics
         self.surface = surface
@@ -62,6 +62,8 @@ class Mrs(LinkedObject):
         # variable to all the contexts it appears in, like:
         # {x4: [("_some_pred", "ARG0"), ...], ...}
         self._role_map = {}
+        # map the characteristic variables to the EPs
+        self._cp_ep_map = {}
         # resolve the structure after its properties have been assigned
         self.resolve()
 
@@ -78,12 +80,27 @@ class Mrs(LinkedObject):
         """The variables (e.g. e2, x4) used in the MRS."""
         return self._vars
 
+    @property
+    def links(self):
+        """Return the DMRS-style links in the MRS. Note that this is
+           not the Lnk from MRS to surface string. For example, a link
+           (Pred1, 'ARG1/EQ', Pred2) means that the ARG1 of Pred1 is
+           associated with the ARG0 of Pred2, and moreover their Labels
+           are associated through a QEQ relationship."""
+        # ltop links
+        # var links
+        #
+        #for ep in self.rels:
+        return []
+
+
     def resolve(self):
         """Using the structures that have been declared, complete the
            MRS by unifying variables (and properties), and checking for
            a valid MRS."""
         self.resolve_handles()
         self.resolve_variables()
+        self.resolve_eps()
         self.create_role_map()
         # self.validate()
 
@@ -116,6 +133,8 @@ class Mrs(LinkedObject):
                     ep.args[argname] = self._vars[var.name]
                 else:
                     self._vars[var.name] = var
+            if ep.cv is not None:
+                ep.cv = self._vars[ep.cv.name]
 
     def unify_var_props(self, var):
         """Merge var's properties with those already stored, and raise a
@@ -133,6 +152,13 @@ class Mrs(LinkedObject):
                                "already set to {2}", prop, val, props[prop]))
             else:
                 props[prop] = val
+
+    def resolve_eps(self):
+        """Associate an EPs properties to those of its characteristic
+           variable."""
+        for ep in self.rels:
+            if ep.cv is not None and isinstance(ep.cv, MrsVariable):
+                ep.properties = ep.cv.props or None
 
     def create_role_map(self):
         """Create a mapping from each handle or predicate to the
@@ -157,18 +183,23 @@ class Mrs(LinkedObject):
     #       the RELS list."""
     #    return len(self.rels)
 
-class ElementaryPredication(LinkedObject):
+class ElementaryPredication(LnkObject):
     """An elementary predication (EP) is a single relation."""
 
-    def __init__(self, pred=None, label=None, scargs=None, args=None,
-                 link=None, surface=None, base=None):
+    def __init__(self, pred=None, label=None, cv=None,
+                 scargs=None, args=None,
+                 lnk=None, surface=None, base=None):
         self.label = label
         self.pred = pred # mrs.Pred object
         self.args = args if args is not None else {}
         self.scargs = scargs if scargs is not None else {}
-        self.link = link # mrs.Link object
+        self.lnk = lnk # mrs.Lnk object
         self.surface = surface
         self.base = base # here for compatibility with the DTD
+        # characteristic variable (CV) is usually ARG0
+        self.cv = None
+        # these properties are shared with the EP's characteristic variable
+        self.properties = None
 
     def __len__(self):
         """Return the length of the EP, which is the number of args and
@@ -199,7 +230,7 @@ class MrsVariable(object):
 
     def resolve(self):
         if self.name is not None:
-            _vid, _sort = sort_vid_split(self.name)
+            _sort, _vid = sort_vid_split(self.name)
             if self.vid is None:
                 self.vid = _vid
             if self.sort is None:
@@ -207,7 +238,6 @@ class MrsVariable(object):
         # only create the name if both vid and sort are given
         elif self.vid is not None and self.sort is not None:
             self.name = self.sort + str(self.vid)
-
 
     def __repr__(self):
         if self.name is not None:
@@ -235,10 +265,10 @@ class HandleConstraint(object):
                self.relation == other.relation and\
                self.rhandle == other.rhandle
 
-class Link(object):
-    # link types
-    # These types determine how a link on an EP or MRS are to be interpreted,
-    # and thus determine the data type/structure of the link data
+class Lnk(object):
+    # lnk types
+    # These types determine how a lnk on an EP or MRS are to be interpreted,
+    # and thus determine the data type/structure of the lnk data
     CHARSPAN  = 'charspan'  # Character span; a pair of offsets
     CHARTSPAN = 'chartspan' # Chart vertex span: a pair of indices
     TOKENS    = 'tokens'    # Token numbers: a list of indices
@@ -246,8 +276,21 @@ class Link(object):
 
     def __init__(self, data, type):
         self.type = type
-        # consider type-checking the data based on the type
-        self.data = data
+        # simple type checking
+        try:
+            if type == self.CHARSPAN or type == self.CHARTSPAN:
+                assert(len(data) == 2)
+                self.data = (int(data[0]), int(data[1]))
+            elif type == self.TOKENS:
+                assert(len(data) > 0)
+                self.data = tuple(int(t) for t in data)
+            elif type == self.EDGE:
+                self.data = int(data)
+            else:
+                raise ValueError('Invalid lnk type: {}'.format(type))
+        except (AssertionError, TypeError):
+            raise ValueError('Given data incompatible with given type: ' +\
+                             '{}, {}'.format(data, type))
 
 realpred_re = re.compile(r'_([^_\\]*(?:\\.[^_\\]*)*)')
 class Pred(object):
@@ -264,7 +307,8 @@ class Pred(object):
         # If a string is given, lemma, pos, and sense will be overwritten
         self.lemma = lemma
         self.pos = pos
-        self.sense = sense
+        # str(sense) in case an int is given
+        self.sense = str(sense) if sense is not None else None
         # The type is easily inferable
         self.type = None
         self.resolve()
@@ -272,13 +316,13 @@ class Pred(object):
     def __eq__(self, other):
         if isinstance(other, Pred):
             other = other.string
-        return self.string.strip('"') == other.strip('"')
+        return self.string.strip('"\'') == other.strip('"\'')
 
     def __str__(self):
         return self.string
 
     def resolve(self):
-        predstr = None if self.string is None else self.string.strip('"')
+        predstr = None if self.string is None else self.string.strip('"\'')
         if predstr is not None:
             if not predstr.lower().endswith('_rel'):
                 raise ValueError('Predicate strings must end with "_rel"')
@@ -301,8 +345,7 @@ class Pred(object):
         elif self.lemma is not None or self.pos is not None:
             self.type = Pred.REALPRED
             if None in (self.lemma, self.pos):
-                raise TypeError('If lemma is specified, pos must be ' +\
-                                'specified as well.')
+                raise TypeError('If lemma or pos is specified, both must be.')
             toks = ['', self.lemma, self.pos]
             if self.sense is not None:
                 toks += [self.sense]

@@ -22,6 +22,8 @@ _index = r'INDEX'
 _rels = r'RELS'
 _hcons = r'HCONS'
 _lbl   = r'LBL'
+# the characteristic variable is assumed to be ARG0
+_cv = r'ARG0'
 # list of scopal arguments. ARGS matching items here will be parsed as
 # handles and not as variables. Also the order these are placed determines
 # the order they appear in an encoded SimpleMRS
@@ -157,7 +159,7 @@ def read_ep(tokens):
     pred = mrs.Pred(tokens.pop(0))
     lnk = read_lnk(tokens)
     label = read_handle(tokens, _lbl)
-    ep = mrs.ElementaryPredication(pred=pred, label=label, link=lnk)
+    ep = mrs.ElementaryPredication(pred=pred, label=label, lnk=lnk)
     while tokens[0] != _right_bracket:
         if tokens[0] in _scargs:
             scarg = tokens.pop(0)
@@ -166,42 +168,45 @@ def read_ep(tokens):
         else:
             varname, var = read_variable(tokens)
             ep.args[varname] = var
+            # check for the characteristic variable
+            if varname == _cv:
+                ep.cv = var
     tokens.pop(0) # we know this is a right bracket
     return ep
 
 def read_lnk(tokens):
-    """Read and return a tuple of the pred's link type and link value,
-       if a pred link is specified."""
+    """Read and return a tuple of the pred's lnk type and lnk value,
+       if a pred lnk is specified."""
     # < FROM : TO > or < FROM # TO > or < TOK... > or < @ EDGE >
     lnktype = None
     lnk = None
     if tokens[0] == _left_angle:
         tokens.pop(0) # we just checked this is a left angle
         if tokens[0] == _right_angle:
-            pass # empty <> brackets the same as no link specified
-        # edge link: ['@', EDGE, ...]
+            pass # empty <> brackets the same as no lnk specified
+        # edge lnk: ['@', EDGE, ...]
         elif tokens[0] == _at:
             tokens.pop(0) # remove the @
-            lnktype = mrs.Link.EDGE
-            lnk = int(tokens.pop(0)) # edge links only have one number
-        # character span link: [FROM, ':', TO, ...]
+            lnktype = mrs.Lnk.EDGE
+            lnk = int(tokens.pop(0)) # edge lnks only have one number
+        # character span lnk: [FROM, ':', TO, ...]
         elif tokens[1] == _colon:
-            lnktype = mrs.Link.CHARSPAN
+            lnktype = mrs.Lnk.CHARSPAN
             lnk = (int(tokens.pop(0)), int(tokens.pop(1)))
             tokens.pop(0) # this should be the colon
-        # chart vertex range link: [FROM, '#', TO, ...]
+        # chart vertex range lnk: [FROM, '#', TO, ...]
         elif tokens[1] == _hash:
-            lnktype = mrs.Link.CHARTSPAN
+            lnktype = mrs.Lnk.CHARTSPAN
             lnk = (int(tokens.pop(0)), int(tokens.pop(1)))
             tokens.pop(0) # this should be the hash
-        # tokens link: [(TOK,)+ ...]
+        # tokens lnk: [(TOK,)+ ...]
         else:
-            lnktype = mrs.Link.TOKENS
+            lnktype = mrs.Lnk.TOKENS
             lnk = []
             while tokens[0] != _right_angle:
                 lnk.append(int(tokens.pop(0)))
         validate_token(tokens.pop(0), _right_angle)
-    return mrs.Link(lnk, lnktype)
+    return mrs.Lnk(lnk, lnktype)
 
 def read_hcons(tokens):
     # HCONS:< HANDLE (qeq|lheq|outscopes) HANDLE ... >
@@ -277,7 +282,7 @@ def encode_rels(rels, listed_vars):
 def encode_ep(ep, listed_vars):
     """Encode an Elementary Predication into the SimpleMRS encoding."""
     toks = [_left_bracket]
-    toks += [ep.pred.string + encode_lnk(ep.link)]
+    toks += [ep.pred.string + encode_lnk(ep.lnk)]
     toks += [encode_handle(_lbl, ep.label)]
     # the values of Scalar Args can only be handles
     for scarg, handle in ep.scargs.items():
@@ -288,22 +293,22 @@ def encode_ep(ep, listed_vars):
     toks += [_right_bracket]
     return ' '.join(toks)
 
-def encode_lnk(link):
-    """Encode a predication link to surface form into the SimpleMRS
+def encode_lnk(lnk):
+    """Encode a predication lnk to surface form into the SimpleMRS
        encoding."""
     s = ""
-    if link is not None:
+    if lnk is not None:
         s = _left_angle
-        if link.type == mrs.Link.CHARSPAN:
-            cfrom, cto = link.data
+        if lnk.type == mrs.Lnk.CHARSPAN:
+            cfrom, cto = lnk.data
             s += ''.join([str(cfrom), _colon, str(cto)])
-        elif link.type == mrs.Link.CHARTSPAN:
-            cfrom, cto = link.data
+        elif lnk.type == mrs.Lnk.CHARTSPAN:
+            cfrom, cto = lnk.data
             s += ''.join([str(cfrom), _hash, str(cto)])
-        elif link.type == mrs.Link.TOKENS:
-            s += ' '.join([str(t) for t in link.data])
-        elif link.type == mrs.Link.EDGE:
-            s += ''.join([_at, str(link.data)])
+        elif lnk.type == mrs.Lnk.TOKENS:
+            s += ' '.join([str(t) for t in lnk.data])
+        elif lnk.type == mrs.Lnk.EDGE:
+            s += ''.join([_at, str(lnk.data)])
         s += _right_angle
     return s
 

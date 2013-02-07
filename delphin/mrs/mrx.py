@@ -38,6 +38,7 @@ def dumps(m):
 ### Decoding
 
 HANDLE_PREFIX = 'h'
+_CV = 'ARG0' # characteristic variable
 
 def decode_list(fh):
     """Decode """
@@ -58,8 +59,8 @@ def decode_mrs(elem):
     # <!ELEMENT mrs (label, var, (ep|hcons)*)>
     # <!ATTLIST mrs
     #           cfrom     CDATA #IMPLIED
-    #           cto       CDATA #IMPLIED 
-    #           surface   CDATA #IMPLIED 
+    #           cto       CDATA #IMPLIED
+    #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
     elem = elem.find('.') # in case elem is an ElementTree rather than Element
     normalize_vars(elem) # try to make all vars have a sort
@@ -67,7 +68,7 @@ def decode_mrs(elem):
                    index = decode_var(elem.find('var')),
                    rels = [decode_ep(ep) for ep in elem.iter('ep')],
                    hcons = [decode_hcons(h) for h in elem.iter('hcons')],
-                   link = decode_link(elem.get('cfrom'), elem.get('cto')),
+                   lnk = decode_lnk(elem.get('cfrom'), elem.get('cto')),
                    surface = elem.get('surface'),
                    identifier = elem.get('ident'))
 
@@ -83,7 +84,7 @@ def normalize_vars(elem):
 
 def decode_label(elem):
     # <!ELEMENT label (extrapair*)>
-    # <!ATTLIST label 
+    # <!ATTLIST label
     #           vid CDATA #REQUIRED >
     # NOTE: I deviate from the DTD here by not retrieving extrapairs;
     #       as far as I can tell handles cannot take properties
@@ -97,7 +98,7 @@ def decode_handle(elem):
 def decode_var(elem):
     # <!ELEMENT var (extrapair*)>
     # <!ATTLIST var
-    #           vid  CDATA #REQUIRED 
+    #           vid  CDATA #REQUIRED
     #           sort (x|e|h|u|l|i) #IMPLIED >
     return mrs.MrsVariable(vid=int(elem.get('vid')), sort=elem.get('sort'),
                            props=decode_extrapairs(elem.iter('extrapair')))
@@ -112,14 +113,16 @@ def decode_ep(elem):
     # <!ELEMENT ep ((pred|spred|realpred), label, fvpair*)>
     # <!ATTLIST ep
     #           cfrom CDATA #IMPLIED
-    #           cto   CDATA #IMPLIED 
+    #           cto   CDATA #IMPLIED
     #           surface   CDATA #IMPLIED
     #           base      CDATA #IMPLIED >
+    args = decode_args(elem)
     return mrs.ElementaryPredication(pred=decode_pred(elem.find('./')),
                                      label=decode_label(elem.find('label')),
+                                     cv=args.get(_CV),
                                      scargs=decode_scargs(elem),
-                                     args=decode_args(elem),
-                                     link=decode_link(elem.get('cfrom'),
+                                     args=args,
+                                     lnk=decode_lnk(elem.get('cfrom'),
                                                       elem.get('cto')),
                                      surface=elem.get('surface'),
                                      base=elem.get('base'))
@@ -151,7 +154,7 @@ def decode_args(elem):
     # non-scopal args are anything that isn't a var with sort='h'
     args = {}
     for e in elem.findall('fvpair'):
-        argname = e.find('rargname').text
+        argname = e.find('rargname').text.upper()
         if e.find('constant') is not None:
             args[argname] = e.find('constant').text
         elif e.find('var').get('sort') != 'h':
@@ -160,7 +163,7 @@ def decode_args(elem):
 
 def decode_hcons(elem):
     # <!ELEMENT hcons (hi, lo)>
-    # <!ATTLIST hcons 
+    # <!ATTLIST hcons
     #           hreln (qeq|lheq|outscopes) #REQUIRED >
     # <!ELEMENT hi (var)>
     # <!ELEMENT lo (label|var)>
@@ -171,13 +174,13 @@ def decode_hcons(elem):
                                 decode_handle(elem.find('lo/')))
 
 
-def decode_link(cfrom, cto):
+def decode_lnk(cfrom, cto):
     if cfrom == cto == None:
         return None
     elif None in (cfrom, cto):
         raise ValueError('Both cfrom and cto, or neither, must be specified.')
     else:
-        return mrs.Link((int(cfrom), int(cto)), mrs.Link.CHARSPAN)
+        return mrs.Lnk((int(cfrom), int(cto)), mrs.Lnk.CHARSPAN)
 
 ##############################################################################
 ##############################################################################
@@ -185,9 +188,9 @@ def decode_link(cfrom, cto):
 
 def encode(m):
     attributes = {}
-    if m.link is not None and m.link.type == mrs.Link.CHARSPAN:
-        attributes['cfrom'] = str(m.link.data[0])
-        attributes['cto'] = str(m.link.data[1])
+    if m.lnk is not None and m.lnk.type == mrs.Lnk.CHARSPAN:
+        attributes['cfrom'] = str(m.lnk.data[0])
+        attributes['cto'] = str(m.lnk.data[1])
     if m.surface is not None:
         attributes['surface'] = m.surface
     if m.identifier is not None:
@@ -230,9 +233,9 @@ def encode_extrapair(key, value):
 
 def encode_ep(ep, listed_vars):
     attributes = {}
-    if ep.link is not None and ep.link.type == mrs.Link.CHARSPAN:
-        attributes['cfrom'] = str(ep.link.data[0])
-        attributes['cto'] = str(ep.link.data[1])
+    if ep.lnk is not None and ep.lnk.type == mrs.Lnk.CHARSPAN:
+        attributes['cfrom'] = str(ep.lnk.data[0])
+        attributes['cto'] = str(ep.lnk.data[1])
     if ep.surface is not None:
         attributes['surface'] = ep.surface
     if ep.base is not None:
