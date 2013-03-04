@@ -63,54 +63,113 @@ def decode_dmrs(elem):
     #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
     elem = elem.find('.') # in case elem is an ElementTree rather than Element
-    return mrs.Mrs(ltop = decode_label(elem.find('label')),
-                   index = decode_var(elem.find('var')),
-                   rels = [decode_ep(ep) for ep in elem.iter('ep')],
-                   hcons = [decode_hcons(h) for h in elem.iter('hcons')],
-                   link = decode_link(elem.get('cfrom'), elem.get('cto')),
-                   surface = elem.get('surface'),
-                   identifier = elem.get('ident'))
+    return mrs.Dmrs(ltop       = elem.get('ltop'),  # not in the DTD; a nodeid
+                    index      = elem.get('index'), # not in the DTD; a nodeid
+                    nodes      = list(map(decode_node, elem.iter('node'))),
+                    links      = list(map(decode_link, elem.iter('link'))),
+                    lnk        = decode_lnk(elem),
+                    surface    = elem.get('surface'),
+                    identifier = elem.get('ident'))
+
+def decode_node(elem):
+    #<!ELEMENT node ((realpred|gpred), sortinfo)>
+    #<!ATTLIST node
+    #          nodeid CDATA #REQUIRED
+    #          cfrom CDATA #REQUIRED
+    #          cto   CDATA #REQUIRED 
+    #          surface   CDATA #IMPLIED
+    #          base      CDATA #IMPLIED 
+    #          carg CDATA #IMPLIED >
+    return mrs.Node(pred       = decode_pred(elem.find('./')),
+                    nodeid     = elem.get('nodeid'),
+                    properties = decode_sortinfo(elem.find('sortinfo')),
+                    lnk        = decode_lnk(elem),
+                    surface    = elem.get('surface'),
+                    base       = elem.get('base'),
+                    carg       = elem.get('carg'))
+
+def decode_pred(elem):
+    #<!ELEMENT realpred EMPTY>
+    #<!ATTLIST realpred
+    #          lemma CDATA #REQUIRED
+    #          pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
+    #          sense CDATA #IMPLIED >
+    #<!ELEMENT gpred (#PCDATA)>
+    if elem.tag == 'gpred':
+        return mrs.Pred(string=elem.text)
+    elif elem.tag == 'realpred':
+        return mrs.Pred(lemma = elem.get('lemma'),
+                        pos   = elem.get('pos'),
+                        sense = elem.get('sense'))
+
+def decode_sortinfo(elem):
+    #<!ELEMENT sortinfo EMPTY>
+    #<!ATTLIST sortinfo
+    #          cvarsort (x|e|i|u) #IMPLIED
+    #          num  (sg|pl|u) #IMPLIED
+    #          pers (1|2|3|1-or-3|u) #IMPLIED
+    #          gend (m|f|n|m-or-f|u) #IMPLIED
+    #          sf (prop|ques|comm|prop-or-ques|u) #IMPLIED
+    #          tense (past|pres|fut|tensed|untensed|u) #IMPLIED
+    #          mood (indicative|subjunctive|u) #IMPLIED
+    #          prontype (std_pron|zero_pron|refl|u) #IMPLIED 
+    #          prog (plus|minus|u) #IMPLIED
+    #          perf (plus|minus|u) #IMPLIED
+    #          ind  (plus|minus|u) #IMPLIED >
+    # note: Just accept any properties, since these are ERG-specific
+    return elem.attrib
+
+def decode_link(elem):
+    #<!ELEMENT link (rargname, post)>
+    #<!ATTLIST link
+    #          from CDATA #REQUIRED
+    #          to   CDATA #REQUIRED > 
+    #<!ELEMENT rargname (#PCDATA)>
+    #<!ELEMENT post (#PCDATA)>
+    return mrs.Link(start   = elem.get('from'),
+                    end     = elem.get('to'),
+                    argname = elem.find('rargname').text,
+                    post    = elem.find('post').text)
+
+def decode_lnk(elem):
+    return mrs.Lnk((elem.get('cfrom'), elem.get('cto')), mrs.Lnk.CHARSPAN)
 
 ##############################################################################
 ##############################################################################
-### Decoding
+### Encoding
 
 _strict = False
 
-def encode_dmrs(m, strict=False, pretty_print=False):
+def encode(m, strict=False, pretty_print=False):
     _strict = strict
     attributes = OrderedDict([('cfrom',str(m.cfrom)), ('cto',str(m.cto))])
-    if m.surface is not None:
-        attributes['surface'] = m.surface
-    if m.identifier is not None:
-        attributes['ident'] = m.identifier
+    if m.surface is not None:    attributes['surface'] = m.surface
+    if m.identifier is not None: attributes['ident']   = m.identifier
     if not _strict:
-        attributes['ltop'] = mrs.sort_vid_split(m.ltop)[1]
-        attributes['index'] = m.index.vid
+        # index corresponds to a variable, so link it to a nodeid
+        attributes['index'] = str(m.index.vid)
+    # ltop link from 0
+    #if m.ltop is not None:
+    #    
     e = etree.Element('dmrs', attrib=attributes)
-    for ep in m.rels:
-        e.append(encode_node(ep))
-    #for link in m.
+    for node in m.nodes: e.append(encode_node(node))
+    for link in m.links: e.append(encode_link(link))
     if pretty_print in ('LKB', 'lkb', 'Lkb'):
         lkb_pprint_re = re.compile(r'(<dmrs[^>]+>|</node>|</link>|</dmrs>)')
-        string = etree.tostring(e, pretty_print=False, encoding='utf-8')
+        string = str(etree.tostring(e, encoding='utf-8'))
         return lkb_pprint_re.sub(r'\1\n', string)
     return etree.tostring(e, pretty_print=pretty_print, encoding='utf-8')
 
-def encode_node(ep):
-    attributes = OrderedDict([('nodeid',str(mrs.sort_vid_split(ep.label)[1])),
-                              ('cfrom',str(ep.cfrom)), ('cto',str(ep.cto))])
-    if ep.surface is not None:
-        attributes['surface'] = ep.surface
-    if ep.base is not None:
-        attributes['base'] = ep.base
-    carg = [a for a in ep.args.values() if not isinstance(a, mrs.MrsVariable)]
-    if carg != []:
-        # there should be only one constant
-        attributes['carg'] = next(carg)
+def encode_node(node):
+    attributes = OrderedDict([('nodeid', str(node.nodeid)),
+                              ('cfrom',str(node.cfrom)),
+                              ('cto',str(node.cto))])
+    if node.surface is not None: attributes['surface'] = node.surface
+    if node.base is not None:    attributes['base']    = node.base
+    if node.carg is not None:    attributes['carg']    = node.carg
     e = etree.Element('node', attrib=attributes)
-    e.append(encode_pred(ep.pred))
-    e.append(encode_sortinfo(ep))
+    e.append(encode_pred(node.pred))
+    e.append(encode_sortinfo(node))
     return e
 
 def encode_pred(pred):
@@ -120,29 +179,32 @@ def encode_pred(pred):
     elif pred.type in (mrs.Pred.REALPRED, mrs.Pred.SPRED):
         attributes = {'lemma':pred.lemma, 'pos':pred.pos}
         if pred.sense is not None:
-            attributes['sense'] = pred.sense
+            attributes['sense'] = str(pred.sense)
         e = etree.Element('realpred', attrib=attributes)
     return e
 
-def encode_sortinfo(ep):
+def encode_sortinfo(node):
     attributes = OrderedDict()
-    if ep_is_quantifier(ep):
+    # return empty <sortinfo/> for quantifiers
+    if node.pred.pos == 'q':
         return etree.Element('sortinfo') # return empty <sortinfo/>
-    attributes['cvarsort'] = ep.cv.sort
-    if ep.properties:
+    attributes['cvarsort'] = node.cv.sort
+    if node.properties:
         if not _strict:
-            for k, v in ep.properties.items():
-                attributes[k.lower()] = v
+            for k, v in node.properties.items():
+                attributes[k.lower()] = str(v)
         else:
             pass #TODO add strict sortinfo
     e = etree.Element('sortinfo', attrib=attributes or None)
     return e
 
-def encode_links(link):
-    pass
-
-def ep_is_quantifier(ep):
-    """Return True if the ep is a quantifier, otherwise False. Assumes
-       a quantifier has a non-empty scopal-argument list, and
-       non-quantifiers have an empty scopal-argument list."""
-    return len(ep.scargs) > 0
+def encode_link(link):
+    e = etree.Element('link', attrib={'from':str(link.start),
+                                      'to':str(link.end)})
+    argname = etree.Element('rargname')
+    argname.text = link.argname
+    post = etree.Element('post')
+    post.text = link.post
+    e.append(argname)
+    e.append(post)
+    return e

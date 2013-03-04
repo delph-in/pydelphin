@@ -6,35 +6,37 @@
 #          and dumps.
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
+from collections import OrderedDict
 import re
 from . import mrs
 from .mrserrors import MrsDecodeError
 
-_left_bracket = r'['
-_right_bracket = r']'
-_left_angle = r'<'
-_right_angle = r'>'
-_colon = r':'
-_hash = r'#'
-_at = r'@'
-_ltop = r'LTOP'
-_index = r'INDEX'
-_rels = r'RELS'
-_hcons = r'HCONS'
-_lbl   = r'LBL'
+strict = False
+
+_left_bracket   = r'['
+_right_bracket  = r']'
+_left_angle     = r'<'
+_right_angle    = r'>'
+_colon          = r':'
+_hash           = r'#'
+_at             = r'@'
+_ltop           = r'LTOP'
+_index          = r'INDEX'
+_rels           = r'RELS'
+_hcons          = r'HCONS'
+_lbl            = r'LBL'
 # the characteristic variable is assumed to be ARG0
-_cv = r'ARG0'
-# list of scopal arguments. ARGS matching items here will be parsed as
-# handles and not as variables. Also the order these are placed determines
-# the order they appear in an encoded SimpleMRS
-_scargs = [r'RSTR', r'BODY']
+_cv             = r'ARG0'
+# constant arguments
+_constarg      = r'CARG'
+def is_carg(x)  : return x == _constarg # for convenience
 # possible relations for handle constraints
-_qeq = r'qeq'
-_lheq = r'lheq'
-_outscopes = r'outscopes'
-_valid_hcons_rels = [_qeq, _lheq, _outscopes]
+_qeq            = r'qeq'
+_lheq           = r'lheq'
+_outscopes      = r'outscopes'
+_valid_hcons    = [_qeq, _lheq, _outscopes]
 # possible relations for individual constraints
-#_valid_icons_rels = [r'focus', r'topic']
+#_valid_icons    = [r'focus', r'topic']
 
 ##############################################################################
 ##############################################################################
@@ -81,8 +83,8 @@ def validate_tokens(tokens, expected):
         validate_token(tokens.pop(0), exp_tok)
 
 def invalid_token_error(token, expected):
-    raise MrsDecodeError('Invalid token: ' + token +\
-                         '\n  Expected: ' + expected)
+    raise MrsDecodeError('Invalid token: "{}"\tExpected: "{}"'.format(token,
+                                                                    expected))
 
 def decode(string):
     return decode_mrs(tokenize(string))
@@ -93,9 +95,9 @@ def decode_mrs(tokens):
     # [ LTOP : handle INDEX : variable RELS : rels-list HCONS : hcons-list ]
     try:
         validate_token(tokens.pop(0), _left_bracket)
-        ltop = read_handle(tokens, _ltop)
-        _, index = read_variable(tokens, variable_name=_index)
-        rels = read_rels(tokens)
+        _, ltop  = read_argument(tokens, rargname=_ltop, sort='h')
+        _, index = read_argument(tokens, rargname=_index)
+        rels  = read_rels(tokens)
         hcons = read_hcons(tokens)
         validate_token(tokens.pop(0), _right_bracket)
         m = mrs.Mrs(ltop, index, rels, hcons)
@@ -103,24 +105,30 @@ def decode_mrs(tokens):
         unexpected_termination_error()
     return m
 
-def read_handle(tokens, handle_name):
-    """Read and return the value of a handle. Handles, such as LTOP and LBL,
-       cannot have variable properties following them."""
-    # HANDLE : handle
-    validate_tokens(tokens, [handle_name, _colon])
-    return tokens.pop(0)
-
-def read_variable(tokens, variable_name=None):
-    """Read and return the name and MrsVariable object for the value of the
-       variable. Fail if variable_name is given and does not match."""
-    # VAR : var [ vartype PROP : val ... ]
+def read_argument(tokens, rargname=None, sort=None):
+    # RARGNAME : var-or-handle
     name = tokens.pop(0)
-    if variable_name:
-        validate_token(name, variable_name)
+    if rargname is not None:
+        validate_token(name, rargname)
     validate_token(tokens.pop(0), _colon)
+    return name, read_variable(tokens, sort=sort)
+
+def read_variable(tokens, sort=None):
+    """Read and return the MrsVariable object for the value of the
+       variable. Fail if the sort does not match the expected."""
+    # var [ vartype PROP : val ... ]
     var = tokens.pop(0)
+    srt, vid = mrs.sort_vid_split(var)
+    # consider something like not(srt <= sort) in the case of subsumptive sorts
+    if sort is not None and srt != sort:
+        raise MrsDecodeError('Variable {} has sort "{}", expected "{}"'.format(
+                             var, srt, sort))
     vartype, props = read_props(tokens)
-    return name, mrs.MrsVariable(name=var, sort=vartype, props=props)
+    if vartype is not None and sort != vartype:
+        pass #TODO log this as an error?
+    if sort == 'h' and props:
+        pass #TODO log this as an error?
+    return mrs.MrsVariable(sort=srt, vid=vid, properties=props)
 
 def read_props(tokens):
     """Read and return a dictionary of variable properties."""
@@ -141,38 +149,50 @@ def read_props(tokens):
     tokens.pop(0) # we know this is a right bracket
     return vartype, props
 
+def read_const(tokens):
+    """Read and return a constant argument."""
+    # CARG: constant
+    carg = tokens.pop(0)
+    validate_token(carg, _constarg)
+    validate_token(tokens.pop(0), _colon)
+    return carg, tokens.pop(0)
+
 def read_rels(tokens):
     """Read and return a RELS set of ElementaryPredications."""
     # RELS: < ep* >
     rels = []
     validate_tokens(tokens, [_rels, _colon, _left_angle])
+    # SimpleMRS does not encode a nodeid, and the label cannot be used because
+    # it may be shared (e.g. adjectives and the noun they modify), as can ARG0
+    # (quantifiers and the quantifiees), so make one up
+    nodeid = 10001
     while tokens[0] != _right_angle:
-        rels += [read_ep(tokens)]
+        rels += [read_ep(tokens, nodeid)]
+        nodeid += 1
     tokens.pop(0) # we know this is a right angle
     return rels
 
-def read_ep(tokens):
+def read_ep(tokens, nodeid):
     """Read and return an ElementaryPredication."""
     # [ pred LBL : lbl ARG : variable-or-handle ... ]
     # or [ pred < span-from : span-to > ...
     validate_token(tokens.pop(0), _left_bracket)
-    pred = mrs.Pred(tokens.pop(0))
-    lnk = read_lnk(tokens)
-    label = read_handle(tokens, _lbl)
-    ep = mrs.ElementaryPredication(pred=pred, label=label, lnk=lnk)
+    pred     = mrs.Pred(tokens.pop(0))
+    lnk      = read_lnk(tokens)
+    _, label = read_argument(tokens, rargname=_lbl, sort='h')
+    cv       = None
+    args     = OrderedDict()
+    carg     = None
     while tokens[0] != _right_bracket:
-        if tokens[0] in _scargs:
-            scarg = tokens.pop(0)
-            validate_token(tokens.pop(0), _colon)
-            ep.scargs[scarg] = tokens.pop(0)
+        if is_carg(tokens[0]):
+            carg = read_constant(tokens)[1]
+        elif tokens[0] == _cv:
+            _, cv = read_argument(tokens)
         else:
-            varname, var = read_variable(tokens)
-            ep.args[varname] = var
-            # check for the characteristic variable
-            if varname == _cv:
-                ep.cv = var
+            args.update([read_argument(tokens)])
     tokens.pop(0) # we know this is a right bracket
-    return ep
+    return mrs.ElementaryPredication(pred, nodeid, label, cv,
+                                     args=args, lnk=lnk, carg=carg)
 
 def read_lnk(tokens):
     """Read and return a tuple of the pred's lnk type and lnk value,
@@ -214,7 +234,7 @@ def read_hcons(tokens):
     hcons = []
     validate_tokens(tokens, [_hcons, _colon, _left_angle])
     while tokens[0] != _right_angle:
-        lh = tokens.pop(0)
+        lh = read_variable(tokens, sort='h')
         # rels are case-insensitive and the convention is lower-case
         rel = tokens.pop(0).lower()
         if rel == _qeq:
@@ -224,8 +244,8 @@ def read_hcons(tokens):
         elif rel == _outscopes:
             rel = mrs.HandleConstraint.OUTSCOPES
         else:
-            invalid_token_error(rel, '('+'|'.join(_valid_hcons_rels)+')')
-        rh = tokens.pop(0)
+            invalid_token_error(rel, '('+'|'.join(_valid_hcons)+')')
+        rh = read_variable(tokens, sort='h')
         hcons += [mrs.HandleConstraint(lh, rel, rh)]
     tokens.pop(0) # we know this is a right angle
     return hcons
@@ -241,55 +261,61 @@ def unexpected_termination_error():
 ##############################################################################
 ### Encoding
 
-def encode(m):
+def encode(m, pretty_print=False):
     """Encode an MRS structure into a SimpleMRS string."""
     # note that listed_vars is modified as a side-effect of the lower
     # functions
     listed_vars = set()
-    toks = [_left_bracket]
-    toks += [encode_handle(_ltop, m.ltop)]
-    toks += [encode_variable(_index, m.index, listed_vars)]
-    toks += [encode_rels(m.rels, listed_vars)]
-    toks += [encode_hcons(m.hcons)]
-    toks += [_right_bracket]
-    return ' '.join(toks)
+    toks = [' '.join([_left_bracket,
+            encode_argument(_ltop, m.ltop, listed_vars),
+            encode_argument(_index, m.index, listed_vars)])]
+    toks += [encode_rels(m.rels, listed_vars, pretty_print=pretty_print)]
+    toks += ['  ' + ' '.join([encode_hcons(m.hcons), _right_bracket])]
+    delim = ' ' if not pretty_print else '\n'
+    return delim.join(toks)
 
-def encode_handle(name, handle):
-    """Encode an MRS handle into the SimpleMRS format."""
-    return ' '.join([name + _colon, handle])
+def encode_argument(rargname, variable, listed_vars):
+    """Encode an MRS argument into the SimpleMRS format."""
+    return ' '.join([rargname + _colon,
+                     encode_variable(variable, listed_vars)])
 
-def encode_variable(name, var, listed_vars):
+def encode_variable(var, listed_vars):
     """Encode an MRS variable, and any variable properties, into the
        SimpleMRS format."""
-    toks = [name + _colon, var.name]
+    toks = [str(var)]
     # only encode the variable properties if they haven't been already
-    if var.name not in listed_vars and var.props:
+    if var.vid not in listed_vars and var.properties:
         toks += [_left_bracket, var.sort]
-        for propkey, propval in var.props.items():
+        for propkey, propval in var.properties.items():
             toks += [propkey + _colon, propval]
         toks += [_right_bracket]
-    listed_vars.add(var.name)
+    listed_vars.add(var.vid)
     return ' '.join(toks)
 
-def encode_rels(rels, listed_vars):
+def encode_const(name, const):
+    """Encode a constant argument into the SimpleMRS format."""
+    # consider checking if const is surrounded by quotes
+    return ' '.join([name + _colon, const])
+
+def encode_rels(rels, listed_vars, pretty_print=False):
     """Encode a RELS list of EPs into the SimpleMRS encoding."""
-    toks = [_rels + _colon, _left_angle]
-    for ep in rels:
-        toks += [encode_ep(ep, listed_vars)]
-    toks += [_right_angle]
-    return ' '.join(toks)
+    delim = ' ' if not pretty_print else '\n          '
+    string = '  ' + ' '.join([_rels + _colon, _left_angle])
+    string += ' ' + delim.join(encode_ep(ep, listed_vars) for ep in rels)
+    string += ' ' + _right_angle
+    return string
 
 def encode_ep(ep, listed_vars):
     """Encode an Elementary Predication into the SimpleMRS encoding."""
     toks = [_left_bracket]
     toks += [ep.pred.string + encode_lnk(ep.lnk)]
-    toks += [encode_handle(_lbl, ep.label)]
-    # the values of Scalar Args can only be handles
-    for scarg, handle in ep.scargs.items():
-        toks += [scarg + _colon, handle]
-    # the values of regular args are variables
-    for arg, var in ep.args.items():
-        toks += [encode_variable(arg, var, listed_vars)]
+    toks += [encode_argument(_lbl, ep.label, listed_vars)]
+    toks += [encode_argument(_cv, ep.cv, listed_vars)]
+    for argname, var in ep.args.items():
+        toks += [encode_argument(argname, var, listed_vars)]
+    # add the constant if it exists
+    if ep.carg is not None:
+        toks += [encode_const(_constarg, ep.carg)]
     toks += [_right_bracket]
     return ' '.join(toks)
 
@@ -322,6 +348,6 @@ def encode_hcons(hcons):
             rel = _lheq
         elif hcon.relation == mrs.HandleConstraint.OUTSCOPES:
             rel = _outscopes
-        toks += [hcon.lhandle, rel, hcon.rhandle]
+        toks += [str(hcon.lhandle), rel, str(hcon.rhandle)]
     toks += [_right_angle]
     return ' '.join(toks)
