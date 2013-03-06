@@ -1,9 +1,10 @@
-This directory contains Python code for DELPH-IN.
+Python libraries for DELPH-IN
 
 Subdirectories are organized by library category (e.g. tdl, mrs, etc)
 or by task (evaluation, etc).
 
-Code is under a delphin subdirectory because of how the Python package
-management system works (hyphens are not allowed in module names, for
-example). Only documentation and high-level scripts should go in this
-top directory.
+Example usage (load a SimpleMRS structure and re-print it with formatting):
+
+from delphin.mrs import simplemrs
+m = simplemrs.load(open('mrsfile.mrs'))
+print(simplemrs.encode(m, pretty_print=True))

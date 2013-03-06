@@ -251,27 +251,6 @@ def get_dmrs_post(xmrs, nid1, argname, nid2):
             post = Dmrs.NEQ
     return post
 
-def label_set_head(xmrs, label_id):
-    """Return the head of a label equality set, which is the first EP
-       with no outgoing args to other elements in the label set."""
-    lblset = xmrs.label_sets.get(label_id, [])
-    for ep in lblset:
-        if not any(xmrs.arg_to_ep(ep.nodeid, a) in lblset
-                   for a in xmrs.args.get(ep.nodeid,[])):
-            return ep
-    return None
-
-def find_qeq_target(xmrs, hole):
-    """Find the EP with the label QEQed from the given hole, if any."""
-    hcon = xmrs.hcons_map.get(hole)
-    if hcon is not None:
-        return label_set_head(xmrs, hcon.rhandle.vid)
-    return None
-
-def make_link(xmrs, srcid, argname, tgtid):
-    return Link(srcid, tgtid, argname,
-                get_dmrs_post(xmrs, srcid, argname, tgtid))
-
 class VarFactory(object):
     """Simple class to produce MrsVariables, incrementing the vid for
        each one."""
@@ -320,9 +299,7 @@ class Xmrs(LnkObject):
         self.cv_map = dict((ep.cv.vid, ep) for ep in self.eps.values()
                            if not ep.is_quantifier())
         # one-to-many label-equality-graph
-        self.label_sets = defaultdict(list)
-        for ep in self.eps.values():
-            self.label_sets[ep.label.vid] += [ep]
+        self.label_sets = self.label_equality_sets()
         self.hcons_map = dict((h.lhandle, h) for h in self.hcons)
         # one-to-many ep-to-ep QEQ graph ("hole to label qeq graph")
         self.qeq_graph = defaultdict(list)
@@ -335,7 +312,10 @@ class Xmrs(LnkObject):
     def arg_to_ep(self, nodeid, argname):
         """Return the EP, if any, linked by the given argument for the
            given EP."""
-        return self.cv_map.get(self.args.get(nodeid,{}).get(argname))
+        var = self.args.get(nodeid,{}).get(argname)
+        if var is None:
+            return None
+        return self.cv_map.get(var.vid)
 
     @property
     def rels(self):
@@ -362,34 +342,60 @@ class Xmrs(LnkObject):
         try:
             return self._links
         except AttributeError:
+            lbl_sets = dict([leq for leq in self.label_equality_sets().items()
+                             if len(leq[1]) > 1])
             # First get argument links
             self._links = []
             for srcid, argdict in self.args.items():
                 for argname, tgtvar in argdict.items():
                     tgtvid = tgtvar.vid
-                    if tgtvid in self.cv_map: # normal variable argument
-                        self._links += [make_link(self, srcid, argname,
-                                                  self.cv_map[tgtvid].nodeid)]
+                    if tgtvid in self.cv_map:
+                        tgtid = self.cv_map[tgtvid].nodeid
                     elif tgtvid in self.label_sets:
-                        # tgt ep is the head of the label set
-                        self._links += [make_link(self, srcid, argname,
-                            label_set_head(self, tgtvid).nodeid)]
+                        tgtid = self.label_set_head(tgtvid).nodeid
                     elif tgtvar in self.hcons_map:
-                        self._links += [make_link(self, srcid, argname,
-                            find_qeq_target(self, tgtvar).nodeid)]
-                        
+                        tgtid = self.find_qeq_target(tgtvar).nodeid
+                    else:
+                        continue #TODO: log this or something
+                    post = get_dmrs_post(self, srcid, argname, tgtid)
+                    if post == Dmrs.EQ:
+                        srcep = self.eps[srcid]
+                        tgtep = self.eps[tgtid]
+                        lbl_sets[srcep.label.vid].remove(srcep)
+                        lbl_sets[tgtep.label.vid].remove(tgtep)
+                    self._links += [Link(srcid, tgtid, argname, post)]
             # Then label-equalities without existing variable links
-            self._links += []
+            for lblid in lbl_sets:
+                tgt = self.label_set_head(lblid)
+                for src in lbl_sets[lblid]:
+                    self._links += [Link(src.nodeid, tgt.nodeid, post=Dmrs.EQ)]
         return self._links
     
     def label_equality_sets(self):
-        """Return a list labels to the set of EPs that
+        """Return a list of labels to the set of EPs that
            have that label."""
         lbl_eq = defaultdict(list)
-        for nid, ep in self.eps.items():
-            lbl_eq[ep.label] += ep
+        for ep in self.eps.values():
+            lbl_eq[ep.label.vid] += [ep]
         return lbl_eq
     
+    def label_set_head(self, label_id):
+        """Return the head of a label equality set, which is the first EP
+           with no outgoing args to other elements in the label set."""
+        lblset = self.label_sets.get(label_id, [])
+        for ep in lblset:
+            if not any(self.arg_to_ep(ep.nodeid, a) in lblset
+                       for a in self.args.get(ep.nodeid,[])):
+                return ep
+        return None
+    
+    def find_qeq_target(self, hole):
+        """Find the EP with the label QEQed from the given hole, if any."""
+        hcon = self.hcons_map.get(hole)
+        if hcon is not None:
+            return self.label_set_head(hcon.rhandle.vid)
+        return None
+
     def find_head_ep(self):
         """Return the head EP in the Xmrs. The head is defined as the EP
            with no arguments in its label group, and is not the argument

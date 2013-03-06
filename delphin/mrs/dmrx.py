@@ -145,7 +145,7 @@ def encode(m, strict=False, pretty_print=False):
     attributes = OrderedDict([('cfrom',str(m.cfrom)), ('cto',str(m.cto))])
     if m.surface is not None:    attributes['surface'] = m.surface
     if m.identifier is not None: attributes['ident']   = m.identifier
-    if not _strict:
+    if not _strict and m.index is not None:
         # index corresponds to a variable, so link it to a nodeid
         attributes['index'] = str(m.index.vid)
     # ltop link from 0
@@ -156,9 +156,11 @@ def encode(m, strict=False, pretty_print=False):
     for link in m.links: e.append(encode_link(link))
     if pretty_print in ('LKB', 'lkb', 'Lkb'):
         lkb_pprint_re = re.compile(r'(<dmrs[^>]+>|</node>|</link>|</dmrs>)')
-        string = str(etree.tostring(e, encoding='utf-8'))
+        string = str(etree.tostring(e, encoding='unicode'))
         return lkb_pprint_re.sub(r'\1\n', string)
-    return etree.tostring(e, pretty_print=pretty_print, encoding='utf-8')
+    # pretty_print is only lxml. Look into tostringlist, maybe?
+    #return etree.tostring(e, pretty_print=pretty_print, encoding='unicode')
+    return etree.tostring(e, encoding='unicode')
 
 def encode_node(node):
     attributes = OrderedDict([('nodeid', str(node.nodeid)),
