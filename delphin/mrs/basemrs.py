@@ -36,6 +36,15 @@ class Lnk(object):
         except (AssertionError, TypeError):
             raise ValueError('Given data incompatible with given type: ' +\
                              '{}, {}'.format(data, type))
+    def __str__(self):
+        if self.type == self.CHARSPAN:
+            return '<{}:{}>'.format(self.data[0], self.data[1])
+        elif self.type == self.CHARTSPAN:
+            return '<{}#{}>'.format(self.data[0], self.data[2])
+        elif self.type == self.EDGE:
+            return '<@{}>'.format(self.data)
+        elif self.type == self.TOKENS:
+            return '<{}>'.format(' '.join(self.data))
 
 class LnkObject(object):
     """Lnks other than CHARSPAN are rarely used, so the presence of
@@ -157,8 +166,9 @@ class HandleConstraint(object):
         return self.__repr__()
 
 pred_re = re.compile(r'_?(?P<lemma>.*?)_' # anything until the last 1 or 2 parts
-                     r'((?P<pos>[a-zA-Z])_)?' # pos is always only 1 char
-                     r'((?P<sense>([^_\\]|(?:\\.))+)_)?rel') # no unescaped _s
+                     r'((?P<pos>[a-z])_)?' # pos is always only 1 char
+                     r'((?P<sense>([^_\\]|(?:\\.))+)_)?rel', # no unescaped _s
+                     re.IGNORECASE)
 class Pred(object):
     GPRED    = 'grammarpred' # only a string allowed
     REALPRED = 'realpred'    # may explicitly define lemma, pos, sense
@@ -362,15 +372,21 @@ class Xmrs(LnkObject):
                         srcep = self.eps[srcid]
                         tgtep = self.eps[tgtid]
                         lbl_sets[srcep.label.vid].remove(srcep)
-                        lbl_sets[tgtep.label.vid].remove(tgtep)
+                        #FIXME hack to get it working (if tgtep...)
+                        if tgtep in lbl_sets[tgtep.label.vid]: lbl_sets[tgtep.label.vid].remove(tgtep)
                     self._links += [Link(srcid, tgtid, argname, post)]
             # Then label-equalities without existing variable links
             for lblid in lbl_sets:
                 tgt = self.label_set_head(lblid)
                 for src in lbl_sets[lblid]:
                     self._links += [Link(src.nodeid, tgt.nodeid, post=Dmrs.EQ)]
+            # LTOP link
+            #TODO: should there be only 1 link? Can there be more than 1 head?
+            if self.ltop is not None and self.ltop.vid in self.label_sets:
+                tgt = self.label_set_head(self.ltop.vid)
+                self._links += [Link(0, tgt.nodeid, post=Dmrs.EQ)]
         return self._links
-    
+
     def label_equality_sets(self):
         """Return a list of labels to the set of EPs that
            have that label."""
@@ -378,7 +394,7 @@ class Xmrs(LnkObject):
         for ep in self.eps.values():
             lbl_eq[ep.label.vid] += [ep]
         return lbl_eq
-    
+
     def label_set_head(self, label_id):
         """Return the head of a label equality set, which is the first EP
            with no outgoing args to other elements in the label set."""
@@ -388,7 +404,7 @@ class Xmrs(LnkObject):
                        for a in self.args.get(ep.nodeid,[])):
                 return ep
         return None
-    
+
     def find_qeq_target(self, hole):
         """Find the EP with the label QEQed from the given hole, if any."""
         hcon = self.hcons_map.get(hole)
@@ -409,35 +425,35 @@ class Xmrs(LnkObject):
                    for var in self.args[nodeid].values()
                    if var.vid in self.cv_map):
                 candidates.add(nodeid)
-        print('step 1:', candidates)
+        #print('step 1:', candidates)
         # remove those that are arguments of an EP with a different label
-        print('cvmap:', self.cv_map)
+        #print('cvmap:', self.cv_map)
         arg_eps = lambda ep: (self.cv_map.get(v.vid)
                               for v in self.args.get(ep.nodeid,{}).values())
         for nodeid, ep in self.eps.items():
-            print('  ep:', str(nodeid), str(ep.pred))
+            #print('  ep:', str(nodeid), str(ep.pred))
             if ep.is_quantifier(): continue
             # consider each non-None argument
             for argep in filter(lambda x: x is not None, arg_eps(ep)):
-                print('    argep:', str(argep.nodeid), str(argep.pred))
+                #print('    argep:', str(argep.nodeid), str(argep.pred))
                 if argep.nodeid in candidates and argep.label != ep.label:
-                    print('   dd')
+                    #print('   dd')
                     candidates.remove(argep.nodeid)
-        print('step 2:', candidates)
+        #print('step 2:', candidates)
         # lastly, get rid of those in a HCONS (but consider these for LTOP)
-        print(candidates)
-        print(list(self.eps[c] for c in candidates))
-        print(self.args)
-        print(self.hcons)
+        #print(candidates)
+        #print(list(self.eps[c] for c in candidates))
+        #print(self.args)
+        #print(self.hcons)
         for c in list(candidates):
-            print(c, str(self.eps[c].pred))
+            #print(c, str(self.eps[c].pred))
             if c not in self.args: continue
             if any(hi in self.args[c].values() for hi in self.hcons_map.keys()):
-                print('dd')
+                #print('dd')
                 candidates.remove(c)
         assert(len(candidates) == 1) #TODO: log failure
         return self.eps[candidates.pop()]
-   
+
 class Mrs(Xmrs):
     """Minimal Recursion Semantics class containing a top handle, a bag
        of ElementaryPredications, and a bag of handle constraints."""
@@ -512,13 +528,16 @@ class Mrs(Xmrs):
     def unify_var_props(self, var):
         """Merge var's properties with those already stored, and raise a
            ValueError if there's a conflict. Exact-match is required."""
-        if var.sort and var.sort != self._vars[var.vid].sort:
-            raise ValueError(str.format("Variable {0} has conflicting " +\
-                                        "types: {1}, {2}", var.vid,
-                                        self._vars[var.vid].sort, var.sort))
+        if var is None: return
+        vid = var.vid
+        if self._vars[vid].sort is None:
+            self._vars[vid].sort = var.sort
+        elif var.sort != self._vars[vid].sort:
+            raise ValueError("Variable {0} has conflicting types: {1}, {2}"
+                             .format(vid, self._vars[vid].sort, var.sort))
         for prop in var.properties:
             val = var.properties[prop]
-            props = self._vars[var.vid].properties
+            props = self._vars[vid].properties
             if props.get(prop, val) != val:
                 raise ValueError(
                     str.format("Cannot set {0} property to {1}, as it is " +\

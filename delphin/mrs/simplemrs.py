@@ -8,7 +8,9 @@
 
 from collections import OrderedDict
 import re
-from . import mrs
+from . import (Mrs, Pred, MrsVariable, Lnk, ElementaryPredication,
+               HandleConstraint)
+from .basemrs import sort_vid_split
 from .mrserrors import MrsDecodeError
 
 strict = False
@@ -50,11 +52,11 @@ def load(fh):
 def loads(s):
     return decode(s)
 
-def dump(fh, m):
-    fh.write(dumps(m))
+def dump(fh, m, encoding='unicode', pretty_print=False):
+    fh.write(dumps(m, encoding=encoding, pretty_print=pretty_print))
 
-def dumps(m):
-    return encode(m)
+def dumps(m, encoding='unicode', pretty_print=False):
+    return encode(m, encoding=encoding, pretty_print=pretty_print)
 
 ##############################################################################
 ##############################################################################
@@ -100,7 +102,7 @@ def decode_mrs(tokens):
         rels  = read_rels(tokens)
         hcons = read_hcons(tokens)
         validate_token(tokens.pop(0), _right_bracket)
-        m = mrs.Mrs(ltop, index, rels, hcons)
+        m = Mrs(ltop, index, rels, hcons)
     except IndexError:
         unexpected_termination_error()
     return m
@@ -118,7 +120,7 @@ def read_variable(tokens, sort=None):
        variable. Fail if the sort does not match the expected."""
     # var [ vartype PROP : val ... ]
     var = tokens.pop(0)
-    srt, vid = mrs.sort_vid_split(var)
+    srt, vid = sort_vid_split(var)
     # consider something like not(srt <= sort) in the case of subsumptive sorts
     if sort is not None and srt != sort:
         raise MrsDecodeError('Variable {} has sort "{}", expected "{}"'.format(
@@ -128,7 +130,7 @@ def read_variable(tokens, sort=None):
         pass #TODO log this as an error?
     if sort == 'h' and props:
         pass #TODO log this as an error?
-    return mrs.MrsVariable(sort=srt, vid=vid, properties=props)
+    return MrsVariable(sort=srt, vid=vid, properties=props)
 
 def read_props(tokens):
     """Read and return a dictionary of variable properties."""
@@ -177,7 +179,7 @@ def read_ep(tokens, nodeid):
     # [ pred LBL : lbl ARG : variable-or-handle ... ]
     # or [ pred < span-from : span-to > ...
     validate_token(tokens.pop(0), _left_bracket)
-    pred     = mrs.Pred(tokens.pop(0))
+    pred     = Pred(tokens.pop(0))
     lnk      = read_lnk(tokens)
     _, label = read_argument(tokens, rargname=_lbl, sort='h')
     cv       = None
@@ -185,14 +187,14 @@ def read_ep(tokens, nodeid):
     carg     = None
     while tokens[0] != _right_bracket:
         if is_carg(tokens[0]):
-            carg = read_constant(tokens)[1]
+            carg = read_const(tokens)[1]
         elif tokens[0] == _cv:
             _, cv = read_argument(tokens)
         else:
             args.update([read_argument(tokens)])
     tokens.pop(0) # we know this is a right bracket
-    return mrs.ElementaryPredication(pred, nodeid, label, cv,
-                                     args=args, lnk=lnk, carg=carg)
+    return ElementaryPredication(pred, nodeid, label, cv,
+                                 args=args, lnk=lnk, carg=carg)
 
 def read_lnk(tokens):
     """Read and return a tuple of the pred's lnk type and lnk value,
@@ -207,26 +209,26 @@ def read_lnk(tokens):
         # edge lnk: ['@', EDGE, ...]
         elif tokens[0] == _at:
             tokens.pop(0) # remove the @
-            lnktype = mrs.Lnk.EDGE
+            lnktype = Lnk.EDGE
             lnk = int(tokens.pop(0)) # edge lnks only have one number
         # character span lnk: [FROM, ':', TO, ...]
         elif tokens[1] == _colon:
-            lnktype = mrs.Lnk.CHARSPAN
+            lnktype = Lnk.CHARSPAN
             lnk = (int(tokens.pop(0)), int(tokens.pop(1)))
             tokens.pop(0) # this should be the colon
         # chart vertex range lnk: [FROM, '#', TO, ...]
         elif tokens[1] == _hash:
-            lnktype = mrs.Lnk.CHARTSPAN
+            lnktype = Lnk.CHARTSPAN
             lnk = (int(tokens.pop(0)), int(tokens.pop(1)))
             tokens.pop(0) # this should be the hash
         # tokens lnk: [(TOK,)+ ...]
         else:
-            lnktype = mrs.Lnk.TOKENS
+            lnktype = Lnk.TOKENS
             lnk = []
             while tokens[0] != _right_angle:
                 lnk.append(int(tokens.pop(0)))
         validate_token(tokens.pop(0), _right_angle)
-    return mrs.Lnk(lnk, lnktype)
+    return Lnk(lnk, lnktype)
 
 def read_hcons(tokens):
     # HCONS:< HANDLE (qeq|lheq|outscopes) HANDLE ... >
@@ -238,15 +240,15 @@ def read_hcons(tokens):
         # rels are case-insensitive and the convention is lower-case
         rel = tokens.pop(0).lower()
         if rel == _qeq:
-            rel = mrs.HandleConstraint.QEQ
+            rel = HandleConstraint.QEQ
         elif rel == _lheq:
-            rel = mrs.HandleConstraint.LHEQ
+            rel = HandleConstraint.LHEQ
         elif rel == _outscopes:
-            rel = mrs.HandleConstraint.OUTSCOPES
+            rel = HandleConstraint.OUTSCOPES
         else:
             invalid_token_error(rel, '('+'|'.join(_valid_hcons)+')')
         rh = read_variable(tokens, sort='h')
-        hcons += [mrs.HandleConstraint(lh, rel, rh)]
+        hcons += [HandleConstraint(lh, rel, rh)]
     tokens.pop(0) # we know this is a right angle
     return hcons
 
@@ -261,7 +263,7 @@ def unexpected_termination_error():
 ##############################################################################
 ### Encoding
 
-def encode(m, pretty_print=False):
+def encode(m, encoding='unicode', pretty_print=False):
     """Encode an MRS structure into a SimpleMRS string."""
     # note that listed_vars is modified as a side-effect of the lower
     # functions
@@ -325,15 +327,15 @@ def encode_lnk(lnk):
     s = ""
     if lnk is not None:
         s = _left_angle
-        if lnk.type == mrs.Lnk.CHARSPAN:
+        if lnk.type == Lnk.CHARSPAN:
             cfrom, cto = lnk.data
             s += ''.join([str(cfrom), _colon, str(cto)])
-        elif lnk.type == mrs.Lnk.CHARTSPAN:
+        elif lnk.type == Lnk.CHARTSPAN:
             cfrom, cto = lnk.data
             s += ''.join([str(cfrom), _hash, str(cto)])
-        elif lnk.type == mrs.Lnk.TOKENS:
+        elif lnk.type == Lnk.TOKENS:
             s += ' '.join([str(t) for t in lnk.data])
-        elif lnk.type == mrs.Lnk.EDGE:
+        elif lnk.type == Lnk.EDGE:
             s += ''.join([_at, str(lnk.data)])
         s += _right_angle
     return s
@@ -342,11 +344,11 @@ def encode_hcons(hcons):
     """Encode a Handle Constraint into the SimpleMRS encoding."""
     toks = [_hcons + _colon, _left_angle]
     for hcon in hcons:
-        if hcon.relation == mrs.HandleConstraint.QEQ:
+        if hcon.relation == HandleConstraint.QEQ:
             rel = _qeq
-        elif hcon.relation == mrs.HandleConstraint.LHEQ:
+        elif hcon.relation == HandleConstraint.LHEQ:
             rel = _lheq
-        elif hcon.relation == mrs.HandleConstraint.OUTSCOPES:
+        elif hcon.relation == HandleConstraint.OUTSCOPES:
             rel = _outscopes
         toks += [str(hcon.lhandle), rel, str(hcon.rhandle)]
     toks += [_right_angle]

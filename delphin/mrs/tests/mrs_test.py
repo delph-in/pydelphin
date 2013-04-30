@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-from ..mrs import Lnk, Pred, ElementaryPredication, Mrs
+from .. import Lnk, Pred, ElementaryPredication, Mrs
 import unittest
 
 class TestLnk(unittest.TestCase):

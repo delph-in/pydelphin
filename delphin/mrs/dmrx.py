@@ -11,7 +11,7 @@
 
 from collections import OrderedDict
 import re
-from . import mrs
+from . import Dmrs, Node, Link, Pred, Lnk
 from .mrserrors import MrsDecodeError
 
 # Import LXML if available, otherwise fall back to another etree implementation
@@ -30,11 +30,11 @@ def load(fh):
 def loads(s):
     return decode_string(s)
 
-def dump(fh, m):
-    fh.write(dumps(m))
+def dump(fh, m, encoding='unicode', pretty_print=False):
+    fh.write(dumps(m, encoding=encoding, pretty_print=pretty_print))
 
-def dumps(m):
-    return encode(m)
+def dumps(m, encoding='unicode', pretty_print=False):
+    return encode(m, encoding=encoding, pretty_print=pretty_print)
 
 ##############################################################################
 ##############################################################################
@@ -63,13 +63,13 @@ def decode_dmrs(elem):
     #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
     elem = elem.find('.') # in case elem is an ElementTree rather than Element
-    return mrs.Dmrs(ltop       = elem.get('ltop'),  # not in the DTD; a nodeid
-                    index      = elem.get('index'), # not in the DTD; a nodeid
-                    nodes      = list(map(decode_node, elem.iter('node'))),
-                    links      = list(map(decode_link, elem.iter('link'))),
-                    lnk        = decode_lnk(elem),
-                    surface    = elem.get('surface'),
-                    identifier = elem.get('ident'))
+    return Dmrs(ltop       = elem.get('ltop'),  # not in the DTD; a nodeid
+                index      = elem.get('index'), # not in the DTD; a nodeid
+                nodes      = list(map(decode_node, elem.iter('node'))),
+                links      = list(map(decode_link, elem.iter('link'))),
+                lnk        = decode_lnk(elem),
+                surface    = elem.get('surface'),
+                identifier = elem.get('ident'))
 
 def decode_node(elem):
     #<!ELEMENT node ((realpred|gpred), sortinfo)>
@@ -80,13 +80,13 @@ def decode_node(elem):
     #          surface   CDATA #IMPLIED
     #          base      CDATA #IMPLIED 
     #          carg CDATA #IMPLIED >
-    return mrs.Node(pred       = decode_pred(elem.find('./')),
-                    nodeid     = elem.get('nodeid'),
-                    properties = decode_sortinfo(elem.find('sortinfo')),
-                    lnk        = decode_lnk(elem),
-                    surface    = elem.get('surface'),
-                    base       = elem.get('base'),
-                    carg       = elem.get('carg'))
+    return Node(pred       = decode_pred(elem.find('./')),
+                nodeid     = elem.get('nodeid'),
+                properties = decode_sortinfo(elem.find('sortinfo')),
+                lnk        = decode_lnk(elem),
+                surface    = elem.get('surface'),
+                base       = elem.get('base'),
+                carg       = elem.get('carg'))
 
 def decode_pred(elem):
     #<!ELEMENT realpred EMPTY>
@@ -96,11 +96,11 @@ def decode_pred(elem):
     #          sense CDATA #IMPLIED >
     #<!ELEMENT gpred (#PCDATA)>
     if elem.tag == 'gpred':
-        return mrs.Pred(string=elem.text)
+        return Pred(string=elem.text)
     elif elem.tag == 'realpred':
-        return mrs.Pred(lemma = elem.get('lemma'),
-                        pos   = elem.get('pos'),
-                        sense = elem.get('sense'))
+        return Pred(lemma = elem.get('lemma'),
+                    pos   = elem.get('pos'),
+                    sense = elem.get('sense'))
 
 def decode_sortinfo(elem):
     #<!ELEMENT sortinfo EMPTY>
@@ -126,13 +126,13 @@ def decode_link(elem):
     #          to   CDATA #REQUIRED > 
     #<!ELEMENT rargname (#PCDATA)>
     #<!ELEMENT post (#PCDATA)>
-    return mrs.Link(start   = elem.get('from'),
-                    end     = elem.get('to'),
-                    argname = elem.find('rargname').text,
-                    post    = elem.find('post').text)
+    return Link(start   = elem.get('from'),
+                end     = elem.get('to'),
+                argname = elem.find('rargname').text,
+                post    = elem.find('post').text)
 
 def decode_lnk(elem):
-    return mrs.Lnk((elem.get('cfrom'), elem.get('cto')), mrs.Lnk.CHARSPAN)
+    return Lnk((elem.get('cfrom'), elem.get('cto')), Lnk.CHARSPAN)
 
 ##############################################################################
 ##############################################################################
@@ -140,7 +140,7 @@ def decode_lnk(elem):
 
 _strict = False
 
-def encode(m, strict=False, pretty_print=False):
+def encode(m, strict=False, encoding='unicode', pretty_print=False):
     _strict = strict
     attributes = OrderedDict([('cfrom',str(m.cfrom)), ('cto',str(m.cto))])
     if m.surface is not None:    attributes['surface'] = m.surface
@@ -154,13 +154,14 @@ def encode(m, strict=False, pretty_print=False):
     e = etree.Element('dmrs', attrib=attributes)
     for node in m.nodes: e.append(encode_node(node))
     for link in m.links: e.append(encode_link(link))
-    if pretty_print in ('LKB', 'lkb', 'Lkb'):
+    # for now, pretty_print=True is the same as pretty_print='LKB'
+    if pretty_print in ('LKB', 'lkb', 'Lkb', True):
         lkb_pprint_re = re.compile(r'(<dmrs[^>]+>|</node>|</link>|</dmrs>)')
-        string = str(etree.tostring(e, encoding='unicode'))
+        string = str(etree.tostring(e, encoding=encoding))
         return lkb_pprint_re.sub(r'\1\n', string)
     # pretty_print is only lxml. Look into tostringlist, maybe?
     #return etree.tostring(e, pretty_print=pretty_print, encoding='unicode')
-    return etree.tostring(e, encoding='unicode')
+    return etree.tostring(e, encoding=encoding)
 
 def encode_node(node):
     attributes = OrderedDict([('nodeid', str(node.nodeid)),
@@ -175,10 +176,10 @@ def encode_node(node):
     return e
 
 def encode_pred(pred):
-    if pred.type == mrs.Pred.GPRED:
+    if pred.type == Pred.GPRED:
         e = etree.Element('gpred')
         e.text = pred.string.strip('"\'')
-    elif pred.type in (mrs.Pred.REALPRED, mrs.Pred.SPRED):
+    elif pred.type in (Pred.REALPRED, Pred.SPRED):
         attributes = {'lemma':pred.lemma, 'pos':pred.pos}
         if pred.sense is not None:
             attributes['sense'] = str(pred.sense)
