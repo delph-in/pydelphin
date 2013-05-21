@@ -76,9 +76,9 @@ def decode_node(elem):
     #<!ATTLIST node
     #          nodeid CDATA #REQUIRED
     #          cfrom CDATA #REQUIRED
-    #          cto   CDATA #REQUIRED 
+    #          cto   CDATA #REQUIRED
     #          surface   CDATA #IMPLIED
-    #          base      CDATA #IMPLIED 
+    #          base      CDATA #IMPLIED
     #          carg CDATA #IMPLIED >
     return Node(pred       = decode_pred(elem.find('./')),
                 nodeid     = elem.get('nodeid'),
@@ -112,7 +112,7 @@ def decode_sortinfo(elem):
     #          sf (prop|ques|comm|prop-or-ques|u) #IMPLIED
     #          tense (past|pres|fut|tensed|untensed|u) #IMPLIED
     #          mood (indicative|subjunctive|u) #IMPLIED
-    #          prontype (std_pron|zero_pron|refl|u) #IMPLIED 
+    #          prontype (std_pron|zero_pron|refl|u) #IMPLIED
     #          prog (plus|minus|u) #IMPLIED
     #          perf (plus|minus|u) #IMPLIED
     #          ind  (plus|minus|u) #IMPLIED >
@@ -123,7 +123,7 @@ def decode_link(elem):
     #<!ELEMENT link (rargname, post)>
     #<!ATTLIST link
     #          from CDATA #REQUIRED
-    #          to   CDATA #REQUIRED > 
+    #          to   CDATA #REQUIRED >
     #<!ELEMENT rargname (#PCDATA)>
     #<!ELEMENT post (#PCDATA)>
     return Link(start   = elem.get('from'),
@@ -150,7 +150,7 @@ def encode(m, strict=False, encoding='unicode', pretty_print=False):
         attributes['index'] = str(m.index.vid)
     # ltop link from 0
     #if m.ltop is not None:
-    #    
+    #
     e = etree.Element('dmrs', attrib=attributes)
     for node in m.nodes: e.append(encode_node(node))
     for link in m.links: e.append(encode_link(link))
@@ -180,7 +180,11 @@ def encode_pred(pred):
         e = etree.Element('gpred')
         e.text = pred.string.strip('"\'')
     elif pred.type in (Pred.REALPRED, Pred.SPRED):
-        attributes = {'lemma':pred.lemma, 'pos':pred.pos}
+        attributes = {}
+        if pred.lemma is not None:
+            attributes['lemma'] = pred.lemma
+        if pred.pos is not None:
+            attributes['pos'] = pred.pos
         if pred.sense is not None:
             attributes['sense'] = str(pred.sense)
         e = etree.Element('realpred', attrib=attributes)
@@ -191,14 +195,16 @@ def encode_sortinfo(node):
     # return empty <sortinfo/> for quantifiers
     if node.pred.pos == 'q':
         return etree.Element('sortinfo') # return empty <sortinfo/>
-    attributes['cvarsort'] = node.cv.sort
+    # all nodes should have a cv. The conditional here is for robustness
+    if node.cv is not None:
+        attributes['cvarsort'] = node.cv.sort
     if node.properties:
         if not _strict:
             for k, v in node.properties.items():
                 attributes[k.lower()] = str(v)
         else:
             pass #TODO add strict sortinfo
-    e = etree.Element('sortinfo', attrib=attributes or None)
+    e = etree.Element('sortinfo', attrib=attributes or {})
     return e
 
 def encode_link(link):

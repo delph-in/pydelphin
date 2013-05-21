@@ -31,7 +31,6 @@ _lbl            = r'LBL'
 _cv             = r'ARG0'
 # constant arguments
 _constarg      = r'CARG'
-def is_carg(x)  : return x == _constarg # for convenience
 # possible relations for handle constraints
 _qeq            = r'qeq'
 _lheq           = r'lheq'
@@ -97,7 +96,7 @@ def decode_mrs(tokens):
     # [ LTOP : handle INDEX : variable RELS : rels-list HCONS : hcons-list ]
     try:
         validate_token(tokens.pop(0), _left_bracket)
-        _, ltop  = read_argument(tokens, rargname=_ltop, sort='h')
+        _, ltop  = read_argument(tokens, rargname=_ltop)#, sort='h')
         _, index = read_argument(tokens, rargname=_index)
         rels  = read_rels(tokens)
         hcons = read_hcons(tokens)
@@ -186,7 +185,7 @@ def read_ep(tokens, nodeid):
     args     = OrderedDict()
     carg     = None
     while tokens[0] != _right_bracket:
-        if is_carg(tokens[0]):
+        if tokens[0] == _constarg:
             carg = read_const(tokens)[1]
         elif tokens[0] == _cv:
             _, cv = read_argument(tokens)
@@ -228,7 +227,8 @@ def read_lnk(tokens):
             while tokens[0] != _right_angle:
                 lnk.append(int(tokens.pop(0)))
         validate_token(tokens.pop(0), _right_angle)
-    return Lnk(lnk, lnktype)
+        return Lnk(lnk, lnktype)
+    return None
 
 def read_hcons(tokens):
     # HCONS:< HANDLE (qeq|lheq|outscopes) HANDLE ... >
@@ -312,7 +312,8 @@ def encode_ep(ep, listed_vars):
     toks = [_left_bracket]
     toks += [ep.pred.string + encode_lnk(ep.lnk)]
     toks += [encode_argument(_lbl, ep.label, listed_vars)]
-    toks += [encode_argument(_cv, ep.cv, listed_vars)]
+    if ep.cv is not None:
+        toks += [encode_argument(_cv, ep.cv, listed_vars)]
     for argname, var in ep.args.items():
         toks += [encode_argument(argname, var, listed_vars)]
     # add the constant if it exists

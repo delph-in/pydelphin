@@ -1,4 +1,5 @@
 from collections import defaultdict, OrderedDict
+import logging
 import re
 
 # Contents: (search by key to jump to section)
@@ -79,25 +80,25 @@ class Node(LnkObject):
         self.base       = base      # here for compatibility with the DTD
         self.carg       = carg
 
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return 'Node({}[{}])'.format(self.nodeid, self.pred)
+
 class ElementaryPredication(Node):
     """An elementary predication (EP) is an extension of a Node that
        requires a characteristic variable (cv) and label. Arguments are
        optional, so this class can be used for EPs in both MRS and RMRS."""
     def __init__(self, pred, nodeid, label, cv, args=None,
                  lnk=None, surface=None, base=None, carg=None):
-        Node.__init__(self, pred, nodeid, properties=cv.properties,
+        Node.__init__(self, pred, nodeid,
+                      properties=cv.properties if cv is not None else None,
                       lnk=lnk, surface=surface, base=base, carg=carg)
         self.label  = label
         self.cv     = cv    # characteristic var (bound var for quantifiers)
         self.args   = args if args is not None else OrderedDict()
-        self.resolve()
-    
-    def resolve(self):
-        """Resolve the data in case the user created an empty EP and
-           filled in the values later."""
-        #TODO: Consider removing this and making EPs immutable
-        self.properties = self.cv.properties # the cv may have changed
-        
+
     def __len__(self):
         """Return the length of the EP, which is the number of args."""
         return len(self.args)
@@ -108,11 +109,11 @@ class ElementaryPredication(Node):
 
     def __str__(self):
         return self.__repr__()
-    
+
     def is_quantifier(self):
         return self.pred.pos == 'q'
 
-    
+
 class MrsVariable(object):
     """A variable has a variable type and properties."""
 
@@ -154,20 +155,21 @@ class HandleConstraint(object):
         return self.lhandle == other.lhandle and\
                self.relation == other.relation and\
                self.rhandle == other.rhandle
-    
+
     def __hash__(self):
         return hash(repr(self))
-    
+
     def __repr__(self):
         return 'HandleConstraint({})'.format(
                ' '.join([str(self.lhandle), self.relation, str(self.rhandle)]))
-    
+
     def __str__(self):
         return self.__repr__()
 
-pred_re = re.compile(r'_?(?P<lemma>.*?)_' # anything until the last 1 or 2 parts
+pred_re = re.compile(r'_?(?P<lemma>.*?)_' # match until last 1 or 2 parts
                      r'((?P<pos>[a-z])_)?' # pos is always only 1 char
-                     r'((?P<sense>([^_\\]|(?:\\.))+)_)?rel', # no unescaped _s
+                     r'((?P<sense>([^_\\]|(?:\\.))+)_)?' # no unescaped _s
+                     r'(?P<end>rel(ation)?)', # NB only _rel is valid
                      re.IGNORECASE)
 class Pred(object):
     GPRED    = 'grammarpred' # only a string allowed
@@ -175,57 +177,54 @@ class Pred(object):
     SPRED    = 'stringpred'  # string-form of realpred
 
     def __init__(self, string=None, lemma=None, pos=None, sense=None):
+        """Extract the lemma, pos, and sense (if applicable) from a pred
+           string, if given, or construct a pred string from those
+           components, if they are given. Treat malformed pred strings
+           as simple preds without extracting the components."""
+        # GPREDs and SPREDs are given by strings (with or without quotes).
         # SPREDs have an internal structure (defined here:
         # http://moin.delph-in.net/RmrsPos), but basically:
         #   _lemma_pos(_sense)?_rel
-        # Note that sense is optional, but the initial underscore is meaningful
-        self.string = string # required for GPRED or SPRED
-        # If a string is given, lemma, pos, and sense will be overwritten
-        self.lemma = lemma
-        self.pos = pos
-        # str(sense) in case an int is given
-        self.sense = str(sense) if sense is not None else None
-        # The type is easily inferable
-        self.type = None
-        self.resolve()
+        # Note that sense is optional. The initial underscore is meaningful.
+        if string is not None:
+            self.string = string
+            string = string.strip('"\'')
+            self.type = Pred.SPRED if string.startswith('_') else Pred.GPRED
+            self.lemma, self.pos, self.sense, self.end =\
+                    self.decompose_pred_string(string.strip('"\''))
+        # REALPREDs are specified by components, not strings
+        else:
+            self.type = None
+            self.lemma = lemma
+            self.pos = pos
+            # str(sense) in case an int is given
+            self.sense = str(sense) if sense is not None else None
+            # end defaults to (and really should always be) _rel
+            self.end = 'rel'
+            string_tokens = filter(bool, [lemma, pos, self.sense, self.end])
+            self.string = '_'.join([''] + string_tokens)
 
     def __eq__(self, other):
         if isinstance(other, Pred):
             other = other.string
         return self.string.strip('"\'') == other.strip('"\'')
 
-    def __str__(self):
+    def __repr__(self):
         return self.string
 
-    def resolve(self):
-        predstr = None if self.string is None else self.string.strip('"\'')
-        if predstr is not None:
-            if not predstr.lower().endswith('_rel'):
-                raise ValueError('Predicate strings must end with "_rel"')
-            self.lemma = self.pos = self.sense = None
-            match = pred_re.search(predstr)
-            if not predstr.startswith('_'):
-                self.type = Pred.GPRED
-            elif match is None:
-                raise ValueError('Unexpected predicate string: ' + predstr)
-            else:
-                self.type = Pred.SPRED # String-Preds require a match
-            # _lemma_pos(_sense)?_rel
-            if match.group('lemma') is not None:
-                self.lemma = match.group('lemma')
-            if match.group('pos') is not None:
-                self.pos = match.group('pos')
-            if match.group('sense') is not None:
-                self.sense = match.group('sense')
-        elif self.lemma is not None or self.pos is not None:
-            self.type = Pred.REALPRED
-            if None in (self.lemma, self.pos):
-                raise TypeError('If lemma or pos is specified, both must be.')
-            toks = ['', self.lemma, self.pos]
-            if self.sense is not None:
-                toks += [self.sense]
-            self.string = '_'.join(toks + ['rel'])
-    
+    def decompose_pred_string(self, predstr):
+        """Extract the components from a pred string and log errors
+           for any malformedness."""
+        if not predstr.lower().endswith('_rel'):
+            logging.warn('Predicate does not end in "_rel": {}'.format(predstr))
+        match = pred_re.search(predstr)
+        if match is None:
+            logging.warn('Unexpected predicate string: {}'.format(predstr))
+            return (predstr, None, None, None)
+        # _lemma_pos(_sense)?_end
+        return (match.group('lemma'), match.group('pos'),
+                match.group('sense'), match.group('end'))
+
 class Link(object):
     """DMRS-style Links are a way of representing arguments without
        variables. A Link encodes a start and end node, the argument
@@ -235,6 +234,10 @@ class Link(object):
         self.end      = end
         self.argname = argname
         self.post     = post
+
+    def __repr__(self):
+        return 'Link({} -> {}, {}/{})'.format(self.start, self.end,
+                                              self.argname, self.post)
 
 ##############################################################################
 ##############################################################################
@@ -264,14 +267,14 @@ def get_dmrs_post(xmrs, nid1, argname, nid2):
 class VarFactory(object):
     """Simple class to produce MrsVariables, incrementing the vid for
        each one."""
-       
+
     def __init__(self, starting_vid=0):
         self.vid = starting_vid
-        
+
     def new(self, sort, properties=None):
         self.vid += 1
         return MrsVariable(sort, self.vid-1, properties=properties)
-        
+
 ##############################################################################
 ##############################################################################
 ### MRS object classes (A1)
@@ -303,11 +306,11 @@ class Xmrs(LnkObject):
         self.surface= surface   # The surface string
         self.identifier = identifier # Associates an utterance with the RMRS
         Xmrs.resolve(self) # Call explicitly so the local resolve() runs
-    
+
     def resolve(self):
         # one-to-one characteristic-variable to ep map
         self.cv_map = dict((ep.cv.vid, ep) for ep in self.eps.values()
-                           if not ep.is_quantifier())
+                           if not ep.is_quantifier() and ep.cv is not None)
         # one-to-many label-equality-graph
         self.label_sets = self.label_equality_sets()
         self.hcons_map = dict((h.lhandle, h) for h in self.hcons)
@@ -315,10 +318,13 @@ class Xmrs(LnkObject):
         self.qeq_graph = defaultdict(list)
         for hc in self.hcons:
             if hc.relation != HandleConstraint.QEQ: continue
-            #self.qeq_graph[hc.lhandle] = 
+            if hc.rhandle.vid not in self.label_sets:
+                logging.warn('QEQ lo handle is not an EP\'s LBL: {}'
+                             .format(hc.rhandle))
+            #self.qeq_graph[hc.lhandle] =
         #if self.index is None:
         #    self.index = self.find_head_ep().cv
-            
+
     def arg_to_ep(self, nodeid, argname):
         """Return the EP, if any, linked by the given argument for the
            given EP."""
@@ -364,16 +370,26 @@ class Xmrs(LnkObject):
                     elif tgtvid in self.label_sets:
                         tgtid = self.label_set_head(tgtvid).nodeid
                     elif tgtvar in self.hcons_map:
-                        tgtid = self.find_qeq_target(tgtvar).nodeid
+                        qeqtgt = self.qeq_target(tgtvar)
+                        if qeqtgt is not None:
+                            tgtid = self.qeq_target(tgtvar).nodeid
+                        else:
+                            logging.warn('QEQ lo handle is not instantiated '
+                                         'in the MRS: {}'.format(
+                                             self.hcons_map[tgtvar].lhandle))
+                            continue
                     else:
                         continue #TODO: log this or something
                     post = get_dmrs_post(self, srcid, argname, tgtid)
                     if post == Dmrs.EQ:
                         srcep = self.eps[srcid]
                         tgtep = self.eps[tgtid]
-                        lbl_sets[srcep.label.vid].remove(srcep)
-                        #FIXME hack to get it working (if tgtep...)
-                        if tgtep in lbl_sets[tgtep.label.vid]: lbl_sets[tgtep.label.vid].remove(tgtep)
+                        # first check for membership, since it can happen more
+                        # than once.
+                        if srcep in lbl_sets[srcep.label.vid]:
+                            lbl_sets[srcep.label.vid].remove(srcep)
+                        if tgtep in lbl_sets[tgtep.label.vid]:
+                            lbl_sets[tgtep.label.vid].remove(tgtep)
                     self._links += [Link(srcid, tgtid, argname, post)]
             # Then label-equalities without existing variable links
             for lblid in lbl_sets:
@@ -405,7 +421,7 @@ class Xmrs(LnkObject):
                 return ep
         return None
 
-    def find_qeq_target(self, hole):
+    def qeq_target(self, hole):
         """Find the EP with the label QEQed from the given hole, if any."""
         hcon = self.hcons_map.get(hole)
         if hcon is not None:
@@ -521,7 +537,11 @@ class Mrs(Xmrs):
             self._vars[self.index.vid] = self.index
         for ep in self.rels:
             self._vars[ep.label.vid] = ep.label
-            ep.cv = unify_var(ep.cv, ep)
+            if ep.cv is not None:
+                ep.cv = unify_var(ep.cv, ep)
+            else:
+                logging.warn('{} does not have a characteristic variable.'
+                             .format(str(ep)))
             for (argname, var) in ep.args.items():
                 ep.args[argname] = unify_var(var, ep)
 
@@ -579,7 +599,7 @@ class Dmrs(Xmrs):
     NEQ      = 'NEQ'
     H        = 'H'
     CVARSORT = 'cvarsort'
-    
+
     def __init__(self, ltop=None, index=None,
                  nodes=None, links=None,
                  lnk=None, surface=None, identifier=None):

@@ -163,7 +163,6 @@ def decode_hcons(elem):
                             decode_var(lo) if lo.tag == 'var' else
                             decode_label(lo))
 
-
 def decode_lnk(cfrom, cto):
     if cfrom == cto == None:
         return None
@@ -263,7 +262,7 @@ def encode_arg(key, value):
     fvpair.append(rargname)
     fvpair.append(value)
     return fvpair
-  
+
 def encode_constant(value):
     const = etree.Element('constant')
     const.text = value
