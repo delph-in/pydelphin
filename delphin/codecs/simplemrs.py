@@ -8,10 +8,10 @@
 
 from collections import OrderedDict
 import re
-from . import (Mrs, Pred, MrsVariable, Lnk, ElementaryPredication,
-               HandleConstraint)
-from .basemrs import sort_vid_split
-from .mrserrors import MrsDecodeError
+from delphin.mrs import (Mrs, ElementaryPredication, Pred,
+                         MrsVariable, Lnk, HandleConstraint)
+from delphin.mrs.var import sort_vid_split
+from delphin._exceptions import MrsDecodeError
 
 strict = False
 
@@ -30,7 +30,7 @@ _lbl            = r'LBL'
 # the characteristic variable is assumed to be ARG0
 _cv             = r'ARG0'
 # constant arguments
-_constarg      = r'CARG'
+_constarg       = r'CARG'
 # possible relations for handle constraints
 _qeq            = r'qeq'
 _lheq           = r'lheq'
@@ -52,7 +52,7 @@ def loads(s):
     return decode(s)
 
 def dump(fh, m, encoding='unicode', pretty_print=False):
-    fh.write(dumps(m, encoding=encoding, pretty_print=pretty_print))
+    print(dumps(m, encoding=encoding, pretty_print=pretty_print), file=fh)
 
 def dumps(m, encoding='unicode', pretty_print=False):
     return encode(m, encoding=encoding, pretty_print=pretty_print)

@@ -2,7 +2,7 @@
 
 import sys
 import argparse
-from delphin.mrs import simplemrs, mrx, dmrx
+from delphin.codecs import simplemrs, mrx, dmrx
 
 mrsformats={'simplemrs':simplemrs, 'mrx':mrx, 'dmrx':dmrx}
 

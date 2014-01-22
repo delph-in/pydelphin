@@ -8,9 +8,9 @@
 #          of MRX instances, and they read and write incrementally.
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
-from . import (Mrs, MrsVariable, Pred, Lnk, ElementaryPredication,
-               HandleConstraint)
-from .mrserrors import MrsDecodeError
+from delphin.mrs import (Mrs, ElementaryPredication, Pred,
+                         MrsVariable, Lnk, HandleConstraint)
+from delphin._exceptions import MrsDecodeError
 from collections import OrderedDict
 
 # Import LXML if available, otherwise fall back to another etree implementation
@@ -30,7 +30,7 @@ def loads(s):
     return decode_string(s)
 
 def dump(fh, m, encoding='unicode', pretty_print=False):
-    fh.write(dumps(m, encoding=encoding, pretty_print=pretty_print))
+    print(dumps(m, encoding=encoding, pretty_print=pretty_print), file=fh)
 
 def dumps(m, encoding='unicode', pretty_print=False):
     return encode(m, encoding=encoding, pretty_print=pretty_print)

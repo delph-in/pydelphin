@@ -3,7 +3,7 @@
 # Summary: This module implements serialization and deserialization of the XML
 #          XML encoding of Distributed Minimal Recusion Semantics (DMRS). It
 #          provides standard Pickle API calls of load, loads, dump, and dumps
-#          for serializing and deserializing single DMRX instances.  Further,
+#          for serializing and deserializing single DMRX instances. Further,
 #          encode_list and decode_list are provided for lists of DMRX
 #          instances, and they read and write incrementally.
 #
@@ -11,8 +11,8 @@
 
 from collections import OrderedDict
 import re
-from . import Dmrs, Node, Link, Pred, Lnk
-from .mrserrors import MrsDecodeError
+from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
+from delphin._exceptions import MrsDecodeError
 
 # Import LXML if available, otherwise fall back to another etree implementation
 try:
@@ -31,7 +31,7 @@ def loads(s):
     return decode_string(s)
 
 def dump(fh, m, encoding='unicode', pretty_print=False):
-    fh.write(dumps(m, encoding=encoding, pretty_print=pretty_print))
+    print(dumps(m, encoding=encoding, pretty_print=pretty_print), file=fh)
 
 def dumps(m, encoding='unicode', pretty_print=False):
     return encode(m, encoding=encoding, pretty_print=pretty_print)
@@ -63,7 +63,7 @@ def decode_dmrs(elem):
     #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
     elem = elem.find('.') # in case elem is an ElementTree rather than Element
-    return Dmrs(ltop       = elem.get('ltop'),  # not in the DTD; a nodeid
+    return Dmrs(ltop       = elem.get('ltop'),
                 index      = elem.get('index'), # not in the DTD; a nodeid
                 nodes      = list(map(decode_node, elem.iter('node'))),
                 links      = list(map(decode_link, elem.iter('link'))),

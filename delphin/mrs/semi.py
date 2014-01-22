@@ -15,7 +15,7 @@ class Vpm(object):
      #      mapping? It would make things cleaner, but consider the
      #      computational efficiency costs
 
-     def __init__(self):
+    def __init__(self):
 
         # note, we have to iterate over all mappings in order, so consider
         # using a list instead of, e.g., an OrderedDict
@@ -25,8 +25,9 @@ class Vpm(object):
         self._mappings = []
 
     def add_mapping(self, left, right):
+        pass
 
-    def map_properties(self, properties, reverse=False)
+    def map_properties(self, properties, reverse=False):
         """
         Return a dictionary of properties and their values after the
         applicable VPM rules have applied.
@@ -58,20 +59,21 @@ class Vpm(object):
         the mapping specifies * and the property is non-null
         TODO: what about conditions of the variable, e.g. [e]
         """
-        apply_op = lambda x, y: x == y if
-        #check_op = lambda op, vm: properties.
-        return all(check_op(properties[p], op, v)
-                   for (p, v) in zip(to(
-        match = (zip(propmap[to_idx], valmap[to_idx])
-                 for valmap in filter(op_match, valmaplist)
-                 if match(properties, valmap[1], valmap[from_idx])).next(
-        match = []
-        for valmap in filter(op_match, valmaplist):
+        pass
+        #apply_op = lambda x, y: x == y if
+        ##check_op = lambda op, vm: properties.
+        #return all(check_op(properties[p], op, v)
+        #           for (p, v) in zip(to(
+        #match = (zip(propmap[to_idx], valmap[to_idx])
+        #         for valmap in filter(op_match, valmaplist)
+        #         if match(properties, valmap[1], valmap[from_idx])).next(
+        #match = []
+        #for valmap in filter(op_match, valmaplist):
 
-            for (prop, val) in zip(propmap[from_idx], valmap[from_idx]):
-                if properties[prop] == val or\
-                   val == '*' and properties.get(prop) is not None or\
-                   val == '!' and properties.get(prop) is None:
+        #    for (prop, val) in zip(propmap[from_idx], valmap[from_idx]):
+        #        if properties[prop] == val or\
+        #           val == '*' and properties.get(prop) is not None or\
+        #           val == '!' and properties.get(prop) is None:
 
-            # break after finding first
-        return match
+        #    # break after finding first
+        #return match
