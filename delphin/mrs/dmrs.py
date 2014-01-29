@@ -2,7 +2,7 @@ from .var import VarGenerator
 from .ep import ElementaryPredication
 from .hcons import qeq
 from .xmrs import Xmrs
-from .config import (HANDLESORT, CVARSORT, LTOP_NODEID
+from .config import (HANDLESORT, CVARSORT, LTOP_NODEID,
                      EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST)
 
 def get_dmrs_post(xmrs, nid1, argname, nid2):
