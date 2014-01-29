@@ -11,7 +11,7 @@
 from delphin.mrs import (Mrs, ElementaryPredication, Pred,
                          MrsVariable, Lnk, HandleConstraint)
 from delphin._exceptions import MrsDecodeError
-from delphin.mrs.config import (CHARSPAN, HANDLESORT, FIRST_NODEID,
+from delphin.mrs.config import (HANDLESORT, FIRST_NODEID,
                                 GRAMMARPRED, STRINGPRED, REALPRED,
                                 CVARG, CONSTARG)
 from collections import OrderedDict
@@ -167,17 +167,14 @@ def decode_lnk(cfrom, cto):
     elif None in (cfrom, cto):
         raise ValueError('Both cfrom and cto, or neither, must be specified.')
     else:
-        return Lnk((int(cfrom), int(cto)), CHARSPAN)
+        return Lnk.charspan(cfrom, cto)
 
 ##############################################################################
 ##############################################################################
 ### Encoding
 
 def encode(m, encoding='unicode', pretty_print=False):
-    attributes = {}
-    if m.lnk is not None and m.lnk.type == CHARSPAN:
-        attributes['cfrom'] = str(m.lnk.data[0])
-        attributes['cto'] = str(m.lnk.data[1])
+    attributes = {'cfrom':str(m.cfrom), 'cto':str(m.cto)}
     if m.surface is not None:
         attributes['surface'] = m.surface
     if m.identifier is not None:
@@ -219,10 +216,7 @@ def encode_extrapair(key, value):
     return extrapair
 
 def encode_ep(ep, listed_vars):
-    attributes = {}
-    if ep.lnk is not None and ep.lnk.type == CHARSPAN:
-        attributes['cfrom'] = str(ep.lnk.data[0])
-        attributes['cto'] = str(ep.lnk.data[1])
+    attributes = {'cfrom':str(ep.cfrom), 'cto':str(ep.cto)}
     if ep.surface is not None:
         attributes['surface'] = ep.surface
     if ep.base is not None:

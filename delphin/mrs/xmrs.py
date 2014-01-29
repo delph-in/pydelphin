@@ -1,5 +1,5 @@
 from collections import (OrderedDict, defaultdict)
-from .lnk import LnkObject
+from .lnk import LnkMixin
 from .link import Link
 from .hcons import HandleConstraint
 from .config import (QEQ, EQ_POST)
@@ -7,7 +7,7 @@ from .config import (QEQ, EQ_POST)
 # Subclasses of Xmrs may be used for decoding.
 # When encoding, only use members and methods defined in Xmrs (though
 # they may be redefined in subclasses)
-class Xmrs(LnkObject):
+class Xmrs(LnkMixin):
     """Basic class for Mrs, Rmrs, and Dmrs objects."""
     def __init__(self, ltop=None, index=None, # top-level handles/variables
                  args=None,  # arguments

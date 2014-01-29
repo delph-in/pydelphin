@@ -10,21 +10,24 @@ class Lnk(object):
         if type not in (CHARSPAN, CHARTSPAN, TOKENS, EDGE):
             raise ValueError('Invalid lnk type: {}'.format(type))
         self.type = type
-        # simple type checking
-        try:
-            if type == CHARSPAN or type == CHARTSPAN:
-                assert(len(data) == 2)
-                self.data = (int(data[0]), int(data[1]))
-            elif type == TOKENS:
-                assert(len(data) > 0)
-                self.data = tuple(int(t) for t in data)
-            elif type == EDGE:
-                self.data = int(data)
-            else:
-                raise ValueError('Invalid lnk type: {}'.format(type))
-        except (AssertionError, TypeError):
-            raise ValueError('Given data incompatible with given type: ' +\
-                             '{}, {}'.format(data, type))
+        self.data = data
+
+    @classmethod
+    def charspan(cls, start, end):
+        return cls((int(start), int(end)), CHARSPAN)
+
+    @classmethod
+    def chartspan(cls, start, end):
+        return cls((int(start), int(end)), CHARTSPAN)
+
+    @classmethod
+    def tokens(cls, tokens):
+        return cls(tuple(map(int, tokens)), TOKENS)
+
+    @classmethod
+    def edge(cls, edge):
+        return cls(int(edge), EDGE)
+
     def __str__(self):
         if self.type == CHARSPAN:
             return '<{}:{}>'.format(self.data[0], self.data[1])
@@ -35,11 +38,12 @@ class Lnk(object):
         elif self.type == TOKENS:
             return '<{}>'.format(' '.join(self.data))
 
-class LnkObject(object):
-    """Lnks other than CHARSPAN are rarely used, so the presence of
-       cfrom and cto are often assumed. In the case that they are
-       undefined, this class (and those that inherit it) gives default
-       values (-1)."""
+class LnkMixin(object):
+    """
+    Lnks other than CHARSPAN are rarely used, so the presence of cfrom
+    and cto are often assumed. In the case that they are undefined,
+    this class (and those that inherit it) gives default values (-1).
+    """
     @property
     def cfrom(self):
         if self.lnk is not None and self.lnk.type == CHARSPAN:

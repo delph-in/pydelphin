@@ -242,27 +242,23 @@ def read_lnk(tokens):
         # edge lnk: ['@', EDGE, ...]
         elif tokens[0] == _at:
             tokens.pop(0) # remove the @
-            lnktype = EDGE
-            lnk = int(tokens.pop(0)) # edge lnks only have one number
+            lnk = Lnk.edge(tokens.pop(0)) # edge lnks only have one number
         # character span lnk: [FROM, ':', TO, ...]
         elif tokens[1] == _colon:
-            lnktype = CHARSPAN
-            lnk = (int(tokens.pop(0)), int(tokens.pop(1)))
+            lnk = Lnk.charspan(tokens.pop(0), tokens.pop(1))
             tokens.pop(0) # this should be the colon
         # chart vertex range lnk: [FROM, '#', TO, ...]
         elif tokens[1] == _hash:
-            lnktype = CHARTSPAN
-            lnk = (int(tokens.pop(0)), int(tokens.pop(1)))
+            lnk = Lnk.chartspan(tokens.pop(0), tokens.pop(1))
             tokens.pop(0) # this should be the hash
         # tokens lnk: [(TOK,)+ ...]
         else:
-            lnktype = TOKENS
-            lnk = []
+            lnkdata = []
             while tokens[0] != _right_angle:
-                lnk.append(int(tokens.pop(0)))
+                lnkdata.append(int(tokens.pop(0)))
+            lnk = Lnk.tokens(lnkdata)
         validate_token(tokens.pop(0), _right_angle)
-        return Lnk(lnk, lnktype)
-    return None
+    return lnk
 
 def read_hcons(tokens):
     # HCONS:< HANDLE (qeq|lheq|outscopes) HANDLE ... >

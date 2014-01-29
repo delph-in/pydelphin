@@ -1,8 +1,8 @@
 from collections import OrderedDict
-from .lnk import LnkObject
+from .lnk import LnkMixin
 from .config import CVARSORT
 
-class Node(LnkObject):
+class Node(LnkMixin):
     """The base class for units of MRSs containing predicates and their
        properties."""
     def __init__(self, pred, nodeid,

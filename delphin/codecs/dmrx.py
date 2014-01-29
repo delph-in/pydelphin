@@ -12,7 +12,7 @@
 from collections import OrderedDict
 import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
-from delphin.mrs.config import (CHARSPAN, GRAMMARPRED, STRINGPRED, REALPRED)
+from delphin.mrs.config import (GRAMMARPRED, STRINGPRED, REALPRED)
 from delphin._exceptions import MrsDecodeError
 
 # Import LXML if available, otherwise fall back to another etree implementation
@@ -133,7 +133,7 @@ def decode_link(elem):
                 post    = elem.find('post').text)
 
 def decode_lnk(elem):
-    return Lnk((elem.get('cfrom'), elem.get('cto')), CHARSPAN)
+    return Lnk.charspan(elem.get('cfrom'), elem.get('cto'))
 
 ##############################################################################
 ##############################################################################
