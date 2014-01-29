@@ -1,7 +1,9 @@
+import logging
 from collections import defaultdict
 from .hook import Hook
 from .var import MrsVariable
 from .xmrs import Xmrs
+from .config import (FIRST_NODEID)
 
 class Mrs(Xmrs):
     """Minimal Recursion Semantics class containing a top handle, a bag
@@ -13,9 +15,10 @@ class Mrs(Xmrs):
     def __init__(self, ltop=None, index=None,
                  rels=None, hcons=None, icons=None,
                  lnk=None, surface=None, identifier=None):
-        # roles are embedded in EPs for MRS
-        args = [(ep.nodeid, arg) for ep in rels for arg in ep.args.items()]
         hook = Hook(ltop=ltop, index=index)
+        for i, ep in enumerate(rels):
+            ep.nodeid = FIRST_NODEID + i
+        args = [(ep.nodeid, arg) for ep in rels for arg in ep.args]
         Xmrs.__init__(self, hook, args=args, eps=rels,
                       hcons=hcons, icons=icons,
                       lnk=lnk, surface=surface, identifier=identifier)
@@ -71,13 +74,12 @@ class Mrs(Xmrs):
             self._vars[self.index.vid] = self.index
         for ep in self.rels:
             self._vars[ep.label.vid] = ep.label
-            if ep.cv is not None:
-                ep.cv = unify_var(ep.cv, ep)
-            else:
+            if ep.cv is None:
                 logging.warn('{} does not have a characteristic variable.'
                              .format(str(ep)))
-            for (argname, var) in ep.args.items():
-                ep.args[argname] = unify_var(var, ep)
+            #    ep.cv = unify_var(ep.cv, ep)
+            for (argname, var) in ep.args:
+                ep.argdict[argname] = unify_var(var, ep)
 
     def unify_var_props(self, var):
         """Merge var's properties with those already stored, and raise a
@@ -113,7 +115,7 @@ class Mrs(Xmrs):
         self._role_map[self.ltop.vid].add(Mrs.TOP_HANDLE)
         self._role_map[self.index.vid].add(Mrs.MAIN_EVENT_VAR)
         for ep in self.rels:
-            for arg, v in ep.args.items():
+            for arg, v in ep.args:
                 self._role_map[v.vid].add((str(ep.pred), arg))
 
     #def ep_conjunctions(self):

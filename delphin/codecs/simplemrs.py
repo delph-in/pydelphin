@@ -39,6 +39,10 @@ _valid_hcons    = [_qeq, _lheq, _outscopes]
 # possible relations for individual constraints
 #_valid_icons    = [r'focus', r'topic']
 
+# it's not ideal to have this here, but anyway make sure it is reset
+# for each decoding. It's used to unify variables
+_vars = {}
+
 ##############################################################################
 ##############################################################################
 ### Pickle-API methods
@@ -67,7 +71,7 @@ def loads(s):
     """
     return deserialize(s)
 
-def dump(fh, m, encoding='utf-8', pretty_print=False):
+def dump(fh, m, pretty_print=False):
     """
     Serialize an Xmrs object to a SimpleMRS representation and write to a file
 
@@ -77,7 +81,7 @@ def dump(fh, m, encoding='utf-8', pretty_print=False):
         encoding: the character encoding for the file
         pretty_print: if true, the output is formatted to be easier to read
     """
-    print(dumps(m, pretty_print=pretty_print).encode(encoding), file=fh)
+    print(dumps(m, pretty_print=pretty_print), file=fh)
 
 def dumps(m, pretty_print=False):
     """
@@ -117,6 +121,9 @@ def validate_tokens(tokens, expected):
     for exp_tok in expected:
         validate_token(tokens.pop(0), exp_tok)
 
+def is_variable(token):
+    return sort_vid_re.match(token) is not None
+
 def invalid_token_error(token, expected):
     raise MrsDecodeError('Invalid token: "{}"\tExpected: "{}"'
                          .format(token, expected))
@@ -127,11 +134,15 @@ def deserialize(string):
 def read_mrs(tokens):
     """Decode a sequence of Simple-MRS tokens. Assume LTOP, INDEX, RELS,
        and HCONS occur in that order."""
+    global _vars
+    _vars = {}
     # [ LTOP : handle INDEX : variable RELS : rels-list HCONS : hcons-list ]
     try:
         validate_token(tokens.pop(0), _left_bracket)
-        _, ltop  = read_argument(tokens, rargname=_ltop)#, sort='h')
-        _, index = read_argument(tokens, rargname=_index)
+        if tokens[0] == _ltop:
+            _, ltop  = read_featval(tokens, feat=_ltop)#, sort='h')
+        if tokens[0] == _index:
+            _, index = read_featval(tokens, feat=_index)
         rels  = read_rels(tokens)
         hcons = read_hcons(tokens)
         validate_token(tokens.pop(0), _right_bracket)
@@ -140,13 +151,18 @@ def read_mrs(tokens):
         unexpected_termination_error()
     return m
 
-def read_argument(tokens, rargname=None, sort=None):
-    # RARGNAME : var-or-handle
+def read_featval(tokens, feat=None, sort=None):
+    # FEAT : (var-or-handle|const)
     name = tokens.pop(0)
-    if rargname is not None:
-        validate_token(name, rargname)
+    if feat is not None:
+        validate_token(name, feat)
     validate_token(tokens.pop(0), _colon)
-    return name, read_variable(tokens, sort=sort)
+    # if it's not a variable, assume it's a constant
+    if is_variable(tokens[0]):
+        value = read_variable(tokens, sort=sort)
+    else:
+        value = tokens.pop(0)
+    return name, value
 
 def read_variable(tokens, sort=None):
     """Read and return the MrsVariable object for the value of the
@@ -163,13 +179,20 @@ def read_variable(tokens, sort=None):
         pass #TODO log this as an error?
     if sort == 'h' and props:
         pass #TODO log this as an error?
-    return MrsVariable(sort=srt, vid=vid, properties=props)
+    if vid in _vars:
+        if srt != _vars[vid].sort:
+            raise MrsDecodeError('Variable {} has a conflicting sort with {}'
+                                 .format(var, str(_vars[vid])))
+        _vars[vid].properties.update(props)
+    else:
+        _vars[vid] = MrsVariable(vid=vid, sort=srt, properties=props)
+    return _vars[vid]
 
 def read_props(tokens):
     """Read and return a dictionary of variable properties."""
     # [ vartype PROP1 : val1 PROP2 : val2 ... ]
-    props = {}
-    if tokens[0] != _left_bracket:  # there might not be any properties
+    props = OrderedDict()
+    if tokens and tokens[0] != _left_bracket:
         return None, props
     tokens.pop(0) # get rid of bracket (we just checked it)
     vartype = tokens.pop(0)
@@ -184,50 +207,29 @@ def read_props(tokens):
     tokens.pop(0) # we know this is a right bracket
     return vartype, props
 
-def read_const(tokens):
-    """Read and return a constant argument."""
-    # CARG: constant
-    carg = tokens.pop(0)
-    validate_token(carg, CONSTARG)
-    validate_token(tokens.pop(0), _colon)
-    return carg, tokens.pop(0)
-
 def read_rels(tokens):
     """Read and return a RELS set of ElementaryPredications."""
     # RELS: < ep* >
     rels = []
     validate_tokens(tokens, [_rels, _colon, _left_angle])
-    # SimpleMRS does not encode a nodeid, and the label cannot be used because
-    # it may be shared (e.g. adjectives and the noun they modify), as can ARG0
-    # (quantifiers and the quantifiees), so make one up
-    nodeid = 10001
     while tokens[0] != _right_angle:
-        rels += [read_ep(tokens, nodeid)]
-        nodeid += 1
+        rels += [read_ep(tokens)]
     tokens.pop(0) # we know this is a right angle
     return rels
 
-def read_ep(tokens, nodeid):
+def read_ep(tokens):
     """Read and return an ElementaryPredication."""
     # [ pred LBL : lbl ARG : variable-or-handle ... ]
-    # or [ pred < span-from : span-to > ...
+    # or [ pred < lnk > ...
     validate_token(tokens.pop(0), _left_bracket)
     pred     = Pred.string_or_grammar_pred(tokens.pop(0))
     lnk      = read_lnk(tokens)
-    _, label = read_argument(tokens, rargname=_lbl, sort='h')
-    cv       = None
+    _, label = read_featval(tokens, feat=_lbl, sort=HANDLESORT)
     args     = OrderedDict()
-    carg     = None
     while tokens[0] != _right_bracket:
-        if tokens[0] == CONSTARG:
-            carg = read_const(tokens)[1]
-        elif tokens[0] == CVARG:
-            _, cv = read_argument(tokens)
-        else:
-            args.update([read_argument(tokens)])
+        args.update([read_featval(tokens)])
     tokens.pop(0) # we know this is a right bracket
-    return ElementaryPredication(pred, nodeid, label, cv,
-                                 args=args, lnk=lnk, carg=carg)
+    return ElementaryPredication(pred, label, args=args, lnk=lnk)
 
 def read_lnk(tokens):
     """Read and return a tuple of the pred's lnk type and lnk value,
@@ -298,9 +300,12 @@ def serialize(m, pretty_print=False):
     # note that listed_vars is modified as a side-effect of the lower
     # functions
     listed_vars = set()
-    toks = [' '.join([_left_bracket,
-            serialize_argument(_ltop, m.ltop, listed_vars),
-            serialize_argument(_index, m.index, listed_vars)])]
+    toks = [_left_bracket]
+    if m.ltop is not None:
+        toks += [serialize_argument(_ltop, m.ltop, listed_vars)]
+    if m.index is not None:
+        toks += [serialize_argument(_index, m.index, listed_vars)]
+    toks = [' '.join(toks)]
     toks += [serialize_rels(m.rels, listed_vars, pretty_print=pretty_print)]
     toks += ['  ' + ' '.join([serialize_hcons(m.hcons), _right_bracket])]
     delim = ' ' if not pretty_print else '\n'
@@ -344,11 +349,11 @@ def serialize_ep(ep, listed_vars):
     toks += [serialize_argument(_lbl, ep.label, listed_vars)]
     if ep.cv is not None:
         toks += [serialize_argument(CVARG, ep.cv, listed_vars)]
-    for argname, var in ep.args.items():
+    for argname, var in ep.args:
         toks += [serialize_argument(argname, var, listed_vars)]
-    # add the constant if it exists
-    if ep.carg is not None:
-        toks += [serialize_const(CONSTARG, ep.carg)]
+    # add the constant if it exists (currently done as a regular arg above)
+    #if ep.carg is not None:
+    #    toks += [serialize_const(CONSTARG, ep.carg)]
     toks += [_right_bracket]
     return ' '.join(toks)
 

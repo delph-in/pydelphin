@@ -11,8 +11,7 @@
 from delphin.mrs import (Mrs, ElementaryPredication, Pred,
                          MrsVariable, Lnk, HandleConstraint)
 from delphin._exceptions import MrsDecodeError
-from delphin.mrs.config import (HANDLESORT, FIRST_NODEID,
-                                GRAMMARPRED, STRINGPRED, REALPRED,
+from delphin.mrs.config import (HANDLESORT, GRAMMARPRED, STRINGPRED, REALPRED,
                                 CVARG, CONSTARG)
 from collections import OrderedDict
 
@@ -42,6 +41,10 @@ def dumps(m, encoding='unicode', pretty_print=False):
 ##############################################################################
 ### Decoding
 
+# it's not ideal to have this here, but anyway make sure it is reset
+# for each decoding. It's used to unify variables
+_vars = {}
+
 def decode_list(fh):
     """Decode """
     # <!ELEMENT mrs-list (mrs)*>
@@ -65,12 +68,13 @@ def decode_mrs(elem):
     #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
     elem = elem.find('.') # in case elem is an ElementTree rather than Element
+    global _vars
+    _vars = {}
     #normalize_vars(elem) # try to make all vars have a sort
     return Mrs(ltop = decode_label(elem.find('label')),
                index = decode_var(elem.find('var')),
-               rels = [decode_ep(ep, nodeid=FIRST_NODEID + i)
-                       for i, ep in enumerate(elem.iter('ep'))],
-               hcons = [decode_hcons(h) for h in elem.iter('hcons')],
+               rels = list(map(decode_ep, elem.iter('ep'))),
+               hcons = list(map(decode_hcons, elem.iter('hcons'))),
                lnk = decode_lnk(elem.get('cfrom'), elem.get('cto')),
                surface = elem.get('surface'),
                identifier = elem.get('ident'))
@@ -86,8 +90,17 @@ def decode_var(elem, sort=None):
     # <!ATTLIST var
     #           vid  CDATA #REQUIRED
     #           sort (x|e|h|u|l|i) #IMPLIED >
-    return MrsVariable(vid=elem.get('vid'), sort=sort or elem.get('sort'),
-                       properties=decode_extrapairs(elem.iter('extrapair')))
+    vid = elem.get('vid')
+    srt = sort or elem.get('sort')
+    props = decode_extrapairs(elem.iter('extrapair'))
+    if vid in _vars:
+        if srt != _vars[vid].sort:
+            raise MrsDecodeError('Variable {}{} has a conflicting sort with {}'
+                                 .format(srt, vid, str(_vars[vid])))
+        _vars[vid].properties.update(props)
+    else:
+        _vars[vid] = MrsVariable(vid=vid, sort=srt, properties=props)
+    return _vars[vid]
 
 def decode_extrapairs(elems):
     # <!ELEMENT extrapair (path,value)>
@@ -96,24 +109,20 @@ def decode_extrapairs(elems):
     return OrderedDict((e.find('path').text.upper(), e.find('value').text)
                        for e in elems)
 
-def decode_ep(elem, nodeid=0):
+def decode_ep(elem):
     # <!ELEMENT ep ((pred|spred|realpred), label, fvpair*)>
     # <!ATTLIST ep
     #           cfrom CDATA #IMPLIED
     #           cto   CDATA #IMPLIED
     #           surface   CDATA #IMPLIED
     #           base      CDATA #IMPLIED >
-    cv, args, carg = decode_args(elem)
     return ElementaryPredication(pred=decode_pred(elem.find('./')),
-                                 nodeid=nodeid,
                                  label=decode_label(elem.find('label')),
-                                 cv=cv,
-                                 args=args,
+                                 args=decode_args(elem),
                                  lnk=decode_lnk(elem.get('cfrom'),
                                                 elem.get('cto')),
                                  surface=elem.get('surface'),
-                                 base=elem.get('base'),
-                                 carg=carg)
+                                 base=elem.get('base'))
 
 def decode_pred(elem):
     # <!ELEMENT pred (#PCDATA)>
@@ -142,13 +151,11 @@ def decode_args(elem):
     cv = carg = None
     for e in elem.findall('fvpair'):
         argname = e.find('rargname').text.upper()
-        if argname == CVARG:
-            cv = decode_var(e.find('var'))
-        elif argname == CONSTARG:
-            carg = e.find('constant').text
+        if argname == CONSTARG:
+            args[argname] = e.find('constant').text
         else:
             args[argname] = decode_var(e.find('var'))
-    return cv, args, carg
+    return args
 
 def decode_hcons(elem):
     # <!ELEMENT hcons (hi, lo)>
@@ -227,7 +234,7 @@ def encode_ep(ep, listed_vars):
     e.append(encode_label(ep.label))
     if ep.cv is not None:
         e.append(encode_arg(CVARG, encode_variable(ep.cv, listed_vars)))
-    for argkey, argval in ep.args.items():
+    for argkey, argval in ep.args:
         e.append(encode_arg(argkey, encode_variable(argval, listed_vars)))
     if ep.carg is not None:
         e.append(encode_arg(CONSTARG, encode_constant(ep.carg)))

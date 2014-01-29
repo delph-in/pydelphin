@@ -1,6 +1,6 @@
 import re
 from collections import OrderedDict
-from .config import HANDLESORT
+from .config import (HANDLESORT, CVARSORT)
 
 class MrsVariable(object):
     """A variable has an id (vid), sort, and maybe properties."""
@@ -33,6 +33,14 @@ class MrsVariable(object):
 
     def __str__(self):
         return '{}{}'.format(str(self.sort), str(self.vid))
+
+    @property
+    def sortinfo(self):
+        #FIXME: currently gets CVARSORT even if the var is not a CV
+        sortinfo = OrderedDict([(CVARSORT, self.sort)])
+        sortinfo.update(self.properties)
+        return sortinfo
+
 
 class VarGenerator(object):
     """Simple class to produce MrsVariables, incrementing the vid for

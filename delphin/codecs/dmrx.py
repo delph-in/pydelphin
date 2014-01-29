@@ -32,11 +32,11 @@ def load(fh):
 def loads(s):
     return decode_string(s)
 
-def dump(fh, m, encoding='unicode', pretty_print=False):
-    print(dumps(m, encoding=encoding, pretty_print=pretty_print), file=fh)
+def dump(fh, m, pretty_print=False):
+    print(dumps(m, pretty_print=pretty_print), file=fh)
 
-def dumps(m, encoding='unicode', pretty_print=False):
-    return encode(m, encoding=encoding, pretty_print=pretty_print)
+def dumps(m, pretty_print=False):
+    return encode(m, pretty_print=pretty_print)
 
 ##############################################################################
 ##############################################################################
@@ -84,7 +84,7 @@ def decode_node(elem):
     #          carg CDATA #IMPLIED >
     return Node(pred       = decode_pred(elem.find('./')),
                 nodeid     = elem.get('nodeid'),
-                properties = decode_sortinfo(elem.find('sortinfo')),
+                sortinfo   = decode_sortinfo(elem.find('sortinfo')),
                 lnk        = decode_lnk(elem),
                 surface    = elem.get('surface'),
                 base       = elem.get('base'),
@@ -197,12 +197,9 @@ def encode_sortinfo(node):
     # return empty <sortinfo/> for quantifiers
     if node.pred.pos == QUANTIFIER_SORT:
         return etree.Element('sortinfo') # return empty <sortinfo/>
-    # all nodes should have a cv. The conditional here is for robustness
-    if node.cv is not None:
-        attributes['cvarsort'] = node.cv.sort
-    if node.properties:
+    if node.sortinfo:
         if not _strict:
-            for k, v in node.properties.items():
+            for k, v in node.sortinfo.items():
                 attributes[k.lower()] = str(v)
         else:
             pass #TODO add strict sortinfo

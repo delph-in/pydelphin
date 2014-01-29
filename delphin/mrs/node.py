@@ -5,12 +5,24 @@ from .config import CVARSORT
 class Node(LnkMixin):
     """The base class for units of MRSs containing predicates and their
        properties."""
-    def __init__(self, pred, nodeid,
-                 properties=None, lnk=None,
-                 surface=None, base=None, carg=None):
+    def __init__(self, nodeid, pred, sortinfo=None,
+                 lnk=None, surface=None, base=None, carg=None):
+        """
+        Args:
+            nodeid (int): node identifier
+            pred (Pred): node's predicate
+            sortinfo (OrderedDict): node properties (with cvarsort)
+            lnk (Lnk): links pred to surface form or parse edges
+            surface: surface string
+            base: base form
+            carg: constant argument string
+        Returns:
+            a Node object
+        """
+        self.nodeid     = nodeid    # DMRS-style nodeid
         self.pred       = pred      # mrs.Pred object
-        self.nodeid     = nodeid    # RMRS anchor, DMRS nodeid, etc.
-        self.properties = properties or OrderedDict()
+        # sortinfo is the properties plus cvarsort
+        self.sortinfo   = sortinfo or OrderedDict()
         self.lnk        = lnk       # mrs.Lnk object
         self.surface    = surface
         self.base       = base      # here for compatibility with the DTD
@@ -21,3 +33,15 @@ class Node(LnkMixin):
 
     def __repr__(self):
         return 'Node({}[{}])'.format(self.nodeid, self.pred)
+
+    @property
+    def cvarsort(self):
+        return self.sortinfo.get(CVARSORT)
+
+    @property
+    def properties(self):
+        return OrderedDict((k,v) for (k,v) in self.sortinfo.items()
+                           if k != CVARSORT)
+
+    def is_quantifier(self):
+        return self.pred.is_quantifier()

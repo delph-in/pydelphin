@@ -58,7 +58,7 @@ class Dmrs(Xmrs):
             else: # NEQ_POST or EQ_POST
                 args += [(l.start, (l.argname, cvs[l.end]))]
         # "upgrade" nodes to EPs
-        eps = [ElementaryPredication(n.pred, n.nodeid, lbls[n.nodeid],
+        eps = [ElementaryPredication(n.pred, lbls[n.nodeid],
                                      cvs[n.nodeid], args=None,
                                      lnk=n.lnk, surface=n.surface,
                                      base=n.base, carg=n.carg)

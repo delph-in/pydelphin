@@ -1,3 +1,4 @@
+import logging
 from collections import (OrderedDict, defaultdict)
 from .lnk import LnkMixin
 from .link import Link
@@ -120,9 +121,9 @@ class Xmrs(LnkMixin):
                         tgtep = self.eps[tgtid]
                         # first check for membership, since it can happen more
                         # than once.
-                        if srcep in lbl_sets[srcep.label.vid]:
-                            lbl_sets[srcep.label.vid].remove(srcep)
-                        if tgtep in lbl_sets[tgtep.label.vid]:
+                        if srcep in lbl_sets.get(srcep.label,[]):
+                            lbl_sets[srcep.label].remove(srcep)
+                        if tgtep in lbl_sets.get(tgtep.label,[]):
                             lbl_sets[tgtep.label.vid].remove(tgtep)
                     self._links += [Link(srcid, tgtid, argname, post)]
             # Then label-equalities without existing variable links
@@ -142,7 +143,7 @@ class Xmrs(LnkMixin):
            have that label."""
         lbl_eq = defaultdict(list)
         for ep in self.eps.values():
-            lbl_eq[ep.label.vid] += [ep]
+            lbl_eq[ep.label] += [ep]
         return lbl_eq
 
     def label_set_head(self, label_id):
