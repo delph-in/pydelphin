@@ -1,3 +1,4 @@
+from .hook import Hook
 from .var import VarGenerator
 from .ep import ElementaryPredication
 from .hcons import qeq
@@ -64,7 +65,8 @@ class Dmrs(Xmrs):
                for n in nodes]
         # TODO: icons not implemented yet
         icons = None
+        hook = Hook(ltop=ltop, index=index)
         # Finally, initialize the Xmrs using the converted structures
-        Xmrs.__init__(self, ltop, index, args=args, eps=eps,
+        Xmrs.__init__(self, hook, args=args, eps=eps,
                       hcons=hcons, icons=icons,
                       lnk=lnk, surface=surface, identifier=identifier)

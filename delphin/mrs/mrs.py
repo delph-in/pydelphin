@@ -1,4 +1,5 @@
 from collections import defaultdict
+from .hook import Hook
 from .var import MrsVariable
 from .xmrs import Xmrs
 
@@ -14,7 +15,8 @@ class Mrs(Xmrs):
                  lnk=None, surface=None, identifier=None):
         # roles are embedded in EPs for MRS
         args = [(ep.nodeid, arg) for ep in rels for arg in ep.args.items()]
-        Xmrs.__init__(self, ltop, index, args=args, eps=rels,
+        hook = Hook(ltop=ltop, index=index)
+        Xmrs.__init__(self, hook, args=args, eps=rels,
                       hcons=hcons, icons=icons,
                       lnk=lnk, surface=surface, identifier=identifier)
         # store these so the rels() method can find them

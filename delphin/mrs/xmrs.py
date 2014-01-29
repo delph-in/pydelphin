@@ -9,14 +9,13 @@ from .config import (QEQ, EQ_POST)
 # they may be redefined in subclasses)
 class Xmrs(LnkMixin):
     """Basic class for Mrs, Rmrs, and Dmrs objects."""
-    def __init__(self, ltop=None, index=None, # top-level handles/variables
+    def __init__(self, hook=None, # top-level handles/variables
                  args=None,  # arguments
                  eps=None,   # ElementaryPredications
                  hcons=None, icons=None,      # handle/individual constraints
                  lnk=None, surface=None,      # surface-string attributes
                  identifier=None):            # discourse-utterance id
-        self.ltop   = ltop  # the global top handle
-        self.index  = index # the main event index
+        self.hook = hook
         # semi-RMRS-style roles {anchor: {ROLE:TGT}}
         self.args   = OrderedDict()
         for nid, arg in args:
@@ -57,6 +56,14 @@ class Xmrs(LnkMixin):
         if var is None:
             return None
         return self.cv_map.get(var.vid)
+
+    @property
+    def ltop(self):
+        return self.hook.ltop
+
+    @property
+    def index(self):
+        return self.hook.index
 
     @property
     def rels(self):
