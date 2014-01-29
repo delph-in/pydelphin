@@ -26,4 +26,4 @@ class ElementaryPredication(Node):
         return self.__repr__()
 
     def is_quantifier(self):
-        return self.pred.pos == 'q'
+        return self.pred.is_quantifier()

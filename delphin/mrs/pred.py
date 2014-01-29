@@ -1,13 +1,14 @@
 import re
-from .config import (GRAMMARPRED, REALPRED, STRINGPRED)
+from .config import (GRAMMARPRED, REALPRED, STRINGPRED, QUANTIFIER_SORT)
 
 pred_re = re.compile(r'_?(?P<lemma>.*?)_' # match until last 1 or 2 parts
                      r'((?P<pos>[a-z])_)?' # pos is always only 1 char
                      r'((?P<sense>([^_\\]|(?:\\.))+)_)?' # no unescaped _s
                      r'(?P<end>rel(ation)?)', # NB only _rel is valid
                      re.IGNORECASE)
+
 class Pred(object):
-    def __init__(self, string=None, lemma=None, pos=None, sense=None):
+    def __init__(self, predtype, lemma=None, pos=None, sense=None):
         """Extract the lemma, pos, and sense (if applicable) from a pred
            string, if given, or construct a pred string from those
            components, if they are given. Treat malformed pred strings
@@ -17,24 +18,11 @@ class Pred(object):
         # http://moin.delph-in.net/RmrsPos), but basically:
         #   _lemma_pos(_sense)?_rel
         # Note that sense is optional. The initial underscore is meaningful.
-        if string is not None:
-            self.string = string
-            string = string.strip('"\'')
-            self.type = STRINGPRED if string.startswith('_') else GRAMMARPRED
-            self.lemma, self.pos, self.sense, self.end =\
-                    self.decompose_pred_string(string.strip('"\''))
-        # REALPREDs are specified by components, not strings
-        else:
-            self.type = None
-            self.lemma = lemma
-            self.pos = pos
-            # str(sense) in case an int is given
-            self.sense = str(sense) if sense is not None else None
-            # end defaults to (and really should always be) _rel
-            self.end = 'rel'
-            string_tokens = list(filter(bool,
-                                        [lemma, pos, self.sense, self.end]))
-            self.string = '_'.join([''] + string_tokens)
+        self.type = predtype
+        self.lemma = lemma
+        self.pos = pos
+        self.sense = str(sense) if sense is not None else sense
+        self.string = None # set by class methods
 
     def __eq__(self, other):
         if isinstance(other, Pred):
@@ -44,7 +32,39 @@ class Pred(object):
     def __repr__(self):
         return self.string
 
-    def decompose_pred_string(self, predstr):
+    def __hash__(self):
+        return hash(self.string)
+
+    @classmethod
+    def stringpred(cls, predstr):
+        lemma, pos, sense, end = Pred.split_pred_string(predstr.strip('"\''))
+        pred = cls(STRINGPRED, lemma=lemma, pos=pos, sense=sense)
+        pred.string = predstr
+        return pred
+
+    @classmethod
+    def grammarpred(cls, predstr):
+        lemma, pos, sense, end = Pred.split_pred_string(predstr.strip('"\''))
+        pred = cls(GRAMMARPRED, lemma=lemma, pos=pos, sense=sense)
+        pred.string = predstr
+        return pred
+
+    @staticmethod
+    def string_or_grammar_pred(predstr):
+        if predstr.strip('"\'').startswith('_'):
+            return Pred.stringpred(predstr)
+        else:
+            return Pred.grammarpred(predstr)
+
+    @classmethod
+    def realpred(cls, lemma, pos, sense=None):
+        pred = cls(REALPRED, lemma=lemma, pos=pos, sense=sense)
+        string_tokens = list(filter(bool, [lemma, pos, str(sense or '')]))
+        pred.string = '_'.join([''] + string_tokens + ['rel'])
+        return pred
+
+    @staticmethod
+    def split_pred_string(predstr):
         """Extract the components from a pred string and log errors
            for any malformedness."""
         if not predstr.lower().endswith('_rel'):
@@ -56,3 +76,6 @@ class Pred(object):
         # _lemma_pos(_sense)?_end
         return (match.group('lemma'), match.group('pos'),
                 match.group('sense'), match.group('end'))
+
+    def is_quantifier(self):
+        return self.pos == QUANTIFIER_SORT

@@ -8,6 +8,7 @@ FIRST_NODEID   = 10000 # the nodeid assigned to the first node
 # sortal values
 UNKNOWNSORT    = 'u' # when nothing is known about the sort
 HANDLESORT     = 'h' # for scopal relations
+QUANTIFIER_SORT= 'q' # for quantifier preds
 # lnk types
 # These types determine how a lnk on an EP or MRS are to be interpreted,
 # and thus determine the data type/structure of the lnk data

@@ -12,7 +12,8 @@
 from collections import OrderedDict
 import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
-from delphin.mrs.config import (GRAMMARPRED, STRINGPRED, REALPRED)
+from delphin.mrs.config import (GRAMMARPRED, STRINGPRED, REALPRED,
+                                QUANTIFIER_SORT)
 from delphin._exceptions import MrsDecodeError
 
 # Import LXML if available, otherwise fall back to another etree implementation
@@ -97,11 +98,11 @@ def decode_pred(elem):
     #          sense CDATA #IMPLIED >
     #<!ELEMENT gpred (#PCDATA)>
     if elem.tag == 'gpred':
-        return Pred(string=elem.text)
+        return Pred.grammarpred(elem.text)
     elif elem.tag == 'realpred':
-        return Pred(lemma = elem.get('lemma'),
-                    pos   = elem.get('pos'),
-                    sense = elem.get('sense'))
+        return Pred.realpred(elem.get('lemma'),
+                             elem.get('pos'),
+                             elem.get('sense'))
 
 def decode_sortinfo(elem):
     #<!ELEMENT sortinfo EMPTY>
@@ -194,7 +195,7 @@ def encode_pred(pred):
 def encode_sortinfo(node):
     attributes = OrderedDict()
     # return empty <sortinfo/> for quantifiers
-    if node.pred.pos == 'q':
+    if node.pred.pos == QUANTIFIER_SORT:
         return etree.Element('sortinfo') # return empty <sortinfo/>
     # all nodes should have a cv. The conditional here is for robustness
     if node.cv is not None:

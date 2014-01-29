@@ -123,13 +123,14 @@ def decode_pred(elem):
     #           lemma CDATA #REQUIRED
     #           pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
     #           sense CDATA #IMPLIED >
-    print(elem.text)
-    if elem.tag in ('pred', 'spred'):
-        return Pred(string=elem.text)
+    if elem.tag == 'pred':
+        return Pred.grammarpred(elem.text)
+    elif elem.tag == 'spred':
+        return Pred.stringpred(elem.text)
     elif elem.tag == 'realpred':
-        return Pred(lemma=elem.get('lemma'),
-                    pos=elem.get('pos'),
-                    sense=elem.get('sense'))
+        return Pred.readpred(elem.get('lemma'),
+                             elem.get('pos'),
+                             elem.get('sense'))
 
 def decode_args(elem):
     # <!ELEMENT fvpair (rargname, (var|constant))>

@@ -212,7 +212,7 @@ def read_ep(tokens, nodeid):
     # [ pred LBL : lbl ARG : variable-or-handle ... ]
     # or [ pred < span-from : span-to > ...
     validate_token(tokens.pop(0), _left_bracket)
-    pred     = Pred(tokens.pop(0))
+    pred     = Pred.string_or_grammar_pred(tokens.pop(0))
     lnk      = read_lnk(tokens)
     _, label = read_argument(tokens, rargname=_lbl, sort='h')
     cv       = None
