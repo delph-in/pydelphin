@@ -11,6 +11,9 @@
 from delphin.mrs import (Mrs, ElementaryPredication, Pred,
                          MrsVariable, Lnk, HandleConstraint)
 from delphin._exceptions import MrsDecodeError
+from delphin.mrs.config import (CHARSPAN, HANDLESORT, FIRST_NODEID,
+                                GRAMMARPRED, STRINGPRED, REALPRED,
+                                CVARG, CONSTARG)
 from collections import OrderedDict
 
 # Import LXML if available, otherwise fall back to another etree implementation
@@ -39,11 +42,6 @@ def dumps(m, encoding='unicode', pretty_print=False):
 ##############################################################################
 ### Decoding
 
-HANDLE_PREFIX = 'h'
-_CV = 'ARG0' # characteristic variable
-_CARG = 'CARG' # constant argument
-_FIRST_NODEID = 10001
-
 def decode_list(fh):
     """Decode """
     # <!ELEMENT mrs-list (mrs)*>
@@ -70,7 +68,7 @@ def decode_mrs(elem):
     #normalize_vars(elem) # try to make all vars have a sort
     return Mrs(ltop = decode_label(elem.find('label')),
                index = decode_var(elem.find('var')),
-               rels = [decode_ep(ep, nodeid=_FIRST_NODEID + i)
+               rels = [decode_ep(ep, nodeid=FIRST_NODEID + i)
                        for i, ep in enumerate(elem.iter('ep'))],
                hcons = [decode_hcons(h) for h in elem.iter('hcons')],
                lnk = decode_lnk(elem.get('cfrom'), elem.get('cto')),
@@ -135,17 +133,17 @@ def decode_pred(elem):
 
 def decode_args(elem):
     # <!ELEMENT fvpair (rargname, (var|constant))>
-    # cv is the characteristic variable (probably ARG0, given by _CV)
-    # carg is the constant arg (e.g. a quoted string; given by _CARG)
+    # cv is the characteristic variable (probably ARG0, given by CVARG)
+    # carg is the constant arg (e.g. a quoted string; given by CONSTARG)
     # This code assumes that only cargs have constant values, and all
     # other args (including CVs) have var values.
     args = OrderedDict()
     cv = carg = None
     for e in elem.findall('fvpair'):
         argname = e.find('rargname').text.upper()
-        if argname == _CV:
+        if argname == CVARG:
             cv = decode_var(e.find('var'))
-        elif argname == _CARG:
+        elif argname == CONSTARG:
             carg = e.find('constant').text
         else:
             args[argname] = decode_var(e.find('var'))
@@ -169,7 +167,7 @@ def decode_lnk(cfrom, cto):
     elif None in (cfrom, cto):
         raise ValueError('Both cfrom and cto, or neither, must be specified.')
     else:
-        return Lnk((int(cfrom), int(cto)), Lnk.CHARSPAN)
+        return Lnk((int(cfrom), int(cto)), CHARSPAN)
 
 ##############################################################################
 ##############################################################################
@@ -177,7 +175,7 @@ def decode_lnk(cfrom, cto):
 
 def encode(m, encoding='unicode', pretty_print=False):
     attributes = {}
-    if m.lnk is not None and m.lnk.type == Lnk.CHARSPAN:
+    if m.lnk is not None and m.lnk.type == CHARSPAN:
         attributes['cfrom'] = str(m.lnk.data[0])
         attributes['cto'] = str(m.lnk.data[1])
     if m.surface is not None:
@@ -222,7 +220,7 @@ def encode_extrapair(key, value):
 
 def encode_ep(ep, listed_vars):
     attributes = {}
-    if ep.lnk is not None and ep.lnk.type == Lnk.CHARSPAN:
+    if ep.lnk is not None and ep.lnk.type == CHARSPAN:
         attributes['cfrom'] = str(ep.lnk.data[0])
         attributes['cto'] = str(ep.lnk.data[1])
     if ep.surface is not None:
@@ -233,22 +231,22 @@ def encode_ep(ep, listed_vars):
     e.append(encode_pred(ep.pred))
     e.append(encode_label(ep.label))
     if ep.cv is not None:
-        e.append(encode_arg(_CV, encode_variable(ep.cv, listed_vars)))
+        e.append(encode_arg(CVARG, encode_variable(ep.cv, listed_vars)))
     for argkey, argval in ep.args.items():
         e.append(encode_arg(argkey, encode_variable(argval, listed_vars)))
     if ep.carg is not None:
-        e.append(encode_arg(_CARG, encode_constant(ep.carg)))
+        e.append(encode_arg(CONSTARG, encode_constant(ep.carg)))
     return e
 
 def encode_pred(pred):
     p = None
-    if pred.type == Pred.GPRED:
+    if pred.type == GRAMMARPRED:
         p = etree.Element('pred')
         p.text = pred.string
-    elif pred.type == Pred.SPRED:
+    elif pred.type == STRINGPRED:
         p = etree.Element('spred')
         p.text = pred.string
-    elif pred.type == Pred.REALPRED:
+    elif pred.type == REALPRED:
         attributes = {'lemma': pred.lemma, 'pos': pred.pos}
         if pred.sense is not None:
             attributes['sense'] = pred.sense
@@ -271,8 +269,8 @@ def encode_constant(value):
 def encode_hcon(hcon):
     hcons = etree.Element('hcons', hreln=hcon.relation)
     hi = etree.Element('hi')
-    hi.append(encode_variable(hcon.lhandle))
+    hi.append(encode_variable(hcon.hi))
     lo = etree.Element('lo')
-    lo.append(encode_variable(hcon.rhandle))
+    lo.append(encode_variable(hcon.lo))
     hcons.extend([hi, lo])
     return hcons

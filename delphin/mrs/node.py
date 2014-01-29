@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from .lnk import LnkObject
+from .config import CVARSORT
 
 class Node(LnkObject):
     """The base class for units of MRSs containing predicates and their

@@ -2,28 +2,24 @@ from .var import VarFactory
 from .ep import ElementaryPredication
 from .hcons import qeq
 from .xmrs import Xmrs
+from .config import (EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
+                     CVARSORT, LTOP_NODEID)
 
 def get_dmrs_post(xmrs, nid1, argname, nid2):
     node2lbl = xmrs.eps[nid2].label
     if xmrs.eps[nid1].label == node2lbl:
-        post = Dmrs.EQ
+        post = EQ_POST
     elif xmrs.args.get(nid1,{}).get(argname) == node2lbl:
-        post = Dmrs.HEQ
+        post = HEQ_POST
     else:
         hcon = xmrs.hcons_map.get(xmrs.args.get(nid1,{}).get(argname))
-        if hcon is not None and hcon.rhandle == node2lbl:
-            post = Dmrs.H
+        if hcon is not None and hcon.lo == node2lbl:
+            post = H_POST
         else:
-            post = Dmrs.NEQ
+            post = NEQ_POST
     return post
 
 class Dmrs(Xmrs):
-    EQ       = 'EQ'
-    HEQ      = 'HEQ'
-    NEQ      = 'NEQ'
-    H        = 'H'
-    CVARSORT = 'cvarsort'
-
     def __init__(self, ltop=None, index=None,
                  nodes=None, links=None,
                  lnk=None, surface=None, identifier=None):
@@ -37,7 +33,7 @@ class Dmrs(Xmrs):
         # find common labels
         lbls = {}
         for l in links:
-            if l.post == Dmrs.EQ:
+            if l.post == EQ_POST:
                 lbl = lbls.get(l.start) or lbls.get(l.end) or vfac.new('h')
                 lbls[l.start] = lbls[l.end] = lbl
         # create any remaining uninstantiated labels
@@ -45,19 +41,19 @@ class Dmrs(Xmrs):
             if n.nodeid not in lbls:
                 lbls[n.nodeid] = vfac.new('h')
         # create characteristic variables (and bound variables)
-        cvs = dict([(n.nodeid, vfac.new(n.properties.get(Dmrs.CVARSORT,'h'),
+        cvs = dict([(n.nodeid, vfac.new(n.properties.get(CVARSORT,'h'),
                                         n.properties or None)) for n in nodes])
         # convert links to args and hcons
         hcons = []
         args = []
         for l in links:
-            if l.post == Dmrs.H or l.post == None:
+            if l.post == H_POST or l.post == None:
                 hole = vfac.new('h')
                 hcons += [qeq(hole, lbls[l.end])]
                 args += [(l.start, (l.argname, hole))]
-            elif l.post == Dmrs.HEQ:
+            elif l.post == HEQ_POST:
                 args += [(l.start, (l.argname, lbls[l.end]))]
-            else: # Dmrs.NEQ or Dmrs.EQ
+            else: # NEQ_POST or EQ_POST
                 args += [(l.start, (l.argname, cvs[l.end]))]
         # "upgrade" nodes to EPs
         eps = [ElementaryPredication(n.pred, n.nodeid, lbls[n.nodeid],

@@ -1,30 +1,27 @@
+from .config import (QEQ, LHEQ, OUTSCOPES)
 
 class HandleConstraint(object):
     """A relation between two handles."""
 
-    QEQ       = 'qeq'
-    LHEQ      = 'lheq'
-    OUTSCOPES = 'outscopes'
-
-    def __init__(self, lhandle, relation, rhandle):
-        self.lhandle = lhandle
+    def __init__(self, hi, relation, lo):
+        self.hi = hi
         self.relation = relation
-        self.rhandle = rhandle
+        self.lo = lo
 
     def __eq__(self, other):
-        return self.lhandle == other.lhandle and\
+        return self.hi == other.hi and\
                self.relation == other.relation and\
-               self.rhandle == other.rhandle
+               self.lo == other.lo
 
     def __hash__(self):
         return hash(repr(self))
 
     def __repr__(self):
         return 'HandleConstraint({})'.format(
-               ' '.join([str(self.lhandle), self.relation, str(self.rhandle)]))
+               ' '.join([str(self.hi), self.relation, str(self.lo)]))
 
     def __str__(self):
         return self.__repr__()
 
 def qeq(hi, lo):
-    return HandleConstraint(hi, HandleConstraint.QEQ, lo)
+    return HandleConstraint(hi, QEQ, lo)

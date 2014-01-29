@@ -2,6 +2,7 @@ from collections import (OrderedDict, defaultdict)
 from .lnk import LnkObject
 from .link import Link
 from .hcons import HandleConstraint
+from .config import (QEQ, EQ_POST)
 
 # Subclasses of Xmrs may be used for decoding.
 # When encoding, only use members and methods defined in Xmrs (though
@@ -37,15 +38,15 @@ class Xmrs(LnkObject):
                            if not ep.is_quantifier() and ep.cv is not None)
         # one-to-many label-equality-graph
         self.label_sets = self.label_equality_sets()
-        self.hcons_map = dict((h.lhandle, h) for h in self.hcons)
+        self.hcons_map = dict((h.hi, h) for h in self.hcons)
         # one-to-many ep-to-ep QEQ graph ("hole to label qeq graph")
         self.qeq_graph = defaultdict(list)
         for hc in self.hcons:
-            if hc.relation != HandleConstraint.QEQ: continue
-            if hc.rhandle.vid not in self.label_sets:
+            if hc.relation != QEQ: continue
+            if hc.lo.vid not in self.label_sets:
                 logging.warn('QEQ lo handle is not an EP\'s LBL: {}'
-                             .format(hc.rhandle))
-            #self.qeq_graph[hc.lhandle] =
+                             .format(hc.lo))
+            #self.qeq_graph[hc.hi] =
         #if self.index is None:
         #    self.index = self.find_head_ep().cv
 
@@ -102,12 +103,12 @@ class Xmrs(LnkObject):
                         else:
                             logging.warn('QEQ lo handle is not instantiated '
                                          'in the MRS: {}'.format(
-                                             self.hcons_map[tgtvar].lhandle))
+                                             self.hcons_map[tgtvar].hi))
                             continue
                     else:
                         continue #TODO: log this or something
                     post = get_dmrs_post(self, srcid, argname, tgtid)
-                    if post == Dmrs.EQ:
+                    if post == EQ_POST:
                         srcep = self.eps[srcid]
                         tgtep = self.eps[tgtid]
                         # first check for membership, since it can happen more
@@ -121,12 +122,12 @@ class Xmrs(LnkObject):
             for lblid in lbl_sets:
                 tgt = self.label_set_head(lblid)
                 for src in lbl_sets[lblid]:
-                    self._links += [Link(src.nodeid, tgt.nodeid, post=Dmrs.EQ)]
+                    self._links += [Link(src.nodeid, tgt.nodeid, post=EQ_POST)]
             # LTOP link
             #TODO: should there be only 1 link? Can there be more than 1 head?
             if self.ltop is not None and self.ltop.vid in self.label_sets:
                 tgt = self.label_set_head(self.ltop.vid)
-                self._links += [Link(0, tgt.nodeid, post=Dmrs.EQ)]
+                self._links += [Link(0, tgt.nodeid, post=EQ_POST)]
         return self._links
 
     def label_equality_sets(self):
@@ -151,7 +152,7 @@ class Xmrs(LnkObject):
         """Find the EP with the label QEQed from the given hole, if any."""
         hcon = self.hcons_map.get(hole)
         if hcon is not None:
-            return self.label_set_head(hcon.rhandle.vid)
+            return self.label_set_head(hcon.lo.vid)
         return None
 
     def find_head_ep(self):

@@ -12,6 +12,7 @@
 from collections import OrderedDict
 import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
+from delphin.mrs.config import (CHARSPAN, GRAMMARPRED, STRINGPRED, REALPRED)
 from delphin._exceptions import MrsDecodeError
 
 # Import LXML if available, otherwise fall back to another etree implementation
@@ -132,7 +133,7 @@ def decode_link(elem):
                 post    = elem.find('post').text)
 
 def decode_lnk(elem):
-    return Lnk((elem.get('cfrom'), elem.get('cto')), Lnk.CHARSPAN)
+    return Lnk((elem.get('cfrom'), elem.get('cto')), CHARSPAN)
 
 ##############################################################################
 ##############################################################################
@@ -176,10 +177,10 @@ def encode_node(node):
     return e
 
 def encode_pred(pred):
-    if pred.type == Pred.GPRED:
+    if pred.type == GRAMMARPRED:
         e = etree.Element('gpred')
         e.text = pred.string.strip('"\'')
-    elif pred.type in (Pred.REALPRED, Pred.SPRED):
+    elif pred.type in (REALPRED, STRINGPRED):
         attributes = {}
         if pred.lemma is not None:
             attributes['lemma'] = pred.lemma
