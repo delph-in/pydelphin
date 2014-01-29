@@ -1,9 +1,9 @@
-from .var import VarFactory
+from .var import VarGenerator
 from .ep import ElementaryPredication
 from .hcons import qeq
 from .xmrs import Xmrs
-from .config import (EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
-                     CVARSORT, LTOP_NODEID)
+from .config import (HANDLESORT, CVARSORT, LTOP_NODEID
+                     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST)
 
 def get_dmrs_post(xmrs, nid1, argname, nid2):
     node2lbl = xmrs.eps[nid2].label
@@ -29,26 +29,27 @@ class Dmrs(Xmrs):
         self._links = links
         # now create necessary structure for making an Xmrs object. This is
         # essentially the same process as converting DMRS to RMRS
-        vfac = VarFactory()
+        vgen = VarGenerator(starting_vid=0)
         # find common labels
         lbls = {}
         for l in links:
             if l.post == EQ_POST:
-                lbl = lbls.get(l.start) or lbls.get(l.end) or vfac.new('h')
+                lbl = lbls.get(l.start) or lbls.get(l.end) or\
+                        vgen.new(HANDLESORT)
                 lbls[l.start] = lbls[l.end] = lbl
         # create any remaining uninstantiated labels
         for n in nodes:
             if n.nodeid not in lbls:
-                lbls[n.nodeid] = vfac.new('h')
+                lbls[n.nodeid] = vgen.new(HANDLESORT)
         # create characteristic variables (and bound variables)
-        cvs = dict([(n.nodeid, vfac.new(n.properties.get(CVARSORT,'h'),
+        cvs = dict([(n.nodeid, vgen.new(n.properties.get(CVARSORT,HANDLESORT),
                                         n.properties or None)) for n in nodes])
         # convert links to args and hcons
         hcons = []
         args = []
         for l in links:
             if l.post == H_POST or l.post == None:
-                hole = vfac.new('h')
+                hole = vgen.new(HANDLESORT)
                 hcons += [qeq(hole, lbls[l.end])]
                 args += [(l.start, (l.argname, hole))]
             elif l.post == HEQ_POST:
