@@ -8,7 +8,7 @@
 
 from collections import OrderedDict
 import re
-from delphin.mrs import (Mrs, ElementaryPredication, Pred,
+from delphin.mrs import (Mrs, ElementaryPredication, Argument, Pred,
                          MrsVariable, Lnk, HandleConstraint)
 from delphin.mrs.var import (sort_vid_split, sort_vid_re)
 from delphin.mrs.config import (HANDLESORT, CVARG, CONSTARG,
@@ -225,11 +225,23 @@ def read_ep(tokens):
     pred     = Pred.string_or_grammar_pred(tokens.pop(0))
     lnk      = read_lnk(tokens)
     _, label = read_featval(tokens, feat=_lbl, sort=HANDLESORT)
-    args     = OrderedDict()
+    args     = []
     while tokens[0] != _right_bracket:
-        args.update([read_featval(tokens)])
+        args.append(read_argument(tokens))
     tokens.pop(0) # we know this is a right bracket
     return ElementaryPredication(pred, label, args=args, lnk=lnk)
+
+def read_argument(tokens):
+    """Read and return an Argument."""
+    # ARGNAME: (VAR|CONST)
+    argname, value = read_featval(tokens)
+    #argtype = CONSTANTARG # default in case others don't match
+    #if isinstance(value, MrsVariable):
+    #    if value.sort == HANDLESORT:
+    #        argtype = HANDLEARG
+    #    else:
+    #        argtype = VARIABLEARG
+    return Argument.mrs_argument(argname, value)
 
 def read_lnk(tokens):
     """Read and return a tuple of the pred's lnk type and lnk value,
@@ -349,8 +361,8 @@ def serialize_ep(ep, listed_vars):
     toks += [serialize_argument(_lbl, ep.label, listed_vars)]
     if ep.cv is not None:
         toks += [serialize_argument(CVARG, ep.cv, listed_vars)]
-    for argname, var in ep.args:
-        toks += [serialize_argument(argname, var, listed_vars)]
+    for arg in ep.args:
+        toks += [serialize_argument(arg.argname, arg.value, listed_vars)]
     # add the constant if it exists (currently done as a regular arg above)
     #if ep.carg is not None:
     #    toks += [serialize_const(CONSTARG, ep.carg)]

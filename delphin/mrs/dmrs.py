@@ -10,10 +10,10 @@ def get_dmrs_post(xmrs, nid1, argname, nid2):
     node2lbl = xmrs.eps[nid2].label
     if xmrs.eps[nid1].label == node2lbl:
         post = EQ_POST
-    elif xmrs.args.get(nid1,{}).get(argname) == node2lbl:
+    elif xmrs._nid_to_argmap.get(nid1,{}).get(argname).value == node2lbl:
         post = HEQ_POST
     else:
-        hcon = xmrs.hcons_map.get(xmrs.args.get(nid1,{}).get(argname))
+        hcon = xmrs.hcons_map.get(xmrs._nid_to_argmap.get(nid1,{}).get(argname).value)
         if hcon is not None and hcon.lo == node2lbl:
             post = H_POST
         else:

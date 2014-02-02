@@ -4,6 +4,7 @@ from .lnk import Lnk
 from .node import Node
 from .ep import ElementaryPredication
 from .var import MrsVariable
+from .arg import Argument
 from .hcons import HandleConstraint
 from .pred import Pred
 from .link import Link

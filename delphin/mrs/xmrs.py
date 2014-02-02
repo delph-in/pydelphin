@@ -1,9 +1,11 @@
 import logging
 from collections import (OrderedDict, defaultdict)
 from .lnk import LnkMixin
+from .var import MrsVariable
 from .link import Link
 from .hcons import HandleConstraint
 from .config import (QEQ, EQ_POST)
+from .util import AccumulationDict, dict_of_dicts as dod
 
 # Subclasses of Xmrs may be used for decoding.
 # When encoding, only use members and methods defined in Xmrs (though
@@ -18,11 +20,8 @@ class Xmrs(LnkMixin):
                  identifier=None):            # discourse-utterance id
         self.hook = hook
         # semi-RMRS-style roles {anchor: {ROLE:TGT}}
-        self.args   = OrderedDict()
-        for nid, arg in args:
-            (argname, tgtvar) = arg
-            if nid not in self.args: self.args[nid] = OrderedDict()
-            self.args[nid][argname] = tgtvar
+        self._nid_to_argmap = dod([(a.nodeid, a.argname, a) for a in args],
+                                  OrderedDict)
         # eps can be DMRS-style nodes or MRS EPs; {anchor: Node}
         self.eps    = OrderedDict([(ep.nodeid, ep) for ep in (eps or [])])
         self.hcons  = hcons # handle constraints [HandleConstraint]
@@ -53,7 +52,7 @@ class Xmrs(LnkMixin):
     def arg_to_ep(self, nodeid, argname):
         """Return the EP, if any, linked by the given argument for the
            given EP."""
-        var = self.args.get(nodeid,{}).get(argname)
+        var = self._nid_to_argmap.get(nodeid,{}).get(argname).value
         if var is None:
             return None
         return self.cv_map.get(var.vid)
@@ -78,6 +77,12 @@ class Xmrs(LnkMixin):
             return self._rels
 
     @property
+    def args(self):
+        # _nid_to_argmap is {nid:{argname:arg}}
+        return [arg for nid in self._nid_to_argmap
+                    for arg in self._nid_to_argmap[nid].values()]
+
+    @property
     def nodes(self):
         return self.eps.values()
 
@@ -97,35 +102,35 @@ class Xmrs(LnkMixin):
                              if len(leq[1]) > 1])
             # First get argument links
             self._links = []
-            for srcid, argdict in self.args.items():
-                for argname, tgtvar in argdict.items():
-                    tgtvid = tgtvar.vid
-                    if tgtvid in self.cv_map:
-                        tgtid = self.cv_map[tgtvid].nodeid
-                    elif tgtvid in self.label_sets:
-                        tgtid = self.label_set_head(tgtvid).nodeid
-                    elif tgtvar in self.hcons_map:
-                        qeqtgt = self.qeq_target(tgtvar)
-                        if qeqtgt is not None:
-                            tgtid = self.qeq_target(tgtvar).nodeid
-                        else:
-                            logging.warn('QEQ lo handle is not instantiated '
-                                         'in the MRS: {}'.format(
-                                             self.hcons_map[tgtvar].hi))
-                            continue
+            for arg in self.args:
+                if not isinstance(arg.value, MrsVariable): continue
+                tgtvid = arg.value.vid
+                if tgtvid in self.cv_map:
+                    tgtid = self.cv_map[tgtvid].nodeid
+                elif tgtvid in self.label_sets:
+                    tgtid = self.label_set_head(tgtvid).nodeid
+                elif arg.value in self.hcons_map:
+                    qeqtgt = self.qeq_target(arg.value)
+                    if qeqtgt is not None:
+                        tgtid = self.qeq_target(arg.value).nodeid
                     else:
-                        continue #TODO: log this or something
-                    post = get_dmrs_post(self, srcid, argname, tgtid)
-                    if post == EQ_POST:
-                        srcep = self.eps[srcid]
-                        tgtep = self.eps[tgtid]
-                        # first check for membership, since it can happen more
-                        # than once.
-                        if srcep in lbl_sets.get(srcep.label,[]):
-                            lbl_sets[srcep.label].remove(srcep)
-                        if tgtep in lbl_sets.get(tgtep.label,[]):
-                            lbl_sets[tgtep.label.vid].remove(tgtep)
-                    self._links += [Link(srcid, tgtid, argname, post)]
+                        logging.warn('QEQ lo handle is not instantiated '
+                                     'in the MRS: {}'.format(
+                                         self.hcons_map[arg.value].hi))
+                        continue
+                else:
+                    continue #TODO: log this or something
+                post = get_dmrs_post(self, arg.nodeid, arg.argname, tgtid)
+                if post == EQ_POST:
+                    srcep = self.eps[arg.nodeid]
+                    tgtep = self.eps[tgtid]
+                    # first check for membership, since it can happen more
+                    # than once.
+                    if srcep in lbl_sets.get(srcep.label,[]):
+                        lbl_sets[srcep.label].remove(srcep)
+                    if tgtep in lbl_sets.get(tgtep.label,[]):
+                        lbl_sets[tgtep.label.vid].remove(tgtep)
+                self._links += [Link(arg.nodeid, tgtid, arg.argname, post)]
             # Then label-equalities without existing variable links
             for lblid in lbl_sets:
                 tgt = self.label_set_head(lblid)
@@ -152,7 +157,7 @@ class Xmrs(LnkMixin):
         lblset = self.label_sets.get(label_id, [])
         for ep in lblset:
             if not any(self.arg_to_ep(ep.nodeid, a) in lblset
-                       for a in self.args.get(ep.nodeid,[])):
+                       for a in self._nid_to_argmap.get(ep.nodeid,[])):
                 return ep
         return None
 

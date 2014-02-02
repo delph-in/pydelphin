@@ -8,7 +8,7 @@
 #          of MRX instances, and they read and write incrementally.
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
-from delphin.mrs import (Mrs, ElementaryPredication, Pred,
+from delphin.mrs import (Mrs, ElementaryPredication, Argument, Pred,
                          MrsVariable, Lnk, HandleConstraint)
 from delphin._exceptions import MrsDecodeError
 from delphin.mrs.config import (HANDLESORT, GRAMMARPRED, STRINGPRED, REALPRED,
@@ -147,14 +147,17 @@ def decode_args(elem):
     # carg is the constant arg (e.g. a quoted string; given by CONSTARG)
     # This code assumes that only cargs have constant values, and all
     # other args (including CVs) have var values.
-    args = OrderedDict()
+    args = []
     cv = carg = None
     for e in elem.findall('fvpair'):
         argname = e.find('rargname').text.upper()
-        if argname == CONSTARG:
-            args[argname] = e.find('constant').text
-        else:
-            args[argname] = decode_var(e.find('var'))
+        if e.find('constant'):
+            #argtype = CONSTANTARG
+            argval = e.find('constant').text
+        elif e.find('var'):
+            argval = decode_var(e.find('var'))
+            #argtype = HANDLEARG if argval.sort == HANDLESORT else VARIABLEARG
+        args.append(Argument.mrs_argument(argname, argval))
     return args
 
 def decode_hcons(elem):
@@ -234,8 +237,9 @@ def encode_ep(ep, listed_vars):
     e.append(encode_label(ep.label))
     if ep.cv is not None:
         e.append(encode_arg(CVARG, encode_variable(ep.cv, listed_vars)))
-    for argkey, argval in ep.args:
-        e.append(encode_arg(argkey, encode_variable(argval, listed_vars)))
+    for arg in ep.args:
+        e.append(encode_arg(arg.argname,
+                            encode_variable(arg.value, listed_vars)))
     if ep.carg is not None:
         e.append(encode_arg(CONSTARG, encode_constant(ep.carg)))
     return e

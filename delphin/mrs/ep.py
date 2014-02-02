@@ -15,16 +15,16 @@ class ElementaryPredication(LnkMixin):
             pred (Pred): EP's predicate
             label (MrsVariable): label handle
             anchor (MrsVariable): the RMRS anchor (similar to a nodeid)
-            args (list): the EP's Arguments (argname, value)
+            args (list): the EP's Arguments
             lnk: Lnk object associated with the pred
             surface: surface string
             base: base form
         """
-        # first args, then can get CV
-        self.argdict  = OrderedDict(args or [])
-        sortinfo = self.cv.sortinfo if self.cv else None
         self.label = label
         nodeid=anchor.vid if anchor else None
+        # first args, then can get CV
+        self.argdict  = OrderedDict((a.argname, a) for a in (args or []))
+        sortinfo = self.cv.sortinfo if self.cv else None
         self._node = Node(nodeid, pred, sortinfo=sortinfo, lnk=lnk,
                           surface=surface, base=base, carg=self.carg)
         # copy up the following from _node
@@ -46,14 +46,29 @@ class ElementaryPredication(LnkMixin):
     def __str__(self):
         return self.__repr__()
 
+    def arg_value(self, argname):
+        try:
+            arg = self.argdict[argname]
+            return arg.value
+        except KeyError:
+            return None
+
+    @property
+    def anchor(self):
+        return MrsVariable(vid=self.nodeid, sort=ANCHOR_SORT)
+
+    @anchor.setter
+    def anchor(self, anchor):
+        self.nodeid = anchor.vid
+
     @property
     def cv(self):
-        return self.argdict.get(CVARG)
+        return self.arg_value(CVARG)
 
     @property
     def carg(self):
-        return self.argdict.get(CONSTARG)
+        return self.arg_value(CONSTARG)
 
     @property
     def args(self):
-        return list(self.argdict.items())
+        return list(self.argdict.values())
