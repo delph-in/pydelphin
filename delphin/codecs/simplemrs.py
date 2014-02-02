@@ -14,7 +14,7 @@ from delphin.mrs.var import (sort_vid_split, sort_vid_re)
 from delphin.mrs.config import (HANDLESORT, CVARG, CONSTARG,
                                 QEQ, LHEQ, OUTSCOPES,
                                 CHARSPAN, CHARTSPAN, EDGE, TOKENS,
-                                VARIABLEARG, HANDLEARG, CONSTANTARG)
+                                VARIABLE_ARG, HOLE_ARG, CONSTANT_ARG)
 from delphin._exceptions import MrsDecodeError
 
 strict = False
@@ -238,7 +238,7 @@ def read_argument(tokens):
     #argtype = CONSTANTARG # default in case others don't match
     #if isinstance(value, MrsVariable):
     #    if value.sort == HANDLESORT:
-    #        argtype = HANDLEARG
+    #        argtype = HOLE_ARG
     #    else:
     #        argtype = VARIABLEARG
     return Argument.mrs_argument(argname, value)

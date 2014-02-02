@@ -156,7 +156,7 @@ def decode_args(elem):
             argval = e.find('constant').text
         elif e.find('var'):
             argval = decode_var(e.find('var'))
-            #argtype = HANDLEARG if argval.sort == HANDLESORT else VARIABLEARG
+            #argtype = HOLE_ARG if argval.sort == HANDLESORT else VARIABLEARG
         args.append(Argument.mrs_argument(argname, argval))
     return args
 

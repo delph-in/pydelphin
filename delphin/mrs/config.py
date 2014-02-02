@@ -25,11 +25,11 @@ QEQ            = 'qeq'
 LHEQ           = 'lheq'
 OUTSCOPES      = 'outscopes'
 # ARGUMENTS
-VARIABLEARG    = 'VariableArgument'
-HANDLEARG      = 'HandleArgument' # to be treated as either LABELARG or HOLEARG
-LABELARG       = 'LabelArgument'
-HOLEARG        = 'HoleArgument'
-CONSTANTARG    = 'ConstantArgument'
+VARIABLE_ARG   = 'VariableArgument'
+HOLE_ARG       = 'HoleArgument' # supertype of LABEL_ARG and HCONS_ARG
+LABEL_ARG      = 'LabelArgument'
+HCONS_ARG      = 'HconsArgument'
+CONSTANT_ARG   = 'ConstantArgument'
 # MRS strings
 CVARG          = 'ARG0'
 CONSTARG       = 'CARG'

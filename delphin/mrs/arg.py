@@ -1,3 +1,6 @@
+from .var import MrsVariable
+from .config import (VARIABLE_ARG, HOLE_ARG, LABEL_ARG, HCONS_ARG,
+                     CONSTANT_ARG)
 
 class Argument(object):
     """
@@ -17,6 +20,14 @@ class Argument(object):
         return 'Argument({nodeid} {argname}={value})'\
                .format(**self.__dict__)
 
+    def __eq__(self, other):
+        # ignore missing nodeid?
+        # argname is case insensitive
+        return (None in (self.nodeid, other.nodeid) or \
+                self.nodeid == other.nodeid) and \
+               self.argname.lower() == other.argname.lower() and \
+               self.value == other.value
+
     @classmethod
     def mrs_argument(cls, argname, value):
         return cls(None, argname, value)
@@ -25,3 +36,14 @@ class Argument(object):
     def rmrs_argument(cls, anchor, argname, value):
         return cls(anchor.vid, argname, value)
 
+    @property
+    def type(self):
+        if isinstance(self.value, MrsVariable):
+            if self.value.sort == HANDLESORT:
+                # can't tell the diff between LABEL_ARG and HCONS_ARG
+                # without the rest of the MRS, so just return HOLE_ARG
+                return HOLE_ARG
+            else:
+                return VARIABLE_ARG
+        else:
+            return CONSTANT_ARG
