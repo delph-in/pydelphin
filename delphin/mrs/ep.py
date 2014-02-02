@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from .lnk import LnkMixin
 from .node import Node
-from .config import (CVARG, CONSTARG)
+from .config import (CVARG, CONSTARG, ANCHOR_SORT)
 
 class ElementaryPredication(LnkMixin):
     """
