@@ -46,6 +46,12 @@ class ElementaryPredication(LnkMixin):
     def __str__(self):
         return self.__repr__()
 
+    def __eq__(self, other):
+        return self._node == other._node and \
+                self.label == other.label and \
+                self.cv == other.cv and \
+                self.args == other.args
+
     def arg_value(self, argname):
         try:
             arg = self.argdict[argname]

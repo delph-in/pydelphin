@@ -15,6 +15,8 @@ class Mrs(Xmrs):
     def __init__(self, ltop=None, index=None,
                  rels=None, hcons=None, icons=None,
                  lnk=None, surface=None, identifier=None):
+        if rels is None: rels = []
+        if hcons is None: hcons = []
         hook = Hook(ltop=ltop, index=index)
         for i, ep in enumerate(rels):
             ep.nodeid = FIRST_NODEID + i

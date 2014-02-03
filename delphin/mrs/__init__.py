@@ -1,5 +1,6 @@
 
 # these may be order-sensitive
+from .hook import Hook
 from .lnk import Lnk
 from .node import Node
 from .ep import ElementaryPredication

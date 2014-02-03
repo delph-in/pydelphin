@@ -18,12 +18,18 @@ class Xmrs(LnkMixin):
                  hcons=None, icons=None,      # handle/individual constraints
                  lnk=None, surface=None,      # surface-string attributes
                  identifier=None):            # discourse-utterance id
+
+        if args is None: args = []
+        if eps is None: eps = []
+        if hcons is None: hcons = []
+        if icons is None: icons = []
+
         self.hook = hook
         # semi-RMRS-style roles {anchor: {ROLE:TGT}}
         self._nid_to_argmap = dod([(a.nodeid, a.argname, a) for a in args],
                                   OrderedDict)
         # eps can be DMRS-style nodes or MRS EPs; {anchor: Node}
-        self.eps    = OrderedDict([(ep.nodeid, ep) for ep in (eps or [])])
+        self.eps    = OrderedDict([(ep.nodeid, ep) for ep in eps])
         self.hcons  = hcons # handle constraints [HandleConstraint]
         self.icons  = icons # individual constraints [IndividualConstraint]
         self.lnk    = lnk   # Lnk object (MRS-level lnk spans the whole input)

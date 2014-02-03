@@ -34,6 +34,12 @@ class Node(LnkMixin):
     def __repr__(self):
         return 'Node({}[{}])'.format(self.nodeid, self.pred)
 
+    def __eq__(self, other):
+        return self.nodeid == other.nodeid and \
+                self.pred == other.pred and \
+                set(self.sortinfo.items()) == set(other.sortinfo.items()) and \
+                self.lnk == other.lnk
+
     @property
     def cvarsort(self):
         return self.sortinfo.get(CVARSORT)

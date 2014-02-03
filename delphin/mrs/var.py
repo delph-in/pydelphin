@@ -54,6 +54,6 @@ class VarGenerator(object):
         self.vid += 1
         return v
 
-sort_vid_re = re.compile(r'(\w*\D)(\d+)')
+sort_vid_re = re.compile(r'^(\w*\D)(\d+)$')
 def sort_vid_split(vs):
     return sort_vid_re.match(vs).groups()
