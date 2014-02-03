@@ -3,6 +3,7 @@ from collections import OrderedDict
 from delphin.mrs import (Mrs, ElementaryPredication as EP, Pred, Argument,
                          MrsVariable, HandleConstraint, Lnk)
 from delphin.codecs import simplemrs
+from delphin.codecs.simplemrs import tokenize # for convenience
 from delphin._exceptions import MrsDecodeError
 
 # "dogs sleep." with ACE and the ERG
@@ -42,7 +43,7 @@ class TestHelperFunctions(unittest.TestCase):
     def test_tokenize(self):
         # break up punctuation and symbols
         eq = self.assertEqual
-        t = simplemrs.tokenize
+        t = tokenize
         eq(t('[A:a0]'), ['[','A',':','a0',']'])
         eq(t('[ABC:abc1[abc D:d E3F:g]]'),
             ['[','ABC',':','abc1','[','abc','D',':','d', 'E3F',':','g',']',']'])
@@ -113,13 +114,37 @@ class TestDeserialize(unittest.TestCase):
             hcons=[HandleConstraint.qeq(self.vars1['h4'], self.vars1['h6'])]
         )
 
+    def test_read_featval(self):
+        eq = self.assertEqual
+        rfv = simplemrs.read_featval
+        eq(rfv(tokenize('CARG: "Kim"')), ('CARG', '"Kim"'))
+        eq(rfv(tokenize('CARG: 3')), ('CARG', '3'))
+        eq(rfv(tokenize('LBL: h1'), feat='LBL', sort='h'),
+           ('LBL', MrsVariable(vid=1, sort='h')))
+        self.assertRaises(MrsDecodeError, rfv, tokenize('LBL: h1'),
+                          feat='ARG1')
+        self.assertRaises(MrsDecodeError, rfv, tokenize('LBL: h1'),
+                          sort='x')
+        props = OrderedDict(PROP='val')
+        eq(rfv(tokenize('ARG1: x1 [ x PROP: val ]')),
+           ('ARG1', MrsVariable(vid=1, sort='x', properties=props)))
+
     def test_read_variable(self):
-        pass
+        eq = self.assertEqual
+        rv = simplemrs.read_variable
+        eq(rv(tokenize('h1')), MrsVariable(vid=1, sort='h'))
+        eq(rv(tokenize('x1 [ x PROP: val ]')),
+           MrsVariable(vid=1, sort='x', properties=OrderedDict(PROP='val')))
+        self.assertRaises(MrsDecodeError, rv, tokenize('x1 [ e PROP: val ]'))
+        self.assertRaises(MrsDecodeError, rv, tokenize('h1 [ h PROP: val ]'))
+        self.assertRaises(MrsDecodeError, rv, tokenize('x1'),
+                          vars={'1':MrsVariable(vid=1, sort='h')})
+
     def test_read_props(self):
         pass
+
     def test_read_rels(self):
         eq = self.assertEqual
-        tokenize = simplemrs.tokenize
         read_rels = simplemrs.read_rels
         rr = lambda s: read_rels(tokenize(s))
         eq(rr('RELS: <>'), [])
@@ -140,7 +165,6 @@ class TestDeserialize(unittest.TestCase):
 
     def test_read_ep(self):
         eq = self.assertEqual
-        tokenize = simplemrs.tokenize
         read_ep = simplemrs.read_ep
         rep = lambda s: read_ep(tokenize(s))
         #TODO self.assertRaises(MrsDecodeError, rep, '[ ]')
@@ -154,10 +178,19 @@ class TestDeserialize(unittest.TestCase):
            self.mrs1ep3)
 
     def test_read_lnk(self):
-        pass
+        eq = self.assertEqual
+        rl = simplemrs.read_lnk
+        eq(rl(tokenize('')), None)
+        eq(rl(tokenize('<>')), None)
+        eq(rl(tokenize('<0:1>')), Lnk.charspan(0,1))
+        eq(rl(tokenize('<@1>')), Lnk.edge(1))
+        eq(rl(tokenize('<0#1>')), Lnk.chartspan(0,1))
+        eq(rl(tokenize('<1>')), Lnk.tokens([1]))
+        eq(rl(tokenize('<1 2 3>')), Lnk.tokens([1,2,3]))
+
     def test_read_hcons(self):
         pass
-    def test_decode_mrs(self):
+    def test_read_mrs(self):
         return
         #m = simplemrs.decode(regular_mrs)
         #eq(m.ltop, simplemrs.decode_handle('h0'))
