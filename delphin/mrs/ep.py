@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from .lnk import LnkMixin
+from .var import MrsVariable
 from .node import Node
 from .config import (CVARG, CONSTARG, ANCHOR_SORT)
 
@@ -61,7 +62,10 @@ class ElementaryPredication(LnkMixin):
 
     @property
     def anchor(self):
-        return MrsVariable(vid=self.nodeid, sort=ANCHOR_SORT)
+        if self.nodeid:
+            return MrsVariable(vid=self.nodeid, sort=ANCHOR_SORT)
+        else:
+            return None
 
     @anchor.setter
     def anchor(self, anchor):

@@ -1,10 +1,10 @@
 # -*- coding: UTF-8 -*-
 from collections import OrderedDict
 import unittest
-from delphin.mrs import (Xmrs, Mrs, Dmrs, ElementaryPredication, Node, Pred,
-                         Argument, Link, MrsVariable, HandleConstraint, Lnk,
-                         Hook)
-from delphin.mrs.config import (QEQ, LHEQ, OUTSCOPES,
+from delphin.mrs import (Xmrs, Mrs, Dmrs, ElementaryPredication as EP, Node,
+                         Pred, Argument, Link, MrsVariable, HandleConstraint,
+                         Lnk, Hook)
+from delphin.mrs.config import (QEQ, LHEQ, OUTSCOPES, CVARSORT,
                                 EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
                                 CHARSPAN, CHARTSPAN, TOKENS, EDGE,
                                 GRAMMARPRED, REALPRED, STRINGPRED,
@@ -148,47 +148,139 @@ class TestPred(unittest.TestCase):
                             Pred.string_or_grammar_pred('dog_n_rel'))
 
 class TestNode(unittest.TestCase):
-    def test_basic(self):
+    def test_construct(self):
         # minimum is a nodeid and a pred
         self.assertRaises(TypeError, Node)
         self.assertRaises(TypeError, Node, 10000)
         n = Node(10000, Pred.stringpred('_dog_n_rel'))
         self.assertEqual(n.nodeid, 10000)
         self.assertEqual(n.pred, '_dog_n_rel')
+
+    def test_sortinfo(self):
+        n = Node(10000, Pred.stringpred('_dog_n_rel'))
         self.assertEqual(len(n.sortinfo), 0)
-        self.assertEqual(n.lnk, None)
-        self.assertEqual(n.surface, None)
-        self.assertEqual(n.base, None)
-        self.assertEqual(n.carg, None)
-        self.assertEqual(n.cvarsort, None)
-        self.assertEqual(len(n.properties), 0)
-        self.assertFalse(n.is_quantifier())
-        n = Node(10000, Pred.grammarpred('def_q_rel'))
-        self.assertTrue(n.is_quantifier())
-
-    def test_normal(self):
         n = Node(10000, Pred.stringpred('_dog_n_rel'),
-                 sortinfo=OrderedDict(cvarsort='x', PER='3'),
-                 lnk=Lnk.charspan(0,2))
-        self.assertEqual(n.nodeid, 10000)
-        self.assertEqual(n.pred, '_dog_n_rel')
+                 sortinfo=[(CVARSORT, 'x')])
+        self.assertEqual(len(n.sortinfo), 1)
+        n = Node(10000, Pred.stringpred('_dog_n_rel'),
+                 sortinfo=[(CVARSORT, 'x'), ('PER', '3')])
         self.assertEqual(len(n.sortinfo), 2)
-        self.assertEqual(n.cfrom, 0)
-        self.assertEqual(n.cto, 2)
-        self.assertEqual(n.surface, None)
-        self.assertEqual(n.base, None)
-        self.assertEqual(n.carg, None)
-        self.assertEqual(n.cvarsort, 'x')
-        self.assertEqual(len(n.properties), 1)
-        self.assertEqual(n.properties['PER'], '3')
-        self.assertFalse(n.is_quantifier())
+        n2 = Node(10001, Pred.stringpred('_cat_n_rel'),
+                  sortinfo=OrderedDict([(CVARSORT,'x'), ('PER','3')]))
+        self.assertEqual(n.sortinfo, n2.sortinfo)
 
-#class TestElementaryPredication(unittest.TestCase):
-#    def test_basic(self):
-#        EP = ElementaryPredication
-#        # minimum EP has pred
-#        self.assertRaises(TypeError, EP)
-#        self.assertRaises(TypeError, EP, )
+    def test_properties(self):
+        n = Node(10000, Pred.stringpred('_dog_n_rel'))
+        self.assertEqual(len(n.properties), 0)
+        n = Node(10000, Pred.stringpred('_dog_n_rel'),
+                 sortinfo=[(CVARSORT, 'x')])
+        self.assertEqual(len(n.properties), 0)
+        n = Node(10000, Pred.stringpred('_dog_n_rel'),
+                 sortinfo=[(CVARSORT, 'x'), ('PER', '3')])
+        self.assertEqual(len(n.properties), 1)
+        n2 = Node(10001, Pred.stringpred('_unknowncat_n_rel'),
+                  sortinfo=OrderedDict([(CVARSORT,'u'), ('PER','3')]))
+        self.assertEqual(n.properties, n2.properties)
+
+    def test_lnk(self):
+        n = Node(10000, Pred.stringpred('_dog_n_rel'))
+        self.assertEqual(n.lnk, None)
+        self.assertEqual(n.cfrom, -1)
+        self.assertEqual(n.cto, -1)
+        n = Node(10000, Pred.stringpred('_dog_n_rel'),
+                 lnk=Lnk.charspan(0,1))
+        self.assertEqual(n.lnk, Lnk.charspan(0,1))
+        self.assertEqual(n.cfrom, 0)
+        self.assertEqual(n.cto, 1)
+
+    def test_cvarsort(self):
+        n = Node(10000, Pred.stringpred('_dog_n_rel'))
+        self.assertEqual(n.cvarsort, None)
+        n.cvarsort = 'x'
+        self.assertEqual(n.cvarsort, 'x')
+        self.assertEqual(n.sortinfo, OrderedDict([(CVARSORT, 'x')]))
+        n = Node(10000, Pred.stringpred('_run_v_rel'),
+                 sortinfo=OrderedDict([(CVARSORT, 'e')]))
+        self.assertEqual(n.cvarsort, 'e')
+
+    def test_get_property(self):
+        n = Node(10000, Pred.stringpred('_dog_n_rel'))
+        self.assertEqual(n.get_property('PER'), None)
+        n = Node(10000, Pred.stringpred('_dog_n_rel'),
+                 sortinfo=OrderedDict([(CVARSORT, 'x'), ('PER', '3')]))
+        self.assertEqual(n.get_property('PER'), '3')
+
+class TestElementaryPredication(unittest.TestCase):
+    def test_construct(self):
+        self.assertRaises(TypeError, EP)
+        self.assertRaises(TypeError, EP, Pred.stringpred('_dog_n_rel'))
+        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1,sort='h'))
+        self.assertEqual(e.pred, '_dog_n_rel')
+        self.assertEqual(e.label, MrsVariable(vid=1, sort='h'))
+
+    def test_anchor(self):
+        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'))
+        self.assertEqual(e.anchor, None)
+        self.assertEqual(e.nodeid, None)
+        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'),
+               anchor=MrsVariable(vid=10000, sort='h'))
+        self.assertEqual(e.anchor, MrsVariable(vid=10000, sort='h'))
+        self.assertEqual(e.nodeid, 10000)
+
+    def test_lnk(self):
+        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'))
+        self.assertEqual(e.lnk, None)
+        self.assertEqual(e.cfrom, -1)
+        self.assertEqual(e.cto, -1)
+        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'),
+               lnk=Lnk.charspan(0,1))
+        self.assertEqual(e.lnk, Lnk.charspan(0,1))
+        self.assertEqual(e.cfrom, 0)
+        self.assertEqual(e.cto, 1)
+
+    def test_properties(self):
+        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'))
+        self.assertEqual(len(e.properties), 0)
+
+    def test_args(self):
+        pass
+
+    def test_cv(self):
+        pass
+    def test_get_property(self):
+        pass
+    def test_get_arg(self):
+        pass
+
+    #def test_basic(self):
+    #    eq = self.assertEqual
+    #    EP = ElementaryPredication
+    #    # minimum EP has pred and a label
+    #    self.assertRaises(TypeError, EP)
+    #    self.assertRaises(TypeError, EP, Pred.stringpred('_dog_n_rel'))
+    #    e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'))
+    #    eq(e.pred, '_dog_n_rel')
+    #    eq(e.label, MrsVariable(vid=1, sort='h'))
+    #    eq(e.cv, None)
+    #    eq(len(e.args), 0)
+    #    eq(e.lnk, None)
+    #    eq(len(e.properties), 0)
+    #    eq(e.anchor, None)
+    #    eq(e.carg, None)
+
+    #def test_modify(self):
+    #    eq = self.assertEqual
+    #    EP = ElementaryPredication
+    #    e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'))
+    #    e.pred = Pred.stringpred('_cat_n_rel')
+    #    eq(e.pred, '_cat_n_rel')
+    #    #eq(
+
+    #def test_mrs_ep(self):
+    #    eq = self.assertEqual
+    #    EP = ElementaryPredication
+    #    #e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'),
+    #    #       a
 
 #class TestXmrs(unittest.TestCase):
 #    def test_empty(self):

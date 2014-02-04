@@ -11,7 +11,7 @@ class Node(LnkMixin):
         Args:
             nodeid (int): node identifier
             pred (Pred): node's predicate
-            sortinfo (OrderedDict): node properties (with cvarsort)
+            sortinfo: node properties (with cvarsort)
             lnk (Lnk): links pred to surface form or parse edges
             surface: surface string
             base: base form
@@ -22,11 +22,13 @@ class Node(LnkMixin):
         self.nodeid     = nodeid    # DMRS-style nodeid
         self.pred       = pred      # mrs.Pred object
         # sortinfo is the properties plus cvarsort
-        self.sortinfo   = sortinfo or OrderedDict()
+        self.sortinfo   = OrderedDict(sortinfo or [])
         self.lnk        = lnk       # mrs.Lnk object
         self.surface    = surface
         self.base       = base      # here for compatibility with the DTD
         self.carg       = carg
+        # accessor method
+        self.get_property = self.sortinfo.get
 
     def __str__(self):
         return self.__repr__()
@@ -43,6 +45,10 @@ class Node(LnkMixin):
     @property
     def cvarsort(self):
         return self.sortinfo.get(CVARSORT)
+
+    @cvarsort.setter
+    def cvarsort(self, value):
+        self.sortinfo[CVARSORT] = value
 
     @property
     def properties(self):
