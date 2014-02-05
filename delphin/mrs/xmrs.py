@@ -187,6 +187,26 @@ class Xmrs(LnkMixin):
     def hcons(self):
         return list(self._var_to_hcons.values())
 
+    # query methods
+    def select_nodes(self, nodeid=None, pred=None):
+        nodematch = lambda n: ((nodeid is None or n.nodeid == nodeid) and
+                               (pred is None or n.pred == pred))
+        return list(filter(nodematch, self.nodes))
+
+    def select_eps(self, anchor=None, cv=None, label=None, pred=None):
+        epmatch = lambda n: ((anchor is None or n.anchor == anchor) and
+                             (cv is None or n.cv == cv) and
+                             (label is None or n.label == label) and
+                             (pred is None or n.pred == pred))
+        return list(filter(epmatch, self.eps))
+
+    def select_args(self, anchor=None, argname=None, value=None):
+        argmatch = lambda a: ((anchor is None or a.anchor == anchor) and
+                              (argname is None or
+                               a.argname.upper() == argname.upper()) and
+                              (value is None or a.value == value))
+        return list(filter(argmatch, self.args))
+
     def get_pred(self, nodeid):
         try:
             return self._nid_to_node[nodeid].pred
