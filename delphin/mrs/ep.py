@@ -1,10 +1,10 @@
 from collections import OrderedDict
-from .lnk import LnkMixin
-from .var import MrsVariable
 from .node import Node
+from .lnk import LnkMixin
+from .var import (MrsVariable, AnchorMixin)
 from .config import (CVARG, CONSTARG, ANCHOR_SORT)
 
-class ElementaryPredication(LnkMixin):
+class ElementaryPredication(LnkMixin, AnchorMixin):
     """
     An elementary predication (EP) is an extension of a Node that
     requires a characteristic variable (cv) and label.
@@ -22,23 +22,28 @@ class ElementaryPredication(LnkMixin):
             base: base form
         """
         self.label = label
-        nodeid=anchor.vid if anchor else None
         # first args, then can get CV
         self.argdict  = OrderedDict((a.argname, a) for a in (args or []))
-        sortinfo = self.cv.sortinfo if self.cv else None
-        self._node = Node(nodeid, pred, sortinfo=sortinfo, lnk=lnk,
-                          surface=surface, base=base, carg=self.carg)
-        # copy up the following from _node
-        self.nodeid        = self._node.nodeid
-        self.pred          = self._node.pred
-        self.sortinfo      = self._node.sortinfo
-        self.properties    = self._node.properties
-        self.lnk           = self._node.lnk
-        self.surface       = self._node.surface
-        self.base          = self._node.base
-        #self.carg          = self._node.carg
-        self.cvarsort      = self._node.cvarsort
-        self.is_quantifier = self._node.is_quantifier
+        # Only fill in other attributes if pred is given, otherwise ignore.
+        # This behavior is to help enable the from_node classmethod.
+        self._node = None
+        if pred is not None:
+            cv = self.cv
+            self._node = Node(
+                anchor.vid if anchor else None,
+                pred,
+                sortinfo=cv.sortinfo if cv else None,
+                lnk=lnk,
+                surface=surface,
+                base=base,
+                carg=self.carg
+            )
+
+    @classmethod
+    def from_node(cls, label, node, args=None):
+        ep = cls(None, label, args=args)
+        ep._node = node
+        return ep
 
     def __repr__(self):
         return 'ElementaryPredication({}[{}])'.format(str(self.pred),
@@ -48,32 +53,62 @@ class ElementaryPredication(LnkMixin):
         return self.__repr__()
 
     def __eq__(self, other):
-        return self._node == other._node and \
-                self.label == other.label and \
-                self.cv == other.cv and \
-                self.args == other.args
+        return self.label == other.label and \
+               self.argdict == other.argdict and \
+               self._node == other._node
 
-    def arg_value(self, argname):
-        try:
-            arg = self.argdict[argname]
-            return arg.value
-        except KeyError:
-            return None
+    # these properties provide an interface to the node attributes
 
     @property
-    def anchor(self):
-        if self.nodeid:
-            return MrsVariable(vid=self.nodeid, sort=ANCHOR_SORT)
-        else:
-            return None
+    def nodeid(self):
+        return self._node.nodeid
+    @nodeid.setter
+    def nodeid(self, value):
+        self._node.nodeid = value
+    
+    @property
+    def pred(self):
+        return self._node.pred
+    @pred.setter
+    def pred(self, value):
+        self._node.pred = value
+    
+    @property
+    def lnk(self):
+        return self._node.lnk
+    @lnk.setter
+    def lnk(self, value):
+        self._node.lnk = value
+    
+    @property
+    def surface(self):
+        return self._node.surface
+    @surface.setter
+    def surface(self, value):
+        self._node.surface = value
+    
+    @property
+    def base(self):
+        return self._node.base
+    @base.setter
+    def base(self, value):
+        self._node.base = value
+    
+    # carg property intentionally left out. It should be accessed from
+    # the arg list (see the property below)
 
-    @anchor.setter
-    def anchor(self, anchor):
-        self.nodeid = anchor.vid
+    # these properties are specific to the EP's qualities
 
     @property
     def cv(self):
         return self.arg_value(CVARG)
+
+    @property
+    def properties(self):
+        try:
+            return self.cv.properties
+        except AttributeError: # in case cv is None
+            return OrderedDict()
 
     @property
     def carg(self):
@@ -82,3 +117,10 @@ class ElementaryPredication(LnkMixin):
     @property
     def args(self):
         return list(self.argdict.values())
+
+    def arg_value(self, argname):
+        try:
+            arg = self.argdict[argname]
+            return arg.value
+        except KeyError:
+            return None

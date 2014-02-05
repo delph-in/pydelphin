@@ -1,8 +1,8 @@
-from .var import MrsVariable
+from .var import MrsVariable, AnchorMixin
 from .config import (VARIABLE_ARG, HOLE_ARG, LABEL_ARG, HCONS_ARG,
                      CONSTANT_ARG)
 
-class Argument(object):
+class Argument(AnchorMixin):
     """
     An argument of an *MRS predicate.
 

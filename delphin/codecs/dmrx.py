@@ -65,9 +65,7 @@ def decode_dmrs(elem):
     #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
     elem = elem.find('.') # in case elem is an ElementTree rather than Element
-    return Dmrs(ltop       = elem.get('ltop'),
-                index      = elem.get('index'), # not in the DTD; a nodeid
-                nodes      = list(map(decode_node, elem.iter('node'))),
+    return Dmrs(nodes      = list(map(decode_node, elem.iter('node'))),
                 links      = list(map(decode_link, elem.iter('link'))),
                 lnk        = decode_lnk(elem),
                 surface    = elem.get('surface'),

@@ -8,18 +8,6 @@ class HandleConstraint(object):
         self.relation = relation
         self.lo = lo
 
-    @classmethod
-    def qeq(cls, hi, lo):
-        return cls(hi, QEQ, lo)
-
-    @classmethod
-    def lheq(cls, hi, lo):
-        return cls(hi, LHEQ, lo)
-
-    @classmethod
-    def outscopes(cls, hi, lo):
-        return cls(hi, OUTSCOPES, lo)
-
     def __eq__(self, other):
         return self.hi == other.hi and\
                self.relation == other.relation and\
@@ -35,6 +23,5 @@ class HandleConstraint(object):
     def __str__(self):
         return self.__repr__()
 
-# note: with the classmethods defined above, this becomes deprecated
 def qeq(hi, lo):
     return HandleConstraint(hi, QEQ, lo)

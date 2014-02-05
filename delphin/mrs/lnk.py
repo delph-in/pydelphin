@@ -28,10 +28,6 @@ class Lnk(object):
     def edge(cls, edge):
         return cls(int(edge), EDGE)
 
-    def __eq__(self, other):
-        return self.type == other.type and \
-                self.data == other.data
-
     def __str__(self):
         if self.type == CHARSPAN:
             return '<{}:{}>'.format(self.data[0], self.data[1])
@@ -41,6 +37,9 @@ class Lnk(object):
             return '<@{}>'.format(self.data)
         elif self.type == TOKENS:
             return '<{}>'.format(' '.join(self.data))
+
+    def __eq__(self, other):
+        return self.type == other.type and self.data == other.data
 
 class LnkMixin(object):
     """

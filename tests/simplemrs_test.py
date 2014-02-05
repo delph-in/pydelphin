@@ -1,7 +1,8 @@
 import unittest
 from collections import OrderedDict
 from delphin.mrs import (Mrs, ElementaryPredication as EP, Pred, Argument,
-                         MrsVariable, HandleConstraint, Lnk)
+                         MrsVariable, Lnk)
+from delphin.mrs.hcons import qeq
 from delphin.codecs import simplemrs
 from delphin.codecs.simplemrs import tokenize # for convenience
 from delphin._exceptions import MrsDecodeError
@@ -111,7 +112,7 @@ class TestDeserialize(unittest.TestCase):
         self.mrs1 = Mrs(
             ltop=self.vars1['h0'], index=self.vars1['e1'],
             rels=[self.mrs1ep1, self.mrs1ep2, self.mrs1ep3],
-            hcons=[HandleConstraint.qeq(self.vars1['h4'], self.vars1['h6'])]
+            hcons=[qeq(self.vars1['h4'], self.vars1['h6'])]
         )
 
     def test_read_featval(self):
@@ -138,7 +139,7 @@ class TestDeserialize(unittest.TestCase):
         self.assertRaises(MrsDecodeError, rv, tokenize('x1 [ e PROP: val ]'))
         self.assertRaises(MrsDecodeError, rv, tokenize('h1 [ h PROP: val ]'))
         self.assertRaises(MrsDecodeError, rv, tokenize('x1'),
-                          vars={'1':MrsVariable(vid=1, sort='h')})
+                          variables={'1':MrsVariable(vid=1, sort='h')})
 
     def test_read_props(self):
         pass

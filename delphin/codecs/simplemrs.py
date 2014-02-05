@@ -124,52 +124,48 @@ def invalid_token_error(token, expected):
     raise MrsDecodeError('Invalid token: "{}"\tExpected: "{}"'
                          .format(token, expected))
 
-def unexpected_termination_error():
-    raise MrsDecodeError('Invalid MRS: Unexpected termination.')
-
 def deserialize(string):
     return read_mrs(tokenize(string))
 
 def read_mrs(tokens):
     """Decode a sequence of Simple-MRS tokens. Assume LTOP, INDEX, RELS,
        and HCONS occur in that order."""
+    # variables needs to be passed to any function that can call read_variable
+    variables = {}
     # [ LTOP : handle INDEX : variable RELS : rels-list HCONS : hcons-list ]
-    # vars is used for unifying variables. It should be passed along to any
-    # function that can call read_variable
-    vars = {}
     try:
         validate_token(tokens.pop(0), _left_bracket)
         if tokens[0] == _ltop:
-            _, ltop  = read_featval(tokens, feat=_ltop, vars=vars)#, sort='h')
+            _, ltop  = read_featval(tokens, feat=_ltop, variables=variables)
         if tokens[0] == _index:
-            _, index = read_featval(tokens, feat=_index, vars=vars)
-        rels  = read_rels(tokens, vars=vars)
-        hcons = read_hcons(tokens, vars=vars)
+            _, index = read_featval(tokens, feat=_index, variables=variables)
+        rels  = read_rels(tokens, variables=variables)
+        hcons = read_hcons(tokens, variables=variables)
         validate_token(tokens.pop(0), _right_bracket)
         m = Mrs(ltop, index, rels, hcons)
     except IndexError:
         unexpected_termination_error()
     return m
 
-def read_featval(tokens, feat=None, sort=None, vars=None):
+def read_featval(tokens, feat=None, sort=None, variables=None):
     # FEAT : (var-or-handle|const)
-    if vars is None: vars = {}
+    if variables is None: variables = {}
     name = tokens.pop(0)
     if feat is not None:
         validate_token(name, feat)
     validate_token(tokens.pop(0), _colon)
     # if it's not a variable, assume it's a constant
     if is_variable(tokens[0]):
-        value = read_variable(tokens, sort=sort, vars=vars)
+        value = read_variable(tokens, sort=sort, variables=variables)
     else:
         value = tokens.pop(0)
     return name, value
 
-def read_variable(tokens, sort=None, vars=None):
+def read_variable(tokens, sort=None, variables=None):
     """Read and return the MrsVariable object for the value of the
        variable. Fail if the sort does not match the expected."""
     # var [ vartype PROP : val ... ]
-    if vars is None: vars = {}
+    if variables is None: variables = {}
     var = tokens.pop(0)
     srt, vid = sort_vid_split(var)
     # consider something like not(srt <= sort) in the case of subsumptive sorts
@@ -178,19 +174,19 @@ def read_variable(tokens, sort=None, vars=None):
                              var, srt, sort))
     vartype, props = read_props(tokens)
     if vartype is not None and srt != vartype:
-        raise MrsDecodeError('The sort of variable {} is incosistently '
-                             'specified'.format(var))
+        raise MrsDecodeError('Variable "{}" and its cvarsort "{}" are '
+                             'not the same.'.format(var, vartype))
     if srt == 'h' and props:
-        raise MrsDecodeError('Handle variables (like {}) may not have '
-                             'properties.'.format(var))
-    if vid in vars:
-        if srt != vars[vid].sort:
+        raise MrsDecodeError('Handle variable "{}" has a non-empty '
+                             'property set {}.'.format(var, props))
+    if vid in variables:    
+        if srt != variables[vid].sort:
             raise MrsDecodeError('Variable {} has a conflicting sort with {}'
-                                 .format(var, str(vars[vid])))
-        vars[vid].properties.update(props)
+                                 .format(var, str(variables[vid])))
+        variables[vid].properties.update(props)
     else:
-        vars[vid] = MrsVariable(vid=vid, sort=srt, properties=props)
-    return vars[vid]
+        variables[vid] = MrsVariable(vid=vid, sort=srt, properties=props)
+    return variables[vid]
 
 def read_props(tokens):
     """Read and return a dictionary of variable properties."""
@@ -211,37 +207,38 @@ def read_props(tokens):
     tokens.pop(0) # we know this is a right bracket
     return vartype, props
 
-def read_rels(tokens, vars=None):
+def read_rels(tokens, variables=None):
     """Read and return a RELS set of ElementaryPredications."""
     # RELS: < ep* >
-    if vars is None: vars = {}
+    if variables is None: variables = {}
     rels = []
     validate_tokens(tokens, [_rels, _colon, _left_angle])
     while tokens[0] != _right_angle:
-        rels += [read_ep(tokens, vars)]
+        rels += [read_ep(tokens, variables=variables)]
     tokens.pop(0) # we know this is a right angle
     return rels
 
-def read_ep(tokens, vars=None):
+def read_ep(tokens, variables=None):
     """Read and return an ElementaryPredication."""
     # [ pred LBL : lbl ARG : variable-or-handle ... ]
     # or [ pred < lnk > ...
-    if vars is None: vars = {}
+    if variables is None: variables = {}
     validate_token(tokens.pop(0), _left_bracket)
     pred     = Pred.string_or_grammar_pred(tokens.pop(0))
     lnk      = read_lnk(tokens)
-    _, label = read_featval(tokens, feat=_lbl, sort=HANDLESORT, vars=vars)
+    _, label = read_featval(tokens, feat=_lbl, sort=HANDLESORT,
+                            variables=variables)
     args     = []
     while tokens[0] != _right_bracket:
-        args.append(read_argument(tokens, vars=vars))
+        args.append(read_argument(tokens, variables=variables))
     tokens.pop(0) # we know this is a right bracket
     return ElementaryPredication(pred, label, args=args, lnk=lnk)
 
-def read_argument(tokens, vars=None):
+def read_argument(tokens, variables=None):
     """Read and return an Argument."""
     # ARGNAME: (VAR|CONST)
-    if vars is None: vars = {}
-    argname, value = read_featval(tokens, vars=vars)
+    if variables is None: variables = {}
+    argname, value = read_featval(tokens, variables=variables)
     #argtype = CONSTANTARG # default in case others don't match
     #if isinstance(value, MrsVariable):
     #    if value.sort == HANDLESORT:
@@ -281,14 +278,14 @@ def read_lnk(tokens):
         validate_token(tokens.pop(0), _right_angle)
     return lnk
 
-def read_hcons(tokens, vars=None):
-    """Read and return an HCONS list."""
+def read_hcons(tokens, variables=None):
     # HCONS:< HANDLE (qeq|lheq|outscopes) HANDLE ... >
-    if vars is None: vars = {}
+    """Read and return an HCONS list."""
+    if variables is None: variables = {}
     hcons = []
     validate_tokens(tokens, [_hcons, _colon, _left_angle])
     while tokens[0] != _right_angle:
-        hi = read_variable(tokens, sort='h')
+        hi = read_variable(tokens, sort='h', variables=variables)
         # rels are case-insensitive and the convention is lower-case
         rel = tokens.pop(0).lower()
         if rel == _qeq:
@@ -299,7 +296,7 @@ def read_hcons(tokens, vars=None):
             rel = OUTSCOPES
         else:
             invalid_token_error(rel, '('+'|'.join(_valid_hcons)+')')
-        lo = read_variable(tokens, sort='h')
+        lo = read_variable(tokens, sort='h', variables=variables)
         hcons += [HandleConstraint(hi, rel, lo)]
     tokens.pop(0) # we know this is a right angle
     return hcons
@@ -307,6 +304,9 @@ def read_hcons(tokens, vars=None):
 #def read_icons(tokens):
 #    # ICONS:<>
 #    pass
+
+def unexpected_termination_error():
+    raise MrsDecodeError('Invalid MRS: Unexpected termination.')
 
 ##############################################################################
 ##############################################################################
@@ -341,7 +341,7 @@ def serialize_variable(var, listed_vars):
     if var.vid not in listed_vars and var.properties:
         toks += [_left_bracket, var.sort]
         for propkey, propval in var.properties.items():
-            toks += [propkey + _colon, propval]
+            toks += [propkey.upper() + _colon, propval]
         toks += [_right_bracket]
     listed_vars.add(var.vid)
     return ' '.join(toks)
@@ -364,8 +364,8 @@ def serialize_ep(ep, listed_vars):
     toks = [_left_bracket]
     toks += [ep.pred.string + serialize_lnk(ep.lnk)]
     toks += [serialize_argument(_lbl, ep.label, listed_vars)]
-    if ep.cv is not None:
-        toks += [serialize_argument(CVARG, ep.cv, listed_vars)]
+    #if ep.cv is not None:
+    #    toks += [serialize_argument(CVARG, ep.cv, listed_vars)]
     for arg in ep.args:
         toks += [serialize_argument(arg.argname, arg.value, listed_vars)]
     # add the constant if it exists (currently done as a regular arg above)

@@ -4,8 +4,8 @@ class Link(object):
        variables. A Link encodes a start and end node, the argument
        name, and label information (e.g. label equality, qeq, etc)."""
     def __init__(self, start, end, argname=None, post=None):
-        self.start    = start
-        self.end      = end
+        self.start    = int(start)
+        self.end      = int(end)
         self.argname  = argname
         self.post     = post
 

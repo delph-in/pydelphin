@@ -1,10 +1,10 @@
 import logging
+from operator import add
 from collections import (OrderedDict, defaultdict)
+from . import (Hook, MrsVariable, ElementaryPredication, Node, Link,
+               HandleConstraint)
 from .lnk import LnkMixin
-from .var import MrsVariable
-from .link import Link
-from .hcons import HandleConstraint
-from .config import (QEQ, EQ_POST)
+from .config import (ANCHOR_SORT, CVARSORT, QEQ, EQ_POST)
 from .util import AccumulationDict, dict_of_dicts as dod
 
 # Subclasses of Xmrs may be used for decoding.
@@ -12,56 +12,86 @@ from .util import AccumulationDict, dict_of_dicts as dod
 # they may be redefined in subclasses)
 class Xmrs(LnkMixin):
     """Basic class for Mrs, Rmrs, and Dmrs objects."""
-    def __init__(self, hook=None, # top-level handles/variables
-                 args=None,  # arguments
-                 eps=None,   # ElementaryPredications
-                 hcons=None, icons=None,      # handle/individual constraints
-                 lnk=None, surface=None,      # surface-string attributes
-                 identifier=None):            # discourse-utterance id
+    def __init__(self, hook=None, nodes=None, args=None,
+                 hcons=None, icons=None,
+                 cvs=None, labels=None,
+                 lnk=None, surface=None, identifier=None):
+        """
+        Xmrs objects are a middle-ground class for Mrs, Rmrs, and Dmrs.
+        The structural components (ltop, index, args, hcons, and icons)
+        do not use variables, but nodeids. Variables are then available
+        through maps (cvs and labels) using the nodeids as keys.
 
+        Args:
+            hook (Hook): container class for things like ltop and index
+            nodes: an iterable container of Nodes
+            args: an iterable container of Arguments
+            icons: an iterable container of IndividualConstraints
+            cvs (dict): a mapping of nodeids to CVs (MrsVariables)
+            labels (dict): a mapping of nodeids to labels (MrsVariables)
+            lnk (Lnk): links the Xmrs to the surface form or parse structure
+            surface: surface string
+            identifier: discourse-utterance id
+        Returns:
+            an Xmrs object
+        """
+        # default values
+        if nodes is None: nodes = []
         if args is None: args = []
-        if eps is None: eps = []
         if hcons is None: hcons = []
         if icons is None: icons = []
+        if cvs is None: cvs = {}
+        if labels is None: labels = {}
 
+        # build inner data structures
         self.hook = hook
-        # semi-RMRS-style roles {anchor: {ROLE:TGT}}
+        self._nid_to_cv = OrderedDict(sorted(cvs))
+        self._cv_to_nids = AccumulationDict(add,
+                               ((cv, [nid]) for nid, cv in cvs))
+        self._nid_to_label = OrderedDict(sorted(labels))
+        self._label_to_nids = AccumulationDict(add,
+                                  ((lbl, [nid]) for nid, lbl in labels))
+        self._nid_to_node = OrderedDict((n.nodeid, n) for n in nodes)
         self._nid_to_argmap = dod([(a.nodeid, a.argname, a) for a in args],
                                   OrderedDict)
-        # eps can be DMRS-style nodes or MRS EPs; {anchor: Node}
-        self.eps    = OrderedDict([(ep.nodeid, ep) for ep in eps])
-        self.hcons  = hcons # handle constraints [HandleConstraint]
+        self._var_to_hcons = OrderedDict((h.lo, h) for h in hcons)
         self.icons  = icons # individual constraints [IndividualConstraint]
         self.lnk    = lnk   # Lnk object (MRS-level lnk spans the whole input)
         self.surface= surface   # The surface string
         self.identifier = identifier # Associates an utterance with the RMRS
-        Xmrs.resolve(self) # Call explicitly so the local resolve() runs
 
-    def resolve(self):
-        # one-to-one characteristic-variable to ep map
-        self.cv_map = dict((ep.cv.vid, ep) for ep in self.eps.values()
-                           if not ep.is_quantifier() and ep.cv is not None)
-        # one-to-many label-equality-graph
-        self.label_sets = self.label_equality_sets()
-        self.hcons_map = dict((h.hi, h) for h in self.hcons)
-        # one-to-many ep-to-ep QEQ graph ("hole to label qeq graph")
-        self.qeq_graph = defaultdict(list)
-        for hc in self.hcons:
-            if hc.relation != QEQ: continue
-            if hc.lo.vid not in self.label_sets:
-                logging.warn('QEQ lo handle is not an EP\'s LBL: {}'
-                             .format(hc.lo))
-            #self.qeq_graph[hc.hi] =
-        #if self.index is None:
-        #    self.index = self.find_head_ep().cv
+        # accessor methods
+        self.get_cv = self._nid_to_cv.get
+        self.get_label = self._nid_to_label.get
+        #self.get_pred = # needs to be defined as a method
+        self.get_node = self._nid_to_node.get
+        #self.get_ep # needs to be defined as a method
+        self.get_argmap = self._nid_to_argmap.get
+        self.get_args = lambda n: self._nid_to_argmap.get(n, {}).values()
+        #self.get_links # needs to be defined as a method
+        self.get_hcons = self._var_to_hcons.get
 
-    def arg_to_ep(self, nodeid, argname):
-        """Return the EP, if any, linked by the given argument for the
-           given EP."""
-        var = self._nid_to_argmap.get(nodeid,{}).get(argname).value
-        if var is None:
-            return None
-        return self.cv_map.get(var.vid)
+    @property
+    def nodeids(self):
+        # does not return LTOP nodeid
+        return list(self._nid_to_node.keys())
+
+    @property
+    def anchors(self):
+        # does not return LTOP anchor
+        return [MrsVariable(vid=n, sort=ANCHOR_SORT) for n in self.nodeids]
+
+    @property
+    def variables(self):
+        raise NotImplementedError
+
+    @property
+    def cvs(self):
+        return list(self._cv_to_nids.keys())
+
+    @property
+    def labels(self):
+        return list(self._label_to_nids.keys())
 
     @property
     def ltop(self):
@@ -72,25 +102,29 @@ class Xmrs(LnkMixin):
         return self.hook.index
 
     @property
-    def rels(self):
-        try:
-            return self._rels
-        except AttributeError:
-            self._rels = []
-            for nodeid, node in self.eps.items():
-                pass
-                # add arguments to args
-            return self._rels
+    def nodes(self):
+        return self._nid_to_node.values()
+
+    @property
+    def eps(self):
+        return [ElementaryPredication(
+                    node.pred,
+                    self.get_label(nid),
+                    anchor=MrsVariable(vid=nid, sort=ANCHOR_SORT),
+                    args=self.get_args(nid),
+                    lnk=node.lnk,
+                    surface=node.surface,
+                    base=node.base
+                )
+                for nid, node in self._nid_to_node.items()]
+
+    rels = eps # just a synonym
 
     @property
     def args(self):
         # _nid_to_argmap is {nid:{argname:arg}}
         return [arg for nid in self._nid_to_argmap
                     for arg in self._nid_to_argmap[nid].values()]
-
-    @property
-    def nodes(self):
-        return self.eps.values()
 
     @property
     def links(self):
@@ -149,11 +183,47 @@ class Xmrs(LnkMixin):
                 self._links += [Link(0, tgt.nodeid, post=EQ_POST)]
         return self._links
 
+    @property
+    def hcons(self):
+        return list(self._var_to_hcons.values())
+
+    def get_pred(self, nodeid):
+        try:
+            return self._nid_to_node[nodeid].pred
+        except KeyError:
+            return None
+
+    def get_ep(self, nodeid):
+        try:
+            node = self._nid_to_node[nodeid]
+            return ElementaryPredication(
+                       node.pred,
+                       self.get_label(nodeid),
+                       anchor=self.get_anchor(nodeid),
+                       args=self.get_args(nodeid),
+                       lnk=node.lnk,
+                       surface=node.surface,
+                       base=node.base,
+                   )
+        except KeyError:
+            return None
+
+    def get_links(self, nodeid):
+        raise NotImplementedError
+
+    def arg_to_ep(self, nodeid, argname):
+        """Return the EP, if any, linked by the given argument for the
+           given EP."""
+        var = self._nid_to_argmap.get(nodeid,{}).get(argname).value
+        if var is None:
+            return None
+        return self.cv_map.get(var.vid)
+
     def label_equality_sets(self):
         """Return a list of labels to the set of EPs that
            have that label."""
         lbl_eq = defaultdict(list)
-        for ep in self.eps.values():
+        for ep in self.eps:
             lbl_eq[ep.label] += [ep]
         return lbl_eq
 

@@ -18,14 +18,13 @@ class AccumulationDict(dict):
 
     def accumulate(self, *args, **kwargs):
         for arg in args:
-            if isinstance(arg, list):
-                for (key, value) in arg:
-                    self.__additem__(key, value)
-            elif isinstance(arg, dict):
-                for (key, value) in arg.items():
-                    self.__additem__(key, value)
-            else:
-                raise TypeError('Argument must be of type list or dict.')
+            if isinstance(arg, dict):
+                arg = arg.items()
+            if not hasattr(arg, '__iter__'):
+                raise TypeError('{} object is not iterable'
+                                .format(arg.__class__.__name__))
+            for (key, value) in arg:
+                self.__additem__(key, value)
         for key in kwargs:
             self.__additem__(key, kwargs[key])
 

@@ -1,6 +1,6 @@
 import re
 from collections import OrderedDict
-from .config import (HANDLESORT, CVARSORT)
+from .config import (HANDLESORT, CVARSORT, ANCHOR_SORT)
 
 class MrsVariable(object):
     """A variable has an id (vid), sort, and maybe properties."""
@@ -41,6 +41,17 @@ class MrsVariable(object):
         sortinfo.update(self.properties)
         return sortinfo
 
+# I'm not sure this belongs here, but anchors are MrsVariables...
+class AnchorMixin(object):
+    @property
+    def anchor(self):
+        if self.nodeid is not None:
+            return MrsVariable(vid=self.nodeid, sort=ANCHOR_SORT)
+        return None
+
+    @anchor.setter
+    def anchor(self, anchor):
+        self.nodeid = anchor.vid
 
 class VarGenerator(object):
     """Simple class to produce MrsVariables, incrementing the vid for
