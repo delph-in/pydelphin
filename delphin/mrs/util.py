@@ -1,3 +1,5 @@
+from itertools import chain, combinations
+
 class AccumulationDict(dict):
     def __init__(self, accumulator, *args, **kwargs):
         if not hasattr(accumulator, '__call__'):
@@ -37,3 +39,8 @@ def dict_of_dicts(triples, dicttype=dict):
             d[a] = dicttype()
             d[a][b] = c
     return d
+
+# adapted from recipe in itertools documentation
+def powerset(iterable):
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
