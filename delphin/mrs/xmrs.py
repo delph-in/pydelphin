@@ -4,7 +4,7 @@ from collections import (OrderedDict, defaultdict)
 from . import (Hook, MrsVariable, ElementaryPredication, Node, Link,
                HandleConstraint)
 from .lnk import LnkMixin
-from .config import (ANCHOR_SORT, CVARSORT, QEQ, EQ_POST)
+from .config import (ANCHOR_SORT, CVARSORT, QEQ, EQ_POST, VARIABLE_ARG)
 from .util import AccumulationDict, dict_of_dicts as dod
 
 # Subclasses of Xmrs may be used for decoding.
@@ -219,7 +219,7 @@ class Xmrs(LnkMixin):
             return ElementaryPredication(
                        node.pred,
                        self.get_label(nodeid),
-                       anchor=self.get_anchor(nodeid),
+                       anchor=MrsVariable(nodeid, sort=ANCHOR_SORT),
                        args=self.get_args(nodeid),
                        lnk=node.lnk,
                        surface=node.surface,

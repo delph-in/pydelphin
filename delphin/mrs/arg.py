@@ -1,6 +1,6 @@
 from .var import MrsVariable, AnchorMixin
 from .config import (VARIABLE_ARG, HOLE_ARG, LABEL_ARG, HCONS_ARG,
-                     CONSTANT_ARG)
+                     CONSTANT_ARG, HANDLESORT)
 
 class Argument(AnchorMixin):
     """
