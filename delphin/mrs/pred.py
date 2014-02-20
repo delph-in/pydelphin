@@ -7,6 +7,33 @@ pred_re = re.compile(r'_?(?P<lemma>.*?)_' # match until last 1 or 2 parts
                      r'(?P<end>rel(ation)?)', # NB only _rel is valid
                      re.IGNORECASE)
 
+def is_valid_pred_string(s, suffix_required=True):
+    """
+    Return True if the given predicate string represents a valid Pred,
+    False otherwise. If suffix_required is False, abbreviated Pred
+    strings will be accepted (e.g. _dog_n_1 instead of _dog_n_1_rel)
+    """
+    s = s.strip('"')
+    if not suffix_required and s.rsplit('_',1)[-1] not in ('rel', 'relation'):
+        s += '_rel'
+    return pred_re.match(s) is not None
+
+def normalize_pred_string(s):
+    """
+    Make pred strings more consistent by removing quotes and using the
+    _rel suffix.
+    """
+    s = s.strip('"')
+    match = pred_re.match(s) or pred_re.match(s + '_rel')
+    if match:
+        d = match.groupdict()
+        tokens = [d['lemma']]
+        if d['pos']: tokens.append(d['pos'])
+        if d['sense']: tokens.append(d['sense'])
+        tokens.append('rel')
+        return '_'.join(tokens)
+    return None
+
 class Pred(object):
     def __init__(self, predtype, lemma=None, pos=None, sense=None):
         """Extract the lemma, pos, and sense (if applicable) from a pred
@@ -25,6 +52,7 @@ class Pred(object):
         self.string = None # set by class methods
 
     def __eq__(self, other):
+
         if isinstance(other, Pred):
             other = other.string
         return self.string.strip('"\'') == other.strip('"\'')
