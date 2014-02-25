@@ -159,39 +159,19 @@ def _traverse_arg(xmrs, obj, steps):
             pass
         elif step == '':
             pass
-        
 
 def find(xmrs, path):
     pass
-    # / -> ARG/pred -> value of ARG is CV of pred, labels not shared
-    # # -> ARG#pred -> value of ARG is CV of pred, label shared
-    # # -> pred1#pred2 -> pred1 and pred2 share a label
-    # ^ -> ARG^pred -> value of ARG is pred's label
-    # ~ -> ARG~pred -> value of ARG is QEQ'd to pred's label
-    #_chase_v_1_rel
-    #_chase_v_1_rel:ARG1
-    #_chase_v_1_rel:ARG1/_dog_n_1_rel
-    #_think_v_1_rel:ARG2^_chase_v_1_rel
-    #_big_a_1_rel:ARG1#_dog_n_1_rel
-    #_the_q_rel:RSTR~_dog_n_1_rel
-    #_the_q_rel[RSTR~_dog_n_1_rel]
-    #_dog_n_1_rel=_wag_v_1_rel
-    # with recursion:
-    #  for "the dog barked"
-    #_bark_v_1_rel:ARG1/(_the_q_rel:RSTR~_dog_n_1_rel)
-    #  but needs 2 _dog_n_1_rels for "the dog whose tail wagged barked"
-    #_bark_v_1_rel:ARG1/(
-    #   _the_q_rel:RSTR~(
-    #       _wag_v_1_rel(ARG1/(
-    #           def_explicit_q_rel:RSTR~(
-    #               poss_rel:ARG1/_tail_n_1_rel
-    #           )
-    #       )=_dog_n_1_rel
-    #   )
-    #)
-    # with memory:
-    # bark:ARG1/(the:RSTR~#1[dog]) &\
-    #    #1:LBL^wag:ARG1/(def:RSTR~#2[tail]) &\
-        #    poss:(ARG1/#2 & ARG2=#1)
-        #compound_rel(ARG1=_ & ARG2/_)
-        #and{(L-HNDL^ & L-INDEX/)bark & (R-HNDL^ & R-INDEX)sleep???
+
+def generate_paths(xmrs, max_depth=None, include_conjunctions=True):
+    paths = []
+    for nid, node in xmrs.nodes:
+        args = list(get_arg_paths(xmrs, nid))
+
+def get_arg_paths(xmrs, nid):
+    for link in xmrs.get_links(nid):
+        
+        if arg.value in xmrs._cv_to_nids and \
+           nid not in xmrs._cv_to_nids(arg.value):
+            
+            yield ':{}{}{}'.format(arg.argname, 

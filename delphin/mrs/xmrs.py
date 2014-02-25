@@ -4,7 +4,8 @@ from collections import (OrderedDict, defaultdict)
 from . import (Hook, MrsVariable, ElementaryPredication, Node, Link,
                HandleConstraint)
 from .lnk import LnkMixin
-from .config import (ANCHOR_SORT, CVARSORT, QEQ, EQ_POST, VARIABLE_ARG)
+from .config import (ANCHOR_SORT, CVARSORT, HANDLESORT,
+                     QEQ, EQ_POST, VARIABLE_ARG)
 from .util import AccumulationDict, dict_of_dicts as dod
 
 # Subclasses of Xmrs may be used for decoding.
@@ -230,6 +231,56 @@ class Xmrs(LnkMixin):
 
     def get_links(self, nodeid):
         raise NotImplementedError
+
+    def get_quantifier(self, nodeid):
+        cv = self._nid_to_cv.get(nodeid)
+        if cv and cv in self._bv_to_nid:
+            return self._bv_to_nid[cv]
+        return None
+
+    def find_argument_head(self, var):
+        if not isinstance(var, MrsVariable):
+            var = MrsVariable.from_string(var)
+        if var in self._cv_to_nids:
+            return self.find_cv_head(var)
+        elif var.sort == HANDLESORT:
+            if var in self._var_to_hcons:
+                var = self._var_to_hcons[var].lo
+            return self.find_scope_head(var)
+        else:
+            return None
+
+    def find_cv_head(self, cv):
+        if not isinstance(cv, MrsVariable):
+            cv = MrsVariable.from_string(cv)
+        nids = self._cv_to_nids.get(cv, [])
+        for nid in nids:
+            node = self._nid_to_node.get(nid)
+            if node and not node.is_quantifier():
+                return nid
+        return None
+
+    def find_scope_head(self, label):
+        if not isinstance(label, MrsVariable):
+            label = MrsVariable.from_string(label)
+        nids = set(self._label_to_nids.get(label, []))
+        if len(nids) == 0:
+            return None
+        for nid in list(nids):
+            cv = self._nid_to_cv.get(nid)
+            if any(any(n in nids for n in self._cv_to_nids.get(a.value))
+                   for a in self.get_args(nid)
+                   if a.type == VARIABLE_ARG and a.value != cv):
+                nids.remove(nid)
+        # if there's more than one at this point, as a heuristic
+        # look for one with a quantifier
+        if len(nids) > 1:
+            for nid in list(nids):
+                if not self.get_quantifier(nid):
+                    nids.remove(nid)
+        assert len(nids) == 1, \
+                'More scope heads than expected: {}'.format(' '.join(nids))
+        return nids.pop()
 
     def arg_to_ep(self, nodeid, argname):
         """Return the EP, if any, linked by the given argument for the

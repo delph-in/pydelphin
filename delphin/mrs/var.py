@@ -14,6 +14,14 @@ class MrsVariable(object):
             pass # handles cannot have properties. Log this?
         self.properties = properties or OrderedDict()
 
+    @classmethod
+    def from_string(cls, varstring):
+        srt_vid = sort_vid_split(varstring)
+        if srt_vid:
+            sort, vid = srt_vid
+            return cls(vid, sort)
+        return None
+
     def __eq__(self, other):
         if isinstance(other, MrsVariable):
             return self.vid == other.vid and self.sort == other.sort
