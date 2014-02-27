@@ -107,3 +107,9 @@ class Pred(object):
 
     def is_quantifier(self):
         return self.pos == QUANTIFIER_SORT
+
+    def short_form(self):
+        """
+        Return the pred string without quotes or a _rel suffix.
+        """
+        return self.string.strip('"').rsplit('_',1)[0]

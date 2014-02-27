@@ -5,7 +5,7 @@ from . import (Hook, MrsVariable, ElementaryPredication, Node, Link,
                HandleConstraint)
 from .lnk import LnkMixin
 from .config import (ANCHOR_SORT, CVARSORT, HANDLESORT,
-                     QEQ, EQ_POST, VARIABLE_ARG)
+                     QEQ, EQ_POST, VARIABLE_ARG, CVARG)
 from .util import AccumulationDict, dict_of_dicts as dod
 
 # Subclasses of Xmrs may be used for decoding.
@@ -55,7 +55,10 @@ class Xmrs(LnkMixin):
         self._nid_to_node = OrderedDict((n.nodeid, n) for n in nodes)
         self._nid_to_argmap = dod([(a.nodeid, a.argname, a) for a in args],
                                   OrderedDict)
-        self._var_to_hcons = OrderedDict((h.lo, h) for h in hcons)
+        self._var_to_hcons = OrderedDict((h.hi, h) for h in hcons)
+        self.introduced_variables = set(list(self._cv_to_nids.keys()) +\
+                                        list(self._label_to_nids.keys()) +\
+                                        list(self._var_to_hcons.keys()))
         self.icons  = icons # individual constraints [IndividualConstraint]
         self.lnk    = lnk   # Lnk object (MRS-level lnk spans the whole input)
         self.surface= surface   # The surface string
@@ -73,14 +76,14 @@ class Xmrs(LnkMixin):
         self.get_hcons = self._var_to_hcons.get
 
     @property
-    def nodeids(self):
+    def node_ids(self):
         # does not return LTOP nodeid
         return list(self._nid_to_node.keys())
 
     @property
     def anchors(self):
         # does not return LTOP anchor
-        return [MrsVariable(vid=n, sort=ANCHOR_SORT) for n in self.nodeids]
+        return [MrsVariable(vid=n, sort=ANCHOR_SORT) for n in self.node_ids]
 
     @property
     def variables(self):
@@ -229,14 +232,22 @@ class Xmrs(LnkMixin):
         except KeyError:
             return None
 
+    def get_outbound_args(self, node_id, allow_unbound=True):
+        for arg in self._nid_to_argmap.get(node_id, {}).values():
+            if arg.argname == CVARG:
+                continue
+            if allow_unbound or arg.value in self.introduced_variables:
+                yield arg
+
     def get_links(self, nodeid):
         raise NotImplementedError
 
-    def get_quantifier(self, nodeid):
-        cv = self._nid_to_cv.get(nodeid)
-        if cv and cv in self._bv_to_nid:
-            return self._bv_to_nid[cv]
-        return None
+    def get_quantifier(self, nid):
+        cv = self._nid_to_cv.get(nid)
+        try:
+            return set(self._cv_to_nids.get(cv, [])).difference({nid}).pop()
+        except KeyError:
+            return None
 
     def find_argument_head(self, var):
         if not isinstance(var, MrsVariable):
@@ -244,8 +255,6 @@ class Xmrs(LnkMixin):
         if var in self._cv_to_nids:
             return self.find_cv_head(var)
         elif var.sort == HANDLESORT:
-            if var in self._var_to_hcons:
-                var = self._var_to_hcons[var].lo
             return self.find_scope_head(var)
         else:
             return None
@@ -263,6 +272,8 @@ class Xmrs(LnkMixin):
     def find_scope_head(self, label):
         if not isinstance(label, MrsVariable):
             label = MrsVariable.from_string(label)
+        if label in self._var_to_hcons:
+            label = self._var_to_hcons[label].lo
         nids = set(self._label_to_nids.get(label, []))
         if len(nids) == 0:
             return None

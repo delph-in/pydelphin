@@ -1,6 +1,8 @@
 import re
 from collections import deque
+from itertools import product
 from .pred import is_valid_pred_string
+from .util import powerset
 
 # Something like this:
 #
@@ -126,6 +128,7 @@ def _traverse_eppath(xmrs, obj, steps, context=None):
     if steps and step[0] == '[':
         eps = list(filter())
     if steps and step[0] == '(':
+        pass
 
 def _traverse_ep(xmrs, obj, steps, context=None):
     step = steps.popleft()
@@ -142,36 +145,89 @@ def _traverse_ep(xmrs, obj, steps, context=None):
 def _traverse_arg(xmrs, obj, steps):
     pass
     if step in (')', ']'):
-            return objs
-            elif step == '[':
-            if traverse(xmrs, curobj, steps):
-                objs.append(curobj)
-        elif step == ':':
-            member = steps[1]
-            obj = obj.get_member()
-        elif step == '/':
-            pass
-        elif step == '%':
-            pass
-        elif step == '^':
-            pass
-        elif step == '~':
-            pass
-        elif step == '':
-            pass
+        pass
+        #    return objs
+        #    elif step == '[':
+        #    if traverse(xmrs, curobj, steps):
+        #        objs.append(curobj)
+    elif step == ':':
+        member = steps[1]
+        obj = obj.get_member()
+    elif step == '/':
+        pass
+    elif step == '%':
+        pass
+    elif step == '^':
+        pass
+    elif step == '~':
+        pass
+    elif step == '':
+        pass
 
 def find(xmrs, path):
     pass
 
-def generate_paths(xmrs, max_depth=None, include_conjunctions=True):
-    paths = []
-    for nid, node in xmrs.nodes:
-        args = list(get_arg_paths(xmrs, nid))
+### GENERATING PATHS #########################################################
 
-def get_arg_paths(xmrs, nid):
-    for link in xmrs.get_links(nid):
-        
-        if arg.value in xmrs._cv_to_nids and \
-           nid not in xmrs._cv_to_nids(arg.value):
-            
-            yield ':{}{}{}'.format(arg.argname, 
+def get_paths(xmrs, **kwargs):
+    for nid in xmrs.node_ids:
+        for eppath in get_ep_paths(xmrs, nid, **kwargs):
+            yield eppath
+
+def get_ep_paths(xmrs, nid, path=None, max_depth=-1, allow_bare_args=False):
+    # ep[argpaths]
+    if max_depth == 0: raise StopIteration
+    path = '{}{}'.format(path or '', xmrs.get_pred(nid).short_form())
+    args = xmrs.get_outbound_args(nid, allow_unbound=False)
+    for argset in powerset(args):
+        numargs = len(argset)
+        if numargs == 0:
+            yield path
+        else:
+            for subpath in get_arg_path_conj(xmrs, argset, path=path,
+                                             max_depth=max_depth,
+                                             allow_bare_args=allow_bare_args):
+                yield subpath
+
+def get_arg_path_conj(xmrs, args, path=None,
+                      max_depth=-1,
+                      allow_bare_args=False):
+    # :argpath or (:argpath [& :argpath]*)
+    if allow_bare_args:
+        yield join_subpaths(path, [':{}'.format(arg.argname) for arg in args])
+    # beware of magic below:
+    # first, get_subpaths is a function that gets subpaths for an arg
+    get_subpaths = lambda x: list(get_arg_paths(xmrs, x, max_depth=max_depth))
+    # then map that function on all args, and get all combinations of
+    # the subpaths with itertools.product.
+    subpath_sets = product(*map(get_subpaths, args))
+    for subpaths in subpath_sets:
+        yield join_subpaths(path, [':{}'.format(sp) for sp in subpaths])
+
+def join_subpaths(basepath, subpaths, joiner=' & '):
+    if len(subpaths) == 1:
+        pathstring = '{}{}'
+    elif len(subpaths) > 1:
+        pathstring = '{}({})'
+    else:
+        raise ValueError("There must be more than one subpath.")
+    return pathstring.format(basepath or '', joiner.join(subpaths))
+
+def get_arg_paths(xmrs, arg, max_depth=-1):
+    op, tgtnid = get_arg_op_and_target(xmrs, arg)
+    yield '{}{}'.format(arg.argname, op)
+    for eppath in get_ep_paths(xmrs, tgtnid, max_depth=max_depth-1):
+        yield '{}{}{}'.format(arg.argname, op, eppath)
+
+def get_arg_op_and_target(xmrs, arg):
+    op = tgtnid = None
+    if arg.value in xmrs._cv_to_nids:
+        tgtnid = xmrs.find_cv_head(arg.value)
+        op = '%' if xmrs.get_label(arg.nodeid) == xmrs.get_label(tgtnid) else '/'
+    elif arg.value in xmrs._label_to_nids:
+        tgtnid = xmrs.find_scope_head(arg.value)
+        op = '^'
+    elif arg.value in xmrs._var_to_hcons:
+        tgtnid = xmrs.find_scope_head(arg.value)
+        op = '~'
+    return op, tgtnid
