@@ -54,7 +54,7 @@ class Xmrs(LnkMixin):
         self._nid_to_node = OrderedDict((n.nodeid, n) for n in nodes)
         self._nid_to_argmap = dod([(a.nodeid, a.argname, a) for a in args],
                                   OrderedDict)
-        self._var_to_hcons = OrderedDict((h.lo, h) for h in hcons)
+        self._var_to_hcons = OrderedDict((h.hi, h) for h in hcons)
         self.icons  = icons # individual constraints [IndividualConstraint]
         self.lnk    = lnk   # Lnk object (MRS-level lnk spans the whole input)
         self.surface= surface   # The surface string
