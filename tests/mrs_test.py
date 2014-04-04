@@ -147,6 +147,46 @@ class TestPred(unittest.TestCase):
         self.assertNotEqual(Pred.string_or_grammar_pred('_dog_n_rel'),
                             Pred.string_or_grammar_pred('dog_n_rel'))
 
+class TestMrsVariable(unittest.TestCase):
+    def test_construct(self):
+        self.assertRaises(TypeError, MrsVariable)
+        self.assertRaises(TypeError, MrsVariable, 1)
+        self.assertRaises(TypeError, MrsVariable, sort='h')
+        self.assertRaises(TypeError, MrsVariable, 1, properties={'a':1})
+        v = MrsVariable(1, 'h')
+        self.assertNotEqual(v, None)
+
+    def test_values(self):
+        v = MrsVariable(1, 'x')
+        self.assertEqual(v.vid, 1)
+        self.assertEqual(v.sort, 'x')
+        self.assertEqual(len(v.properties), 0)
+        v = MrsVariable(10, 'event', properties={'a':1})
+        self.assertEqual(v.vid, 10)
+        self.assertEqual(v.sort, 'event')
+        self.assertEqual(v.properties, {'a':1})
+
+    def test_str(self):
+        v = MrsVariable(1, 'x')
+        self.assertEqual(str(v), 'x1')
+        v = MrsVariable(10, 'individual')
+        self.assertEqual(str(v), 'individual10')
+
+    def test_hashable(self):
+        v1 = MrsVariable(1, 'x')
+        v2 = MrsVariable(2, 'e')
+        d = {v1:'one', v2:'two'}
+        self.assertEqual(d[v1], 'one')
+        self.assertEqual(d['x1'], 'one')
+        self.assertEqual(d[v2], 'two')
+        self.assertRaises(KeyError, d.__getitem__, v1.vid)
+        self.assertRaises(KeyError, d.__getitem__, v1.sort)
+        # note: it's invalid to have two variables with different VIDs
+        v3 = MrsVariable(2, 'x')
+        d[v3] = 'three'
+        self.assertEqual(len(d), 3)
+        self.assertEqual(d[v3], 'three')
+
 class TestNode(unittest.TestCase):
     def test_construct(self):
         # minimum is a nodeid and a pred
