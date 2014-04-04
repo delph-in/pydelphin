@@ -4,11 +4,12 @@ import unittest
 from delphin.mrs import (Xmrs, Mrs, Dmrs, ElementaryPredication as EP, Node,
                          Pred, Argument, Link, MrsVariable, HandleConstraint,
                          Lnk, Hook)
+from delphin.mrs.var import AnchorMixin
 from delphin.mrs.config import (QEQ, LHEQ, OUTSCOPES, CVARSORT,
                                 EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
                                 CHARSPAN, CHARTSPAN, TOKENS, EDGE,
                                 GRAMMARPRED, REALPRED, STRINGPRED,
-                                LTOP_NODEID, FIRST_NODEID)
+                                LTOP_NODEID, FIRST_NODEID, ANCHOR_SORT)
 
 class TestLnk(unittest.TestCase):
     def testLnkTypes(self):
@@ -195,6 +196,20 @@ class TestMrsVariable(unittest.TestCase):
         d[v3] = 'three'
         self.assertEqual(len(d), 3)
         self.assertEqual(d[v3], 'three')
+
+class TestAnchorMixin(unittest.TestCase):
+    def test_inherit(self):
+        class NoNodeId(AnchorMixin):
+            pass
+        n = NoNodeId()
+        self.assertRaises(AttributeError, getattr, n, 'anchor')
+        class WithNodeId(AnchorMixin):
+            def __init__(self):
+                self.nodeid = 0
+        n = WithNodeId()
+        self.assertEqual(n.anchor, MrsVariable(0, ANCHOR_SORT))
+        n.anchor = MrsVariable(1, ANCHOR_SORT)
+        self.assertEqual(n.anchor, MrsVariable(1, ANCHOR_SORT))
 
 class TestHook(unittest.TestCase):
     def test_construct(self):
