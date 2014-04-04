@@ -172,6 +172,15 @@ class TestMrsVariable(unittest.TestCase):
         v = MrsVariable(10, 'individual')
         self.assertEqual(str(v), 'individual10')
 
+    def test_equality(self):
+        v = MrsVariable(1, 'x')
+        self.assertEqual(v, MrsVariable(1, 'x'))
+        self.assertEqual(v, 'x1')
+        self.assertNotEqual(v, 'x2')
+        self.assertNotEqual(v, 'e1')
+        self.assertNotEqual(v, 'x')
+        self.assertEqual(v, 1)
+
     def test_hashable(self):
         v1 = MrsVariable(1, 'x')
         v2 = MrsVariable(2, 'e')
@@ -186,6 +195,18 @@ class TestMrsVariable(unittest.TestCase):
         d[v3] = 'three'
         self.assertEqual(len(d), 3)
         self.assertEqual(d[v3], 'three')
+
+class TestHook(unittest.TestCase):
+    def test_construct(self):
+        h = Hook()
+        self.assertEqual(h.ltop, None)
+        self.assertEqual(h.index, None)
+        self.assertEqual(h.xarg, None)
+        h = Hook(ltop=MrsVariable(1, 'h'), index=MrsVariable(2, 'e'),
+                 xarg=MrsVariable(3, 'x'))
+        self.assertEqual(h.ltop, 'h1')
+        self.assertEqual(h.index, 'e2')
+        self.assertEqual(h.xarg, 'x3')
 
 class TestNode(unittest.TestCase):
     def test_construct(self):
