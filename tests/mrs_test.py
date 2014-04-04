@@ -208,6 +208,37 @@ class TestHook(unittest.TestCase):
         self.assertEqual(h.index, 'e2')
         self.assertEqual(h.xarg, 'x3')
 
+class TestHandleConstraint(unittest.TestCase):
+    def test_construct(self):
+        h1 = MrsVariable(1, 'handle')
+        h2 = MrsVariable(2, 'handle')
+        self.assertRaises(TypeError, HandleConstraint)
+        self.assertRaises(TypeError, HandleConstraint, h1)
+        self.assertRaises(TypeError, HandleConstraint, h1, QEQ)
+        # planned:
+        # self.assertRaises(MrsHconsException, HandleConstraint, h1, QEQ, h1)
+        hc = HandleConstraint(h1, QEQ, h2)
+        self.assertEqual(hc.hi, h1)
+        self.assertEqual(hc.relation, QEQ)
+        self.assertEqual(hc.lo, h2)
+        hc = HandleConstraint(h1, LHEQ, h2)
+        self.assertEqual(hc.relation, LHEQ)
+
+    def test_equality(self):
+        h1 = MrsVariable(1, 'h')
+        h2 = MrsVariable(2, 'h')
+        hc1 = HandleConstraint(h1, QEQ, h2)
+        self.assertEqual(hc1, HandleConstraint(h1, QEQ, h2))
+        self.assertNotEqual(hc1, HandleConstraint(h2, QEQ, h1))
+        self.assertNotEqual(hc1, HandleConstraint(h1, LHEQ, h2))
+
+    def test_hashable(self):
+        hc1 = HandleConstraint(MrsVariable(1, 'h'), QEQ, MrsVariable(2, 'h'))
+        hc2 = HandleConstraint(MrsVariable(3, 'h'), QEQ, MrsVariable(4, 'h'))
+        d = {hc1:1, hc2:2}
+        self.assertEqual(d[hc1], 1)
+        self.assertEqual(d[hc2], 2)
+
 class TestNode(unittest.TestCase):
     def test_construct(self):
         # minimum is a nodeid and a pred
