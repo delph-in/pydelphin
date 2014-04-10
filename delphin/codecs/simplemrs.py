@@ -42,6 +42,7 @@ _valid_hcons    = [_qeq, _lheq, _outscopes]
 # color options
 bold = lambda x: '\x1b[1m{}\x1b[0m'.format(x)
 gray = lambda x: '\x1b[90m{}\x1b[39;49m'.format(x)
+red = lambda x: '\x1b[31m{}\x1b[39;49m'.format(x)
 magenta = lambda x: '\x1b[95m{}\x1b[39;49m'.format(x)
 blue = lambda x: '\x1b[94m{}\x1b[39;49m'.format(x)
 darkgreen = lambda x: '\x1b[32m{}\x1b[39;49m'.format(x)
@@ -352,10 +353,14 @@ def serialize_mrs(m, pretty_print=False):
     delim = ' ' if not pretty_print else '\n'
     return delim.join(toks)
 
-def serialize_argument(rargname, variable, listed_vars):
+def serialize_argument(rargname, value, listed_vars):
     """Serialize an MRS argument into the SimpleMRS format."""
-    return ' '.join([magenta(rargname) + _colon,
-                     serialize_variable(variable, listed_vars)])
+    argname = magenta(rargname) + _colon
+    if isinstance(value, MrsVariable):
+        return ' '.join([magenta(rargname) + _colon,
+                         serialize_variable(value, listed_vars)])
+    else:
+        return ' '.join([red(rargname) + _colon, str(value)])
 
 def serialize_variable(var, listed_vars):
     """Serialize an MRS variable, and any variable properties, into the
@@ -373,11 +378,6 @@ def serialize_variable(var, listed_vars):
         toks += [_right_bracket]
     listed_vars.add(var.vid)
     return ' '.join(toks)
-
-def serialize_const(name, const):
-    """Serialize a constant argument into the SimpleMRS format."""
-    # consider checking if const is surrounded by quotes
-    return ' '.join([name + _colon, const])
 
 def serialize_rels(rels, listed_vars, pretty_print=False):
     """Serialize a RELS list of EPs into the SimpleMRS encoding."""

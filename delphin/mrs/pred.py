@@ -1,4 +1,5 @@
 import re
+import logging
 from .config import (GRAMMARPRED, REALPRED, STRINGPRED, QUANTIFIER_SORT)
 
 pred_re = re.compile(r'_?(?P<lemma>.*?)_' # match until last 1 or 2 parts
