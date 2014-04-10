@@ -39,6 +39,15 @@ _valid_hcons    = [_qeq, _lheq, _outscopes]
 # possible relations for individual constraints
 #_valid_icons    = [r'focus', r'topic']
 
+# color options
+bold = lambda x: '\x1b[1m{}\x1b[0m'.format(x)
+gray = lambda x: '\x1b[90m{}\x1b[39;49m'.format(x)
+magenta = lambda x: '\x1b[95m{}\x1b[39;49m'.format(x)
+blue = lambda x: '\x1b[94m{}\x1b[39;49m'.format(x)
+darkgreen = lambda x: '\x1b[32m{}\x1b[39;49m'.format(x)
+green = lambda x: '\x1b[92m{}\x1b[39;49m'.format(x)
+yellow = lambda x: '\x1b[33m{}\x1b[39;49m'.format(x)
+
 ##############################################################################
 ##############################################################################
 ### Pickle-API methods
@@ -67,7 +76,7 @@ def loads(s):
     """
     return deserialize(s)
 
-def dump(fh, m, pretty_print=False):
+def dump(fh, m, pretty_print=False, color=False):
     """
     Serialize an Xmrs object to a SimpleMRS representation and write to a file
 
@@ -77,9 +86,9 @@ def dump(fh, m, pretty_print=False):
         encoding: the character encoding for the file
         pretty_print: if true, the output is formatted to be easier to read
     """
-    print(dumps(m, pretty_print=pretty_print), file=fh)
+    print(dumps(m, pretty_print=pretty_print, color=color), file=fh)
 
-def dumps(m, pretty_print=False):
+def dumps(m, pretty_print=False, color=False):
     """
     Serialize an Xmrs object to a SimpleMRS representation
 
@@ -89,7 +98,7 @@ def dumps(m, pretty_print=False):
     Returns:
         a SimpleMrs string
     """
-    return serialize(m, pretty_print=pretty_print)
+    return serialize(m, pretty_print=pretty_print, color=color)
 
 ##############################################################################
 ##############################################################################
@@ -312,10 +321,17 @@ def unexpected_termination_error():
 ##############################################################################
 ### Encoding
 
-def serialize(m, pretty_print=False):
+def unset_colors():
+    global bold, gray, red, blue, magenta, darkgreen, green, yellow
+    bold = gray = red = blue = magenta = darkgreen = green = yellow =\
+        lambda x: x
+
+def serialize(m, pretty_print=False, color=False):
     """Serialize an MRS structure into a SimpleMRS string."""
     # note that listed_vars is modified as a side-effect of the lower
     # functions
+    if not color:
+        unset_colors()
     listed_vars = set()
     toks = [_left_bracket]
     if m.ltop is not None:
@@ -324,19 +340,24 @@ def serialize(m, pretty_print=False):
         toks += [serialize_argument(_index, m.index, listed_vars)]
     toks = [' '.join(toks)]
     toks += [serialize_rels(m.rels, listed_vars, pretty_print=pretty_print)]
-    toks += ['  ' + ' '.join([serialize_hcons(m.hcons), _right_bracket])]
+    toks += ['  ' + ' '.join([serialize_hcons(m.hcons, listed_vars),
+                              _right_bracket])]
     delim = ' ' if not pretty_print else '\n'
     return delim.join(toks)
 
 def serialize_argument(rargname, variable, listed_vars):
     """Serialize an MRS argument into the SimpleMRS format."""
-    return ' '.join([rargname + _colon,
+    return ' '.join([magenta(rargname) + _colon,
                      serialize_variable(variable, listed_vars)])
 
 def serialize_variable(var, listed_vars):
     """Serialize an MRS variable, and any variable properties, into the
        SimpleMRS format."""
-    toks = [str(var)]
+    if var.sort == HANDLESORT:
+        varstr = yellow(bold(str(var)))
+    else:
+        varstr = blue(bold(str(var)))
+    toks = [varstr]
     # only serialize the variable properties if they haven't been already
     if var.vid not in listed_vars and var.properties:
         toks += [_left_bracket, var.sort]
@@ -362,7 +383,11 @@ def serialize_rels(rels, listed_vars, pretty_print=False):
 def serialize_ep(ep, listed_vars):
     """Serialize an Elementary Predication into the SimpleMRS encoding."""
     toks = [_left_bracket]
-    toks += [ep.pred.string + serialize_lnk(ep.lnk)]
+    if ep.is_quantifier():
+        predstr = darkgreen(ep.pred.string)
+    else:
+        predstr = green(bold(ep.pred.string))
+    toks += [predstr + serialize_lnk(ep.lnk)]
     toks += [serialize_argument(_lbl, ep.label, listed_vars)]
     #if ep.cv is not None:
     #    toks += [serialize_argument(CVARG, ep.cv, listed_vars)]
@@ -391,9 +416,9 @@ def serialize_lnk(lnk):
         elif lnk.type == EDGE:
             s += ''.join([_at, str(lnk.data)])
         s += _right_angle
-    return s
+    return gray(s)
 
-def serialize_hcons(hcons):
+def serialize_hcons(hcons, listed_vars):
     """Serialize a Handle Constraint into the SimpleMRS encoding."""
     toks = [_hcons + _colon, _left_angle]
     for hcon in hcons:
@@ -403,6 +428,8 @@ def serialize_hcons(hcons):
             rel = _lheq
         elif hcon.relation == OUTSCOPES:
             rel = _outscopes
-        toks += [str(hcon.hi), rel, str(hcon.lo)]
+        toks += [serialize_variable(hcon.hi, listed_vars),
+                 rel,
+                 serialize_variable(hcon.lo, listed_vars)]
     toks += [_right_angle]
     return ' '.join(toks)
