@@ -76,7 +76,7 @@ def loads(s):
     """
     return deserialize(s)
 
-def dump(fh, m, pretty_print=False, color=False):
+def dump(fh, m, pretty_print=False, color=False, **kwargs):
     """
     Serialize an Xmrs object to a SimpleMRS representation and write to a file
 
@@ -86,9 +86,9 @@ def dump(fh, m, pretty_print=False, color=False):
         encoding: the character encoding for the file
         pretty_print: if true, the output is formatted to be easier to read
     """
-    print(dumps(m, pretty_print=pretty_print, color=color), file=fh)
+    print(dumps(m, pretty_print=pretty_print, color=color, **kwargs), file=fh)
 
-def dumps(m, pretty_print=False, color=False):
+def dumps(m, pretty_print=False, color=False, **kwargs):
     """
     Serialize an Xmrs object to a SimpleMRS representation
 

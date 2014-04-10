@@ -15,7 +15,7 @@ convert_parser.add_argument('--to', '-t', dest='tgtfmt',
                             choices=list(mrsformats.keys()))
 convert_parser.add_argument('--pretty-print', '-p', action='store_true')
 convert_parser.add_argument('--color', '-c', action='store_true')
-convert_parser.add_argument('infile', metavar='PATH')
+convert_parser.add_argument('infile', metavar='PATH', nargs='?')
 
 args = parser.parse_args()
 if args.command in ('convert', 'c'):

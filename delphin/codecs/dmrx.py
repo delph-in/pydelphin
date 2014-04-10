@@ -32,10 +32,10 @@ def load(fh):
 def loads(s):
     return decode_string(s)
 
-def dump(fh, m, pretty_print=False):
-    print(dumps(m, pretty_print=pretty_print), file=fh)
+def dump(fh, m, pretty_print=False, **kwargs):
+    print(dumps(m, pretty_print=pretty_print, **kwargs), file=fh)
 
-def dumps(m, pretty_print=False):
+def dumps(m, pretty_print=False, **kwargs):
     return encode(m, pretty_print=pretty_print)
 
 ##############################################################################

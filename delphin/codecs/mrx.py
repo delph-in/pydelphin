@@ -31,10 +31,11 @@ def load(fh):
 def loads(s):
     return decode_string(s)
 
-def dump(fh, m, encoding='unicode', pretty_print=False):
-    print(dumps(m, encoding=encoding, pretty_print=pretty_print), file=fh)
+def dump(fh, m, encoding='unicode', pretty_print=False, **kwargs):
+    print(dumps(m, encoding=encoding, pretty_print=pretty_print, **kwargs),
+          file=fh)
 
-def dumps(m, encoding='unicode', pretty_print=False):
+def dumps(m, encoding='unicode', pretty_print=False, **kwargs):
     return encode(m, encoding=encoding, pretty_print=pretty_print)
 
 ##############################################################################
