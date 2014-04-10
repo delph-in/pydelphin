@@ -8,20 +8,6 @@ from .xmrs import Xmrs
 from .config import (HANDLESORT, CVARSORT, CVARG, LTOP_NODEID, RSTR,
                      EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST)
 
-def get_dmrs_post(xmrs, nid1, argname, nid2):
-    node2lbl = xmrs.eps[nid2].label
-    if xmrs.eps[nid1].label == node2lbl:
-        post = EQ_POST
-    elif xmrs._nid_to_argmap.get(nid1,{}).get(argname).value == node2lbl:
-        post = HEQ_POST
-    else:
-        hcon = xmrs.hcons_map.get(xmrs._nid_to_argmap.get(nid1,{}).get(argname).value)
-        if hcon is not None and hcon.lo == node2lbl:
-            post = H_POST
-        else:
-            post = NEQ_POST
-    return post
-
 def Dmrs(nodes=None, links=None,
          lnk=None, surface=None, identifier=None,
          **kwargs):
