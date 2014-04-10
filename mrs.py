@@ -21,7 +21,7 @@ args = parser.parse_args()
 if args.command in ('convert', 'c'):
     instream = open(args.infile, 'r') if args.infile is not None else sys.stdin
     outstream = sys.stdout
-    m = mrsformats[args.srcfmt].load(instream)
-    mrsformats[args.tgtfmt].dump(outstream, m,
+    ms = mrsformats[args.srcfmt].load(instream)
+    mrsformats[args.tgtfmt].dump(outstream, ms,
                                  pretty_print=args.pretty_print,
                                  color=args.color)

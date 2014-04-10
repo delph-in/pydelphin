@@ -76,7 +76,7 @@ def loads(s):
     """
     return deserialize(s)
 
-def dump(fh, m, pretty_print=False, color=False, **kwargs):
+def dump(fh, ms, pretty_print=False, color=False, **kwargs):
     """
     Serialize an Xmrs object to a SimpleMRS representation and write to a file
 
@@ -86,9 +86,9 @@ def dump(fh, m, pretty_print=False, color=False, **kwargs):
         encoding: the character encoding for the file
         pretty_print: if true, the output is formatted to be easier to read
     """
-    print(dumps(m, pretty_print=pretty_print, color=color, **kwargs), file=fh)
+    print(dumps(ms, pretty_print=pretty_print, color=color, **kwargs), file=fh)
 
-def dumps(m, pretty_print=False, color=False, **kwargs):
+def dumps(ms, pretty_print=False, color=False, **kwargs):
     """
     Serialize an Xmrs object to a SimpleMRS representation
 
@@ -98,7 +98,7 @@ def dumps(m, pretty_print=False, color=False, **kwargs):
     Returns:
         a SimpleMrs string
     """
-    return serialize(m, pretty_print=pretty_print, color=color)
+    return serialize(ms, pretty_print=pretty_print, color=color)
 
 ##############################################################################
 ##############################################################################
@@ -134,7 +134,10 @@ def invalid_token_error(token, expected):
                          .format(token, expected))
 
 def deserialize(string):
-    return read_mrs(tokenize(string))
+    #FIXME: consider buffering this so we don't read the whole string at once
+    tokens = tokenize(string)
+    while tokens:
+        yield read_mrs(tokens)
 
 def read_mrs(tokens):
     """Decode a sequence of Simple-MRS tokens. Assume LTOP, INDEX, RELS,
@@ -326,12 +329,16 @@ def unset_colors():
     bold = gray = red = blue = magenta = darkgreen = green = yellow =\
         lambda x: x
 
-def serialize(m, pretty_print=False, color=False):
+def serialize(ms, pretty_print=False, color=False):
     """Serialize an MRS structure into a SimpleMRS string."""
-    # note that listed_vars is modified as a side-effect of the lower
-    # functions
     if not color:
         unset_colors()
+    delim = ' ' if not pretty_print else '\n'
+    return delim.join(serialize_mrs(m, pretty_print=pretty_print) for m in ms)
+
+def serialize_mrs(m, pretty_print=False):
+    # note that listed_vars is modified as a side-effect of the lower
+    # functions
     listed_vars = set()
     toks = [_left_bracket]
     if m.ltop is not None:
