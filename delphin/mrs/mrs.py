@@ -1,5 +1,6 @@
 import logging
 from collections import OrderedDict
+from .lnk import Lnk
 from .hook import Hook
 from .var import MrsVariable
 from .node import Node
@@ -46,6 +47,11 @@ def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
         nodes.append(Node(ep.nodeid, ep.pred, sortinfo=sortinfo,
             lnk=ep.lnk, surface=ep.surface, base=ep.base, carg=ep.carg))
         args.extend(ep.args)
+    # if there's no MRS lnk, get the min cfrom and max cto (if not using
+    # charspan lnks, it will get -1 and -1 anyway)
+    if lnk is None:
+        lnk = Lnk.charspan(min(ep.cfrom for ep in rels),
+                           max(ep.cto for ep in rels))
     return Xmrs(hook=hook, nodes=nodes, args=args,
                 hcons=hcons, icons=icons,
                 cvs=cvs, labels=labels,

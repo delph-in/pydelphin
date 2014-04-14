@@ -26,15 +26,16 @@ except ImportError:
 ### Pickle-API methods
 
 def load(fh):
-    return decode(fh)
+    return list(decode(fh))
 
 def loads(s):
-    return decode_string(s)
+    raise NotImplementedError
 
-def dump(fh, m, encoding='unicode', pretty_print=False):
-    print(dumps(m, encoding=encoding, pretty_print=pretty_print), file=fh)
+def dump(fh, m, encoding='unicode', pretty_print=False, **kwargs):
+    print(dumps(m, encoding=encoding, pretty_print=pretty_print, **kwargs),
+          file=fh)
 
-def dumps(m, encoding='unicode', pretty_print=False):
+def dumps(m, encoding='unicode', pretty_print=False, **kwargs):
     return encode(m, encoding=encoding, pretty_print=pretty_print)
 
 ##############################################################################
@@ -45,8 +46,8 @@ def dumps(m, encoding='unicode', pretty_print=False):
 # for each decoding. It's used to unify variables
 _vars = {}
 
-def decode_list(fh):
-    """Decode """
+def decode(fh):
+    """Decode an MRX-encoded MRS structure."""
     # <!ELEMENT mrs-list (mrs)*>
     # if memory becomes a big problem, consider catching start events,
     # get the root element (later start events can be ignored), and
@@ -54,11 +55,6 @@ def decode_list(fh):
     for event, elem in etree.iterparse(fh, events=('end')):
         yield decode_mrs(elem)
         elem.clear()
-
-def decode(fh):
-    """Decode an MRX-encoded MRS structure."""
-    elem = etree.parse(fh)
-    return decode_mrs(elem)
 
 def decode_mrs(elem):
     # <!ELEMENT mrs (label, var, (ep|hcons)*)>
@@ -184,7 +180,20 @@ def decode_lnk(cfrom, cto):
 ##############################################################################
 ### Encoding
 
-def encode(m, encoding='unicode', pretty_print=False):
+def encode(ms, encoding='unicode', pretty_print=False):
+    e = etree.Element('mrs-list')
+    for m in ms:
+        e.append(encode_mrs(m))
+    if pretty_print:
+        import re
+        pprint_re = re.compile(r'(<mrs[^-]|</mrs>|</mrs-list>'
+                               r'|<ep\s|<fvpair>|<extrapair>|<hcons\s)',
+                               re.IGNORECASE)
+        string = etree.tostring(e, encoding=encoding)
+        return pprint_re.sub(r'\n\1', string)
+    return etree.tostring(e, encoding=encoding)
+
+def encode_mrs(m):
     attributes = {'cfrom':str(m.cfrom), 'cto':str(m.cto)}
     if m.surface is not None:
         attributes['surface'] = m.surface
@@ -198,13 +207,7 @@ def encode(m, encoding='unicode', pretty_print=False):
         e.append(encode_ep(ep, listed_vars))
     for hcon in m.hcons:
         e.append(encode_hcon(hcon))
-    if pretty_print:
-        import re
-        pprint_re = re.compile(r'(<ep\s|<fvpair>|<extrapair>|<hcons\s|</mrs>)',
-                               re.IGNORECASE)
-        string = etree.tostring(e, encoding=encoding)
-        return pprint_re.sub(r'\n\1', string)
-    return etree.tostring(e, encoding=encoding)
+    return e
 
 def encode_label(label):
     return etree.Element('label', vid=str(label.vid))

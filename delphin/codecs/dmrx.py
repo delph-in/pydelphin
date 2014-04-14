@@ -27,16 +27,16 @@ except ImportError:
 ### Pickle-API methods
 
 def load(fh):
-    return decode(fh)
+    return list(decode(fh))
 
 def loads(s):
-    return decode_string(s)
+    raise NotImplementedError
 
-def dump(fh, m, pretty_print=False):
-    print(dumps(m, pretty_print=pretty_print), file=fh)
+def dump(fh, ms, pretty_print=False, **kwargs):
+    print(dumps(ms, pretty_print=pretty_print, **kwargs), file=fh)
 
-def dumps(m, pretty_print=False):
-    return encode(m, pretty_print=pretty_print)
+def dumps(ms, pretty_print=False, **kwargs):
+    return encode(ms, pretty_print=pretty_print)
 
 ##############################################################################
 ##############################################################################
@@ -44,6 +44,9 @@ def dumps(m, pretty_print=False):
 
 def decode_list(fh):
     """Decode """
+
+def decode(fh):
+    """Decode a DMRX-encoded DMRS structure."""
     # <!ELEMENT dmrs-list (dmrs)*>
     # if memory becomes a big problem, consider catching start events,
     # get the root element (later start events can be ignored), and
@@ -51,11 +54,6 @@ def decode_list(fh):
     for event, elem in etree.iterparse(fh, events=('end')):
         yield decode_dmrs(elem)
         elem.clear()
-
-def decode(fh):
-    """Decode a DMRX-encoded DMRS structure."""
-    elem = etree.parse(fh)
-    return decode_dmrs(elem)
 
 def decode_dmrs(elem):
     # <!ELEMENT dmrs (node|link)*>
@@ -140,20 +138,10 @@ def decode_lnk(elem):
 
 _strict = False
 
-def encode(m, strict=False, encoding='unicode', pretty_print=False):
-    _strict = strict
-    attributes = OrderedDict([('cfrom',str(m.cfrom)), ('cto',str(m.cto))])
-    if m.surface is not None:    attributes['surface'] = m.surface
-    if m.identifier is not None: attributes['ident']   = m.identifier
-    if not _strict and m.index is not None:
-        # index corresponds to a variable, so link it to a nodeid
-        attributes['index'] = str(m.index.vid)
-    # ltop link from 0
-    #if m.ltop is not None:
-    #
-    e = etree.Element('dmrs', attrib=attributes)
-    for node in m.nodes: e.append(encode_node(node))
-    for link in m.links: e.append(encode_link(link))
+def encode(ms, strict=False, encoding='unicode', pretty_print=False):
+    e = etree.Element('dmrs-list')
+    for m in ms:
+        e.append(encode_dmrs(m, strict=strict))
     # for now, pretty_print=True is the same as pretty_print='LKB'
     if pretty_print in ('LKB', 'lkb', 'Lkb', True):
         lkb_pprint_re = re.compile(r'(<dmrs[^>]+>|</node>|</link>|</dmrs>)')
@@ -162,6 +150,19 @@ def encode(m, strict=False, encoding='unicode', pretty_print=False):
     # pretty_print is only lxml. Look into tostringlist, maybe?
     #return etree.tostring(e, pretty_print=pretty_print, encoding='unicode')
     return etree.tostring(e, encoding=encoding)
+
+def encode_dmrs(m, strict=False):
+    _strict = strict
+    attributes = OrderedDict([('cfrom',str(m.cfrom)), ('cto',str(m.cto))])
+    if m.surface is not None:    attributes['surface'] = m.surface
+    if m.identifier is not None: attributes['ident']   = m.identifier
+    if not _strict and m.index is not None:
+        # index corresponds to a variable, so link it to a nodeid
+        attributes['index'] = str(m.index.vid)
+    e = etree.Element('dmrs', attrib=attributes)
+    for node in m.nodes: e.append(encode_node(node))
+    for link in m.links: e.append(encode_link(link))
+    return e
 
 def encode_node(node):
     attributes = OrderedDict([('nodeid', str(node.nodeid)),

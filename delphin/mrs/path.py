@@ -1,6 +1,7 @@
 import re
 from collections import deque
 from itertools import product
+import os, sys
 from .pred import is_valid_pred_string
 from .util import powerset
 
@@ -200,7 +201,7 @@ def get_arg_path_conj(xmrs, args, path=None,
     get_subpaths = lambda x: list(get_arg_paths(xmrs, x, max_depth=max_depth))
     # then map that function on all args, and get all combinations of
     # the subpaths with itertools.product.
-    subpath_sets = product(*map(get_subpaths, args))
+    subpath_sets = product(*list(map(get_subpaths, args)))
     for subpaths in subpath_sets:
         yield join_subpaths(path, [':{}'.format(sp) for sp in subpaths])
 
@@ -221,8 +222,8 @@ def get_arg_paths(xmrs, arg, max_depth=-1):
 
 def get_arg_op_and_target(xmrs, arg):
     op = tgtnid = None
-    if arg.value in xmrs._cv_to_nids:
-        tgtnid = xmrs.find_cv_head(arg.value)
+    if arg.value in xmrs._cv_to_nid:
+        tgtnid = xmrs._cv_to_nid[arg.value]
         op = '%' if xmrs.get_label(arg.nodeid) == xmrs.get_label(tgtnid) else '/'
     elif arg.value in xmrs._label_to_nids:
         tgtnid = xmrs.find_scope_head(arg.value)

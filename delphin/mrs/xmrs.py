@@ -1,11 +1,13 @@
 import logging
-from operator import add
+from operator import add, or_
+from copy import deepcopy
 from collections import (OrderedDict, defaultdict)
 from . import (Hook, MrsVariable, ElementaryPredication, Node, Link,
                HandleConstraint)
 from .lnk import LnkMixin
-from .config import (ANCHOR_SORT, CVARSORT, HANDLESORT,
-                     QEQ, EQ_POST, VARIABLE_ARG, CVARG)
+from .config import (ANCHOR_SORT, HANDLESORT, CVARSORT,
+                     CVARG, QEQ, VARIABLE_ARG, LTOP_NODEID,
+                     EQ_POST, NEQ_POST, HEQ_POST, H_POST)
 from .util import AccumulationDict, dict_of_dicts as dod
 
 # Subclasses of Xmrs may be used for decoding.
@@ -36,8 +38,8 @@ class Xmrs(LnkMixin):
         Returns:
             an Xmrs object
         """
-        # default values
-        if nodes is None: nodes = []
+        # default values (or run the generators)
+        nodes = list(nodes or [])
         if args is None: args = []
         if hcons is None: hcons = []
         if icons is None: icons = []
@@ -46,17 +48,25 @@ class Xmrs(LnkMixin):
 
         # build inner data structures
         self.hook = hook
+        # nid_to_cv includes all nodes, but cv_to_nid and bv_to_nid
+        # separate them by whether the node is a quantifier
         self._nid_to_cv = OrderedDict(sorted(cvs))
-        self._cv_to_nids = AccumulationDict(add,
-                               ((cv, [nid]) for nid, cv in cvs))
+        self._cv_to_nid = OrderedDict()
+        self._bv_to_nid = OrderedDict()
+        for node in nodes:
+            nid = node.nodeid
+            if node.is_quantifier():
+                self._bv_to_nid[self._nid_to_cv[nid]] = nid
+            else:
+                self._cv_to_nid[self._nid_to_cv[nid]] = nid
         self._nid_to_label = OrderedDict(sorted(labels))
-        self._label_to_nids = AccumulationDict(add,
-                                  ((lbl, [nid]) for nid, lbl in labels))
+        self._label_to_nids = AccumulationDict(or_,
+                                  ((lbl, {nid}) for nid, lbl in labels))
         self._nid_to_node = OrderedDict((n.nodeid, n) for n in nodes)
         self._nid_to_argmap = dod([(a.nodeid, a.argname, a) for a in args],
                                   OrderedDict)
         self._var_to_hcons = OrderedDict((h.hi, h) for h in hcons)
-        self.introduced_variables = set(list(self._cv_to_nids.keys()) +\
+        self.introduced_variables = set(list(self._cv_to_nid.keys()) +\
                                         list(self._label_to_nids.keys()) +\
                                         list(self._var_to_hcons.keys()))
         self.icons  = icons # individual constraints [IndividualConstraint]
@@ -91,7 +101,7 @@ class Xmrs(LnkMixin):
 
     @property
     def cvs(self):
-        return list(self._cv_to_nids.keys())
+        return list(self._cv_to_nid.keys())
 
     @property
     def labels(self):
@@ -137,55 +147,106 @@ class Xmrs(LnkMixin):
            that is the characteristic variable of some other predicate,
            as well as for label equalities when no argument link exists
            (even considering transitivity)."""
-        #FIXME: remove circular import (which is why the import is here)
-        from .dmrs import (Dmrs, get_dmrs_post)
-        try:
-            return self._links
-        except AttributeError:
-            lbl_sets = dict([leq for leq in self.label_equality_sets().items()
-                             if len(leq[1]) > 1])
-            # First get argument links
-            self._links = []
-            for arg in self.args:
+        links = list(self._variable_links())
+        links.extend(list(self._eq_links(links)))
+        links.extend(list(self._ltop_links()))
+        return links
+
+    def _variable_links(self):
+        nid_to_cv = self._nid_to_cv
+        cv_to_nid = self._cv_to_nid
+        label_to_nids = self._label_to_nids
+        nid_to_label = self._nid_to_label
+        var_to_hcons = self._var_to_hcons
+        for srcnid, argmap in self._nid_to_argmap.items():
+            for arg in argmap.values():
+                # ignore ARG0s
+                if arg.argname == CVARG: continue
+                var = arg.value
+                # skip constant arguments
                 if not isinstance(arg.value, MrsVariable): continue
-                tgtvid = arg.value.vid
-                if tgtvid in self.cv_map:
-                    tgtid = self.cv_map[tgtvid].nodeid
-                elif tgtvid in self.label_sets:
-                    tgtid = self.label_set_head(tgtvid).nodeid
-                elif arg.value in self.hcons_map:
-                    qeqtgt = self.qeq_target(arg.value)
-                    if qeqtgt is not None:
-                        tgtid = self.qeq_target(arg.value).nodeid
+                # variable arguments (post is EQ or NEQ)
+                if var in cv_to_nid:
+                    tgtnid = cv_to_nid[var]
+                    if nid_to_label[srcnid] == nid_to_label[tgtnid]:
+                        post = EQ_POST
                     else:
-                        logging.warn('QEQ lo handle is not instantiated '
-                                     'in the MRS: {}'.format(
-                                         self.hcons_map[arg.value].hi))
-                        continue
+                        post = NEQ_POST
+                    yield Link(srcnid, tgtnid, arg.argname, post)
+                # label-equality (HEQ) or hcons (H) arguments
                 else:
-                    continue #TODO: log this or something
-                post = get_dmrs_post(self, arg.nodeid, arg.argname, tgtid)
-                if post == EQ_POST:
-                    srcep = self.eps[arg.nodeid]
-                    tgtep = self.eps[tgtid]
-                    # first check for membership, since it can happen more
-                    # than once.
-                    if srcep in lbl_sets.get(srcep.label,[]):
-                        lbl_sets[srcep.label].remove(srcep)
-                    if tgtep in lbl_sets.get(tgtep.label,[]):
-                        lbl_sets[tgtep.label.vid].remove(tgtep)
-                self._links += [Link(arg.nodeid, tgtid, arg.argname, post)]
-            # Then label-equalities without existing variable links
-            for lblid in lbl_sets:
-                tgt = self.label_set_head(lblid)
-                for src in lbl_sets[lblid]:
-                    self._links += [Link(src.nodeid, tgt.nodeid, post=EQ_POST)]
-            # LTOP link
-            #TODO: should there be only 1 link? Can there be more than 1 head?
-            if self.ltop is not None and self.ltop.vid in self.label_sets:
-                tgt = self.label_set_head(self.ltop.vid)
-                self._links += [Link(0, tgt.nodeid, post=EQ_POST)]
-        return self._links
+                    if var in label_to_nids:
+                        tgtnids = list(self.label_set_heads(var))
+                        post = HEQ_POST
+                    elif var in var_to_hcons:
+                        tgtnids = list(self.qeq_targets(var))
+                        post = H_POST
+                    else:
+                        #TODO: log this?
+                        continue
+                    # special case for quantifiers
+                    srccv = self._nid_to_cv[srcnid]
+                    qfer_match = lambda x: nid_to_cv[x] == srccv
+                    tgtqfers = list(filter(qfer_match, tgtnids))
+                    if len(tgtqfers) > 1:
+                        logging.error('Multiple quantifiers: {}'
+                                      .format(tgtqfers))
+                    elif len(tgtqfers) == 1:
+                        tgtnids = [tgtqfers[0]]
+                    for tgtnid in tgtnids:
+                        yield Link(srcnid, tgtnid, arg.argname, post)
+
+    def _eq_links(self, links):
+        """
+        Return the list of /EQ links with no pre-slash argument name.
+        These links are necessary for expressing label equality when it
+        cannot be expressed through variable links. For example, in "The
+        dog whose tail wagged barked", there will be an /EQ link between
+        _wag_v_1 and _dog_n_1 (since they share a scope but dog is not
+        an argument of wag, at least in the expected parse).
+        """
+        # First find the subgraphs whose label equality is given by
+        # variable links.
+        lbl_groups = defaultdict(lambda: defaultdict(set))
+        nid_to_label = self._nid_to_label
+        for link in filter(lambda x: x.post == EQ_POST, links):
+            start = link.start
+            end = link.end
+            lbl = nid_to_label[start]
+            groups = lbl_groups[lbl]
+            new_group = groups.get(start, {start}) | groups.get(end, {end})
+            # need to update references for all in new_group
+            for nid in new_group:
+                lbl_groups[lbl][nid] = new_group
+        # add any in a label set that aren't evidenced by links
+        for lbl, nids in self._label_to_nids.items():
+            groups = lbl_groups[lbl]
+            for nid in nids:
+                if nid not in groups:
+                    groups[nid] = {nid}
+        # When there's more than 1 group per label, we need /EQ links.
+        # The nodes to use are selected simply by CFROM order (if
+        # available).
+        for lbl, groups in lbl_groups.items():
+            # Change nid:set to [set] where the set is the same object
+            # FIXME: this is an awful way to do it.. is there a better way?
+            groups = list({id(grp): grp for grp in groups.values()}.values())
+            if len(groups) < 2: continue
+            targets = [min(grp, key=lambda x: self._nid_to_node[x].cfrom)
+                       for grp in groups]
+            start = targets[0]
+            for end in targets[1:]:
+                yield Link(start, end, post=EQ_POST)
+
+    def _ltop_links(self):
+        ltop = self.ltop
+        if ltop is None: raise StopIteration
+        if ltop in self._label_to_nids:
+            for target in self.label_set_heads(ltop):
+                yield Link(LTOP_NODEID, target, HEQ_POST)
+        elif ltop in self._var_to_hcons:
+            for target in self.qeq_targets(ltop):
+                yield Link(LTOP_NODEID, target, H_POST)
 
     @property
     def hcons(self):
@@ -239,13 +300,10 @@ class Xmrs(LnkMixin):
             if allow_unbound or arg.value in self.introduced_variables:
                 yield arg
 
-    def get_links(self, nodeid):
-        raise NotImplementedError
-
     def get_quantifier(self, nid):
         cv = self._nid_to_cv.get(nid)
         try:
-            return set(self._cv_to_nids.get(cv, [])).difference({nid}).pop()
+            return self._bv_to_nid[cv]
         except KeyError:
             return None
 
@@ -253,36 +311,14 @@ class Xmrs(LnkMixin):
         if not isinstance(var, MrsVariable):
             var = MrsVariable.from_string(var)
         if var in self._cv_to_nids:
-            return self.find_cv_head(var)
+            return self._cv_to_nid[var]
         elif var.sort == HANDLESORT:
             return self.find_scope_head(var)
         else:
             return None
 
-    def find_cv_head(self, cv):
-        if not isinstance(cv, MrsVariable):
-            cv = MrsVariable.from_string(cv)
-        nids = self._cv_to_nids.get(cv, [])
-        for nid in nids:
-            node = self._nid_to_node.get(nid)
-            if node and not node.is_quantifier():
-                return nid
-        return None
-
     def find_scope_head(self, label):
-        if not isinstance(label, MrsVariable):
-            label = MrsVariable.from_string(label)
-        if label in self._var_to_hcons:
-            label = self._var_to_hcons[label].lo
-        nids = set(self._label_to_nids.get(label, []))
-        if len(nids) == 0:
-            return None
-        for nid in list(nids):
-            cv = self._nid_to_cv.get(nid)
-            if any(any(n in nids for n in self._cv_to_nids.get(a.value))
-                   for a in self.get_args(nid)
-                   if a.type == VARIABLE_ARG and a.value != cv):
-                nids.remove(nid)
+        nids = list(self.label_set_heads(label, resolve_hcons=True))
         # if there's more than one at this point, as a heuristic
         # look for one with a quantifier
         if len(nids) > 1:
@@ -293,77 +329,42 @@ class Xmrs(LnkMixin):
                 'More scope heads than expected: {}'.format(' '.join(nids))
         return nids.pop()
 
-    def arg_to_ep(self, nodeid, argname):
-        """Return the EP, if any, linked by the given argument for the
-           given EP."""
+    def arg_to_nid(self, nodeid, argname):
+        """Return the node id of the EP, if any, linked by the given
+           argument for the given EP."""
         var = self._nid_to_argmap.get(nodeid,{}).get(argname).value
         if var is None:
             return None
-        return self.cv_map.get(var.vid)
+        return self._cv_to_nid.get(var)
 
     def label_equality_sets(self):
-        """Return a list of labels to the set of EPs that
+        """Return a dict of labels to the set of node ids of EPs that
            have that label."""
-        lbl_eq = defaultdict(list)
-        for ep in self.eps:
-            lbl_eq[ep.label] += [ep]
-        return lbl_eq
+        return deepcopy(self._label_to_nids)
 
-    def label_set_head(self, label_id):
-        """Return the head of a label equality set, which is the first EP
-           with no outgoing args to other elements in the label set."""
-        lblset = self.label_sets.get(label_id, [])
-        for ep in lblset:
-            if not any(self.arg_to_ep(ep.nodeid, a) in lblset
-                       for a in self._nid_to_argmap.get(ep.nodeid,[])):
-                return ep
+    def label_set_heads(self, label, resolve_hcons=False):
+        """Return the heads of a label equality set, which are the EPs
+           with no outgoing args to other elements in the label set.
+           Generally there is only one head, but in some (possibly
+           incomplete) graphs there may be more than one."""
+        if not isinstance(label, MrsVariable):
+            label = MrsVariable.from_string(label)
+        if resolve_hcons and label in self._var_to_hcons:
+            # get QEQ'd label if available, else just use the label
+            label = self._var_to_hcons[label].lo
+        nids = self._label_to_nids.get(label, [])
+        for nid in nids:
+            argmap = self._nid_to_argmap.get(nid)
+            if argmap is None: continue
+            for a in argmap:
+                if a == CVARG: continue
+            if not any(self.arg_to_nid(nid, a) in nids for a in argmap
+                       if a != CVARG):
+                yield nid
+
+    def qeq_targets(self, handle):
+        """Find the EP with the label QEQed from the given handle, if any."""
+        hcons = self._var_to_hcons.get(handle)
+        if hcons is not None:
+            return self.label_set_heads(hcons.lo)
         return None
-
-    def qeq_target(self, hole):
-        """Find the EP with the label QEQed from the given hole, if any."""
-        hcon = self.hcons_map.get(hole)
-        if hcon is not None:
-            return self.label_set_head(hcon.lo.vid)
-        return None
-
-    def find_head_ep(self):
-        """Return the head EP in the Xmrs. The head is defined as the EP
-           with no arguments in its label group, and is not the argument
-           of an EP outside of its label group."""
-        candidates = set()
-        # add all that have no arguments with the same label
-        for nodeid, ep in self.eps.items():
-            if ep.is_quantifier(): continue
-            if nodeid not in self.args or\
-               all(self.cv_map[var.vid].label != ep.label
-                   for var in self.args[nodeid].values()
-                   if var.vid in self.cv_map):
-                candidates.add(nodeid)
-        #print('step 1:', candidates)
-        # remove those that are arguments of an EP with a different label
-        #print('cvmap:', self.cv_map)
-        arg_eps = lambda ep: (self.cv_map.get(v.vid)
-                              for v in self.args.get(ep.nodeid,{}).values())
-        for nodeid, ep in self.eps.items():
-            #print('  ep:', str(nodeid), str(ep.pred))
-            if ep.is_quantifier(): continue
-            # consider each non-None argument
-            for argep in filter(lambda x: x is not None, arg_eps(ep)):
-                #print('    argep:', str(argep.nodeid), str(argep.pred))
-                if argep.nodeid in candidates and argep.label != ep.label:
-                    #print('   dd')
-                    candidates.remove(argep.nodeid)
-        #print('step 2:', candidates)
-        # lastly, get rid of those in a HCONS (but consider these for LTOP)
-        #print(candidates)
-        #print(list(self.eps[c] for c in candidates))
-        #print(self.args)
-        #print(self.hcons)
-        for c in list(candidates):
-            #print(c, str(self.eps[c].pred))
-            if c not in self.args: continue
-            if any(hi in self.args[c].values() for hi in self.hcons_map.keys()):
-                #print('dd')
-                candidates.remove(c)
-        assert(len(candidates) == 1) #TODO: log failure
-        return self.eps[candidates.pop()]

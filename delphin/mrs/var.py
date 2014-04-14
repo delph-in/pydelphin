@@ -32,9 +32,12 @@ class MrsVariable(object):
             # or a string like 'x1'
             except ValueError:
                 return str(self) == other
+            # other is not an int nor a string
+            except TypeError:
+                return False
 
     def __hash__(self):
-        return hash(self.vid)
+        return hash(str(self))
 
     def __repr__(self):
         return 'MrsVariable({}{})'.format(self.sort, self.vid)

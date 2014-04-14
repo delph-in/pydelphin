@@ -124,3 +124,6 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
             return arg.value
         except KeyError:
             return None
+
+    def is_quantifier(self):
+        return self.pred.is_quantifier()

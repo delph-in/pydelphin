@@ -8,6 +8,7 @@
 
 import argparse
 import logging
+import sys
 from delphin import itsdb
 import util
 
@@ -23,8 +24,8 @@ def main():
     sp = ap.add_subparsers(help='commands')
 
     up = sp.add_parser('update',
-                       help='Update a [incr tsdb()] profile to a new schema '+\
-                            '(relations file). If --overwrite is not '+\
+                       help='Update a [incr tsdb()] profile to a new schema '
+                            '(relations file). If --overwrite is not '
                             'specified, the original is copied to PATH.NNN')
     up.add_argument('profile', metavar='PATH',
                     help='The path of the profile to update')
@@ -36,8 +37,22 @@ def main():
                          'a backup.')
     up.set_defaults(func=update_profile)
 
+    ex = sp.add_parser('extract',
+                       help='Extract a field or fields from a profile and '
+                            'output as text.')
+    ex.add_argument('profile', metavar='PATH',
+                    help='The path of the profile to extract fields from')
+    ex.add_argument('--table', '-t', help='The table to pull fields from'
+                                          ' (e.g. "item")')
+    ex.add_argument('--field', '-f', action='append', dest='fields',
+                    help='The field names in the profile (e.g. "i-input")')
+    ex.add_argument('--field-delimiter', '-d', default='\t',
+                    help='The delimiter of fields for a single instance')
+    ex.set_defaults(func=extract_fields)
+
     args = ap.parse_args()
     args.func(args)
+
 
 def update_profile(args):
     # The idea is to first load a profile with the current relations file,
@@ -61,6 +76,18 @@ def update_profile(args):
     if args.overwrite:
         shutil.rmtree(backup_profile)
     logging.info('Profile updated: %s' % profile_dir)
+
+def extract_fields(args):
+    import os.path
+    # don't crash with "Broken Pipe" when using head or tail, etc.
+    import signal
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+    profile_dir = os.path.normpath(args.profile)
+    profile = itsdb.TsdbProfile(profile_dir)
+    table = profile.get_table(args.table)
+    for row in table.rows():
+        print(args.field_delimiter.join(str(row.get(f)) for f in args.fields))
 
 if __name__ == '__main__':
     main()
