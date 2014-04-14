@@ -1,6 +1,7 @@
 from .var import MrsVariable, AnchorMixin
-from .config import (VARIABLE_ARG, HOLE_ARG, LABEL_ARG, HCONS_ARG,
+from .config import (VARIABLE_ARG, HOLE_ARG,
                      CONSTANT_ARG, HANDLESORT)
+
 
 class Argument(AnchorMixin):
     """
@@ -23,10 +24,13 @@ class Argument(AnchorMixin):
     def __eq__(self, other):
         # ignore missing nodeid?
         # argname is case insensitive
-        return (None in (self.nodeid, other.nodeid) or \
-                self.nodeid == other.nodeid) and \
-               self.argname.lower() == other.argname.lower() and \
-               self.value == other.value
+        snid = self.nodeid
+        onid = other.nodeid
+        return (
+            (None in (snid, onid) or snid == onid) and
+            self.argname.lower() == other.argname.lower() and
+            self.value == other.value
+        )
 
     @classmethod
     def mrs_argument(cls, argname, value):

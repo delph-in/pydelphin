@@ -7,14 +7,18 @@ from .node import Node
 from .xmrs import Xmrs
 from .config import (FIRST_NODEID, CVARSORT, ANCHOR_SORT)
 
+
 def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
         lnk=None, surface=None, identifier=None):
     """Minimal Recursion Semantics contains a top handle, a bag
        of ElementaryPredications, and a bag of handle constraints."""
     # default values
-    if rels is None: rels = []
-    if hcons is None: hcons = []
-    if icons is None: pass # do nothing for now
+    if rels is None:
+        rels = []
+    if hcons is None:
+        hcons = []
+    if icons is None:
+        pass  # do nothing for now
 
     # Xmrs requires that EPs and Arguments have anchors, so add those
     # if necessary
@@ -39,13 +43,14 @@ def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
     for ep in rels:
         labels.append((ep.nodeid, ep.label))
         if ep.cv:
-            sortinfo = OrderedDict([(CVARSORT, ep.cv.sort)] +\
+            sortinfo = OrderedDict([(CVARSORT, ep.cv.sort)] +
                                    list(ep.properties.items()))
             cvs.append((ep.nodeid, ep.cv))
         else:
             sortinfo = None
         nodes.append(Node(ep.nodeid, ep.pred, sortinfo=sortinfo,
-            lnk=ep.lnk, surface=ep.surface, base=ep.base, carg=ep.carg))
+                          lnk=ep.lnk, surface=ep.surface, base=ep.base,
+                          carg=ep.carg))
         args.extend(ep.args)
     # if there's no MRS lnk, get the min cfrom and max cto (if not using
     # charspan lnks, it will get -1 and -1 anyway)
@@ -57,10 +62,11 @@ def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
                 cvs=cvs, labels=labels,
                 lnk=lnk, surface=surface, identifier=identifier)
 
+
 def validate(ltop, index, rels, hcons, icons, lnk, surface, identifier):
-    #TODO: check if there are labels?
+    # TODO: check if there are labels?
     lbls = set(ep.label for ep in rels)
-    hcmap = {hc.lo:hc for hc in hcons}
+    hcmap = {hc.lo: hc for hc in hcons}
     for ep in rels:
         if ep.cv is None:
             logging.warning('The EP for {} is missing a characteristic '
@@ -70,4 +76,3 @@ def validate(ltop, index, rels, hcons, icons, lnk, surface, identifier):
                 logging.warning('The lo variable ({0.lo}) of HCONS {0}'
                                 'is not the label of any EP in the MRS.'
                                 .format(hcmap[arg.value]))
-

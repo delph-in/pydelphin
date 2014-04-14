@@ -3,13 +3,14 @@ import re
 from collections import defaultdict
 
 ##############################################################################
-### Global variables
+# Global variables
 
 _relations_filename = 'relations'
 _field_delimiter = '@'
 
 ##############################################################################
-### Non-class (i.e. static) functions
+# Non-class (i.e. static) functions
+
 
 def get_relations(path):
     """
@@ -32,13 +33,13 @@ def get_relations(path):
         elif len(line.strip()) > 0 and current_table is not None:
             fields = line.split()
             relations[current_table].append(fields[0])
-            #TODO: Add data type, key, partial key, comment? etc.
-            #TODO: Import db to proper db (sqlite, etc)
+            # TODO: Add data type, key, partial key, comment? etc.
+            # TODO: Import db to proper db (sqlite, etc)
     return relations
 
 
 ##############################################################################
-### Profile classes
+# Profile classes
 
 class TsdbTable:
     """
@@ -64,10 +65,11 @@ class TsdbTable:
             raise StopIteration
         f = open(tbl_filename)
         for line in f:
-            #line = unicode(line, 'utf-8')
+            # line = unicode(line, 'utf-8')
             yield dict(zip(self.profile.relations[self.name],
                            line.strip().split(_field_delimiter)))
         f.close()
+
 
 class TsdbProfile:
 

@@ -1,5 +1,5 @@
 import logging
-from operator import add, or_
+from operator import or_
 from copy import deepcopy
 from collections import (OrderedDict, defaultdict)
 from . import (Hook, MrsVariable, ElementaryPredication, Node, Link,
@@ -9,6 +9,7 @@ from .config import (ANCHOR_SORT, HANDLESORT, CVARSORT,
                      CVARG, QEQ, VARIABLE_ARG, LTOP_NODEID,
                      EQ_POST, NEQ_POST, HEQ_POST, H_POST)
 from .util import AccumulationDict, dict_of_dicts as dod
+
 
 # Subclasses of Xmrs may be used for decoding.
 # When encoding, only use members and methods defined in Xmrs (though
@@ -40,11 +41,11 @@ class Xmrs(LnkMixin):
         """
         # default values (or run the generators)
         nodes = list(nodes or [])
-        if args is None: args = []
-        if hcons is None: hcons = []
-        if icons is None: icons = []
-        if cvs is None: cvs = {}
-        if labels is None: labels = {}
+        args = list(args or [])
+        hcons = list(hcons or [])
+        icons = list(icons or [])
+        cvs = dict(cvs or [])
+        labels = dict(labels or [])
 
         # build inner data structures
         self.hook = hook
@@ -60,29 +61,31 @@ class Xmrs(LnkMixin):
             else:
                 self._cv_to_nid[self._nid_to_cv[nid]] = nid
         self._nid_to_label = OrderedDict(sorted(labels))
-        self._label_to_nids = AccumulationDict(or_,
-                                  ((lbl, {nid}) for nid, lbl in labels))
+        self._label_to_nids = AccumulationDict(
+            or_,
+            ((lbl, {nid}) for nid, lbl in labels)
+        )
         self._nid_to_node = OrderedDict((n.nodeid, n) for n in nodes)
         self._nid_to_argmap = dod([(a.nodeid, a.argname, a) for a in args],
                                   OrderedDict)
         self._var_to_hcons = OrderedDict((h.hi, h) for h in hcons)
-        self.introduced_variables = set(list(self._cv_to_nid.keys()) +\
-                                        list(self._label_to_nids.keys()) +\
+        self.introduced_variables = set(list(self._cv_to_nid.keys()) +
+                                        list(self._label_to_nids.keys()) +
                                         list(self._var_to_hcons.keys()))
-        self.icons  = icons # individual constraints [IndividualConstraint]
-        self.lnk    = lnk   # Lnk object (MRS-level lnk spans the whole input)
-        self.surface= surface   # The surface string
-        self.identifier = identifier # Associates an utterance with the RMRS
+        self.icons = icons  # individual constraints [IndividualConstraint]
+        self.lnk = lnk  # Lnk object (MRS-level lnk spans the whole input)
+        self.surface = surface   # The surface string
+        self.identifier = identifier  # Associates an utterance with the RMRS
 
         # accessor methods
         self.get_cv = self._nid_to_cv.get
         self.get_label = self._nid_to_label.get
-        #self.get_pred = # needs to be defined as a method
+        # self.get_pred = # needs to be defined as a method
         self.get_node = self._nid_to_node.get
-        #self.get_ep # needs to be defined as a method
+        # self.get_ep # needs to be defined as a method
         self.get_argmap = self._nid_to_argmap.get
         self.get_args = lambda n: self._nid_to_argmap.get(n, {}).values()
-        #self.get_links # needs to be defined as a method
+        # self.get_links # needs to be defined as a method
         self.get_hcons = self._var_to_hcons.get
 
     @property
@@ -122,23 +125,25 @@ class Xmrs(LnkMixin):
     @property
     def eps(self):
         return [ElementaryPredication(
-                    node.pred,
-                    self.get_label(nid),
-                    anchor=MrsVariable(vid=nid, sort=ANCHOR_SORT),
-                    args=self.get_args(nid),
-                    lnk=node.lnk,
-                    surface=node.surface,
-                    base=node.base
-                )
-                for nid, node in self._nid_to_node.items()]
+            node.pred,
+            self.get_label(nid),
+            anchor=MrsVariable(vid=nid, sort=ANCHOR_SORT),
+            args=self.get_args(nid),
+            lnk=node.lnk,
+            surface=node.surface,
+            base=node.base
+            )
+            for nid, node in self._nid_to_node.items()
+        ]
 
-    rels = eps # just a synonym
+    rels = eps  # just a synonym
 
     @property
     def args(self):
         # _nid_to_argmap is {nid:{argname:arg}}
-        return [arg for nid in self._nid_to_argmap
-                    for arg in self._nid_to_argmap[nid].values()]
+        return [arg
+                for nid in self._nid_to_argmap
+                for arg in self._nid_to_argmap[nid].values()]
 
     @property
     def links(self):
@@ -161,10 +166,12 @@ class Xmrs(LnkMixin):
         for srcnid, argmap in self._nid_to_argmap.items():
             for arg in argmap.values():
                 # ignore ARG0s
-                if arg.argname == CVARG: continue
+                if arg.argname == CVARG:
+                    continue
                 var = arg.value
                 # skip constant arguments
-                if not isinstance(arg.value, MrsVariable): continue
+                if not isinstance(arg.value, MrsVariable):
+                    continue
                 # variable arguments (post is EQ or NEQ)
                 if var in cv_to_nid:
                     tgtnid = cv_to_nid[var]
@@ -182,7 +189,7 @@ class Xmrs(LnkMixin):
                         tgtnids = list(self.qeq_targets(var))
                         post = H_POST
                     else:
-                        #TODO: log this?
+                        # TODO: log this?
                         continue
                     # special case for quantifiers
                     srccv = self._nid_to_cv[srcnid]
@@ -231,7 +238,8 @@ class Xmrs(LnkMixin):
             # Change nid:set to [set] where the set is the same object
             # FIXME: this is an awful way to do it.. is there a better way?
             groups = list({id(grp): grp for grp in groups.values()}.values())
-            if len(groups) < 2: continue
+            if len(groups) < 2:
+                continue
             targets = [min(grp, key=lambda x: self._nid_to_node[x].cfrom)
                        for grp in groups]
             start = targets[0]
@@ -240,7 +248,8 @@ class Xmrs(LnkMixin):
 
     def _ltop_links(self):
         ltop = self.ltop
-        if ltop is None: raise StopIteration
+        if ltop is None:
+            raise StopIteration
         if ltop in self._label_to_nids:
             for target in self.label_set_heads(ltop):
                 yield Link(LTOP_NODEID, target, HEQ_POST)
@@ -282,14 +291,14 @@ class Xmrs(LnkMixin):
         try:
             node = self._nid_to_node[nodeid]
             return ElementaryPredication(
-                       node.pred,
-                       self.get_label(nodeid),
-                       anchor=MrsVariable(nodeid, sort=ANCHOR_SORT),
-                       args=self.get_args(nodeid),
-                       lnk=node.lnk,
-                       surface=node.surface,
-                       base=node.base,
-                   )
+                node.pred,
+                self.get_label(nodeid),
+                anchor=MrsVariable(nodeid, sort=ANCHOR_SORT),
+                args=self.get_args(nodeid),
+                lnk=node.lnk,
+                surface=node.surface,
+                base=node.base,
+            )
         except KeyError:
             return None
 
@@ -326,13 +335,13 @@ class Xmrs(LnkMixin):
                 if not self.get_quantifier(nid):
                     nids.remove(nid)
         assert len(nids) == 1, \
-                'More scope heads than expected: {}'.format(' '.join(nids))
+            'More scope heads than expected: {}'.format(' '.join(nids))
         return nids.pop()
 
     def arg_to_nid(self, nodeid, argname):
         """Return the node id of the EP, if any, linked by the given
            argument for the given EP."""
-        var = self._nid_to_argmap.get(nodeid,{}).get(argname).value
+        var = self._nid_to_argmap.get(nodeid, {}).get(argname).value
         if var is None:
             return None
         return self._cv_to_nid.get(var)
@@ -355,9 +364,11 @@ class Xmrs(LnkMixin):
         nids = self._label_to_nids.get(label, [])
         for nid in nids:
             argmap = self._nid_to_argmap.get(nid)
-            if argmap is None: continue
+            if argmap is None:
+                continue
             for a in argmap:
-                if a == CVARG: continue
+                if a == CVARG:
+                    continue
             if not any(self.arg_to_nid(nid, a) in nids for a in argmap
                        if a != CVARG):
                 yield nid

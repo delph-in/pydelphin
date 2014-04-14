@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 class SemI(object):
     def __init__(self, vpm=None):
         self._vpm = vpm
@@ -10,10 +8,11 @@ class SemI(object):
     def map_properties_right_to_left(self, props):
         return self._vpm.map_rl(props)
 
+
 class Vpm(object):
-     #NOTE: why not a VpmMap class that tests for matches then applies the
-     #      mapping? It would make things cleaner, but consider the
-     #      computational efficiency costs
+    # NOTE: why not a VpmMap class that tests for matches then applies the
+    #       mapping? It would make things cleaner, but consider the
+    #       computational efficiency costs
 
     def __init__(self):
 
@@ -49,9 +48,6 @@ class Vpm(object):
     def find_map(self, properties, pm, vm, frm, to, match):
         return [next(zip(to(pm), to(vm)) for vm in filter(match, vmlist))]
 
-    def find_map(self, properties, key, reverse=False):
-        pass
-
     def map_match(self, properties, valmap, frm, to, op_match):
         """
         Return True if the "from" side of the valmap matches the properties.
@@ -60,15 +56,15 @@ class Vpm(object):
         TODO: what about conditions of the variable, e.g. [e]
         """
         pass
-        #apply_op = lambda x, y: x == y if
-        ##check_op = lambda op, vm: properties.
-        #return all(check_op(properties[p], op, v)
+        # apply_op = lambda x, y: x == y if
+        # check_op = lambda op, vm: properties.
+        # return all(check_op(properties[p], op, v)
         #           for (p, v) in zip(to(
-        #match = (zip(propmap[to_idx], valmap[to_idx])
+        # match = (zip(propmap[to_idx], valmap[to_idx])
         #         for valmap in filter(op_match, valmaplist)
         #         if match(properties, valmap[1], valmap[from_idx])).next(
-        #match = []
-        #for valmap in filter(op_match, valmaplist):
+        # match = []
+        # for valmap in filter(op_match, valmaplist):
 
         #    for (prop, val) in zip(propmap[from_idx], valmap[from_idx]):
         #        if properties[prop] == val or\
@@ -76,4 +72,4 @@ class Vpm(object):
         #           val == '!' and properties.get(prop) is None:
 
         #    # break after finding first
-        #return match
+        # return match

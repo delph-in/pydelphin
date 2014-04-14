@@ -2,11 +2,14 @@ import re
 import logging
 from .config import (GRAMMARPRED, REALPRED, STRINGPRED, QUANTIFIER_SORT)
 
-pred_re = re.compile(r'_?(?P<lemma>.*?)_' # match until last 1 or 2 parts
-                     r'((?P<pos>[a-z])_)?' # pos is always only 1 char
-                     r'((?P<sense>([^_\\]|(?:\\.))+)_)?' # no unescaped _s
-                     r'(?P<end>rel(ation)?)', # NB only _rel is valid
-                     re.IGNORECASE)
+pred_re = re.compile(
+    r'_?(?P<lemma>.*?)_'  # match until last 1 or 2 parts
+    r'((?P<pos>[a-z])_)?'  # pos is always only 1 char
+    r'((?P<sense>([^_\\]|(?:\\.))+)_)?'  # no unescaped _s
+    r'(?P<end>rel(ation)?)',  # NB only _rel is valid
+    re.IGNORECASE
+)
+
 
 def is_valid_pred_string(s, suffix_required=True):
     """
@@ -15,9 +18,10 @@ def is_valid_pred_string(s, suffix_required=True):
     strings will be accepted (e.g. _dog_n_1 instead of _dog_n_1_rel)
     """
     s = s.strip('"')
-    if not suffix_required and s.rsplit('_',1)[-1] not in ('rel', 'relation'):
+    if not suffix_required and s.rsplit('_', 1)[-1] not in ('rel', 'relation'):
         s += '_rel'
     return pred_re.match(s) is not None
+
 
 def normalize_pred_string(s):
     """
@@ -29,11 +33,14 @@ def normalize_pred_string(s):
     if match:
         d = match.groupdict()
         tokens = [d['lemma']]
-        if d['pos']: tokens.append(d['pos'])
-        if d['sense']: tokens.append(d['sense'])
+        if d['pos']:
+            tokens.append(d['pos'])
+        if d['sense']:
+            tokens.append(d['sense'])
         tokens.append('rel')
         return '_'.join(tokens)
     return None
+
 
 class Pred(object):
     def __init__(self, predtype, lemma=None, pos=None, sense=None):
@@ -50,7 +57,7 @@ class Pred(object):
         self.lemma = lemma
         self.pos = pos
         self.sense = str(sense) if sense is not None else sense
-        self.string = None # set by class methods
+        self.string = None  # set by class methods
 
     def __eq__(self, other):
 
@@ -97,7 +104,8 @@ class Pred(object):
         """Extract the components from a pred string and log errors
            for any malformedness."""
         if not predstr.lower().endswith('_rel'):
-            logging.warn('Predicate does not end in "_rel": {}'.format(predstr))
+            logging.warn('Predicate does not end in "_rel": {}'
+                         .format(predstr))
         match = pred_re.search(predstr)
         if match is None:
             logging.warn('Unexpected predicate string: {}'.format(predstr))
@@ -113,4 +121,4 @@ class Pred(object):
         """
         Return the pred string without quotes or a _rel suffix.
         """
-        return self.string.strip('"').rsplit('_',1)[0]
+        return self.string.strip('"').rsplit('_', 1)[0]

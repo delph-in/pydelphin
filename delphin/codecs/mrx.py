@@ -11,40 +11,45 @@
 from delphin.mrs import (Mrs, ElementaryPredication, Argument, Pred,
                          MrsVariable, Lnk, HandleConstraint)
 from delphin._exceptions import MrsDecodeError
-from delphin.mrs.config import (HANDLESORT, GRAMMARPRED, STRINGPRED, REALPRED,
+from delphin.mrs.config import (GRAMMARPRED, STRINGPRED, REALPRED,
                                 CVARG, CONSTARG)
 from collections import OrderedDict
 
 # Import LXML if available, otherwise fall back to another etree implementation
 try:
-  from lxml import etree
+    from lxml import etree
 except ImportError:
-  import xml.etree.ElementTree as etree
+    import xml.etree.ElementTree as etree
 
 ##############################################################################
 ##############################################################################
-### Pickle-API methods
+# Pickle-API methods
+
 
 def load(fh):
     return list(decode(fh))
 
+
 def loads(s):
     raise NotImplementedError
+
 
 def dump(fh, m, encoding='unicode', pretty_print=False, **kwargs):
     print(dumps(m, encoding=encoding, pretty_print=pretty_print, **kwargs),
           file=fh)
+
 
 def dumps(m, encoding='unicode', pretty_print=False, **kwargs):
     return encode(m, encoding=encoding, pretty_print=pretty_print)
 
 ##############################################################################
 ##############################################################################
-### Decoding
+# Decoding
 
 # it's not ideal to have this here, but anyway make sure it is reset
 # for each decoding. It's used to unify variables
 _vars = {}
+
 
 def decode(fh):
     """Decode an MRX-encoded MRS structure."""
@@ -56,6 +61,7 @@ def decode(fh):
         yield decode_mrs(elem)
         elem.clear()
 
+
 def decode_mrs(elem):
     # <!ELEMENT mrs (label, var, (ep|hcons)*)>
     # <!ATTLIST mrs
@@ -63,23 +69,25 @@ def decode_mrs(elem):
     #           cto       CDATA #IMPLIED
     #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
-    elem = elem.find('.') # in case elem is an ElementTree rather than Element
+    elem = elem.find('.')  # in case elem is ElementTree rather than Element
     global _vars
     _vars = {}
-    #normalize_vars(elem) # try to make all vars have a sort
-    return Mrs(ltop = decode_label(elem.find('label')),
-               index = decode_var(elem.find('var')),
-               rels = list(map(decode_ep, elem.iter('ep'))),
-               hcons = list(map(decode_hcons, elem.iter('hcons'))),
-               lnk = decode_lnk(elem.get('cfrom'), elem.get('cto')),
-               surface = elem.get('surface'),
-               identifier = elem.get('ident'))
+    # normalize_vars(elem) # try to make all vars have a sort
+    return Mrs(ltop=decode_label(elem.find('label')),
+               index=decode_var(elem.find('var')),
+               rels=list(map(decode_ep, elem.iter('ep'))),
+               hcons=list(map(decode_hcons, elem.iter('hcons'))),
+               lnk=decode_lnk(elem.get('cfrom'), elem.get('cto')),
+               surface=elem.get('surface'),
+               identifier=elem.get('ident'))
+
 
 def decode_label(elem):
     # <!ELEMENT label (extrapair*)>
     # <!ATTLIST label
     #           vid CDATA #REQUIRED >
     return decode_var(elem, sort='h')
+
 
 def decode_var(elem, sort=None):
     # <!ELEMENT var (extrapair*)>
@@ -98,12 +106,14 @@ def decode_var(elem, sort=None):
         _vars[vid] = MrsVariable(vid=vid, sort=srt, properties=props)
     return _vars[vid]
 
+
 def decode_extrapairs(elems):
     # <!ELEMENT extrapair (path,value)>
     # <!ELEMENT path (#PCDATA)>
     # <!ELEMENT value (#PCDATA)>
     return OrderedDict((e.find('path').text.upper(), e.find('value').text)
                        for e in elems)
+
 
 def decode_ep(elem):
     # <!ELEMENT ep ((pred|spred|realpred), label, fvpair*)>
@@ -119,6 +129,7 @@ def decode_ep(elem):
                                                 elem.get('cto')),
                                  surface=elem.get('surface'),
                                  base=elem.get('base'))
+
 
 def decode_pred(elem):
     # <!ELEMENT pred (#PCDATA)>
@@ -137,6 +148,7 @@ def decode_pred(elem):
                              elem.get('pos'),
                              elem.get('sense'))
 
+
 def decode_args(elem):
     # <!ELEMENT fvpair (rargname, (var|constant))>
     # cv is the characteristic variable (probably ARG0, given by CVARG)
@@ -144,17 +156,17 @@ def decode_args(elem):
     # This code assumes that only cargs have constant values, and all
     # other args (including CVs) have var values.
     args = []
-    cv = carg = None
     for e in elem.findall('fvpair'):
         argname = e.find('rargname').text.upper()
         if e.find('constant'):
-            #argtype = CONSTANTARG
+            # argtype = CONSTANTARG
             argval = e.find('constant').text
         elif e.find('var'):
             argval = decode_var(e.find('var'))
-            #argtype = HOLE_ARG if argval.sort == HANDLESORT else VARIABLEARG
+            # argtype = HOLE_ARG if argval.sort == HANDLESORT else VARIABLEARG
         args.append(Argument.mrs_argument(argname, argval))
     return args
+
 
 def decode_hcons(elem):
     # <!ELEMENT hcons (hi, lo)>
@@ -168,8 +180,9 @@ def decode_hcons(elem):
                             decode_var(lo) if lo.tag == 'var' else
                             decode_label(lo))
 
+
 def decode_lnk(cfrom, cto):
-    if cfrom == cto == None:
+    if cfrom is cto is None:
         return None
     elif None in (cfrom, cto):
         raise ValueError('Both cfrom and cto, or neither, must be specified.')
@@ -178,7 +191,8 @@ def decode_lnk(cfrom, cto):
 
 ##############################################################################
 ##############################################################################
-### Encoding
+# Encoding
+
 
 def encode(ms, encoding='unicode', pretty_print=False):
     e = etree.Element('mrs-list')
@@ -193,8 +207,9 @@ def encode(ms, encoding='unicode', pretty_print=False):
         return pprint_re.sub(r'\n\1', string)
     return etree.tostring(e, encoding=encoding)
 
+
 def encode_mrs(m):
-    attributes = {'cfrom':str(m.cfrom), 'cto':str(m.cto)}
+    attributes = {'cfrom': str(m.cfrom), 'cto': str(m.cto)}
     if m.surface is not None:
         attributes['surface'] = m.surface
     if m.identifier is not None:
@@ -209,8 +224,10 @@ def encode_mrs(m):
         e.append(encode_hcon(hcon))
     return e
 
+
 def encode_label(label):
     return etree.Element('label', vid=str(label.vid))
+
 
 def encode_variable(v, listed_vars=set()):
     var = etree.Element('var', vid=str(v.vid), sort=v.sort)
@@ -219,6 +236,7 @@ def encode_variable(v, listed_vars=set()):
                    for key, val in v.properties.items())
         listed_vars.add(v.vid)
     return var
+
 
 def encode_extrapair(key, value):
     extrapair = etree.Element('extrapair')
@@ -229,8 +247,9 @@ def encode_extrapair(key, value):
     extrapair.extend([path, val])
     return extrapair
 
+
 def encode_ep(ep, listed_vars):
-    attributes = {'cfrom':str(ep.cfrom), 'cto':str(ep.cto)}
+    attributes = {'cfrom': str(ep.cfrom), 'cto': str(ep.cto)}
     if ep.surface is not None:
         attributes['surface'] = ep.surface
     if ep.base is not None:
@@ -247,6 +266,7 @@ def encode_ep(ep, listed_vars):
         e.append(encode_arg(CONSTARG, encode_constant(ep.carg)))
     return e
 
+
 def encode_pred(pred):
     p = None
     if pred.type == GRAMMARPRED:
@@ -262,6 +282,7 @@ def encode_pred(pred):
         p = etree.Element('realpred', attrib=attributes)
     return p
 
+
 def encode_arg(key, value):
     fvpair = etree.Element('fvpair')
     rargname = etree.Element('rargname')
@@ -270,10 +291,12 @@ def encode_arg(key, value):
     fvpair.append(value)
     return fvpair
 
+
 def encode_constant(value):
     const = etree.Element('constant')
     const.text = value
     return const
+
 
 def encode_hcon(hcon):
     hcons = etree.Element('hcons', hreln=hcon.relation)

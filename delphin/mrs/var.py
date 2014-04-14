@@ -2,16 +2,24 @@ import re
 from collections import OrderedDict
 from .config import (HANDLESORT, CVARSORT, ANCHOR_SORT)
 
+
+sort_vid_re = re.compile(r'^(\w*\D)(\d+)$')
+
+
+def sort_vid_split(vs):
+    return sort_vid_re.match(vs).groups()
+
+
 class MrsVariable(object):
     """A variable has an id (vid), sort, and maybe properties."""
 
     def __init__(self, vid, sort, properties=None):
         # vid is the number of the name (e.g. 1, 10003)
-        self.vid        = int(vid)
+        self.vid = int(vid)
         # sort is the letter(s) of the name (e.g. h, x)
-        self.sort       = sort
+        self.sort = sort
         if sort == HANDLESORT and properties:
-            pass # handles cannot have properties. Log this?
+            pass  # handles cannot have properties. Log this?
         self.properties = properties or OrderedDict()
 
     @classmethod
@@ -47,10 +55,11 @@ class MrsVariable(object):
 
     @property
     def sortinfo(self):
-        #FIXME: currently gets CVARSORT even if the var is not a CV
+        # FIXME: currently gets CVARSORT even if the var is not a CV
         sortinfo = OrderedDict([(CVARSORT, self.sort)])
         sortinfo.update(self.properties)
         return sortinfo
+
 
 # I'm not sure this belongs here, but anchors are MrsVariables...
 class AnchorMixin(object):
@@ -64,6 +73,7 @@ class AnchorMixin(object):
     def anchor(self, anchor):
         self.nodeid = anchor.vid
 
+
 class VarGenerator(object):
     """Simple class to produce MrsVariables, incrementing the vid for
        each one."""
@@ -75,7 +85,3 @@ class VarGenerator(object):
         v = MrsVariable(self.vid, sort, properties=properties)
         self.vid += 1
         return v
-
-sort_vid_re = re.compile(r'^(\w*\D)(\d+)$')
-def sort_vid_split(vs):
-    return sort_vid_re.match(vs).groups()

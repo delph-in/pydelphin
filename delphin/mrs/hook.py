@@ -9,6 +9,6 @@ class Hook(object):
             the ltop (or is QEQed by the LTOP))
         :param index: nodeid of most salient predicate (i.e. semantic head)
         """
-        self.ltop   = ltop
-        self.index  = index
-        self.xarg   = xarg
+        self.ltop = ltop
+        self.index = index
+        self.xarg = xarg

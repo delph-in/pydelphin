@@ -1,25 +1,24 @@
-from collections import defaultdict
 from .hook import Hook
 from .var import VarGenerator
 from .arg import Argument
-from .ep import ElementaryPredication
 from .hcons import qeq
 from .xmrs import Xmrs
-from .config import (HANDLESORT, CVARSORT, CVARG, LTOP_NODEID, RSTR,
-                     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST)
+from .config import (HANDLESORT, CVARG, LTOP_NODEID, RSTR,
+                     EQ_POST, HEQ_POST, H_POST, NIL_POST)
+
 
 def Dmrs(nodes=None, links=None,
          lnk=None, surface=None, identifier=None,
          **kwargs):
     vgen = VarGenerator(starting_vid=0)
     labels = _make_labels(nodes, links, vgen)
-    hook = Hook(ltop=labels[LTOP_NODEID]) # no index for now
+    hook = Hook(ltop=labels[LTOP_NODEID])  # no index for now
     cvs = _make_cvs(nodes, vgen)
     # initialize args with ARG0 for characteristic variables
     args = [Argument(nid, CVARG, cv) for nid, cv in cvs.items()]
     hcons = []
     for l in links:
-        #FIXME: I don't have a clear answer about how LTOP links are
+        # FIXME: I don't have a clear answer about how LTOP links are
         # constructed, so I will assume that H_POST or NIL_POST
         # assumes a QEQ. Label equality would have been captured by
         # _make_labels() earlier.
@@ -38,28 +37,31 @@ def Dmrs(nodes=None, links=None,
                     args += [Argument(l.start, CVARG, cvs[l.start])]
             elif l.post == HEQ_POST:
                 args += [Argument(l.start, l.argname, labels[l.end])]
-            else: # NEQ_POST or EQ_POST
+            else:  # NEQ_POST or EQ_POST
                 args += [Argument(l.start, l.argname, cvs[l.end])]
 
-    icons = None # future feature
+    icons = None  # future feature
     return Xmrs(hook=hook, nodes=nodes, args=args,
                 hcons=hcons, icons=icons,
                 cvs=cvs.items(), labels=labels.items(),
                 lnk=lnk, surface=surface, identifier=identifier)
 
+
 def _make_labels(nodes, links, vgen):
     labels = {}
-    labels[LTOP_NODEID] = vgen.new(HANDLESORT) # reserve h0 for ltop
+    labels[LTOP_NODEID] = vgen.new(HANDLESORT)  # reserve h0 for ltop
     for l in links:
         if l.post == EQ_POST:
-            lbl = labels.get(l.start) or labels.get(l.end) or\
-                    vgen.new(HANDLESORT)
+            lbl = (labels.get(l.start) or
+                   labels.get(l.end) or
+                   vgen.new(HANDLESORT))
             labels[l.start] = labels[l.end] = lbl
     # create any remaining uninstantiated labels
     for n in nodes:
         if n.nodeid not in labels:
             labels[n.nodeid] = vgen.new(HANDLESORT)
     return labels
+
 
 def _make_cvs(nodes, vgen):
     cvs = {}

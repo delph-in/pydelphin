@@ -1,5 +1,6 @@
 from itertools import chain, combinations
 
+
 class AccumulationDict(dict):
     def __init__(self, accumulator, *args, **kwargs):
         if not hasattr(accumulator, '__call__'):
@@ -30,6 +31,7 @@ class AccumulationDict(dict):
         for key in kwargs:
             self.__additem__(key, kwargs[key])
 
+
 def dict_of_dicts(triples, dicttype=dict):
     d = dicttype()
     for a, b, c in triples:
@@ -39,6 +41,7 @@ def dict_of_dicts(triples, dicttype=dict):
             d[a] = dicttype()
             d[a][b] = c
     return d
+
 
 # adapted from recipe in itertools documentation
 def powerset(iterable):

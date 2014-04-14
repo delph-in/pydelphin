@@ -1,8 +1,9 @@
 from collections import OrderedDict
 from .node import Node
 from .lnk import LnkMixin
-from .var import (MrsVariable, AnchorMixin)
-from .config import (CVARG, CONSTARG, ANCHOR_SORT)
+from .var import AnchorMixin
+from .config import (CVARG, CONSTARG)
+
 
 class ElementaryPredication(LnkMixin, AnchorMixin):
     """
@@ -23,7 +24,7 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
         """
         self.label = label
         # first args, then can get CV
-        self.argdict  = OrderedDict((a.argname, a) for a in (args or []))
+        self.argdict = OrderedDict((a.argname, a) for a in (args or []))
         # Only fill in other attributes if pred is given, otherwise ignore.
         # This behavior is to help enable the from_node classmethod.
         self._node = None
@@ -53,47 +54,52 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
         return self.__repr__()
 
     def __eq__(self, other):
-        return self.label == other.label and \
-               self.argdict == other.argdict and \
-               self._node == other._node
+        return (self.label == other.label and
+                self.argdict == other.argdict and
+                self._node == other._node)
 
     # these properties provide an interface to the node attributes
 
     @property
     def nodeid(self):
         return self._node.nodeid
+
     @nodeid.setter
     def nodeid(self, value):
         self._node.nodeid = value
-    
+
     @property
     def pred(self):
         return self._node.pred
+
     @pred.setter
     def pred(self, value):
         self._node.pred = value
-    
+
     @property
     def lnk(self):
         return self._node.lnk
+
     @lnk.setter
     def lnk(self, value):
         self._node.lnk = value
-    
+
     @property
     def surface(self):
         return self._node.surface
+
     @surface.setter
     def surface(self, value):
         self._node.surface = value
-    
+
     @property
     def base(self):
         return self._node.base
+
     @base.setter
     def base(self, value):
         self._node.base = value
-    
+
     # carg property intentionally left out. It should be accessed from
     # the arg list (see the property below)
 
@@ -107,7 +113,7 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
     def properties(self):
         try:
             return self.cv.properties
-        except AttributeError: # in case cv is None
+        except AttributeError:  # in case cv is None
             return OrderedDict()
 
     @property

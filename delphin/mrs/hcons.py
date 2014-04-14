@@ -1,4 +1,5 @@
-from .config import (QEQ, LHEQ, OUTSCOPES)
+from .config import QEQ
+
 
 class HandleConstraint(object):
     """A relation between two handles."""
@@ -9,9 +10,9 @@ class HandleConstraint(object):
         self.lo = lo
 
     def __eq__(self, other):
-        return self.hi == other.hi and\
-               self.relation == other.relation and\
-               self.lo == other.lo
+        return (self.hi == other.hi and
+                self.relation == other.relation and
+                self.lo == other.lo)
 
     def __hash__(self):
         return hash(repr(self))
@@ -22,6 +23,7 @@ class HandleConstraint(object):
 
     def __str__(self):
         return self.__repr__()
+
 
 def qeq(hi, lo):
     return HandleConstraint(hi, QEQ, lo)

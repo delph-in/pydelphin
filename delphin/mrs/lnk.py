@@ -1,5 +1,6 @@
 from .config import (CHARSPAN, CHARTSPAN, TOKENS, EDGE)
 
+
 class Lnk(object):
     """
     Lnk objects link predicates to the surface form in one of several
@@ -40,6 +41,7 @@ class Lnk(object):
 
     def __eq__(self, other):
         return self.type == other.type and self.data == other.data
+
 
 class LnkMixin(object):
     """
