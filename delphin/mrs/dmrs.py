@@ -1,9 +1,10 @@
 from .hook import Hook
 from .var import VarGenerator
+from .ep import ElementaryPredication
 from .arg import Argument
 from .hcons import qeq
 from .xmrs import Xmrs
-from .config import (HANDLESORT, CVARG, LTOP_NODEID, RSTR,
+from .config import (HANDLESORT, CVARG, CONSTARG, LTOP_NODEID, RSTR,
                      EQ_POST, HEQ_POST, H_POST, NIL_POST)
 
 
@@ -12,12 +13,14 @@ def Dmrs(nodes=None, links=None,
          **kwargs):
     vgen = VarGenerator(starting_vid=0)
     labels = _make_labels(nodes, links, vgen)
-    hook = Hook(ltop=labels[LTOP_NODEID])  # no index for now
     cvs = _make_cvs(nodes, vgen)
+    hook = Hook(ltop=labels[LTOP_NODEID])  # no index for now
     # initialize args with ARG0 for characteristic variables
-    args = [Argument(nid, CVARG, cv) for nid, cv in cvs.items()]
+    args = {nid: [Argument(nid, CVARG, cv)] for nid, cv in cvs.items()}
     hcons = []
     for l in links:
+        if l.start not in args:
+            args[l.start] = []
         # FIXME: I don't have a clear answer about how LTOP links are
         # constructed, so I will assume that H_POST or NIL_POST
         # assumes a QEQ. Label equality would have been captured by
@@ -26,24 +29,40 @@ def Dmrs(nodes=None, links=None,
             if l.post == H_POST or l.post == NIL_POST:
                 hcons += [qeq(labels[LTOP_NODEID], labels[l.end])]
         else:
+            if l.argname is None:
+                continue  # don't make an argument for bare EQ links
             if l.post == H_POST:
                 hole = vgen.new(HANDLESORT)
                 hcons += [qeq(hole, labels[l.end])]
-                args += [Argument(l.start, l.argname, hole)]
+                args[l.start].append(Argument(l.start, l.argname, hole))
                 # if the arg is RSTR, it's a quantifier, so we can
                 # find its characteristic variable now
                 if l.argname.upper() == RSTR:
                     cvs[l.start] = cvs[l.end]
-                    args += [Argument(l.start, CVARG, cvs[l.start])]
+                    args[l.start].append(
+                        Argument(l.start, CVARG, cvs[l.start])
+                    )
             elif l.post == HEQ_POST:
-                args += [Argument(l.start, l.argname, labels[l.end])]
+                args[l.start].append(
+                    Argument(l.start, l.argname, labels[l.end])
+                )
             else:  # NEQ_POST or EQ_POST
-                args += [Argument(l.start, l.argname, cvs[l.end])]
+                args[l.start].append(
+                    Argument(l.start, l.argname, cvs[l.end])
+                )
+    eps = []
+    for node in nodes:
+        nid = node.nodeid
+        if node.carg is not None:
+            args[nid].append(Argument(nid, CONSTARG, node.carg))
+        ep = ElementaryPredication.from_node(
+            labels[nid], node, (args.get(nid) or None)
+        )
+        eps.append(ep)
 
     icons = None  # future feature
-    return Xmrs(hook=hook, nodes=nodes, args=args,
+    return Xmrs(hook=hook, eps=eps,
                 hcons=hcons, icons=icons,
-                cvs=cvs.items(), labels=labels.items(),
                 lnk=lnk, surface=surface, identifier=identifier)
 
 

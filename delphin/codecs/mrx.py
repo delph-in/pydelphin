@@ -8,12 +8,13 @@
 #          of MRX instances, and they read and write incrementally.
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
+from collections import OrderedDict
+from io import BytesIO
 from delphin.mrs import (Mrs, ElementaryPredication, Argument, Pred,
                          MrsVariable, Lnk, HandleConstraint)
 from delphin._exceptions import MrsDecodeError
 from delphin.mrs.config import (GRAMMARPRED, STRINGPRED, REALPRED,
                                 CVARG, CONSTARG)
-from collections import OrderedDict
 
 # Import LXML if available, otherwise fall back to another etree implementation
 try:
@@ -30,8 +31,8 @@ def load(fh):
     return list(decode(fh))
 
 
-def loads(s):
-    raise NotImplementedError
+def loads(s, encoding='utf-8'):
+    return list(decode(BytesIO(bytes(s, encoding=encoding))))
 
 
 def dump(fh, m, encoding='unicode', pretty_print=False, **kwargs):
@@ -57,9 +58,10 @@ def decode(fh):
     # if memory becomes a big problem, consider catching start events,
     # get the root element (later start events can be ignored), and
     # root.clear() after decoding each mrs
-    for event, elem in etree.iterparse(fh, events=('end')):
-        yield decode_mrs(elem)
-        elem.clear()
+    for event, elem in etree.iterparse(fh, events=('end',)):
+        if elem.tag == 'mrs':
+            yield decode_mrs(elem)
+            elem.clear()
 
 
 def decode_mrs(elem):
@@ -158,10 +160,10 @@ def decode_args(elem):
     args = []
     for e in elem.findall('fvpair'):
         argname = e.find('rargname').text.upper()
-        if e.find('constant'):
+        if e.find('constant') is not None:
             # argtype = CONSTANTARG
             argval = e.find('constant').text
-        elif e.find('var'):
+        elif e.find('var') is not None:
             argval = decode_var(e.find('var'))
             # argtype = HOLE_ARG if argval.sort == HANDLESORT else VARIABLEARG
         args.append(Argument.mrs_argument(argname, argval))
@@ -216,8 +218,10 @@ def encode_mrs(m):
         attributes['ident'] = m.identifier
     e = etree.Element('mrs', attrib=attributes)
     listed_vars = set()
-    e.append(encode_label(m.ltop))
-    e.append(encode_variable(m.index, listed_vars))
+    if m.ltop is not None:
+        e.append(encode_label(m.ltop))
+    if m.index is not None:
+        e.append(encode_variable(m.index, listed_vars))
     for ep in m.rels:
         e.append(encode_ep(ep, listed_vars))
     for hcon in m.hcons:

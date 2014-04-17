@@ -1,34 +1,30 @@
 import logging
-from collections import OrderedDict
 from .lnk import Lnk
 from .hook import Hook
 from .var import MrsVariable
-from .node import Node
 from .xmrs import Xmrs
-from .config import (FIRST_NODEID, CVARSORT, ANCHOR_SORT)
+from .config import (FIRST_NODEID, ANCHOR_SORT)
 
 
 def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
         lnk=None, surface=None, identifier=None):
     """Minimal Recursion Semantics contains a top handle, a bag
        of ElementaryPredications, and a bag of handle constraints."""
-    # default values
-    if rels is None:
-        rels = []
-    if hcons is None:
-        hcons = []
-    if icons is None:
-        pass  # do nothing for now
+    # default values or run generators
+    rels = list(rels or [])
+    hcons = list(hcons or [])
+    icons = list(icons or [])
 
     # Xmrs requires that EPs and Arguments have anchors, so add those
     # if necessary
     for i, ep in enumerate(rels):
         # setting anchor for model consistency, but it may be faster
         # to just set the nodeid directly
+        anchor = MrsVariable(vid=FIRST_NODEID + i, sort=ANCHOR_SORT)
         if ep.anchor is None:
-            ep.anchor = MrsVariable(vid=FIRST_NODEID + i, sort=ANCHOR_SORT)
+            ep.anchor = anchor
         for arg in ep.args:
-            arg.anchor = ep.anchor
+            arg.anchor = anchor
 
     # maybe validation can do further finishing, like adding CVs or
     # setting argument types
@@ -36,30 +32,13 @@ def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
 
     # construct Xmrs structures
     hook = Hook(ltop=ltop, index=index)
-    nodes = []
-    args = []
-    cvs = []
-    labels = []
-    for ep in rels:
-        labels.append((ep.nodeid, ep.label))
-        if ep.cv:
-            sortinfo = OrderedDict([(CVARSORT, ep.cv.sort)] +
-                                   list(ep.properties.items()))
-            cvs.append((ep.nodeid, ep.cv))
-        else:
-            sortinfo = None
-        nodes.append(Node(ep.nodeid, ep.pred, sortinfo=sortinfo,
-                          lnk=ep.lnk, surface=ep.surface, base=ep.base,
-                          carg=ep.carg))
-        args.extend(ep.args)
     # if there's no MRS lnk, get the min cfrom and max cto (if not using
     # charspan lnks, it will get -1 and -1 anyway)
     if lnk is None:
         lnk = Lnk.charspan(min(ep.cfrom for ep in rels),
                            max(ep.cto for ep in rels))
-    return Xmrs(hook=hook, nodes=nodes, args=args,
+    return Xmrs(hook=hook, eps=rels,
                 hcons=hcons, icons=icons,
-                cvs=cvs, labels=labels,
                 lnk=lnk, surface=surface, identifier=identifier)
 
 

@@ -10,6 +10,7 @@
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
 from collections import OrderedDict
+from io import BytesIO
 import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
 from delphin.mrs.config import (GRAMMARPRED, STRINGPRED, REALPRED,
@@ -30,8 +31,8 @@ def load(fh):
     return list(decode(fh))
 
 
-def loads(s):
-    raise NotImplementedError
+def loads(s, encoding='utf-8'):
+    return list(decode(BytesIO(bytes(s, encoding=encoding))))
 
 
 def dump(fh, ms, pretty_print=False, **kwargs):
@@ -46,20 +47,16 @@ def dumps(ms, pretty_print=False, **kwargs):
 ##############################################################################
 # Decoding
 
-def decode_list(fh):
-    """Decode """
-
-
 def decode(fh):
     """Decode a DMRX-encoded DMRS structure."""
     # <!ELEMENT dmrs-list (dmrs)*>
     # if memory becomes a big problem, consider catching start events,
     # get the root element (later start events can be ignored), and
     # root.clear() after decoding each mrs
-    for event, elem in etree.iterparse(fh, events=('end')):
-        yield decode_dmrs(elem)
-        elem.clear()
-
+    for event, elem in etree.iterparse(fh, events=('end',)):
+        if elem.tag == 'dmrs':
+            yield decode_dmrs(elem)
+            elem.clear()
 
 def decode_dmrs(elem):
     # <!ELEMENT dmrs (node|link)*>
@@ -85,7 +82,7 @@ def decode_node(elem):
     #           surface   CDATA #IMPLIED
     #           base      CDATA #IMPLIED
     #           carg CDATA #IMPLIED >
-    return Node(pred=decode_pred(elem.find('./')),
+    return Node(pred=decode_pred(elem.find('*[1]')),
                 nodeid=elem.get('nodeid'),
                 sortinfo=decode_sortinfo(elem.find('sortinfo')),
                 lnk=decode_lnk(elem),
@@ -141,7 +138,7 @@ def decode_link(elem):
 
 
 def decode_lnk(elem):
-    return Lnk.charspan(elem.get('cfrom'), elem.get('cto'))
+    return Lnk.charspan(elem.get('cfrom', '-1'), elem.get('cto', '-1'))
 
 ##############################################################################
 ##############################################################################

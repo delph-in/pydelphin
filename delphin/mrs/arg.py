@@ -1,5 +1,5 @@
 from .var import MrsVariable, AnchorMixin
-from .config import (VARIABLE_ARG, HOLE_ARG,
+from .config import (CVARG, INTRINSIC_ARG, VARIABLE_ARG, HOLE_ARG,
                      CONSTANT_ARG, HANDLESORT)
 
 
@@ -16,6 +16,7 @@ class Argument(AnchorMixin):
         self.nodeid = nodeid
         self.argname = argname
         self.value = value
+        self._type = None
 
     def __repr__(self):
         return 'Argument({nodeid} {argname}={value})'\
@@ -40,9 +41,10 @@ class Argument(AnchorMixin):
     def rmrs_argument(cls, anchor, argname, value):
         return cls(anchor.vid, argname, value)
 
-    @property
-    def type(self):
-        if isinstance(self.value, MrsVariable):
+    def infer_argument_type(self):
+        if self.argname == CVARG:
+            return INTRINSIC_ARG
+        elif isinstance(self.value, MrsVariable):
             if self.value.sort == HANDLESORT:
                 # can't tell the diff between LABEL_ARG and HCONS_ARG
                 # without the rest of the MRS, so just return HOLE_ARG
@@ -51,3 +53,13 @@ class Argument(AnchorMixin):
                 return VARIABLE_ARG
         else:
             return CONSTANT_ARG
+
+    @property
+    def type(self):
+        if self._type is None:
+            self._type = self.infer_argument_type()
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        self._type = value

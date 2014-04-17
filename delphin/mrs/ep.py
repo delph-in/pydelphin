@@ -117,6 +117,10 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
             return OrderedDict()
 
     @property
+    def sortinfo(self):
+        return self.cv.sortinfo
+
+    @property
     def carg(self):
         return self.arg_value(CONSTARG)
 

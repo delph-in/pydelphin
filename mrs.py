@@ -4,7 +4,7 @@ import sys
 import argparse
 from delphin.codecs import simplemrs, mrx, dmrx
 
-mrsformats={'simplemrs':simplemrs, 'mrx':mrx, 'dmrx':dmrx}
+mrsformats = {'simplemrs': simplemrs, 'mrx': mrx, 'dmrx': dmrx}
 
 parser = argparse.ArgumentParser(description="Utility for manipulating MRSs")
 subparsers = parser.add_subparsers(dest='command')
@@ -24,18 +24,24 @@ path_parser.add_argument('infile', metavar='PATH', nargs='?')
 
 args = parser.parse_args()
 if args.command in ('convert', 'c'):
-    instream = open(args.infile, 'r') if args.infile is not None else sys.stdin
+    srcfmt = mrsformats[args.srcfmt]
+    if args.infile is not None:
+        ms = srcfmt.load(open(args.infile, 'r'))
+    else:
+        ms = srcfmt.loads(sys.stdin.read())
     outstream = sys.stdout
-    ms = mrsformats[args.srcfmt].load(instream)
     mrsformats[args.tgtfmt].dump(outstream, ms,
                                  pretty_print=args.pretty_print,
                                  color=args.color)
 elif args.command in ('paths', 'p'):
     from delphin.mrs import path as mrspath
-    instream = open(args.infile, 'r') if args.infile is not None else sys.stdin
+    if args.infile is not None:
+        instream = open(args.infile, 'r')
+    else:
+        instream = sys.stdin
     outstream = sys.stdout
     ms = mrsformats[args.format].load(instream)
     for m in ms:
-    	paths = list(mrspath.get_paths(m))
-    	print('\n'.join(paths))
-    	print()
+        paths = list(mrspath.get_paths(m))
+        print('\n'.join(paths))
+        print()

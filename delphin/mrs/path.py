@@ -186,7 +186,7 @@ def find(xmrs, path):
 
 
 def get_paths(xmrs, **kwargs):
-    for nid in xmrs.node_ids:
+    for nid in xmrs.nodeids:
         for eppath in get_ep_paths(xmrs, nid, **kwargs):
             yield eppath
 

@@ -25,6 +25,7 @@ QEQ            = 'qeq'
 LHEQ           = 'lheq'
 OUTSCOPES      = 'outscopes'
 # ARGUMENTS
+INTRINSIC_ARG  = 'IntrinsicArgument'
 VARIABLE_ARG   = 'VariableArgument'
 HOLE_ARG       = 'HoleArgument' # supertype of LABEL_ARG and HCONS_ARG
 LABEL_ARG      = 'LabelArgument'
