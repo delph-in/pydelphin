@@ -23,8 +23,9 @@ def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
         anchor = MrsVariable(vid=FIRST_NODEID + i, sort=ANCHOR_SORT)
         if ep.anchor is None:
             ep.anchor = anchor
-        for arg in ep.args:
-            arg.anchor = anchor
+        # the args' nodeids will be set by the above
+        #for arg in ep.args:
+        #    arg.anchor = anchor
 
     # maybe validation can do further finishing, like adding CVs or
     # setting argument types

@@ -67,6 +67,9 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
     @nodeid.setter
     def nodeid(self, value):
         self._node.nodeid = value
+        # also update the args' nodeids
+        for arg in self.argdict.values():
+            arg.nodeid = value
 
     @property
     def pred(self):
@@ -75,6 +78,10 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
     @pred.setter
     def pred(self, value):
         self._node.pred = value
+
+    @property
+    def sortinfo(self):
+        return self.cv.sortinfo
 
     @property
     def lnk(self):
@@ -115,10 +122,6 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
             return self.cv.properties
         except AttributeError:  # in case cv is None
             return OrderedDict()
-
-    @property
-    def sortinfo(self):
-        return self.cv.sortinfo
 
     @property
     def carg(self):

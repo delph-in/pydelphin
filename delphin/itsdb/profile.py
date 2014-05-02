@@ -1,5 +1,6 @@
 import os
 import re
+import gzip
 from collections import defaultdict
 
 ##############################################################################
@@ -61,9 +62,12 @@ class TsdbTable:
         """
         tbl_filename = os.path.join(self.profile.root, self.name)
         # Don't crash if table doesn't exist, just yield nothing
-        if not os.path.exists(tbl_filename):
+        if os.path.exists(tbl_filename):
+            f = open(tbl_filename)
+        elif os.path.exists(tbl_filename + '.gz'):
+            f = gzip.open(tbl_filename + '.gz', mode='rt')
+        else:
             raise StopIteration
-        f = open(tbl_filename)
         for line in f:
             # line = unicode(line, 'utf-8')
             yield dict(zip(self.profile.relations[self.name],

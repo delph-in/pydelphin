@@ -2,6 +2,7 @@ import logging
 from operator import or_
 from copy import copy, deepcopy
 from collections import (OrderedDict, defaultdict)
+from delphin._exceptions import XmrsStructureError
 from . import (Hook, MrsVariable, ElementaryPredication, Node, Link,
                HandleConstraint)
 from .lnk import LnkMixin
@@ -9,28 +10,22 @@ from .config import (LTOP_NODEID, ANCHOR_SORT, HANDLESORT, CVARSORT,
                      CVARG, QEQ, INTRINSIC_ARG, VARIABLE_ARG, HOLE_ARG,
                      LABEL_ARG, HCONS_ARG, CONSTANT_ARG,
                      EQ_POST, NEQ_POST, HEQ_POST, H_POST)
-from .util import AccumulationDict, dict_of_dicts as dod
+from .util import AccumulationDict
 
 
-# Subclasses of Xmrs may be used for decoding.
-# When encoding, only use members and methods defined in Xmrs (though
-# they may be redefined in subclasses)
 class Xmrs(LnkMixin):
     """Basic class for Mrs, Rmrs, and Dmrs objects."""
     def __init__(self, hook=None, eps=None,
                  hcons=None, icons=None,
                  lnk=None, surface=None, identifier=None):
         """
-        Xmrs objects are a middle-ground class for Mrs, Rmrs, and Dmrs.
-        The structural components (ltop, index, args, hcons, and icons)
-        do not use variables, but nodeids. Variables are then available
-        through maps (cvs and labels) using the nodeids as keys.
+        Xmrs is a middle-ground class for Mrs, Rmrs, and Dmrs.
 
         Args:
             hook (Hook): container class for things like ltop and index
             eps ([ElementaryPredication]): list of eps
             hcons ([HandleConstraint]): list of hcons
-            icons: an iterable container of IndividualConstraints
+            icons: list of IndividualConstraints (planned feature)
             lnk (Lnk): links the Xmrs to the surface form or parse structure
             surface: surface string
             identifier: discourse-utterance id
@@ -57,11 +52,7 @@ class Xmrs(LnkMixin):
         # equality from HCONS)
         for ep in eps:
             for arg in ep.args:
-                if arg.infer_argument_type() == HOLE_ARG:
-                    if arg.value in self._var_to_hcons:
-                        arg.type = HCONS_ARG
-                    else:
-                        arg.type = LABEL_ARG
+                arg.type = arg.infer_argument_type(xmrs=self)
 
         # Some additional indices for quicker lookup
         self._cv_to_nid = {ep.cv: ep.nodeid for ep in eps
@@ -91,6 +82,13 @@ class Xmrs(LnkMixin):
              if isinstance(arg.value, MrsVariable)] +
             [hc.lo for hc in hcons]
         )
+
+    def __repr__(self):
+        if self.surface is not None:
+            stringform = self.surface
+        else:
+            stringform = ' '.join(ep.pred.lemma for ep in self.eps)
+        return 'Xmrs({})'.format(stringform)
 
     # Interface layer to the internal representations (and part of the
     # public API)
@@ -314,6 +312,9 @@ class Xmrs(LnkMixin):
         except KeyError:
             return None
 
+    def get_hcons(self, hi_var):
+        return self._var_to_hcons.get(hi_var)
+
     def get_outbound_args(self, nodeid, allow_unbound=True):
         for arg in self.get_args(nodeid):
             if arg.argname == CVARG:
@@ -321,9 +322,9 @@ class Xmrs(LnkMixin):
             if allow_unbound or arg.value in self.introduced_variables:
                 yield arg
 
-    def get_quantifier(self, nid):
+    def get_quantifier(self, nodeid):
         try:
-            cv = self._nid_to_ep[nid].cv
+            cv = self._nid_to_ep[nodeid].cv
             return self._bv_to_nid[cv]
         except KeyError:
             return None
@@ -391,3 +392,55 @@ class Xmrs(LnkMixin):
         if hcons is not None:
             return self.label_set_heads(hcons.lo)
         return None
+
+    # Manipulation methods
+    # These are necessary because there is too much upkeep to just add
+    # things directly to the internal data structures.
+
+    def add_ep(self, ep):
+        xse = XmrsStructureError
+        # assume the ep has a pred and label
+        if ep.nodeid is None:
+            ep.nodeid = max(self.nodeids) + 1
+        nid = ep.nodeid
+        if nid in self._nid_to_ep:
+            raise xse('Nodeid/Anchor {} already exists.'.format(nid))
+        is_qfer = ep.is_quantifier()
+        cv = ep.cv
+        if is_qfer and cv in self._bv_to_nid:
+            raise xse('A quantifier EP with the bound variable {} already '
+                      'exists.'.format(cv))
+        elif not is_qfer and cv in self._cv_to_nid:
+            raise xse('An EP with the characteristic variable {} already '
+                      'exists.'.format(cv))
+        
+        self._nid_to_ep[nid] = ep
+        # for now allowing None cvs... bad idea?
+        if cv is not None:
+            if is_qfer:
+                self._bv_to_nid[cv] = nid
+            else:
+                self._cv_to_nid[cv] = nid
+        self._label_to_nids.accumulate((ep.label, {nid}))
+        self.lnk = lnk  # Lnk object (MRS-level lnk spans the whole input)
+
+        # Introduced variables are characteristic variables, labels, and
+        # the hi value of HCONS. Anything else is considered to be not
+        # introduced, and is probably an underspecified type (e.g. i2).
+        # Note also that LTOP and INDEX are not explicitly included.
+        self._introduced_variables = set(
+            [ep.cv for ep in eps] +
+            [ep.label for ep in eps] +
+            [hc.hi for hc in hcons]
+        )
+
+        # All variables include introduced variables, LTOP and INDEX (if
+        # not already included as introduced variables), all ARG vars,
+        # and the lo values of HCONS.
+        self._all_variables = self._introduced_variables.union(
+            [hook.ltop, hook.index] +
+            [arg.value for ep in eps for arg in ep.args
+             if isinstance(arg.value, MrsVariable)] +
+            [hc.lo for hc in hcons]
+        )
+

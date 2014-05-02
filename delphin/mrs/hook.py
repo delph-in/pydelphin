@@ -12,3 +12,8 @@ class Hook(object):
         self.ltop = ltop
         self.index = index
         self.xarg = xarg
+
+    def __repr__(self):
+        return 'Hook(ltop={} index={} xarg={})'.format(
+            self.ltop, self.index, self.xarg
+        )
