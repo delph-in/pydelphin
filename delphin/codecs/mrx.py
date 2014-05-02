@@ -233,7 +233,9 @@ def encode_label(label):
     return etree.Element('label', vid=str(label.vid))
 
 
-def encode_variable(v, listed_vars=set()):
+def encode_variable(v, listed_vars=None):
+    if listed_vars is None:
+        listed_vars = set()
     var = etree.Element('var', vid=str(v.vid), sort=v.sort)
     if v.vid not in listed_vars and v.properties:
         var.extend(encode_extrapair(key, val)
@@ -264,10 +266,11 @@ def encode_ep(ep, listed_vars):
     if ep.cv is not None:
         e.append(encode_arg(CVARG, encode_variable(ep.cv, listed_vars)))
     for arg in ep.args:
-        e.append(encode_arg(arg.argname,
-                            encode_variable(arg.value, listed_vars)))
-    if ep.carg is not None:
-        e.append(encode_arg(CONSTARG, encode_constant(ep.carg)))
+        if isinstance(arg.value, MrsVariable):
+            e.append(encode_arg(arg.argname,
+                                encode_variable(arg.value, listed_vars)))
+        else:
+            e.append(encode_arg(arg.argname, encode_constant(arg.value)))
     return e
 
 

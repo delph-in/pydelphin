@@ -38,6 +38,9 @@ _valid_hcons = [_qeq, _lheq, _outscopes]
 # possible relations for individual constraints
 # _valid_icons    = [r'focus', r'topic']
 
+# pretty-print options
+_default_mrs_delim = '\n'
+
 # color options
 bold = lambda x: '\x1b[1m{}\x1b[0m'.format(x)
 gray = lambda x: '\x1b[90m{}\x1b[39;49m'.format(x)
@@ -362,13 +365,14 @@ def serialize(ms, pretty_print=False, color=False):
     """Serialize an MRS structure into a SimpleMRS string."""
     if not color:
         unset_colors()
-    delim = ' ' if not pretty_print else '\n'
+    delim = _default_mrs_delim if not pretty_print else '\n'
     return delim.join(serialize_mrs(m, pretty_print=pretty_print) for m in ms)
 
 
 def serialize_mrs(m, pretty_print=False):
     # note that listed_vars is modified as a side-effect of the lower
     # functions
+    indent = '' if not pretty_print else '  '
     listed_vars = set()
     toks = [_left_bracket]
     if m.ltop is not None:
@@ -377,8 +381,8 @@ def serialize_mrs(m, pretty_print=False):
         toks += [serialize_argument(_index, m.index, listed_vars)]
     toks = [' '.join(toks)]
     toks += [serialize_rels(m.rels, listed_vars, pretty_print=pretty_print)]
-    toks += ['  ' + ' '.join([serialize_hcons(m.hcons, listed_vars),
-                              _right_bracket])]
+    toks += [indent + ' '.join([serialize_hcons(m.hcons, listed_vars),
+                                _right_bracket])]
     delim = ' ' if not pretty_print else '\n'
     return delim.join(toks)
 
@@ -412,8 +416,9 @@ def serialize_variable(var, listed_vars):
 
 def serialize_rels(rels, listed_vars, pretty_print=False):
     """Serialize a RELS list of EPs into the SimpleMRS encoding."""
+    indent = '' if not pretty_print else '  '
     delim = ' ' if not pretty_print else '\n          '
-    string = '  ' + ' '.join([_rels + _colon, _left_angle])
+    string = indent + ' '.join([_rels + _colon, _left_angle])
     string += ' ' + delim.join(serialize_ep(ep, listed_vars) for ep in rels)
     string += ' ' + _right_angle
     return string
