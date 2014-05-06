@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>MRS, RMRS, DMRS, and pyDelphin</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <style type="text/css">
+      @font-face {
+          font-family: "Droid Sans";
+          src: local("Droid Sans"),
+               url(http://fonts.googleapis.com/css?family=Droid+Sans);
+      }
+      @font-face {
+          font-family: "Droid Serif";
+          src: local("Droid Serif"),
+               url(http://fonts.googleapis.com/css?family=Droid+Serif);
+      }
+      /* Slideshow styles */
+      body {
+        font-family: 'Droid Serif', Serif;
+        font-size: 20px;
+      }
+      h1, h2, h3 {
+        font-family: 'Droid Sans', Sans;
+        font-weight: 400;
+        margin-bottom: 0;
+      }
+      h1 { font-size: 4em; }
+      h2 { font-size: 2em; }
+      h3 { font-size: 1.6em; }
+      .footnote {
+        position: absolute;
+        font-size: 0.8em;
+        bottom: 3em;
+      }
+      li p { line-height: 1.25em; }
+      .red { color: #fa0000; }
+      .large { font-size: 2em; }
+      a, a > code {
+        color: rgb(249, 38, 114);
+        text-decoration: none;
+      }
+      code {
+        -moz-border-radius: 5px;
+        -web-border-radius: 5px;
+        background: #e7e8e2;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# MRS, RMRS, DMRS, and
+# the pyDelphin library
+
+---
+
+# Agenda
+
+1. [Minimal Recursion Semantics](#mrstop)
+  1. Semantic Representations and Scoping
+  2. MRS
+  3. RMRS
+  4. DMRS
+  5. EDs
+2. [pyDelphin](#pydelphin)
+  1. Installation and Requirements
+  2. Working with [incr tsdb()] Profiles
+  3. Serializing/Deserializing
+  4. Working with the \*MRS Library
+3. [Applications](#applications)
+  1. Format Conversion
+  2. Feature Extraction
+
+???
+
+Give overview:
+
+* motivations
+* existing tools
+* goals of pyDelphin
+
+---
+
+name: mrstop
+class: center, middle
+
+# Minimal Recursion Semantics
+
+http://moin.delph-in.net/RmrsTop
+
+---
+
+## Semantic Representations and Scoping
+
+| | |
+| ----- | ----- |
+| Minimal Recursion Semantics (MRS; Copestake et al., 2005) is a flat semantic representation that can be underspecified for quantifier scope. <br/><br/> "All moons orbit some planet." | <a title="By Sage Ross (Own work) [GFDL (http://www.gnu.org/copyleft/fdl.html) or CC-BY-SA-3.0-2.5-2.0-1.0 (http://creativecommons.org/licenses/by-sa/3.0)], via Wikimedia Commons" href="http://commons.wikimedia.org/wiki/File%3APlanetarium_in_Putnam_Gallery_2%2C_2009-11-24.jpg"><img width="300px" align="middle" alt="Planetarium in Putnam Gallery 2, 2009-11-24" src="http://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Planetarium_in_Putnam_Gallery_2%2C_2009-11-24.jpg/512px-Planetarium_in_Putnam_Gallery_2%2C_2009-11-24.jpg"/></a> |
+
+* traditional scoped readings
+  - ```∀x(moon(x) ^ ∃y(planet(y) ^ orbit(x,y)))```
+  - ```∃y(planet(y) ^ ∀x(moon(x) ^ orbit(x,y)))```
+
+* MRS(-like) ambiguous scope
+  - ```
+    h1:all(h2), h3:moon(x), h4:some(h5), h6:planet(y), h7:orbit(x, y),
+    h2 qeq h3, h5 qeq h6
+    ```
+
+???
+
+Not shown: body of quantifiers
+
+---
+
+## MRS, RMRS, and DMRS
+
+The MRS family includes three near-equivalent variations:
+
+* Minimal Recursion Semantics (MRS)
+* Robust Minimal Recursion Semantics (RMRS)
+* Dependency Minimal Recursion Semantics (DMRS)
+
+(to avoid confusion, I will hereafter refer to the greater formalism
+as *MRS)
+
+---
+
+name: mrs
+
+## MRS
+
+The original MRS (Copestake et al., 2005) has:
+
+* a top handle (and unofficially an index)
+* a bag of Elementary Predications (EPs)
+* a bag of Handle Constraints
+
+EPs have:
+
+* a predicate
+* a label
+* a characteristic variable
+* a (possibly empty) list of variable arguments
+* a (possibly empty) list of scopal arguments
+* (sometimes a constant argument)
+
+Handle Constraints have:
+
+* a Hi handle
+* a Lo handle
+* a relation between them (usually QEQ)
+
+---
+
+name: rmrs
+
+## RMRS
+
+Robust Minimal Recursion Semantics (RMRS; Copestake 2006) allows other
+kinds of underspecification, introduces anchors, and separates predicates
+from arguments. This makes the semantics look more like Neo-Davidsonian
+semantics, but instead of using an event variable to bind arguments, anchors
+are used.
+
+RMRS was created so that semantics could be generated from shallow methods
+(i.e. where a full representation could not be guaranteed). It was even
+billed as the successor to MRS that everyone should follow, so many functions
+in the LKB are based on RMRS, and wiki pages on the DELPH-IN website use
+RMRS in the URL. However, MRS remains the most popular representation.
+
+pyDelphin does not currently support RMRS (though it is planned), so I will
+not further cover RMRS at this time.
+
+---
+
+name: dmrs
+
+## DMRS
+
+Dependency Minimal Recursion Semantics (DMRS; Copestake 2009) fully removes
+variables and represents the structure more graphically (at least more
+obviously so).
+
+* EPs become **nodes**
+* Arguments become **links**
+* Links always connect two nodes, except for LTOP (which has the special
+  nodeid of 0)
+* Links have a pre-slash argument name (sometimes optional) and a post-slash
+  label to describe how the two nodes relate (obligatory)
+* Constant arguments are properties of nodes
+* Unexpressed arguments are not represented at all
+
+---
+
+## DMRS (2)
+
+As DMRS does not have variables, links must state how nodes relate to each other:
+
+* For links with argument names:
+    - **ARG/NEQ** : the value of the source node's argument ARG is the
+  characteristic variable of the target node, and the two nodes do not share a
+  label
+    - **ARG/EQ** : same as ARG/NEQ, but the two nodes share a label
+    - **ARG/HEQ** : the value of the source node's argument ARG is the label
+    of the target node
+    - **ARG/H** : the value of the source node's argument ARG is a hole QEQ'd
+    to the label of the target node
+* For links without argument names:
+    - **/EQ** : the two nodes share a label, but are not arguments of each
+    other (this is treated as an undirected link)
+    - **/H** : only used for LTOP, and means that the LTOP handle is QEQ'd to
+    the target node's label
+
+---
+
+## DMRS (3)
+
+DMRS differ from other dependency formalisms in that the direction of the
+links (i.e. arrows) go in the direction of the arguments of the \*MRS
+structure. Thus, instead of:
+
+`dog -> large`
+
+DMRS has:
+
+`large -> dog`
+
+because the "large" EP selects "dog" as its `ARG1`.
+
+Similarly, quantifiers select the quantifiees:
+
+`the -> dog`
+
+DMRS will be further exemplified in the demo of pyDelphin code.
+
+---
+
+name: eds
+
+## EDs
+
+Elementary Dependencies (EDs; Oepen and Lønning 2006) are another
+dependency-like representation. They can be broken down into triples, which
+make them useful as features for machine learning, but they are lossy---you
+cannot recreate a full MRS given only the EDs.
+
+I will not further describe EDs at this time.
+
+---
+
+name: pydelphin
+class: center, middle
+
+# pyDelphin
+
+### Python libraries for DELPH-IN resources
+
+http://github.com/goodmami/pydelphin
+
+---
+
+name: install
+
+## Installation and Requirements
+
+#### Install
+
+```bash
+$ git clone https://github.com/goodmami/pydelphin.git
+$ cd pydelphin/
+$ # NOTE: The following is optional and not really recommended.
+$ #       Instead, consider using PYTHONPATH to find the package.
+$ ./setup.py install
+```
+
+#### Requirements
+
+* Python3 (http://python.org)
+
+#### Optional Packages
+
+* lxml (http://lxml.de; used for pretty-printing XML serializations)
+
+---
+
+name: api
+
+## pyDelphin API
+
+#### Documentation
+
+Some documentation is available (\*gasp!\*) at
+https://github.com/goodmami/pydelphin/wiki
+
+It is (of course) incomplete, but it's a good entry-point for the *MRS
+libraries.
+
+#### Available Packages
+
+| | | |
+| ------ | ------ | ------ |
+| `delphin.itsdb` |...| classes and methods for interacting with [incr tsdb()] profiles |
+| `delphin.codecs` | ... | serializers/deserializers of various formats |
+| `delphin.mrs` | ... | classes and methods for interacting with \*MRS objects |
+
+The naming scheme tries to follow the standard nomenclature when possible,
+with one main exception: `Xmrs` is the class that contains a \*MRS instance.
+
+---
+
+name: itsdb
+
+## Working with [incr tsdb()] profiles
+
+The `delphin.itsdb` package is used to examine [incr tsdb()] profiles, and
+has a limited capacity to write them.
+
+To inspect values in a profile:
+
+```python3
+&gt;&gt;&gt; from delphin import itsdb
+&gt;&gt;&gt; profile = itsdb.TsdbProfile('erg-mrs')
+&gt;&gt;&gt; result_table = profile.get_table('result')
+&gt;&gt;&gt; for row in result_table.rows():
+...     print(row.get('mrs'))
+[ LTOP: h1 INDEX: e3 [ e SF: PROP TENSE: PAST MOOD: INDICATIVE PROG: -...
+ *snip*
+```
+
+To write a profile with a new relations file (e.g. to refresh it for a new
+schema):
+
+```python3
+&gt;&gt;&gt; profile = itsdb.TsdbProfile('old_profile')
+&gt;&gt;&gt; profile.write_profile('new_profile', 'relations')
+```
+
+Currently this is all the module does. I'd be happy to hear feature
+suggestions.
+
+???
+
+```python3
+dir(profile)
+list(profile.relations.keys())
+profile.relations['item']
+profile.write_profile('new_profile', relations_file)
+```
+
+---
+
+name: codecs
+
+## Serialization/Deserialization
+
+Codecs exist for several *MRS formats:
+
+| | | |
+| ------ | ------ | ------ |
+| `delphin.codecs.simplemrs` | ... | the popular SimpleMRS format |
+| `delphin.codecs.mrx` | ... | the XML format for MRS |
+| `delphin.codecs.dmrx` | ... | the XML format for DMRS |
+
+* Codecs use Python's Pickle API (`load()`, `loads()`, `dump()`, `dumps()`),
+  with some differing parameters.
+
+* The load/loads/dump/dumps functions read/write **iterables** of MRSs
+
+* Internal representations for all *MRS codecs are `Xmrs` objects
+
+---
+
+## Serialization/Deserialization
+
+* For example:
+  ```python3
+  &gt;&gt;&gt; from delphin.codecs import simplemrs
+  &gt;&gt;&gt; ms = simplemrs.loads('''[ LTOP: h0 INDEX: e2 [ e SF: prop
+  ... TENSE: pres MOOD: indicative PROG: - PERF: - ] RELS: &lt; [
+  ... "_rain_v_1_rel"&lt;3:9&gt; LBL: h1 ARG0: e2 ] &gt; HCONS: &lt; h0
+  ... qeq h1 &gt; ]''')
+  &gt;&gt;&gt; print(simplemrs.dumps(ms, pretty_print=True))
+  [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative ... ]
+      RELS: &lt; [ "_rain_v_1_rel"&lt;3:9&gt; LBL: h1 ARG0: e2 ] &gt;
+      HCONS: &lt; h0 qeq h1 &gt; ]
+  ```
+
+* But what is this surprising behavior?
+  ```python3
+  &gt;&gt;&gt; ms = simplemrs.loads(...)  # as before
+  &gt;&gt;&gt; len(ms)
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  TypeError: object of type 'generator' has no len()
+  &gt;&gt;&gt; print(len(list(ms)))
+  1
+  &gt;&gt;&gt; print(len(list(ms)))  # again
+  0
+  &gt;&gt;&gt;  # ???
+  ```
+
+???
+
+load/loads returns a generator
+
+dump/dumps prints from an iterable (e.g. list or generator)
+
+Converting is easy (but covered in a later section):
+
+dmrx.dump(simplemrs.load('mrs_file'))
+
+---
+
+## <a title="By Woodennature (Own work) [CC-BY-3.0 (http://creativecommons.org/licenses/by/3.0)], via Wikimedia Commons" href="http://commons.wikimedia.org/wiki/File%3ASingapore_Road_Signs_-_Temporary_Sign_-_Detour.svg"><img width="20%" alt="Singapore Road Signs - Temporary Sign - Detour" src="http://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Singapore_Road_Signs_-_Temporary_Sign_-_Detour.svg/512px-Singapore_Road_Signs_-_Temporary_Sign_-_Detour.svg.png"/></a> Python lists vs generators
+
+* Python has different kinds of iterables
+  - Lists (and tuples, etc.) are fully instantiated in memory
+  - Generators only get the **next** element ***as needed***
+      + Generators use much less memory
+      + Generators can be created with `yield` statements or generator
+        expressions
+* pyDelphin frequently uses generators, as in the codecs, so be aware
+
+```python3
+&gt;&gt;&gt; w = [1, 2, 3]  # list
+&gt;&gt;&gt; x = [i for i in (1, 2, 3)]  # list comprehension
+&gt;&gt;&gt; y = (i for i in (1, 2, 3))  # generator expression
+&gt;&gt;&gt; def infinity():
+...     x = 1
+...     while True:
+...         yield x
+...         x += 1
+&gt;&gt;&gt; z = infinity()
+&gt;&gt;&gt; next(z)
+1
+&gt;&gt;&gt; next(z)
+2
+```
+
+???
+
+lists:
+
+* can get the length of a list
+* can get indexed elements of a list
+
+generators:
+
+* have no random access (i.e. indexing)
+* cannot return the length (it could even be infinite)
+* can only be consumed once
+
+---
+
+name: querying
+
+## Working with the \*MRS Library
+
+The `delphin.mrs` library has many submodules:
+
+| | | |
+| ----- | ----- | ----- |
+| `xmrs` | ... | Most interesting stuff; \*MRS methods |
+| `mrs` | ... | Functions related to the original MRS |
+| `dmrs` | ... | Functions related to DMRS |
+| `lnk` | ... | `Lnk` class for tying semantics to the surface form |
+| `var` | ... | `MrsVariable` class and related |
+| `pred` | ... | `Pred` class and related |
+| `node` | ... | DMRS-style `Node` class |
+| `ep` | ... | MRS- and RMRS-style `ElementaryPredication` class |
+| `arg` | ... | MRS- and RMRS-style `Argument` class |
+| `link` | ... | DMRS-style `Link` class |
+| `hook` | ... | `Hook` class contains LTOP, INDEX, and XARG |
+| `hcons` | ... | `HandleConstraint` class and QEQ functions |
+
+---
+
+## Working with the \*MRS Library (2)
+
+The `Xmrs` class is used for all \*MRS representations.
+
+An instantiated Xmrs object can be easily queried for substructures:
+
+```python3
+&gt;&gt;&gt; ms = simplemrs.load('the-large-dog-whose-tail-wagged-barked.mrs')
+&gt;&gt;&gt; m = next(ms)  # ms is a generator, so get the first Xmrs from it
+&gt;&gt;&gt; # note: in later slides, m refers to this object
+&gt;&gt;&gt; 
+&gt;&gt;&gt; m.hook
+Hook(ltop=h0 index=e2 xarg=None)
+&gt;&gt;&gt; 
+&gt;&gt;&gt; m.rels  # same as m.eps
+[ElementaryPredication(_the_q_rel[x3]),
+ElementaryPredication("_large_a_1_rel"[e8]),
+ElementaryPredication("_dog_n_1_rel"[x3]),
+ElementaryPredication(def_explicit_q_rel[x10]),
+ElementaryPredication(poss_rel[e13]),
+ElementaryPredication("_tail_n_1_rel"[x10]),
+ElementaryPredication("_wag_v_1_rel"[e15]),
+ElementaryPredication("_bark_v_1_rel"[e2])]
+&gt;&gt;&gt; 
+&gt;&gt;&gt; m.hcons
+[HandleConstraint(h0 qeq h1), HandleConstraint(h5 qeq h7),
+HandleConstraint(h11 qeq h14)]
+```
+
+---
+
+## Working with the \*MRS Library (3)
+
+* The way things are stored internally in Xmrs objects shouldn't matter, as
+  the API should be consistent
+* But knowing the following will be useful:
+  - Xmrs uses Anchors (or NodeIDs, rather) to index (and thus retrieve)
+    other objects. e.g.
+
+        ```python3
+        &gt;&gt;&gt; m.get_label(10000)
+        MrsVariable(h1)
+        ```
+
+  - The `ARG0` of EPs is also sometimes used as an index key, and pyDelphin
+    refers to them as "characteristic variables" or "cvs"
+
+        ```python3
+        &gt;&gt;&gt; m.find_argument_head(some_cv)  # labels are ok, too
+        10005
+        ```
+
+  - Labels are also used in certain operations (as above, and..)
+
+        ```python3
+        &gt;&gt;&gt; list(m.label_set_heads(some_label))
+        [10002, 10006]
+        ```
+
+---
+
+## Working with the \*MRS Library (4)
+
+For convenience, other properties are available for commonly used objects:
+
+```python3
+&gt;&gt;&gt; m.index  # from m.hook.index
+MrsVariable(e2)
+&gt;&gt;&gt; 
+&gt;&gt;&gt; m.anchors
+[MrsVariable(h10000), MrsVariable(h10001), MrsVariable(h10002),
+MrsVariable(h10003), MrsVariable(h10004), MrsVariable(h10005),
+MrsVariable(h10006), MrsVariable(h10007)]
+&gt;&gt;&gt; 
+&gt;&gt;&gt; m.args  # from the EPs' arguments
+[Argument(10000:ARG0:x3), Argument(10000:RSTR:h5),
+Argument(10000:BODY:h6), Argument(10001:ARG0:e8),
+Argument(10001:ARG1:x3), Argument(10002:ARG0:x3),
+Argument(10003:ARG0:x10), Argument(10003:RSTR:h11),
+Argument(10003:BODY:h12), Argument(10004:ARG0:e13),
+Argument(10004:ARG1:x10), Argument(10004:ARG2:x3),
+Argument(10005:ARG0:x10), Argument(10006:ARG0:e15),
+Argument(10006:ARG1:x10), Argument(10007:ARG0:e2),
+Argument(10007:ARG1:x3)]
+```
+
+---
+
+## Working with the \*MRS Library (5)
+
+You can even get structures for other \*MRS formalisms:
+
+```python3
+&gt;&gt;&gt; m.nodes
+[Node(10000[_the_q_rel]), Node(10001["_large_a_1_rel"]),
+Node(10002["_dog_n_1_rel"]), Node(10003[def_explicit_q_rel]),
+Node(10004[poss_rel]), Node(10005["_tail_n_1_rel"]),
+Node(10006["_wag_v_1_rel"]), Node(10007["_bark_v_1_rel"])]
+&gt;&gt;&gt; 
+&gt;&gt;&gt; m.links
+[Link(0 -> 10007, None/H), Link(10000 -> 10002, RSTR/H),
+Link(10001 -> 10002, ARG1/EQ), Link(10003 -> 10005, RSTR/H),
+Link(10004 -> 10005, ARG1/NEQ), Link(10004 -> 10002, ARG2/EQ),
+Link(10006 -> 10005, ARG1/NEQ), Link(10007 -> 10002, ARG1/NEQ),
+Link(10001 -> 10006, None/EQ)]
+```
+
+---
+
+## Working with the \*MRS Library (6)
+
+As another convenience, MrsVariables and Preds can compare to strings:
+
+```python3
+&gt;&gt;&gt; MrsVariable(vid=1, sort='e') == 'e1'
+True
+&gt;&gt;&gt; MrsVariable(vid=1, sort='e') == 'x1'
+False
+&gt;&gt;&gt; 
+&gt;&gt;&gt; Pred.realpred(lemma='dog', pos='n', sense='1') == '_dog_n_1_rel'
+True
+&gt;&gt;&gt; Pred.realpred(lemma='dog', pos='n', sense='1') == '_cat_n_1_rel'
+False
+&gt;&gt;&gt; Pred.realpred(lemma='dog', pos='n', sense='1') == '_dog_n_2_rel'
+False
+```
+
+There are also some nice helper methods for finding things you want:
+
+```python3
+&gt;&gt;&gt; m.select_eps(pred='_dog_n_1_rel')
+[ElementaryPredication("_dog_n_1_rel"[x3])]
+&gt;&gt;&gt; m.select_eps(cv='x3')
+[ElementaryPredication(_the_q_rel[x3]),
+ElementaryPredication("_dog_n_1_rel"[x3])]
+&gt;&gt;&gt; m.select_args(value='x3')
+[Argument(10000:ARG0:x3), Argument(10001:ARG1:x3),
+Argument(10002:ARG0:x3), Argument(10004:ARG2:x3),
+Argument(10007:ARG1:x3)]
+```
+
+???
+
+But...
+
+&gt;&gt;&gt; Pred.realpred(lemma='dog', pos='n', sense='1') == '_dog_n_1'
+False
+
+Demonstrate other useful methods:
+
+m.find_argument_targets(arg)
+m.label_set_heads(label)
+m.find_scope_head(label)
+m.qeq_targets(handle)
+
+---
+
+## Working with the \*MRS Library (7)
+
+MrsPath is an advanced query language similar to XPath for XML. In a future
+release I plan for MrsPath to be used for queries, but for now you can only
+generate the paths present in an Xmrs. These are useful as subgraphs of the
+Xmrs (e.g. for feature extraction).
+
+```python3
+&gt;&gt;&gt; from delphin.mrs import path
+&gt;&gt;&gt; for p in path.get_paths(m):
+...     print(p)
+... 
+_the_q
+_the_q:RSTR~
+_the_q:RSTR~_dog_n_1
+_large_a_1
+_large_a_1:ARG1%
+_large_a_1:ARG1%_dog_n_1
+_dog_n_1
+   *snip*
+poss(:ARG1/ & :ARG2%)
+poss(:ARG1/ & :ARG2%_dog_n_1)
+poss(:ARG1/_tail_n_1 & :ARG2%)
+poss(:ARG1/_tail_n_1 & :ARG2%_dog_n_1)
+   *snip*
+_bark_v_1
+_bark_v_1:ARG1/
+_bark_v_1:ARG1/_dog_n_1
+```
+
+---
+
+## Working with the \*MRS Library (7)
+
+You can create \*MRS objects programmatically, but manipulating an existing
+one is currently not well supported.This is because there are internal indices
+that must be updated when preds, arguments, variables, hcons, etc. are added.
+Support for these functions is forthcoming.
+
+You may, however, take the members of an existing Xmrs and use them to
+construct a new one:
+
+```python3
+&gt;&gt;&gt; m
+Xmrs(the large dog def_explicit poss tail wag bark)
+&gt;&gt;&gt; from delphin.mrs.xmrs import Xmrs
+&gt;&gt;&gt; m2 = Xmrs(hook=m.hook, eps=m.select_eps(cv='x3'), lnk=m.lnk)
+&gt;&gt;&gt; m2
+Xmrs(the dog)
+```
+
+---
+
+name: applications
+
+# Applications
+
+---
+
+## Format Conversion
+
+Converting between (supported) \*MRS formats is very easy:
+
+```python3
+&gt;&gt;&gt; from delphin.codecs import simplemrs, dmrx
+&gt;&gt;&gt; ms = simplemrs.load('the-large-dog-whose-tail-wagged-barked.mrs')
+&gt;&gt;&gt; print(dmrx.dumps(ms, pretty_print=True)
+<dmrs-list>
+<dmrs cfrom="0" cto="39" index="2">
+  <node nodeid="10000" cfrom="0" cto="3"><realpred lemma="the" pos="q"/>...
+  <node nodeid="10001" cfrom="4" cto="9"><realpred lemma="large" pos="a"...
+  <node nodeid="10002" cfrom="10" cto="13"><realpred lemma="dog" pos="n"...
+   *snip*
+  <link from="0" to="10007"><rargname/><post>H</post></link>
+  <link from="10001" to="10002"><rargname>ARG1</rargname><post>EQ</post>...
+  <link from="10003" to="10005"><rargname>RSTR</rargname><post>H</post>...
+   *snip*
+</dmrs>
+</dmrs-list>
+```
+
+In fact, I've made a top-level script to do this for you:
+
+```bash
+$ python3 mrs.py convert --from simplemrs --to dmrx testsuite.mrs
+```
+
+---
+
+## Feature Extraction
+
+Given the query methods described above in the \*MRS API, feature extraction
+should be straightforward.
+
+You can also make more interesting features by composing the methods:
+
+```python3
+&gt;&gt;&gt; m2 = next(simplemrs.load('the-dog-barks-and-arrives.mrs'))
+&gt;&gt;&gt; for ep in m2.select_eps(pred='_and_c_rel'):
+...     lhs_nid = m2.find_argument_head(ep.arg_value('L-INDEX'))
+...     rhs_nid = m2.find_argument_head(ep.arg_value('R-INDEX'))
+```
+
+ (remainder to be demoed)
+
+---
+
+Thank you!
+
+---
+
+# References
+
+* Copestake, Ann, Dan Flickinger, Carl Pollard, and Ivan A. Sag. "Minimal
+  recursion semantics: An introduction." Research on Language and Computation 3,
+  no. 2-3 (2005): 281-332.
+* Copestake, Ann. "Robust minimal recursion semantics." unpublished draft (2006).
+* Copestake, Ann. "Slacker semantics: why superficiality, dependency and
+  avoidance of commitment can be the right way to go." In Proceedings of the
+  12th Conference of the European Chapter of the Association for Computational
+  Linguistics, pp. 1-9. Association for Computational Linguistics, 2009.
+* Oepen, Stephan, and Jan Tore Lønning. "Discriminant-based MRS banking." In
+  Proceedings of the 5th international conference on language resources and
+  evaluation (lrec 2006). 2006.
+
+    </textarea>
+    <script src="remark.js" type="text/javascript">
+    </script>
+    <script type="text/javascript">
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
