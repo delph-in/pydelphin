@@ -27,21 +27,35 @@ except ImportError:
 # Pickle-API methods
 
 
-def load(fh):
-    return list(decode(fh))
+def load(fh, single=False):
+    ms = decode(fh)
+    if single:
+        ms = next(ms)
+    return ms
 
 
-def loads(s, encoding='utf-8'):
-    return list(decode(BytesIO(bytes(s, encoding=encoding))))
+def loads(s, single=False, encoding='utf-8'):
+    ms = decode(BytesIO(bytes(s, encoding=encoding)))
+    if single:
+        ms = next(ms)
+    return ms
 
 
-def dump(fh, m, encoding='unicode', pretty_print=False, **kwargs):
-    print(dumps(m, encoding=encoding, pretty_print=pretty_print, **kwargs),
-          file=fh)
+def dump(fh, ms, **kwargs):
+    print(dumps(ms, **kwargs), file=fh)
 
 
-def dumps(m, encoding='unicode', pretty_print=False, **kwargs):
-    return encode(m, encoding=encoding, pretty_print=pretty_print)
+def dumps(ms, single=False, encoding='unicode', pretty_print=False, **kwargs):
+    if single:
+        ms = [ms]
+    return encode(ms, encoding=encoding, pretty_print=pretty_print)
+
+# for convenience
+
+load_one = lambda fh: load(fh, single=True)
+loads_one = lambda s: loads(s, single=True)
+dump_one = lambda fh, m, **kwargs: dump(fh, m, single=True, **kwargs)
+dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 
 ##############################################################################
 ##############################################################################

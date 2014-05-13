@@ -56,56 +56,86 @@ yellow = lambda x: '\x1b[33m{}\x1b[39;49m'.format(x)
 # Pickle-API methods
 
 
-def load(fh):
+def load(fh, single=False):
     """
-    Deserialize a SimpleMRS from a file (handle or filename)
+    Deserialize SimpleMRSs from a file (handle or filename)
 
     Args:
         fh: filename or file object
+        single: if True, only return the first read Xmrs object
     Returns:
-        an Xmrs object
+        a generator of Xmrs objects (unless the 'single' option is True)
     """
     if isinstance(fh, str):
-        return loads(open(fh, 'r').read())
-    return loads(fh.read())
+        return loads(open(fh, 'r').read(), single=single)
+    return loads(fh.read(), single=single)
 
 
-def loads(s):
+def loads(s, single=False):
     """
-    Deserialize an MRS from a SimpleMRS string representation
+    Deserialize SimpleMRS string representations
 
     Args:
         s: a SimpleMRS string
+        single: if True, only return the first read Xmrs object
     Returns:
-        an Xmrs object
+        a generator of Xmrs objects (unless the 'single' option is True)
     """
-    return deserialize(s)
+    ms = deserialize(s)
+    if single:
+        return next(ms)
+    else:
+        return ms
 
 
-def dump(fh, ms, pretty_print=False, color=False, **kwargs):
+def dump(fh, ms, single=False, pretty_print=False, color=False, **kwargs):
     """
-    Serialize an Xmrs object to a SimpleMRS representation and write to a file
+    Serialize Xmrs objects to a SimpleMRS representation and write to a
+    file
 
     Args:
         fh: filename or file object
-        m: the Xmrs object to Serialize
+        ms: an iterator of Xmrs objects to serialize (unless the
+            'single' option is True)
+        single: if True, treat ms as a single Xmrs object instead of as
+            an iterator
         encoding: the character encoding for the file
-        pretty_print: if true, the output is formatted to be easier to read
+        pretty_print: if True, the output is formatted to be easier to
+            read
     """
-    print(dumps(ms, pretty_print=pretty_print, color=color, **kwargs), file=fh)
+    print(dumps(ms,
+                single=single,
+                pretty_print=pretty_print,
+                color=color,
+                **kwargs),
+          file=fh)
 
 
-def dumps(ms, pretty_print=False, color=False, **kwargs):
+def dumps(ms, single=False, pretty_print=False, color=False, **kwargs):
     """
     Serialize an Xmrs object to a SimpleMRS representation
 
     Args:
-        m: the Xmrs object to Serialize
-        pretty_print: if true, the output is formatted to be easier to read
+        ms: an iterator of Xmrs objects to serialize (unless the
+            'single' option is True)
+        single: if True, treat ms as a single Xmrs object instead of as
+            an iterator
+        pretty_print: if True, the output is formatted to be easier to
+            read
     Returns:
-        a SimpleMrs string
+        a SimpleMrs string representation of a corpus of Xmrs
     """
+    if single:
+        ms = [ms]
     return serialize(ms, pretty_print=pretty_print, color=color)
+
+
+# for convenience
+
+load_one = lambda fh: load(fh, single=True)
+loads_one = lambda s: loads(s, single=True)
+dump_one = lambda fh, m, **kwargs: dump(fh, m, single=True, **kwargs)
+dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 
 ##############################################################################
 ##############################################################################
@@ -365,7 +395,7 @@ def serialize(ms, pretty_print=False, color=False):
     """Serialize an MRS structure into a SimpleMRS string."""
     if not color:
         unset_colors()
-    delim = _default_mrs_delim if not pretty_print else '\n'
+    delim = '\n' if pretty_print else _default_mrs_delim
     return delim.join(serialize_mrs(m, pretty_print=pretty_print) for m in ms)
 
 
