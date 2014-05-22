@@ -19,7 +19,7 @@ import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- General configuration ------------------------------------------------
 
@@ -33,7 +33,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
-    'sphinx.ext.viewcode',
+#    'sphinx.ext.viewcode',
+    'sphinxcontrib.napoleon',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -94,17 +95,37 @@ exclude_patterns = ['_build']
 pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
-#modindex_common_prefix = []
+modindex_common_prefix = ['delphin.']
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
 
+# global substitutions and things
+rst_epilog = '''
+.. |Xmrs| replace:: :py:class:`~delphin.mrs.Xmrs`
+.. |Hook| replace:: :py:class:`~delphin.mrs.Hook`
+.. |Lnk| replace:: :py:class:`~delphin.mrs.Lnk`
+.. |ElementaryPredication| replace::
+     :py:class:`~delphin.mrs.ElementaryPredication`
+.. |ElementaryPredications| replace::
+     :py:class:`ElementaryPredications<delphin.mrs.ElementaryPredication>`
+.. |EP| replace:: :py:class:`EP<delphin.mrs.ElementaryPredication>`
+.. |Pred| replace:: :py:class:`~delphin.mrs.Pred`
+.. |MrsVariable| replace:: :py:class:`~delphin.mrs.MrsVariable`
+.. |MrsVariables| replace::
+     :py:class:`MrsVariables<delphin.mrs.MrsVariable>`
+.. |HandleConstraint| replace:: :py:class:`~delphin.mrs.HandleConstraint`
+.. |HandleConstraints| replace::
+     :py:class:`HandleConstraints <delphin.mrs.HandleConstraint>`
+.. |Node| replace:: :py:class:`~delphin.mrs.Node`
+.. |Link| replace:: :py:class:`~delphin.mrs.Link`
+'''
 
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = 'agogo'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

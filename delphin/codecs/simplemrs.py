@@ -61,10 +61,10 @@ def load(fh, single=False):
     Deserialize SimpleMRSs from a file (handle or filename)
 
     Args:
-        fh: filename or file object
-        single: if True, only return the first read Xmrs object
+      fh: filename or file object
+      single: if True, only return the first read |Xmrs| object
     Returns:
-        a generator of Xmrs objects (unless the 'single' option is True)
+      a generator of Xmrs objects (unless the *single* option is True)
     """
     if isinstance(fh, str):
         return loads(open(fh, 'r').read(), single=single)
@@ -76,10 +76,10 @@ def loads(s, single=False):
     Deserialize SimpleMRS string representations
 
     Args:
-        s: a SimpleMRS string
-        single: if True, only return the first read Xmrs object
+      s: a SimpleMRS string
+      single: if True, only return the first read Xmrs object
     Returns:
-        a generator of Xmrs objects (unless the 'single' option is True)
+      a generator of Xmrs objects (unless the *single* option is True)
     """
     ms = deserialize(s)
     if single:
@@ -94,14 +94,16 @@ def dump(fh, ms, single=False, pretty_print=False, color=False, **kwargs):
     file
 
     Args:
-        fh: filename or file object
-        ms: an iterator of Xmrs objects to serialize (unless the
-            'single' option is True)
-        single: if True, treat ms as a single Xmrs object instead of as
-            an iterator
-        encoding: the character encoding for the file
-        pretty_print: if True, the output is formatted to be easier to
-            read
+      fh: filename or file object
+      ms: an iterator of Xmrs objects to serialize (unless the
+        *single* option is True)
+      single: if True, treat ms as a single Xmrs object instead of
+        as an iterator
+      pretty_print: if True, the output is formatted to be easier to
+        read
+      color: if True, colorize the output with ANSI color codes
+    Returns:
+      None
     """
     print(dumps(ms,
                 single=single,
@@ -116,12 +118,13 @@ def dumps(ms, single=False, pretty_print=False, color=False, **kwargs):
     Serialize an Xmrs object to a SimpleMRS representation
 
     Args:
-        ms: an iterator of Xmrs objects to serialize (unless the
-            'single' option is True)
-        single: if True, treat ms as a single Xmrs object instead of as
-            an iterator
-        pretty_print: if True, the output is formatted to be easier to
-            read
+      ms: an iterator of Xmrs objects to serialize (unless the
+        *single* option is True)
+      single: if True, treat ms as a single Xmrs object instead of
+        as an iterator
+      pretty_print: if True, the output is formatted to be easier to
+        read
+      color: if True, colorize the output with ANSI color codes
     Returns:
         a SimpleMrs string representation of a corpus of Xmrs
     """

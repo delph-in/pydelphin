@@ -14,24 +14,23 @@ from .util import AccumulationDict
 
 
 class Xmrs(LnkMixin):
-    """Basic class for Mrs, Rmrs, and Dmrs objects."""
+    """
+    Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
+
+    Args:
+        hook: a |Hook| object to contain the ltop, xarg, and index
+        eps: an iterable of |ElementaryPredications|
+        hcons: an iterable of |HandleConstraints|
+        icons: an iterable of IndividualConstraints (planned feature)
+        lnk: a |Lnk| object to associate the Xmrs to the surface form
+            or parse structure
+        surface: surface string
+        identifier: discourse-utterance id
+    """
+
     def __init__(self, hook=None, eps=None,
                  hcons=None, icons=None,
                  lnk=None, surface=None, identifier=None):
-        """
-        Xmrs is a middle-ground class for Mrs, Rmrs, and Dmrs.
-
-        Args:
-            hook (Hook): container class for things like ltop and index
-            eps ([ElementaryPredication]): list of eps
-            hcons ([HandleConstraint]): list of hcons
-            icons: list of IndividualConstraints (planned feature)
-            lnk (Lnk): links the Xmrs to the surface form or parse structure
-            surface: surface string
-            identifier: discourse-utterance id
-        Returns:
-            an Xmrs object
-        """
         # set default values (or run the generators)
         eps = list(eps or [])
         hcons = list(hcons or [])
@@ -95,11 +94,17 @@ class Xmrs(LnkMixin):
 
     @property
     def nodeids(self):
+        """
+        A list of `nodeids`.
+        """
         # does not return LTOP nodeid
         return list(self._nid_to_ep.keys())
 
     @property
     def anchors(self):
+        """
+        A list of |Anchor| |s|
+        """
         # does not return LTOP anchor
         return list(ep.anchor for ep in self._nid_to_ep.values())
 

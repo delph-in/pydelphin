@@ -9,8 +9,10 @@ Welcome to pyDelphin's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :glob:
+   :maxdepth: 3
 
+   api/*
 
 
 Indices and tables

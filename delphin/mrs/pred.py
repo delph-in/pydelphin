@@ -43,6 +43,57 @@ def normalize_pred_string(s):
 
 
 class Pred(object):
+    """
+    A semantic predicate.
+
+    Preds come in three flavors:
+    
+    * **grammar preds** (gpreds): preds defined in a semantic hierarchy
+      in the grammar, and are not necessarily tied to a lexical entry;
+      grammar preds may not begin with a leading underscore
+    * **real preds** (realpreds): preds that are defined as the
+      composition of a lemma, a part-of-speech (pos), and sometimes a
+      sense---parts-of-speech are always single characters, and senses
+      may be numbers or string descriptions
+    * **string preds** (spreds): a string (often double-quoted) that
+      represents a real pred; string preds must begin with a leading
+      underscore
+
+    While MRS representations may distinguish real preds and string
+    preds, in pyDelphin they are equivalent. All well-formed predicates,
+    when represented as strings, end with ``_rel``, but in practice this
+    may not be true (some may end in ``_relation``, or have no such
+    suffix).
+
+    Example:
+
+    Preds are compared using their string representations. Surrounding
+    quotes (double or single) are ignored, and capitalization doesn't
+    matter. In addition, preds may be compared directly to their string
+    representations:
+
+    >>> p1 = Pred.stringpred('_dog_n_1_rel')
+    >>> p2 = Pred.realpred(lemma='dog', pos='n', sense='1')
+    >>> p3 = Pred.grammarpred('dog_n_1_rel')
+    >>> p1 == p2
+    True
+    >>> p1 == '_dog_n_1_rel'
+    True
+    >>> p1 == p3
+    False
+
+    Args:
+        predtype: the type of predicate; valid values are grammarpred,
+            stringpred, or realpred, although in practice one won't use
+            this constructor directly, but instead use one of the
+            classmethods
+        lemma: the lemma of the predicate
+        pos: the part-of-speech; a single, lowercase character
+        sense: the (often omitted) sense of the predicate
+    Returns:
+        an instantiated Pred object
+    """
+
     def __init__(self, predtype, lemma=None, pos=None, sense=None):
         """Extract the lemma, pos, and sense (if applicable) from a pred
            string, if given, or construct a pred string from those
