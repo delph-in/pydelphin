@@ -14,33 +14,35 @@ from .util import AccumulationDict
 
 
 class Xmrs(LnkMixin):
-    """Basic class for Mrs, Rmrs, and Dmrs objects."""
+    """
+    Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
+
+    Args:
+        hook: a |Hook| object to contain the ltop, xarg, and index
+        eps: an iterable of |ElementaryPredications|
+        hcons: an iterable of |HandleConstraints|
+        icons: an iterable of IndividualConstraints (planned feature)
+        lnk: the |Lnk| object associating the Xmrs to the surface form
+        surface: the surface string
+        identifier: a discourse-utterance id
+    """
+
     def __init__(self, hook=None, eps=None,
                  hcons=None, icons=None,
                  lnk=None, surface=None, identifier=None):
-        """
-        Xmrs is a middle-ground class for Mrs, Rmrs, and Dmrs.
-
-        Args:
-            hook (Hook): container class for things like ltop and index
-            eps ([ElementaryPredication]): list of eps
-            hcons ([HandleConstraint]): list of hcons
-            icons: list of IndividualConstraints (planned feature)
-            lnk (Lnk): links the Xmrs to the surface form or parse structure
-            surface: surface string
-            identifier: discourse-utterance id
-        Returns:
-            an Xmrs object
-        """
         # set default values (or run the generators)
         eps = list(eps or [])
         hcons = list(hcons or [])
         icons = list(icons or [])
 
         # Some members relate to the whole MRS
+        #: The |Hook| object contains the LTOP, INDEX, and XARG
         self.hook = hook
+        #: A |Lnk| object to associate the Xmrs to the surface form
         self.lnk = lnk  # Lnk object (MRS-level lnk spans the whole input)
+        #: The surface string
         self.surface = surface   # The surface string
+        #: A discourse-utterance id
         self.identifier = identifier  # Associates an utterance with the RMRS
 
         # Inner data structures
@@ -95,77 +97,122 @@ class Xmrs(LnkMixin):
 
     @property
     def nodeids(self):
+        """
+        The list of `nodeids`.
+        """
         # does not return LTOP nodeid
         return list(self._nid_to_ep.keys())
 
     @property
     def anchors(self):
+        """
+        The list of `anchors`.
+        """
         # does not return LTOP anchor
         return list(ep.anchor for ep in self._nid_to_ep.values())
 
     @property
     def variables(self):
+        """
+        The list of |MrsVariables|.
+        """
         return list(self._all_variables)
 
     @property
     def introduced_variables(self):
+        """
+        The list of the |MrsVariables| that are introduced in the Xmrs.
+        Introduced |MrsVariables| exist as characteristic variables,
+        labels, or holes (the HI variable of a QEQ).
+        """
         return list(self._introduced_variables)
 
     @property
-    def cvs(self):
+    def characteristic_variables(self):
+        """
+        The list of characteristic variables.
+        """
         return list(ep.cv for ep in self._nid_to_ep.values()
                     if not ep.is_quantifier())
 
-    # a more verbose synonym
-    characteristic_variables = cvs
+    #: A synonym for :py:meth:`characteristic_variables`
+    cvs = characteristic_variables
 
     @property
-    def bvs(self):
+    def bound_variables(self):
+        """
+        The list of bound variables (i.e. the value of the intrinsic
+        argument of quantifiers).
+        """
         return list(ep.cv for ep in self._nid_to_ep.values()
                     if ep.is_quantifier())
 
-    # a more verbose synonym
-    bound_variables = cvs
+    #: A synonym for :py:meth:`bound_variables`
+    bvs = bound_variables
 
     @property
     def labels(self):
+        """
+        The list of labels of the |EPs| in the Xmrs.
+        """
         return list(set(ep.label for ep in self._nid_to_ep.values()))
 
     @property
     def ltop(self):
+        """
+        The LTOP |MrsVariable|, if it exists, otherwise None.
+        """
         return self.hook.ltop
 
     @property
     def index(self):
+        """
+        The INDEX |MrsVariable|, if it exists, otherwise None.
+        """
         return self.hook.index
 
     @property
     def nodes(self):
+        """
+        The list of |Nodes|.
+        """
         return [copy(ep._node) for nid, ep in self._nid_to_ep.items()]
 
     @property
     def eps(self):
+        """
+        The list of |ElementaryPredications|.
+        """
         return [copy(ep) for ep in self._nid_to_ep.values()]
 
     rels = eps  # just a synonym
 
     @property
     def args(self):
+        """
+        The list of all |Arguments|.
+        """
         return [arg
                 for ep in self._nid_to_ep.values()
                 for arg in ep.args]
 
     @property
     def hcons(self):
+        """
+        The list of all |HandleConstraints|.
+        """
         return list(self._var_to_hcons.values())
 
     @property
     def links(self):
-        """Return the set of links for the XMRS structure. Links exist
-           for every non-characteristic argument that has a variable
-           that is the characteristic variable of some other predicate,
-           as well as for label equalities when no argument link exists
-           (even considering transitivity)."""
+        """
+        The list of |Links|.
+        """
+        # Return the set of links for the XMRS structure. Links exist
+        # for every non-characteristic argument that has a variable
+        # that is the characteristic variable of some other predicate,
+        # as well as for label equalities when no argument link exists
+        # (even considering transitivity).
         links = list(self._ltop_links())
         links.extend(list(self._variable_links()))
         links.extend(list(self._eq_links(links)))
@@ -260,11 +307,20 @@ class Xmrs(LnkMixin):
 
     # query methods
     def select_nodes(self, nodeid=None, pred=None):
+        """
+        Return the list of all |Nodes| that have the matching *nodeid*
+        and/or *pred* values. If none match, return an empty list.
+        """
         nodematch = lambda n: ((nodeid is None or n.nodeid == nodeid) and
                                (pred is None or n.pred == pred))
         return list(filter(nodematch, self.nodes))
 
     def select_eps(self, anchor=None, cv=None, label=None, pred=None):
+        """
+        Return the list of all |EPs| that have the matching *anchor*,
+        *cv*, *label*, and or *pred* values. If none match, return an
+        empty list.
+        """
         epmatch = lambda n: ((anchor is None or n.anchor == anchor) and
                              (cv is None or n.cv == cv) and
                              (label is None or n.label == label) and
@@ -272,6 +328,11 @@ class Xmrs(LnkMixin):
         return list(filter(epmatch, self.eps))
 
     def select_args(self, anchor=None, argname=None, value=None):
+        """
+        Return the list of all |Arguments| that have the matching
+        *anchor*, *argname*, and/or *value* values. If none match,
+        return an empty list.
+        """
         argmatch = lambda a: ((anchor is None or a.anchor == anchor) and
                               (argname is None or
                                a.argname.upper() == argname.upper()) and

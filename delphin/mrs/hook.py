@@ -1,14 +1,17 @@
 
 class Hook(object):
-    """Container class for ltop, index, and xarg."""
+    """
+    A container class for LTOP, INDEX, and XARG.
+
+    This class simply encapsulates three variables associated with an
+    |Xmrs| object, and none of the arguments are required.
+
+    Args:
+        ltop: the global top handle
+        index: the semantic index
+        xarg: the external argument (not likely used for a full |Xmrs|)
+    """
     def __init__(self, ltop=None, index=None, xarg=None):
-        """
-        :param ltop: vid of the label of the local-top predicates
-            (usually same as index, but may differ; e.g. "kim
-            sleeps maybe", sleeps is the index, but maybe is
-            the ltop (or is QEQed by the LTOP))
-        :param index: nodeid of most salient predicate (i.e. semantic head)
-        """
         self.ltop = ltop
         self.index = index
         self.xarg = xarg

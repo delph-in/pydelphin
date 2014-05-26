@@ -8,8 +8,43 @@ from .config import (FIRST_NODEID, ANCHOR_SORT)
 
 def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
         lnk=None, surface=None, identifier=None):
-    """Minimal Recursion Semantics contains a top handle, a bag
-       of ElementaryPredications, and a bag of handle constraints."""
+    """
+    Construct an |Xmrs| using MRS components.
+
+    Formally, Minimal Recursion Semantics (MRS) have a top handle, a
+    bag of |ElementaryPredications|, and a bag of |HandleConstraints|.
+    All |Arguments|, including intrinsic arguments and constant
+    arguments, are expected to be contained by the |EPs|.
+
+    Args:
+        ltop: an |MrsVariable| for the top handle
+        index: an |MrsVariable| for the index
+        rels: a list of |ElementaryPredications|
+        hcons: a list of |HandleConstraints|
+        icons: a list of IndividualConstraints (planned feature)
+        lnk: the |Lnk| object associating the MRS to the surface form
+        surface: the surface string
+        identifier: a discourse-utterance id
+    Returns:
+        an |Xmrs| object
+
+    Example:
+
+    >>> ltop = MrsVariable(vid=0, sort='h')
+    >>> rain_label = MrsVariable(vid=1, sort='h')
+    >>> index = MrsVariable(vid=2, sort='e')
+    >>> m = Mrs(
+    >>>     ltop=ltop, index=index,
+    >>>     rels=[ElementaryPredication(
+    >>>         Pred.stringpred('_rain_v_1_rel'),
+    >>>         label=rain_label,
+    >>>         anchor=MrsVariable(vid=10000, sort='h'),
+    >>>         args=[Argument(10000, 'ARG0', index)]
+    >>>         )
+    >>>     ],
+    >>>     hcons=[HandleConstraint(ltop, 'qeq', rain_label)]
+    >>> )
+    """
     # default values or run generators
     rels = list(rels or [])
     hcons = list(hcons or [])
