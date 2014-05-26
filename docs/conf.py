@@ -21,12 +21,6 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-if on_rtd:
-    # Mocking of the dependecies
-    sys.path.insert(0,'.')
-    from readthedocs import *
-    sys.path.pop(0)
-
 sys.path.insert(0, os.path.abspath('..'))
 
 # -- General configuration ------------------------------------------------
@@ -42,8 +36,10 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
 #    'sphinx.ext.viewcode',
-    'sphinxcontrib.napoleon',
 ]
+# taking out napoleon for RTD until it gets fixed
+if not on_rtd:
+    extensions.append('sphinxcontrib.napoleon')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
