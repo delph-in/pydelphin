@@ -360,7 +360,8 @@ class Xmrs(LnkMixin):
                 if not self.get_quantifier(nid):
                     nids.remove(nid)
         assert len(nids) == 1, \
-            'More scope heads than expected: {}'.format(' '.join(nids))
+            'More scope heads than expected: {}'.format(
+                ' '.join(map(str,nids)))
         return nids.pop()
 
     def label_equality_sets(self):

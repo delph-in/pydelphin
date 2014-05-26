@@ -20,6 +20,7 @@ convert_parser.add_argument('infile', metavar='PATH', nargs='?')
 
 path_parser = subparsers.add_parser('paths', aliases=['p'])
 path_parser.add_argument('--format', '-f', choices=list(mrsformats.keys()))
+path_parser.add_argument('--depth', '-d', default=-1)
 path_parser.add_argument('infile', metavar='PATH', nargs='?')
 
 args = parser.parse_args()
@@ -42,6 +43,5 @@ elif args.command in ('paths', 'p'):
     outstream = sys.stdout
     ms = mrsformats[args.format].load(instream)
     for m in ms:
-        paths = list(mrspath.get_paths(m))
-        print('\n'.join(paths))
-        print()
+        paths = list(mrspath.get_paths(m, max_depth=int(args.depth)))
+        print('\t'.join(paths))
