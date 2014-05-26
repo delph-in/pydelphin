@@ -5,13 +5,14 @@ from .config import (CVARG, INTRINSIC_ARG, VARIABLE_ARG, HOLE_ARG,
 
 class Argument(AnchorMixin):
     """
-    An argument of an *MRS predicate.
+    An argument of an \*MRS predicate.
 
     Args:
         nodeid: the nodeid of the node with the argument
         argname: the name of the argument (sometimes called "rargname")
         value: the MrsVariable or constant value of the argument
     """
+
     def __init__(self, nodeid, argname, value):
         self.nodeid = nodeid
         self.argname = argname

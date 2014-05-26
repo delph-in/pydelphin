@@ -110,6 +110,9 @@ rst_epilog = '''
 .. |ElementaryPredications| replace::
      :py:class:`ElementaryPredications<delphin.mrs.ElementaryPredication>`
 .. |EP| replace:: :py:class:`EP<delphin.mrs.ElementaryPredication>`
+.. |EPs| replace:: :py:class:`EPs<delphin.mrs.ElementaryPredication>`
+.. |Argument| replace:: :py:class:`~delphin.mrs.Argument`
+.. |Arguments| replace:: :py:class:`Arguments<delphin.mrs.Argument>`
 .. |Pred| replace:: :py:class:`~delphin.mrs.Pred`
 .. |MrsVariable| replace:: :py:class:`~delphin.mrs.MrsVariable`
 .. |MrsVariables| replace::
@@ -118,8 +121,16 @@ rst_epilog = '''
 .. |HandleConstraints| replace::
      :py:class:`HandleConstraints <delphin.mrs.HandleConstraint>`
 .. |Node| replace:: :py:class:`~delphin.mrs.Node`
+.. |Nodes| replace:: :py:class:`Nodes<delphin.mrs.Node>`
 .. |Link| replace:: :py:class:`~delphin.mrs.Link`
+.. |Links| replace:: :py:class:`Links<delphin.mrs.Link>`
 '''
+
+autodoc_member_order = 'bysource'
+
+# -- Options for Napoleon -------------------------------------------------
+
+napoleon_use_admonition_for_examples = True
 
 # -- Options for HTML output ----------------------------------------------
 

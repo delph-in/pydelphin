@@ -4,22 +4,25 @@ from .config import CVARSORT
 
 
 class Node(LnkMixin):
-    """The base class for units of MRSs containing predicates and their
-       properties."""
+    """
+    A very simple predication for DMRSs. Nodes don't have |Arguments|
+    or labels like |EPs|, but they do have a
+    :py:attr:`~delphin.mrs.node.Node.carg` property for constant
+    arguments, and their sortal type is given by the `cvarsort` value
+    on their property mapping.
+
+    Args:
+        nodeid: node identifier
+        pred: node's |Pred|
+        sortinfo: node properties (with cvarsort)
+        lnk: links pred to surface form or parse edges
+        surface: surface string
+        base: base form
+        carg: constant argument string
+    """
+
     def __init__(self, nodeid, pred, sortinfo=None,
                  lnk=None, surface=None, base=None, carg=None):
-        """
-        Args:
-            nodeid (int): node identifier
-            pred (Pred): node's predicate
-            sortinfo (OrderedDict): node properties (with cvarsort)
-            lnk (Lnk): links pred to surface form or parse edges
-            surface: surface string
-            base: base form
-            carg: constant argument string
-        Returns:
-            a Node object
-        """
         self.nodeid = int(nodeid) if nodeid is not None else None
         self.pred = pred
         # sortinfo is the properties plus cvarsort
@@ -53,6 +56,9 @@ class Node(LnkMixin):
 
     @property
     def cvarsort(self):
+        """
+        The sortal type of the predicate.
+        """
         return self.sortinfo.get(CVARSORT)
 
     @cvarsort.setter
@@ -61,8 +67,15 @@ class Node(LnkMixin):
 
     @property
     def properties(self):
+        """
+        The properties of the Node (without `cvarsort`, so it's the set
+        of properties a corresponding |EP| would have).
+        """
         return OrderedDict((k, v) for (k, v) in self.sortinfo.items()
                            if k != CVARSORT)
 
     def is_quantifier(self):
+        """
+        Return True if the Node is a quantifier, or False otherwise.
+        """
         return self.pred.is_quantifier()

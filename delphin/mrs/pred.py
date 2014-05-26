@@ -46,6 +46,17 @@ class Pred(object):
     """
     A semantic predicate.
 
+    Args:
+        predtype: the type of predicate; valid values are grammarpred,
+            stringpred, or realpred, although in practice one won't use
+            this constructor directly, but instead use one of the
+            classmethods
+        lemma: the lemma of the predicate
+        pos: the part-of-speech; a single, lowercase character
+        sense: the (often omitted) sense of the predicate
+    Returns:
+        an instantiated Pred object
+
     Preds come in three flavors:
     
     * **grammar preds** (gpreds): preds defined in a semantic hierarchy
@@ -67,31 +78,20 @@ class Pred(object):
 
     Example:
 
-    Preds are compared using their string representations. Surrounding
-    quotes (double or single) are ignored, and capitalization doesn't
-    matter. In addition, preds may be compared directly to their string
-    representations:
+        Preds are compared using their string representations.
+        Surrounding quotes (double or single) are ignored, and
+        capitalization doesn't matter. In addition, preds may be
+        compared directly to their string representations:
 
-    >>> p1 = Pred.stringpred('_dog_n_1_rel')
-    >>> p2 = Pred.realpred(lemma='dog', pos='n', sense='1')
-    >>> p3 = Pred.grammarpred('dog_n_1_rel')
-    >>> p1 == p2
-    True
-    >>> p1 == '_dog_n_1_rel'
-    True
-    >>> p1 == p3
-    False
-
-    Args:
-        predtype: the type of predicate; valid values are grammarpred,
-            stringpred, or realpred, although in practice one won't use
-            this constructor directly, but instead use one of the
-            classmethods
-        lemma: the lemma of the predicate
-        pos: the part-of-speech; a single, lowercase character
-        sense: the (often omitted) sense of the predicate
-    Returns:
-        an instantiated Pred object
+        >>> p1 = Pred.stringpred('_dog_n_1_rel')
+        >>> p2 = Pred.realpred(lemma='dog', pos='n', sense='1')
+        >>> p3 = Pred.grammarpred('dog_n_1_rel')
+        >>> p1 == p2
+        True
+        >>> p1 == '_dog_n_1_rel'
+        True
+        >>> p1 == p3
+        False
     """
 
     def __init__(self, predtype, lemma=None, pos=None, sense=None):
@@ -152,8 +152,20 @@ class Pred(object):
 
     @staticmethod
     def split_pred_string(predstr):
-        """Extract the components from a pred string and log errors
-           for any malformedness."""
+        """
+        Extract the components from a pred string and log errors for any
+        malformedness.
+
+        Args:
+            predstr: a predicate string
+
+        Examples:
+
+            >>> Pred.split_pred_string('_dog_n_1_rel')
+            ('dog', 'n', '1', 'rel')
+            >>> Pred.split_pred_string('quant_rel')
+            ('quant', None, None, 'rel')
+        """
         if not predstr.lower().endswith('_rel'):
             logging.warn('Predicate does not end in "_rel": {}'
                          .format(predstr))
@@ -171,5 +183,11 @@ class Pred(object):
     def short_form(self):
         """
         Return the pred string without quotes or a _rel suffix.
+
+        Example:
+
+            >>> p = Pred.stringpred('"_cat_n_1_rel"')
+            >>> p.short_form()
+            '_cat_n_1'
         """
         return self.string.strip('"').rsplit('_', 1)[0]

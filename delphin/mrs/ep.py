@@ -7,21 +7,28 @@ from .config import (CVARG, CONSTARG)
 
 class ElementaryPredication(LnkMixin, AnchorMixin):
     """
-    An elementary predication (EP) is an extension of a Node that
-    requires a characteristic variable (cv) and label.
+    An elementary predication (EP) combines a predicate with various
+    structural semantic properties.
+
+    EPs must have a |Pred| and a |MrsVariable| *label*. Well-formed EPs
+    will have an intrinsic argument (e.g. ARG0) on their *args* list,
+    which specifies the characteristic variable (CV), though it is not
+    required by pyDelphin. However, some methods use an index of CVs to
+    calculate semantic structure, so the absence of an intrinsic
+    argument could cause unexpected behavior.
+
+    Args:
+        pred: The |Pred| of the EP
+        label: label handle
+        anchor: an |MrsVariable| anchor or int nodeid
+        args: a list of the EP's |Arguments|
+        lnk: |Lnk| object associated with the pred
+        surface: surface string
+        base: base form
     """
+
     def __init__(self, pred, label, anchor=None, args=None,
                  lnk=None, surface=None, base=None):
-        """
-        Args:
-            pred (Pred): EP's predicate
-            label (MrsVariable): label handle
-            anchor (MrsVariable): the RMRS anchor (similar to a nodeid)
-            args (list): the EP's Arguments
-            lnk: Lnk object associated with the pred
-            surface: surface string
-            base: base form
-        """
         self.label = label
         # first args, then can get CV
         self.argdict = OrderedDict((a.argname, a) for a in (args or []))
