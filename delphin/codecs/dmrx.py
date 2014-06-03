@@ -185,7 +185,7 @@ def encode_dmrs(m, strict=False):
         attributes['ident'] = m.identifier
     if not _strict and m.index is not None:
         # index corresponds to a variable, so link it to a nodeid
-        attributes['index'] = str(m.index.vid)
+        attributes['index'] = str(m.find_argument_head(m.index))
     e = etree.Element('dmrs', attrib=attributes)
     for node in m.nodes:
         e.append(encode_node(node))
