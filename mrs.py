@@ -2,9 +2,10 @@
 
 import sys
 import argparse
-from delphin.codecs import simplemrs, mrx, dmrx
+from delphin.codecs import simplemrs, mrx, dmrx, simpledmrs
 
-mrsformats = {'simplemrs': simplemrs, 'mrx': mrx, 'dmrx': dmrx}
+mrsformats = {'simplemrs': simplemrs, 'mrx': mrx,
+              'dmrx': dmrx, 'simpledmrs': simpledmrs}
 
 parser = argparse.ArgumentParser(description="Utility for manipulating MRSs")
 subparsers = parser.add_subparsers(dest='command')

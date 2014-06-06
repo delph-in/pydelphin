@@ -1,11 +1,11 @@
 
-# DMRX codec
+# SimpleDMRS codec
 # Summary: This module implements serialization and deserialization of the
-#          XML encoding of Distributed Minimal Recusion Semantics (DMRS). It
+#          SimpleDMRS encoding of Distributed Minimal Recusion Semantics (DMRS). It
 #          provides standard Pickle API calls of load, loads, dump, and dumps
-#          for serializing and deserializing DMRX corpora. Further,
-#          load_one, loads_one, dump_one, and dumps_one operate on a single
-#          DMRX/DMRS.
+#          for serializing and deserializing single SimpleDMRS instances. Further,
+#          encode_list and decode_list are provided for lists of DMRX
+#          instances, and they read and write incrementally.
 #
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
@@ -14,13 +14,15 @@ from io import BytesIO
 import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
 from delphin.mrs.config import (GRAMMARPRED, STRINGPRED, REALPRED,
-                                QUANTIFIER_SORT)
+                                QUANTIFIER_SORT, EQ_POST)
 
-# Import LXML if available, otherwise fall back to another etree implementation
-try:
-    from lxml import etree
-except ImportError:
-    import xml.etree.ElementTree as etree
+
+_graphtype = 'dmrs'
+_graph = '{graphtype} {graphid}{{{dmrsproperties}{nodes}{links}}}'
+_dmrsproperties = ''
+_node = '{nodeid} [{pred}{lnk}{sortinfo}];'
+_sortinfo = ' {cvarsort} {properties}'
+_link = '{from}:{pre}/{post} {arrow} {to};'
 
 ##############################################################################
 ##############################################################################
@@ -160,94 +162,33 @@ def decode_lnk(elem):
 
 _strict = False
 
-
-def encode(ms, strict=False, encoding='unicode', pretty_print=False):
-    e = etree.Element('dmrs-list')
+def encode(ms, strict=False, encoding='unicode', pretty_print=False, indent=2):
+    ss = []
     for m in ms:
-        e.append(encode_dmrs(m, strict=strict))
-    # for now, pretty_print=True is the same as pretty_print='LKB'
-    if pretty_print in ('LKB', 'lkb', 'Lkb', True):
-        lkb_pprint_re = re.compile(r'(<dmrs[^>]+>|</node>|</link>|</dmrs>)')
-        string = str(etree.tostring(e, encoding=encoding))
-        return lkb_pprint_re.sub(r'\1\n', string)
-    # pretty_print is only lxml. Look into tostringlist, maybe?
-    # return etree.tostring(e, pretty_print=pretty_print, encoding='unicode')
-    return etree.tostring(e, encoding=encoding)
-
-
-def encode_dmrs(m, strict=False):
-    _strict = strict
-    attributes = OrderedDict([('cfrom', str(m.cfrom)),
-                              ('cto', str(m.cto))])
-    if m.surface is not None:
-        attributes['surface'] = m.surface
-    if m.identifier is not None:
-        attributes['ident'] = m.identifier
-    if not _strict and m.index is not None:
-        # index corresponds to a variable, so link it to a nodeid
-        attributes['index'] = str(m.find_argument_head(m.index))
-    e = etree.Element('dmrs', attrib=attributes)
-    for node in m.nodes:
-        e.append(encode_node(node))
-    for link in m.links:
-        e.append(encode_link(link))
-    return e
-
-
-def encode_node(node):
-    attributes = OrderedDict([('nodeid', str(node.nodeid)),
-                              ('cfrom', str(node.cfrom)),
-                              ('cto', str(node.cto))])
-    if node.surface is not None:
-        attributes['surface'] = node.surface
-    if node.base is not None:
-        attributes['base'] = node.base
-    if node.carg is not None:
-        attributes['carg'] = node.carg
-    e = etree.Element('node', attrib=attributes)
-    e.append(encode_pred(node.pred))
-    e.append(encode_sortinfo(node))
-    return e
-
-
-def encode_pred(pred):
-    if pred.type == GRAMMARPRED:
-        e = etree.Element('gpred')
-        e.text = pred.string.strip('"\'')
-    elif pred.type in (REALPRED, STRINGPRED):
-        attributes = {}
-        if pred.lemma is not None:
-            attributes['lemma'] = pred.lemma
-        if pred.pos is not None:
-            attributes['pos'] = pred.pos
-        if pred.sense is not None:
-            attributes['sense'] = str(pred.sense)
-        e = etree.Element('realpred', attrib=attributes)
-    return e
-
-
-def encode_sortinfo(node):
-    attributes = OrderedDict()
-    # return empty <sortinfo/> for quantifiers
-    if node.pred.pos == QUANTIFIER_SORT:
-        return etree.Element('sortinfo')  # return empty <sortinfo/>
-    if node.sortinfo:
-        if not _strict:
-            for k, v in node.sortinfo.items():
-                attributes[k.lower()] = str(v)
-        else:
-            pass  # TODO add strict sortinfo
-    e = etree.Element('sortinfo', attrib=attributes or {})
-    return e
-
-
-def encode_link(link):
-    e = etree.Element('link', attrib={'from': str(link.start),
-                                      'to': str(link.end)})
-    argname = etree.Element('rargname')
-    argname.text = link.argname
-    post = etree.Element('post')
-    post.text = link.post
-    e.append(argname)
-    e.append(post)
-    return e
+        s = _graph.format(**{
+            'graphtype': _graphtype,
+            'graphid': '',
+            'dmrsproperties': _dmrsproperties.format(str(m.lnk)),
+            'nodes': ''.join(_node.format(**{
+                'nodeid': n.nodeid,
+                'pred': str(n.pred),
+                'lnk': '' if n.lnk is None else str(n.lnk),
+                'sortinfo': '' if not n.sortinfo else _sortinfo.format(**{
+                    'cvarsort': n.cvarsort,
+                    'properties': ' '.join('{}={}'.format(k, v)
+                                           for k, v in n.properties.items())
+                    })
+                })
+                for n in m.nodes),
+            'links': ''.join(_link.format(**{
+                'from': l.start,
+                'pre': l.argname or '',
+                'post': l.post,
+                'arrow': '->' if l.argname or l.post != EQ_POST else '--',
+                'to': l.end
+                })
+                for l in m.links)
+            })
+        s = s.replace(';',';\n  ').replace('{','{\n  ').replace('  }','}')
+        ss.append(s)
+    return '\n'.join(ss)
