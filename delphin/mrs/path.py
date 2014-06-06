@@ -184,28 +184,40 @@ def find(xmrs, path):
 
 # GENERATING PATHS #########################################################
 
+class XmrsPath(object):
+    def __init__(self, path, preds):
+        self.path = path
+        self.preds = tuple(sorted(preds or []))
+
+    def __str__(self):
+        return self.path
+
 
 def get_paths(xmrs, **kwargs):
     for nid in xmrs.nodeids:
-        for eppath in get_ep_paths(xmrs, nid, **kwargs):
-            yield eppath
+        for (eppath, preds) in get_ep_paths(xmrs, nid, **kwargs):
+            yield XmrsPath(eppath, preds)
 
 
 def get_ep_paths(xmrs, nid, path=None, max_depth=-1, allow_bare_args=False):
     # ep[argpaths]
     if max_depth == 0:
         raise StopIteration
-    path = '{}{}'.format(path or '', xmrs.get_pred(nid).short_form())
+    pred = xmrs.get_pred(nid)
+    path = '{}{}'.format(path or '', pred.short_form())
     args = xmrs.get_outbound_args(nid, allow_unbound=False)
     for argset in powerset(args):
         numargs = len(argset)
         if numargs == 0:
-            yield path
+            yield (path, [pred])
         else:
-            for subpath in get_arg_path_conj(xmrs, argset, path=path,
-                                             max_depth=max_depth,
-                                             allow_bare_args=allow_bare_args):
-                yield subpath
+            arg_path_conj = get_arg_path_conj(
+                xmrs, argset, path=path,
+                max_depth=max_depth,
+                allow_bare_args=allow_bare_args
+            )
+            for (subpath, subpreds) in arg_path_conj:
+                yield (subpath, [pred] + subpreds)
 
 
 def get_arg_path_conj(xmrs, args, path=None,
@@ -220,8 +232,10 @@ def get_arg_path_conj(xmrs, args, path=None,
     # then map that function on all args, and get all combinations of
     # the subpaths with itertools.product.
     subpath_sets = product(*list(map(get_subpaths, args)))
-    for subpaths in subpath_sets:
-        yield join_subpaths(path, [':{}'.format(sp) for sp in subpaths])
+    print(list(subpath_sets))
+    for subpaths, subpreds in subpath_sets:
+        yield (join_subpaths(path, [':{}'.format(sp) for sp in subpaths]),
+               subpreds)
 
 
 def join_subpaths(basepath, subpaths, joiner=' & '):
