@@ -197,7 +197,6 @@ def read_mrs(tokens):
     try:
         validate_token(tokens.pop(0), _left_bracket)
         ltop = index = surface = lnk = None
-        print(tokens[0])
         # SimpleMRS extension for encoding surface string
         if tokens[0].startswith('"') and tokens[0].endswith('"'):
             surface = tokens.pop(0)[1:-1] # get rid of first quotes
