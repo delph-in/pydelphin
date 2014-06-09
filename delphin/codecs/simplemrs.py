@@ -196,6 +196,12 @@ def read_mrs(tokens):
     # [ LTOP : handle INDEX : variable RELS : rels-list HCONS : hcons-list ]
     try:
         validate_token(tokens.pop(0), _left_bracket)
+        ltop = index = surface = lnk = None
+        print(tokens[0])
+        # SimpleMRS extension for encoding surface string
+        if tokens[0].startswith('"') and tokens[0].endswith('"'):
+            surface = tokens.pop(0)[1:-1] # get rid of first quotes
+            lnk = read_lnk(tokens)
         if tokens[0] == _ltop:
             _, ltop = read_featval(tokens, feat=_ltop, variables=variables)
         if tokens[0] == _index:
@@ -203,7 +209,7 @@ def read_mrs(tokens):
         rels = read_rels(tokens, variables=variables)
         hcons = read_hcons(tokens, variables=variables)
         validate_token(tokens.pop(0), _right_bracket)
-        m = Mrs(ltop, index, rels, hcons)
+        m = Mrs(ltop, index, rels, hcons, surface=surface)
     except IndexError:
         unexpected_termination_error()
     return m
@@ -405,19 +411,19 @@ def serialize(ms, pretty_print=False, color=False):
 def serialize_mrs(m, pretty_print=False):
     # note that listed_vars is modified as a side-effect of the lower
     # functions
-    indent = '' if not pretty_print else '  '
     listed_vars = set()
-    toks = [_left_bracket]
+    toks = []
+    if not strict and m.surface is not None:
+        toks += ["\"{}\"{}".format(m.surface, serialize_lnk(m.lnk))]
     if m.ltop is not None:
         toks += [serialize_argument(_ltop, m.ltop, listed_vars)]
     if m.index is not None:
         toks += [serialize_argument(_index, m.index, listed_vars)]
-    toks = [' '.join(toks)]
+    #toks = [' '.join(toks)]
     toks += [serialize_rels(m.rels, listed_vars, pretty_print=pretty_print)]
-    toks += [indent + ' '.join([serialize_hcons(m.hcons, listed_vars),
-                                _right_bracket])]
-    delim = ' ' if not pretty_print else '\n'
-    return delim.join(toks)
+    toks += [' '.join([serialize_hcons(m.hcons, listed_vars)])]
+    delim = ' ' if not pretty_print else '\n  '
+    return '{} {} {}'.format(_left_bracket, delim.join(toks), _right_bracket)
 
 
 def serialize_argument(rargname, value, listed_vars):
@@ -449,9 +455,8 @@ def serialize_variable(var, listed_vars):
 
 def serialize_rels(rels, listed_vars, pretty_print=False):
     """Serialize a RELS list of EPs into the SimpleMRS encoding."""
-    indent = '' if not pretty_print else '  '
     delim = ' ' if not pretty_print else '\n          '
-    string = indent + ' '.join([_rels + _colon, _left_angle])
+    string = ' '.join([_rels + _colon, _left_angle])
     string += ' ' + delim.join(serialize_ep(ep, listed_vars) for ep in rels)
     string += ' ' + _right_angle
     return string
