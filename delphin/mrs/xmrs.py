@@ -385,10 +385,12 @@ class Xmrs(LnkMixin):
 
     def get_quantifier(self, nodeid):
         try:
-            cv = self._nid_to_ep[nodeid].cv
-            return self._bv_to_nid[cv]
+            ep = self._nid_to_ep[nodeid]
+            if not ep.is_quantifier():
+                return self._bv_to_nid[ep.cv]
         except KeyError:
-            return None
+            pass
+        return None
 
     def find_argument_targets(self, arg):
         argtype = arg.type
