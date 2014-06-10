@@ -6,7 +6,7 @@ pred_re = re.compile(
     r'_?(?P<lemma>.*?)_'  # match until last 1 or 2 parts
     r'((?P<pos>[a-z])_)?'  # pos is always only 1 char
     r'((?P<sense>([^_\\]|(?:\\.))+)_)?'  # no unescaped _s
-    r'(?P<end>rel(ation)?)',  # NB only _rel is valid
+    r'(?P<end>rel(ation)?)$',  # NB only _rel is valid
     re.IGNORECASE
 )
 
