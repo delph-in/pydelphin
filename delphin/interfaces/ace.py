@@ -4,7 +4,7 @@
 import logging
 from subprocess import Popen, PIPE, STDOUT
 from .util import decode_stagfile, encode_stagfile
-from delphin.iterfaces import _do
+from delphin.interfaces import _do
 
 def do(cmd):
     # validate cmd here (e.g. that it has a 'grammar' key, correct 'task', etc)

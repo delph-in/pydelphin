@@ -9,7 +9,9 @@ import re
 from collections import OrderedDict
 from copy import deepcopy
 from importlib import import_module
-from delphin import interfaces
+#from delphin.codecs import itsdb
+#import delphin.interfaces
+#from delphin.utils import load_config
 
 _rcfilename = '.pydelphinrc'
 
@@ -24,9 +26,12 @@ def main(args):
         sys.exit()
 
     prepare_output_directory(config)
+    in_profile = itsdb.load_profile()
     for command in args.commands:
+        out_profile = 
         cmd = make_command(command, doecfg)
-        print(json.dumps(cmd, indent=2))
+        interface = get_interface(cmd['interface'])
+        interface.do(cmd)
 
 def load_config(args):
     """
@@ -67,8 +72,8 @@ def load_config(args):
         doecfg['variables']['grammar'] = args.grammar
     if args.output_directory:
         doecfg['output_directory'] = args.output_directory
-    if args.input_file:
-        doecfg['input_file'] = args.input_file
+    if args.input_profile:
+        doecfg['input_profile'] = args.input_profile
     if args.verbosity:
         doecfg['verbosity'] = args.verbosity
 
@@ -99,6 +104,9 @@ def validate(args, doecfg):
             valid = False
         if args.output_directory is None:
             logging.error('An --output-directory argument is required.')
+            valid = False
+        if args.input_profile is None:
+            logging.error('An --input-profile argument is required.')
             valid = False
     return valid 
 
@@ -147,16 +155,8 @@ def make_command(command, doecfg):
         cmd['grammar'] = doecfg['grammar']
     return cmd
 
-    # first unify command arguments and commandtype arguments
-    for cmd in config['commands'].values():
-        ct = config['commandtypes'][cmd['type']]
-        cmd['arguments'] = [ct['executable']] + ct.get('arguments')\
-                         + cmd.get('arguments')
-    # load the relevant interfaces
-    for cmd in args.commands:
-        c = config['commands'][cmd]
-        ct = config['commandtypes'][c['type']]
-        c['interface'] = ct.get('interface', 'generic')
+def get_interface(interface_name):
+    return import_module('{}.{}'.format('delphin.interfaces', interface_name))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('pyDelphin Operating Environment')
@@ -169,10 +169,11 @@ if __name__ == '__main__':
         default=2, help='increase the verbosity (can be repeated: -vvv)')
     parser.add_argument('-q', '--quiet', action='store_const', const=0,
         dest='verbosity', help='set verbosity to the quietest level')
-    parser.add_argument('-o', '--outdir', metavar='DIR',
-        dest='output_directory', help='the output directory for all commands')
-    parser.add_argument('-i', '--infile', metavar='PATH', dest='input_file',
-        help='the input file to the first command')
+    parser.add_argument('-o', '--output-directory', metavar='DIR',
+        help='the output directory for all commands')
+    parser.add_argument('-i', '--input-profile', metavar='PATH',
+        help='the [incr tsdb()] profile to use as input for the first '
+             'command')
     parser.add_argument('-c', '--config', metavar='PATH',
         help='the configuration file describing possible commands')
     parser.add_argument('-s', '--source-grammar', metavar='PATH')

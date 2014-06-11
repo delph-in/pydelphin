@@ -74,9 +74,14 @@
                 "arguments": ["-n", "{nsolutions}", "-g", "{grammar}"],
                 "interface": "ace",
                 "tasks": {
-                    "parse": {},
-                    "transfer": {},
+                    "parse": {
+                        "key": "item:i-input"
+                    },
+                    "transfer": {
+                        "key": "result:mrs"
+                    },
                     "generate": {
+                        "key": "result:mrs",
                         "arguments": ["-e"]
                     }
                 }
