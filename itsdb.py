@@ -88,8 +88,7 @@ def extract_fields(args):
 
     profile_dir = os.path.normpath(args.profile)
     profile = itsdb.TsdbProfile(profile_dir)
-    table = profile.get_table(args.table)
-    for row in table.rows():
+    for row in profile.read_table(args.table):
         print(args.field_delimiter.join(str(row.get(f)) for f in args.fields))
 
 if __name__ == '__main__':

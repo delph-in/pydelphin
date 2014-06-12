@@ -1,5 +1,13 @@
 
-class XmrsError(Exception):
+class PyDelphinException(Exception):
+    pass
+
+
+class ItsdbError(PyDelphinException):
+    pass
+
+
+class XmrsError(PyDelphinException):
     pass
 
 
