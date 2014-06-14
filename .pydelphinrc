@@ -13,11 +13,11 @@
     "itsdb": {
         "field_delimiter": "@",
         "relations_filename": "relations",
-        "character_escapes": {
-            "@": "\\s",
-            "\n": "\\n",
-            "\\": "\\\\"
-        },
+        "character_escapes": [
+            ["@", "\\s"],
+            ["\n", "\\n"],
+            ["\\", "\\\\"]
+        ],
         "default_values": {
             "i-wf": 1
         }
