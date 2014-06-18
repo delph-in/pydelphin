@@ -22,16 +22,23 @@ Here's a brief example of using the `itsdb` library:
 
 ```python3
 >>> from delphin import itsdb
->>> profile = itsdb.TsdbProfile('jacy/tsdb/gold/mrs/')
->>> print(next(profile.get_table('result').rows())['derivation'])
-(utterance-root (91 utterance_rule-decl-finite -0.723739 0 4 (90 head_subj_rule -1.05796 0 4 (87 hf-complement-rule -0.50201 0 2 (86 quantify-n-rule -0.32216 0 1 (5 ame-noun 0 0 1 ("雨" 1 "\\"雨\\""))) (6 ga 0.531537 1 2 ("が" 2 "\\"が\\""))) (89 vstem-vend-rule -0.471785 2 4 (88 t-lexeme-c-stem-infl-rule 0.120963 2 3 (14 furu_1 0 2 3 ("降っ" 3 "\\"降っ\\""))) (24 ta-end -0.380719 3 4 ("た" 4 "\\"た\\""))))))
+>>> prof = itsdb.TsdbProfile('/home/goodmami/logon/dfki/jacy/tsdb/gold/mrs')
+>>> for row in prof.read_table('item'):
+...     print(row.get('i-input'))
+雨 が 降っ た ．
+太郎 が 吠え た ．
+窓 が 開い た ．
+太郎 が 次郎 を 追っ た ．
+[...]
+>>> next(prof.read_table('result')).get('derivation')
+'(utterance-root (91 utterance_rule-decl-finite -0.723739 0 4 (90 head_subj_rule -1.05796 0 4 (87 hf-complement-rule -0.50201 0 2 (86 quantify-n-rule -0.32216 0 1 (5 ame-noun 0 0 1 ("雨" 1 "\\"雨\\""))) (6 ga 0.531537 1 2 ("が" 2 "\\"が\\""))) (89 vstem-vend-rule -0.471785 2 4 (88 t-lexeme-c-stem-infl-rule 0.120963 2 3 (14 furu_1 0 2 3 ("降っ" 3 "\\"降っ\\""))) (24 ta-end -0.380719 3 4 ("た" 4 "\\"た\\""))))))'
 ```
 
 And here's an example of loading a SimpleMRS representation:
 
 ```python3
 >>> from delphin.codecs import simplemrs
->>> m = simplemrs.loads('[ LTOP: h1 INDEX: e2 [ e TENSE: PAST MOOD: INDICATIVE PROG: - PERF: - SF: PROP ASPECT: DEFAULT_ASPECT PASS: - ] RELS: < [ udef_q_rel<0:1> LBL: h3 ARG0: x6 [ x PERS: 3 ] RSTR: h5 BODY: h4 ] [ "_ame_n_rel"<0:1> LBL: h7 ARG0: x6 ] [ "_furu_v_1_rel"<2:3> LBL: h8 ARG0: e2 ARG1: x6 ] > HCONS: < h5 qeq h7 > ]')
+>>> m = simplemrs.loads_one('[ LTOP: h1 INDEX: e2 [ e TENSE: PAST MOOD: INDICATIVE PROG: - PERF: - SF: PROP ASPECT: DEFAULT_ASPECT PASS: - ] RELS: < [ udef_q_rel<0:1> LBL: h3 ARG0: x6 [ x PERS: 3 ] RSTR: h5 BODY: h4 ] [ "_ame_n_rel"<0:1> LBL: h7 ARG0: x6 ] [ "_furu_v_1_rel"<2:3> LBL: h8 ARG0: e2 ARG1: x6 ] > HCONS: < h5 qeq h7 > ]')
 >>> m.ltop
 MrsVariable(h1)
 >>> for r in m.rels:
@@ -40,7 +47,7 @@ MrsVariable(h1)
 udef_q_rel
 "_ame_n_rel"
 "_furu_v_1_rel"
->>> print(simplemrs.dumps(m, pretty_print=True))
+>>> print(simplemrs.dumps_one(m, pretty_print=True))
 [ LTOP: h1 INDEX: e2 [ e TENSE: PAST MOOD: INDICATIVE PROG: - PERF: - SF: PROP ASPECT: DEFAULT_ASPECT PASS: - ]
   RELS: < [ udef_q_rel<0:1> LBL: h3 ARG0: x6 [ x PERS: 3 ] RSTR: h5 BODY: h4 ]
           [ "_ame_n_rel"<0:1> LBL: h7 ARG0: x6 ]
