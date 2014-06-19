@@ -16,10 +16,10 @@ _character_escapes = [
     ('\\', '\\\\')
 ]
 _default_datatype_values = {
-    ':integer': -1
+    ':integer': '-1'
 }
 _default_field_values = {
-    'i-wf': 1
+    'i-wf': '1'
 }
 
 ##############################################################################
@@ -107,13 +107,13 @@ def _write_table(profile_dir, table_name, rows, fields,
         f = open(tbl_filename, mode=mode)
 
     for row in rows:
-        f.write(make_row(row, fields))
+        f.write(make_row(row, fields) + '\n')
 
     f.close()
 
 
 def make_row(row, fields):
-    row_fields = [row.get(f.name, default_value(f.name, f.datatype))
+    row_fields = [row.get(f.name, str(default_value(f.name, f.datatype)))
                   for f in fields]
     return encode_row(row_fields)
 
@@ -168,7 +168,7 @@ class TsdbProfile:
                 .format(table_name, tbl_filename)
             )
 
-        for line in f:
+        for line in map(str.strip, f):
             fields = decode_row(line)
             if len(fields) != field_len:
                 # should this throw an exception instead?
