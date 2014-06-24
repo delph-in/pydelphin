@@ -200,7 +200,7 @@ class TsdbProfile:
                                  .format(col))
         self.applicators[table].append((cols, function))
 
-    def table_fields(self, table_name):
+    def table_relations(self, table_name):
         if table_name not in self.relations:
             raise ItsdbError(
                 'Table {} is not defined in the profiles relations.'
@@ -226,7 +226,7 @@ class TsdbProfile:
         Iterate through the rows in the [incr tsdb()] table.
         """
 
-        field_names = [f.name for f in self.table_fields(table_name)]
+        field_names = [f.name for f in self.table_relations(table_name)]
         field_len = len(field_names)
         with self._open_table(table_name) as table:
             for line in table:
@@ -293,7 +293,7 @@ class TsdbProfile:
         _write_table(self.root,
                      table_name,
                      rows,
-                     self.fields(table_name),
+                     self.table_relations(table_name),
                      append=append,
                      gzip=gzip)
 

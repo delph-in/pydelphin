@@ -18,8 +18,11 @@
             ["\n", "\\n"],
             ["\\", "\\\\"]
         ],
-        "default_values": {
-            "i-wf": 1
+        "default_datatype_values": {
+            ":integer": "-1"
+        },
+        "default_field_values": {
+            "i-wf": "1"
         }
     },
     "doe": {
@@ -75,14 +78,17 @@
                 "interface": "ace",
                 "tasks": {
                     "parse": {
-                        "key": "item:i-input"
+                        "input": ["item:i-input"],
+                        "output": ["result:derivation", "result:mrs"]
                     },
                     "transfer": {
-                        "key": "result:mrs"
+                        "input": ["result:mrs"],
+                        "output": ["result:mrs"]
                     },
                     "generate": {
-                        "key": "result:mrs",
-                        "arguments": ["-e"]
+                        "arguments": ["-e"],
+                        "input": ["result:mrs"],
+                        "output": ["result:surface"]
                     }
                 }
             }

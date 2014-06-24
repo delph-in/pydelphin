@@ -16,25 +16,26 @@ _rcfilename = '.pydelphinrc'
 
 def main(args):
     config = load_config(args)
-    doecfg = config['doe']
-    if not validate(args, doecfg):
+    cfg = config['doe']
+    if not validate(args, cfg):
         sys.exit('Exiting.')
 
     if args.list:
-        list_commands(doecfg)
+        list_commands(cfg)
         sys.exit()
 
-    in_profile = prepare_input_profile(doecfg)
-    prepare_output_profile(config)
+    in_profile = prepare_input_profile(cfg)
+
+    if args.output_profile:
+        out_profile = prepare_output_profile(config, in_profile)
 
     if args.select:
-        print(args.select)
         table, cols = get_data_specifier(args.select)
         print('\n'.join(in_profile.select(table, cols, mode='row')))
 
     #for command in args.commands:
     #    out_profile = None
-    #    cmd = make_command(command, doecfg)
+    #    cmd = make_command(command, cfg)
     #    interface = get_interface(cmd['interface'])
     #    interface.do(cmd)
 
@@ -70,10 +71,20 @@ def load_config(args):
         'verbosity': args.verbosity,
         'input_profile': args.input_profile or cfg.get('input_profile'),
         'output_profile': args.output_profile or cfg.get('output_profile'),
+        'relations': args.relations or cfg.get('relations'),
         'select': args.select or cfg.get('select'),
         'apply': args.apply or cfg.get('apply', []),
         'filter': args.filter or cfg.get('filter', []),
     })
+    # if relations is still unset, try to get from input_profile
+    if not cfg.get('relations') and cfg.get('input_profile'):
+        try:
+            rel_fn = config['itsdb']['relations_filename']
+        except KeyError:
+            rel_fn = 'relations'
+        in_rel_path = os.path.join(cfg['input_profile'], rel_fn)
+        if os.path.isfile(in_rel_path):
+            cfg['relations'] = in_rel_path
     # these overrides need some nesting, so do them separate
     if 'variables' not in cfg:
         cfg['variables'] = {}
@@ -105,19 +116,23 @@ def strip_json_comments(fh):
     return ''.join(lines)
 
 
-def validate(args, doecfg):
+def validate(args, cfg):
     """ Validate arguments not caught by argparse. """
+    if args.list:
+        return True
     valid = True
-    if not args.list:
-        #if len(args.commands) == 0:
-        #    logging.error('At least one command is required.')
-        #    valid = False
-        if args.output_profile is None:
-            logging.error('An --output-profile argument is required.')
-            valid = False
-        if args.input_profile is None:
-            logging.error('An --input-profile argument is required.')
-            valid = False
+    #if len(args.commands) == 0:
+    #    logging.error('At least one command is required.')
+    #    valid = False
+    if args.output_profile is None:
+        logging.error('An --output-profile argument is required.')
+        valid = False
+    if args.input_profile is None:
+        logging.error('An --input-profile argument is required.')
+        valid = False
+    if not cfg['relations'] and args.output_profile is not None:
+        logging.error('No relations file found for the output profile.')
+        valid = False
     return valid
 
 
@@ -129,7 +144,6 @@ def list_commands(config):
 
 def prepare_input_profile(cfg):
     prof = itsdb.TsdbProfile(cfg['input_profile'])
-    print(cfg.get('filter'))
     for spr, f in cfg.get('filter', []):
         table, cols = get_data_specifier(spr)
         f = make_lambda_function(f)
@@ -141,34 +155,41 @@ def prepare_input_profile(cfg):
     return prof
 
 
-def prepare_output_profile(config):
-    #if not config.get('output_directory'):
-    #    config['output_directory'] = os.getcwd()
-    doecfg = config['doe']
-    outdir = doecfg['output_profile']
+def prepare_output_profile(config, in_profile):
+    cfg = config['doe']
+    outdir = cfg['output_profile']
+    prepare_output_directory(outdir, config)
+    # copy relations file
+    in_profile.write_profile(outdir, relations_filename=cfg['relations'])
+    prof = itsdb.TsdbProfile(outdir)
+    return prof
+
+
+def prepare_output_directory(path, config):
     try:
-        os.makedirs(outdir, exist_ok=True)
+        os.makedirs(path, exist_ok=True)
     except PermissionError:
         logging.critical('Permission denied to create output directory: {}'
-                         .format(outdir))
+                         .format(path))
         sys.exit(1)
-    if not os.access(outdir, mode=os.R_OK|os.W_OK):
+    if not os.access(path, mode=os.R_OK|os.W_OK):
         logging.critical('Cannot write to output directory: {}'
-                         .format(outdir))
+                         .format(path))
         sys.exit(1)
     # copy configuration for documentation
     # TODO: allow for multiple configs in same directory (e.g. (PID).rcfile)
-    rcpath = os.path.join(doecfg['output_profile'], _rcfilename)
+    rcpath = os.path.join(path, _rcfilename)
     if not os.path.exists(rcpath):
         json.dump(config, open(rcpath, 'w'), indent=2)
     else:
         logging.warning('Config file path already exists: {}'.format(rcpath))
 
-def make_command(command, doecfg):
+
+def make_command(command, cfg):
     # make a copy so changes for this command do not affect later ones
-    cmd = deepcopy(doecfg['commands'][command])
+    cmd = deepcopy(cfg['commands'][command])
     cpu_name = cmd['cpu']
-    cpu = doecfg['cpus'][cpu_name]
+    cpu = cfg['cpus'][cpu_name]
     task_name = cmd['task']
     task = cpu['tasks'][task_name]
     cmd['executable'] = cpu['executable']
@@ -176,8 +197,8 @@ def make_command(command, doecfg):
     cmd['interface'] = cpu.get('interface', 'generic')
     # if grammar is given explicitly, use it, otherwise use
     # task-specific grammar (already in the command)
-    if doecfg.get('grammar'):
-        cmd['grammar'] = doecfg['grammar']
+    if cfg.get('grammar'):
+        cmd['grammar'] = cfg['grammar']
     return cmd
 
 
@@ -267,6 +288,11 @@ FILTER/APPLY EXPRESSIONS
     add('-o', '--output-profile',
         metavar='PATH',
         help='The [incr tsdb()] profile to output.')
+    add('-r', '--relations',
+        metavar='PATH', type=argparse.FileType('r'),
+        help='The relations file to use for the output profile. If not '
+             'specified and the --input-profile option is used, the '
+             'relations file is copied from the input profile.')
     add('-s', '--select',
         metavar='TBL[:COL[@COL..]]',
         help='Print the contents of each row in TBL. If COLs are specified, '
