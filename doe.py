@@ -310,7 +310,9 @@ FILTER/APPLY EXPRESSIONS
         help='Ignore rows from TBL where EXPR returns a non-true value for '
              'the row. If COLs are specified, EXPR is tested for every COL '
              'on each row. See also the section about DATA SPECIFIERS and '
-             'FILTER/APPLY EXPRESSIONS. e.g. '
+             'FILTER/APPLY EXPRESSIONS. Also note that filters do not '
+             'cascade, so filtering `item:i-id` does not filter rows with '
+             '`i-id` that are not in the `item` table. e.g. '
              '--filter item "int(row[\'i-length\']) < 5"')
     add('-S', '--source-grammar', metavar='PATH')
     add('-T', '--target-grammar', metavar='PATH')
