@@ -16,21 +16,20 @@ _rcfilename = '.pydelphinrc'
 
 def main(args):
     config = load_config(args)
-    cfg = config['doe']
-    if not validate(args, cfg):
+    if not validate(args, config):
         sys.exit('Exiting.')
 
     if args.list:
-        list_commands(cfg)
+        list_commands(config)
         sys.exit()
 
-    in_profile = prepare_input_profile(cfg)
+    in_profile = prepare_input_profile(config)
 
     if args.output_profile:
         out_profile = prepare_output_profile(config, in_profile)
 
     if args.select:
-        table, cols = get_data_specifier(args.select)
+        table, cols = itsdb.get_data_specifier(args.select)
         print('\n'.join(in_profile.select(table, cols, mode='row')))
 
     #for command in args.commands:
@@ -45,8 +44,8 @@ def load_config(args):
     Load a configuration file. Configurations may be loaded from 3 places. In
     order of precedence:
        1. the argument of the -c (--config) option
-       2. a .stagrc file in the current directory
-       3. a .stagrc file in the $HOME directory
+       2. a .pydelphinrc file in the current directory
+       3. a .pydelphinrc file in the $HOME directory
     Only one of the above may be loaded. Additionally, configuration options
     given explicitly at the command line override any loaded values.
     """
@@ -62,9 +61,8 @@ def load_config(args):
         sys.exit('No config file found. Exiting.')
 
     logging.debug('Loading the config file found at {}'.format(args.config))
-    config = json.loads(strip_json_comments(open(args.config,'r')),
-                        object_pairs_hook=OrderedDict)
-    cfg = config['doe']
+    cfg = json.loads(strip_json_comments(open(args.config,'r')),
+                     object_pairs_hook=OrderedDict)
 
     # override the loaded values with those from the command-line
     cfg.update({
@@ -73,18 +71,18 @@ def load_config(args):
         'output_profile': args.output_profile or cfg.get('output_profile'),
         'relations': args.relations or cfg.get('relations'),
         'select': args.select or cfg.get('select'),
-        'apply': args.apply or cfg.get('apply', []),
-        'filter': args.filter or cfg.get('filter', []),
+        'applicators': args.applicators or cfg.get('applicators', []),
+        'filters': args.filters or cfg.get('filters', []),
     })
     # if relations is still unset, try to get from input_profile
-    if not cfg.get('relations') and cfg.get('input_profile'):
-        try:
-            rel_fn = config['itsdb']['relations_filename']
-        except KeyError:
-            rel_fn = 'relations'
-        in_rel_path = os.path.join(cfg['input_profile'], rel_fn)
-        if os.path.isfile(in_rel_path):
-            cfg['relations'] = in_rel_path
+    # if not cfg.get('relations') and cfg.get('input_profile'):
+    #     try:
+    #         rel_fn = config['itsdb']['relations_filename']
+    #     except KeyError:
+    #         rel_fn = 'relations'
+    #     in_rel_path = os.path.join(cfg['input_profile'], rel_fn)
+    #     if os.path.isfile(in_rel_path):
+    #         cfg['relations'] = in_rel_path
     # these overrides need some nesting, so do them separate
     if 'variables' not in cfg:
         cfg['variables'] = {}
@@ -97,7 +95,7 @@ def load_config(args):
     if args.grammar:
         cfg['variables']['grammar'] = args.grammar
 
-    return config
+    return cfg
 
 json_single_comment_re = re.compile(r'^\s*//')
 json_start_comment_re = re.compile(r'^\s*/\*')
@@ -130,7 +128,7 @@ def validate(args, cfg):
     if args.input_profile is None:
         logging.error('An --input-profile argument is required.')
         valid = False
-    if not cfg['relations'] and args.output_profile is not None:
+    if not (cfg['relations'] or args.input_profile) and args.output_profile:
         logging.error('No relations file found for the output profile.')
         valid = False
     return valid
@@ -143,24 +141,22 @@ def list_commands(config):
 
 
 def prepare_input_profile(cfg):
-    prof = itsdb.TsdbProfile(cfg['input_profile'])
-    for spr, f in cfg.get('filter', []):
-        table, cols = get_data_specifier(spr)
-        f = make_lambda_function(f)
-        prof.add_filter(table, cols, f)
-    for spr, f in cfg.get('apply', []):
-        table, cols = get_data_specifier(spr)
-        f = make_lambda_function(f)
-        prof.add_applicator(table, cols, f)
+    filters = [make_itsdb_action(ds, f)
+               for ds, f in cfg.get('filters', [])]
+    applicators = [make_itsdb_action(ds, f)
+                   for ds, f in cfg.get('applicators', [])]
+    prof = itsdb.TsdbProfile(cfg['input_profile'],
+                             filters=filters,
+                             applicators=applicators)
     return prof
 
 
-def prepare_output_profile(config, in_profile):
-    cfg = config['doe']
+def prepare_output_profile(cfg, in_profile):
     outdir = cfg['output_profile']
-    prepare_output_directory(outdir, config)
+    prepare_output_directory(outdir, cfg)
     # copy relations file
-    in_profile.write_profile(outdir, relations_filename=cfg['relations'])
+    relations = cfg.get('relations')
+    in_profile.write_profile(outdir, relations_filename=relations)
     prof = itsdb.TsdbProfile(outdir)
     return prof
 
@@ -206,25 +202,10 @@ def get_interface(interface_name):
     return import_module('{}.{}'.format('delphin.interfaces', interface_name))
 
 
-data_specifier_re = re.compile(r'(?P<table>[^:]+)(:(?P<cols>.+))?$')
-def get_data_specifier(string):
-    """
-    Return a tuple (table, col) for some [incr tsdb()] data specifier.
-    For example:
-
-      item              -> ('item', None)
-      item:i-input      -> ('item', ['i-input'])
-      item:i-input@i-wf -> ('item', ['i-input', 'i-wf'])
-      (otherwise)       -> (None, None)
-    """
-    match = data_specifier_re.match(string)
-    if match is None:
-        return (None, None)
-    table = match.group('table').strip()
-    cols = match.group('cols')
-    if cols is not None:
-        cols = list(map(str.strip, cols.split('@')))
-    return (table, cols)
+def make_itsdb_action(data_specifier, function):
+    table, cols = itsdb.get_data_specifier(data_specifier)
+    function = make_lambda_function(function)
+    return (table, cols, function)
 
 
 def make_lambda_function(function):
@@ -300,19 +281,24 @@ FILTER/APPLY EXPRESSIONS
              'about DATA SPECIFIERS. e.g. '
              '--select item:i-input@i-wf')
     add('-a', '--apply',
-        nargs=2, metavar=('TBL:COL[@COL..]', 'EXPR'), action='append',
+        nargs=2, metavar=('TBL:COL[@COL..]', 'EXPR'),
+        action='append', dest='applicators',
         help='Apply EXPR to the contents of COL for each COL for each row '
              'in TBL. See also the section about DATA SPECIFIERS and '
              'FILTER/APPLY EXPRESSIONS. e.g. '
              '--apply result:mrs "mrs.convert(x, \'mrx\', \'dmrx\')"')
     add('-f', '--filter',
-        nargs=2, metavar=('TBL[:COL[@COL..]]', 'EXPR'), action='append',
-        help='Ignore rows from TBL where EXPR returns a non-true value for '
-             'the row. If COLs are specified, EXPR is tested for every COL '
-             'on each row. See also the section about DATA SPECIFIERS and '
-             'FILTER/APPLY EXPRESSIONS. Also note that filters do not '
-             'cascade, so filtering `item:i-id` does not filter rows with '
-             '`i-id` that are not in the `item` table. e.g. '
+        nargs=2, metavar=('TBL[:COL[@COL..]]', 'EXPR'),
+        action='append', dest='filters',
+        help='Ignore rows where EXPR returns a non-true value. TBL restricts '
+             'the filter to rows of that table. Specifying COLs makes the '
+             'filter run for each COL, but only if the COL exists in the '
+             'table. It is an error if neither TBL nor COLs are specified. '
+             'See also the section about DATA SPECIFIERS and FILTER/APPLY '
+             'EXPRESSIONS. Also note that filters do not cascade, so '
+             'filtering `:i-id` only filters tables that have the `i-id` '
+             'column, but not those affected by the filter (the `parse` table '
+             'would be filtered, but not the `results` table). e.g. '
              '--filter item "int(row[\'i-length\']) < 5"')
     add('-S', '--source-grammar', metavar='PATH')
     add('-T', '--target-grammar', metavar='PATH')

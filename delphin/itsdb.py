@@ -21,6 +21,16 @@ _default_datatype_values = {
 _default_field_values = {
     'i-wf': '1'
 }
+_primary_keys = [
+    ["i-id", "item"],
+    ["p-id", "phenomenon"],
+    ["ip-id", "item-phenomenon"],
+    ["s-id", "set"],
+    ["run-id", "run"],
+    ["parse-id", "parse"],
+    ["e-id", "edge"],
+    ["f-id", "fold"]
+]
 
 ##############################################################################
 # Non-class (i.e. static) functions
@@ -39,8 +49,8 @@ def get_relations(path):
                                Defaults to 'relations'.
     """
 
-    relations = defaultdict(list)
-    table_re = re.compile(r'^(\w.+):$')
+    relations = OrderedDict()
+    table_re = re.compile(r'^(?P<table>\w.+):$')
     field_re = re.compile(r'\s*(?P<name>\S+)'
                           r'(\s+(?P<props>[^#]+))?'
                           r'(\s*#\s*(?P<comment>.*)$)?')
@@ -50,7 +60,9 @@ def get_relations(path):
         table_match = table_re.search(line)
         field_match = field_re.search(line)
         if table_match is not None:
-            current_table = table_match.groups()[0]
+            current_table = table_match.group('table')
+            if current_table not in relations:
+                relations[current_table] = list()
         elif current_table is not None and field_match is not None:
             name = field_match.group('name')
             props = field_match.group('props').split()
@@ -67,8 +79,32 @@ def get_relations(path):
     return relations
 
 
+data_specifier_re = re.compile(r'(?P<table>[^:]+)?(:(?P<cols>.+))?$')
+def get_data_specifier(string):
+    """
+    Return a tuple (table, col) for some [incr tsdb()] data specifier.
+    For example:
+
+      item              -> ('item', None)
+      item:i-input      -> ('item', ['i-input'])
+      item:i-input@i-wf -> ('item', ['i-input', 'i-wf'])
+      :i-input          -> (None, ['i-input'])
+      (otherwise)       -> (None, None)
+    """
+    match = data_specifier_re.match(string)
+    if match is None:
+        return (None, None)
+    table = match.group('table')
+    if table is not None:
+        table = table.strip()
+    cols = match.group('cols')
+    if cols is not None:
+        cols = list(map(str.strip, cols.split('@')))
+    return (table, cols)
+
+
 def decode_row(line):
-    fields = line.split(_field_delimiter)
+    fields = line.strip().split(_field_delimiter)
     return list(map(unescape, fields))
 
 
@@ -129,7 +165,8 @@ def filter_rows(filters, rows):
     for row in rows:
         if all(condition(row, row.get(col))
                for (cols, condition) in filters
-               for col in cols):
+               for col in cols
+               if col is None or col in row):
             yield row
 
 
@@ -161,13 +198,14 @@ class TsdbProfile:
         Applicators apply after the filters.
     """
 
-    def __init__(self, path, filters=None, applicators=None):
+    def __init__(self, path, filters=None, applicators=None, index=True):
         self.root = path
         self.relations = get_relations(os.path.join(self.root,
                                                     _relations_filename))
 
         self.filters = defaultdict(list)
         self.applicators = defaultdict(list)
+        self._index = dict()
 
         for (table, cols, condition) in (filters or []):
             self.add_filter(table, cols, condition)
@@ -175,8 +213,11 @@ class TsdbProfile:
         for (table, cols, function) in (applicators or []):
             self.add_applicator(table, cols, condition)
 
+        if index:
+            self.build_index()
+
     def add_filter(self, table, cols, condition):
-        if table not in self.relations:
+        if table is not None and table not in self.relations:
             raise ItsdbError('Cannot add filter; table "{}" is not defined '
                              'by the relations file.'
                              .format(table))
@@ -199,6 +240,15 @@ class TsdbProfile:
                                  'defined by the relations file.'
                                  .format(col))
         self.applicators[table].append((cols, function))
+
+    def build_index(self):
+        self._index = dict()
+        for (keyname, table) in _primary_keys:
+            ids = set()
+            for row in self.read_table(table):
+                key = row[keyname]
+                ids.add(key)
+            self._index[keyname] = ids
 
     def table_relations(self, table_name):
         if table_name not in self.relations:
@@ -245,7 +295,14 @@ class TsdbProfile:
         Iterate through the rows in the [incr tsdb()] table, yielding
         only rows that pass any filters, and changed by any applicators.
         """
-        filters = self.filters[table_name]
+        filters = self.filters[None] + self.filters[table_name]
+        for f in self.relations[table_name]:
+            if f.key and f.name in self._index:
+                key = f.name
+                # why doesn't this work if the second one does?
+                # filters.append(([key], lambda row, x: x in self._index[key]))
+                filters.append(([None],
+                                lambda row, x: row[key] in self._index[key]))
         applicators = self.applicators[table_name]
         rows = self.read_raw_table(table_name)
         return filter_rows(filters, apply_rows(applicators, rows))
@@ -312,6 +369,7 @@ class TsdbProfile:
         if relations_filename:
             relations = get_relations(relations_filename)
         else:
+            relations_filename = os.path.join(self.root, _relations_filename)
             relations = self.relations
         shutil.copyfile(relations_filename,
                         os.path.join(profile_directory, _relations_filename))
