@@ -290,24 +290,27 @@ class TsdbProfile:
                 row = OrderedDict(zip(field_names, fields))
                 yield row
 
-    def read_table(self, table_name):
+    def read_table(self, table_name, key_filter=True):
         """
         Iterate through the rows in the [incr tsdb()] table, yielding
         only rows that pass any filters, and changed by any applicators.
         """
         filters = self.filters[None] + self.filters[table_name]
-        for f in self.relations[table_name]:
-            if f.key and f.name in self._index:
+        if key_filter:
+            for f in self.relations[table_name]:
                 key = f.name
-                # why doesn't this work if the second one does?
-                # filters.append(([key], lambda row, x: x in self._index[key]))
-                filters.append(([None],
-                                lambda row, x: row[key] in self._index[key]))
+                if f.key and (key in self._index):
+                    ids = self._index[key]
+                    # Can't keep local variables (like ids) in the scope of
+                    # the lambda expression, so make it a default argument.
+                    # Source: http://stackoverflow.com/a/938493/1441112
+                    function = lambda r, x, ids=ids: x in ids
+                    filters.append(([key], function))
         applicators = self.applicators[table_name]
         rows = self.read_raw_table(table_name)
         return filter_rows(filters, apply_rows(applicators, rows))
 
-    def select(self, table, cols, mode='list'):
+    def select(self, table, cols, mode='list', key_filter=True):
         """
         Return the data from the specified table and columns.
 
@@ -324,6 +327,7 @@ class TsdbProfile:
             dict            col to value map    {'i-id':'10','i-wf':'1'}
             row             [incr tsdb()] row   '10@1'
             ==============  ==================  ========================
+          key_filter: If True, filter rows by keys shared in other tables.
 
         Returns:
           A generator of data for each row in table. The data structure
@@ -342,7 +346,7 @@ class TsdbProfile:
                              .format(mode))
         if cols is None:
             cols = [c.name for c in self.relations[table]]
-        for row in self.read_table(table):
+        for row in self.read_table(table, key_filter=key_filter):
             data = [row.get(c) for c in cols]
             yield cast(cols, data)
 
@@ -355,6 +359,7 @@ class TsdbProfile:
                      gzip=gzip)
 
     def write_profile(self, profile_directory, relations_filename=None,
+                      key_filter=True,
                       append=False, gzip=False):
         """
         Using self.relations as a schema, write the profile data out to
@@ -378,6 +383,6 @@ class TsdbProfile:
             # (likely was a skeleton rather than a profile)
             if not os.path.exists(os.path.join(self.root, table_name)):
                 continue
-            rows = self.read_table(table_name)
+            rows = self.read_table(table_name, key_filter=key_filter)
             _write_table(profile_directory, table_name, rows, fields,
                          append=append, gzip=gzip)
