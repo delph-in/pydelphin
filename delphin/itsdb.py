@@ -211,7 +211,7 @@ class TsdbProfile:
             self.add_filter(table, cols, condition)
 
         for (table, cols, function) in (applicators or []):
-            self.add_applicator(table, cols, condition)
+            self.add_applicator(table, cols, function)
 
         if index:
             self.build_index()

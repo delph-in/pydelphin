@@ -128,9 +128,9 @@ def validate(args, cfg):
     #if len(args.commands) == 0:
     #    logging.error('At least one command is required.')
     #    valid = False
-    if args.output is None:
-        logging.error('An --output argument is required.')
-        valid = False
+    #if args.output is None:
+    #    logging.error('An --output argument is required.')
+    #    valid = False
     if args.input is None:
         logging.error('An --input argument is required.')
         valid = False
