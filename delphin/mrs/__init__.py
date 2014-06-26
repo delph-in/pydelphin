@@ -46,3 +46,58 @@ from .dmrs import Dmrs
 
 __all__ = [Hook, Lnk, Node, ElementaryPredication, MrsVariable,
            Argument, HandleConstraint, Pred, Link, Xmrs, Mrs, Dmrs]
+
+from . import simplemrs, mrx, dmrx, eds
+
+serialization_formats = {
+    'simplemrs': simplemrs,
+    'mrx': mrx,
+    'dmrx': dmrx,
+    'eds': eds
+}
+
+
+def convert(txt, src_fmt, tgt_fmt, single=True, **kwargs):
+    """
+    Convert a textual representation of \*MRS from one the src_fmt
+    representation to the tgt_fmt representation. By default, only
+    read and convert a single \*MRS object (e.g. for `mrx` this
+    starts at <mrs> and not <mrs-list>), but changing the `mode`
+    argument to `corpus` (alternatively: `list`) reads and converts
+    multiple \*MRSs.
+
+    Args:
+      txt: A string of semantic data.
+      src_fmt: The original representation format of txt.
+      tgt_fmt: The representation format to convert to.
+      single: If True, assume txt represents a single \*MRS, otherwise
+        read it as a corpus (or list) of \*MRSs.
+      kwargs: Any other keyword arguments to pass to the serializer
+        of the target format. Some options may include:
+        ============  ====================================
+         option        description
+        ============  ====================================
+        pretty_print  print with newlines and indentation
+        color         print with syntax highlighting
+        ============  ====================================
+
+    Returns:
+      A string in the target format.
+
+    Formats:
+      src_fmt and tgt_fmt may be one of the following:
+        =========  ============================
+         format     description
+        =========  ============================
+        simplemrs  The popular SimpleMRS format
+        mrx        The XML format of MRS
+        dmrx       The XML format of DMRS
+        =========  ============================
+    """
+    reader = serialization_formats[src_fmt.lower()]
+    writer = serialization_formats[tgt_fmt.lower()]
+    return writer.dumps(
+        reader.loads(txt, single=single),
+        single=single,
+        **kwargs
+    )
