@@ -19,9 +19,9 @@ def main(args):
     if not validate(args, cfg):
         sys.exit('Exiting.')
 
-    if args.list:
-        list_commands(cfg)
-        sys.exit()
+    # if args.list:
+    #     list_commands(cfg)
+    #     sys.exit()
 
     in_profile = prepare_input_profile(cfg)
 
@@ -90,16 +90,16 @@ def load_config(args):
     #     if os.path.isfile(in_rel_path):
     #         cfg['relations'] = in_rel_path
     # these overrides need some nesting, so do them separate
-    if 'variables' not in cfg:
-        cfg['variables'] = {}
-    if args.source_grammar:
-        cfg['variables']['source_grammar'] = args.source_grammar
-    if args.transfer_grammar:
-        cfg['variables']['transfer_grammar'] = args.transfer_grammar
-    if args.target_grammar:
-        cfg['variables']['target_grammar'] = args.target_grammar
-    if args.grammar:
-        cfg['variables']['grammar'] = args.grammar
+    # if 'variables' not in cfg:
+    #     cfg['variables'] = {}
+    # if args.source_grammar:
+    #     cfg['variables']['source_grammar'] = args.source_grammar
+    # if args.transfer_grammar:
+    #     cfg['variables']['transfer_grammar'] = args.transfer_grammar
+    # if args.target_grammar:
+    #     cfg['variables']['target_grammar'] = args.target_grammar
+    # if args.grammar:
+    #     cfg['variables']['grammar'] = args.grammar
 
     return cfg
 
@@ -122,19 +122,24 @@ def strip_json_comments(fh):
 
 def validate(args, cfg):
     """ Validate arguments not caught by argparse. """
-    if args.list:
-        return True
+    # if args.list:
+    #     return True
     valid = True
     #if len(args.commands) == 0:
     #    logging.error('At least one command is required.')
     #    valid = False
     if args.output is None:
-        logging.error('An --output-profile argument is required.')
+        logging.error('An --output argument is required.')
         valid = False
     if args.input is None:
-        logging.error('An --input-profile argument is required.')
+        logging.error('An --input argument is required.')
         valid = False
-    if not (cfg['relations'] or args.input) and args.output:
+    relations = cfg.get('relations')
+    if relations:
+        if not os.path.isfile(cfg['relations']):
+            logging.error('Relations file not found: {}'.format(relations))
+            valid = False
+    elif args.output and not args.input:
         logging.error('No relations file found for the output profile.')
         valid = False
     return valid
@@ -278,7 +283,7 @@ FILTER/APPLY EXPRESSIONS
         metavar='PATH',
         help='The [incr tsdb()] profile to output.')
     add('-r', '--relations',
-        metavar='PATH', type=argparse.FileType('r'),
+        metavar='PATH',
         help='The relations file to use for the output profile. If not '
              'specified and the --input-profile option is used, the '
              'relations file is copied from the input profile.')
