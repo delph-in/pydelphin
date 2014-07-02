@@ -1,0 +1,330 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import argparse
+import logging
+import json
+import re
+from collections import OrderedDict
+from copy import deepcopy
+from importlib import import_module
+from delphin import itsdb, mrs
+
+_rcfilename = '.pydelphinrc'
+
+
+def main(args):
+    cfg = load_config(args)
+    if not validate(args, cfg):
+        sys.exit('Exiting.')
+
+    # if args.list:
+    #     list_commands(cfg)
+    #     sys.exit()
+
+    in_profile = prepare_input_profile(cfg)
+
+    if args.output:
+        out_profile = prepare_output_profile(cfg, in_profile)
+
+    if args.select:
+        table, cols = itsdb.get_data_specifier(args.select)
+        print('\n'.join(
+            in_profile.select(
+                table, cols, mode='row', key_filter=cfg['cascade_filters']
+            )
+        ))
+
+    #for command in args.commands:
+    #    out_profile = None
+    #    cmd = make_command(command, cfg)
+    #    interface = get_interface(cmd['interface'])
+    #    interface.do(cmd)
+
+
+def load_config(args):
+    """
+    Load a configuration file. Configurations may be loaded from 3 places. In
+    order of precedence:
+       1. the argument of the -c (--config) option
+       2. a .pydelphinrc file in the current directory
+       3. a .pydelphinrc file in the $HOME directory
+    Only one of the above may be loaded. Additionally, configuration options
+    given explicitly at the command line override any loaded values.
+    """
+    if args.config is not None:
+        if not os.path.exists(args.config):
+            sys.exit('Config file not found: {}'.format(args.config))
+        # will be loaded below
+    elif os.path.exists(os.path.join(os.getcwd(), _rcfilename)):
+        args.config = os.path.join(os.getcwd(), _rcfilename)
+    elif os.path.exists(os.path.join(os.environ['HOME'], _rcfilename)):
+        args.config = os.path.join(args.output, _rcfilename)
+    else:
+        sys.exit('No config file found. Exiting.')
+
+    logging.debug('Loading the config file found at {}'.format(args.config))
+    cfg = json.loads(strip_json_comments(open(args.config,'r')),
+                     object_pairs_hook=OrderedDict)
+
+    # override the loaded values with those from the command-line
+    cfg.update({
+        'verbosity': args.verbosity,
+        'input': args.input or cfg.get('input'),
+        'output': args.output or cfg.get('output'),
+        'relations': args.relations or cfg.get('relations'),
+        'select': args.select or cfg.get('select'),
+        'applicators': args.applicators or cfg.get('applicators', []),
+        'filters': args.filters or cfg.get('filters', []),
+        'cascade_filters': args.cascade_filters or
+                           cfg.get('cascade_filters', False)
+    })
+    # if relations is still unset, try to get from input
+    # if not cfg.get('relations') and cfg.get('input'):
+    #     try:
+    #         rel_fn = config['itsdb']['relations_filename']
+    #     except KeyError:
+    #         rel_fn = 'relations'
+    #     in_rel_path = os.path.join(cfg['input'], rel_fn)
+    #     if os.path.isfile(in_rel_path):
+    #         cfg['relations'] = in_rel_path
+    # these overrides need some nesting, so do them separate
+    # if 'variables' not in cfg:
+    #     cfg['variables'] = {}
+    # if args.source_grammar:
+    #     cfg['variables']['source_grammar'] = args.source_grammar
+    # if args.transfer_grammar:
+    #     cfg['variables']['transfer_grammar'] = args.transfer_grammar
+    # if args.target_grammar:
+    #     cfg['variables']['target_grammar'] = args.target_grammar
+    # if args.grammar:
+    #     cfg['variables']['grammar'] = args.grammar
+
+    return cfg
+
+json_single_comment_re = re.compile(r'^\s*//')
+json_start_comment_re = re.compile(r'^\s*/\*')
+json_end_comment_re = re.compile(r'\*/\s*$')
+def strip_json_comments(fh):
+    in_comment = False
+    lines = []
+    for line in fh:
+        if in_comment:
+            if json_end_comment_re.search(line):
+                in_comment = False
+        elif json_start_comment_re.match(line):
+            in_comment = True
+        elif not json_single_comment_re.match(line):
+            lines.append(line)
+    return ''.join(lines)
+
+
+def validate(args, cfg):
+    """ Validate arguments not caught by argparse. """
+    # if args.list:
+    #     return True
+    valid = True
+    #if len(args.commands) == 0:
+    #    logging.error('At least one command is required.')
+    #    valid = False
+    #if args.output is None:
+    #    logging.error('An --output argument is required.')
+    #    valid = False
+    if args.input is None:
+        logging.error('An --input argument is required.')
+        valid = False
+    relations = cfg.get('relations')
+    if relations:
+        if not os.path.isfile(cfg['relations']):
+            logging.error('Relations file not found: {}'.format(relations))
+            valid = False
+    elif args.output and not args.input:
+        logging.error('No relations file found for the output profile.')
+        valid = False
+    return valid
+
+
+def list_commands(config):
+    print('Commands:')
+    for c, cmd in config['commands'].items():
+        print('  {}: {}'.format(c, cmd.get('description')))
+
+
+def prepare_input_profile(cfg):
+    filters = [make_itsdb_action(ds, f)
+               for ds, f in cfg.get('filters', [])]
+    applicators = [make_itsdb_action(ds, f)
+                   for ds, f in cfg.get('applicators', [])]
+    prof = itsdb.TsdbProfile(cfg['input'],
+                             filters=filters,
+                             applicators=applicators)
+    return prof
+
+
+def prepare_output_profile(cfg, in_profile):
+    outdir = cfg['output']
+    prepare_output_directory(outdir, cfg)
+    # copy relations file
+    relations = cfg.get('relations')
+    in_profile.write_profile(outdir,
+                             relations_filename=relations,
+                             key_filter=cfg['cascade_filters'])
+    prof = itsdb.TsdbProfile(outdir)
+    return prof
+
+
+def prepare_output_directory(path, config):
+    try:
+        os.makedirs(path, exist_ok=True)
+    except PermissionError:
+        logging.critical('Permission denied to create output directory: {}'
+                         .format(path))
+        sys.exit(1)
+    if not os.access(path, mode=os.R_OK|os.W_OK):
+        logging.critical('Cannot write to output directory: {}'
+                         .format(path))
+        sys.exit(1)
+    # copy configuration for documentation
+    # TODO: allow for multiple configs in same directory (e.g. (PID).rcfile)
+    rcpath = os.path.join(path, _rcfilename)
+    if not os.path.exists(rcpath):
+        json.dump(config, open(rcpath, 'w'), indent=2)
+    else:
+        logging.warning('Config file path already exists: {}'.format(rcpath))
+
+
+def make_command(command, cfg):
+    # make a copy so changes for this command do not affect later ones
+    cmd = deepcopy(cfg['commands'][command])
+    cpu_name = cmd['cpu']
+    cpu = cfg['cpus'][cpu_name]
+    task_name = cmd['task']
+    task = cpu['tasks'][task_name]
+    cmd['executable'] = cpu['executable']
+    cmd['arguments'] = cpu.get('arguments', []) + task.get('arguments', [])
+    cmd['interface'] = cpu.get('interface', 'generic')
+    # if grammar is given explicitly, use it, otherwise use
+    # task-specific grammar (already in the command)
+    if cfg.get('grammar'):
+        cmd['grammar'] = cfg['grammar']
+    return cmd
+
+
+def get_interface(interface_name):
+    return import_module('{}.{}'.format('delphin.interfaces', interface_name))
+
+
+def make_itsdb_action(data_specifier, function):
+    table, cols = itsdb.get_data_specifier(data_specifier)
+    function = make_lambda_function(function)
+    return (table, cols, function)
+
+
+def make_lambda_function(function):
+    return eval('lambda row, x:{}'.format(function))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description='''
+DATA SPECIFIERS
+  The --select, --apply, and --filter options take as a first argument
+  a string to specify the table and, if desired or necessary, the column
+  from a [incr tsdb()] profile to draw data from. These take the form:
+    TABLE[:COL[@COL..]]
+  For example, this selects an entire row from the `item` table:
+    item
+  while this selects the `i-id` and `i-input` columns for each row:
+    item:i-id@i-input
+  For --select and --filter, the COL specifiers are optional. For
+  --apply, at least one COL is required.
+
+FILTER/APPLY EXPRESSIONS
+  The --filter and --apply options take as a second argument a small
+  Python expression to be evaluated. This expression is turned into a
+  lambda expression like this:
+      f = lambda row, x: EXPR
+  Thus, EXPR can use `row`, which is the contents of the entire row as a
+  Python dictionary, and `x` is the value of the current column (if COLs
+  are specified, otherwise it is None). The type of `x` is a string for
+  --apply, and it will be a string for --filter unless an --apply
+  operation has recast it. For example, these are equivalent and select
+  all rows in `item` where the `i-id` field has an integer value less
+  than 10:
+    --filter item "int(row['i-id']) < 10"
+    --filter item:i-id "int(x) < 10"
+    --apply item:i-id "int(x)" --filter item:i-id "x < 10"
+  Note, however, that the last one with the --apply operation differs in
+  that the value of `item:i-id` remains an `int` after the filtering.
+        '''
+    )
+    add = parser.add_argument
+    add('-c', '--config',
+        metavar='PATH',
+        help='The configuration file describing possible commands.')
+    # the --list option is a specific kind of help that uses the config.
+    # When it is not used, --outdir and a command are required, but we
+    # can't use argparse to state the requirement (validate later)
+    #add('-l', '--list',
+    #    action='store_true',
+    #   help='List the commands allowed by the configuration.')
+    add('-v', '--verbose',
+        action='count', dest='verbosity', default=2,
+        help='Increase the verbosity (can be repeated: -vvv).')
+    add('-q', '--quiet',
+        action='store_const', const=0, dest='verbosity',
+        help='Set verbosity to the quietest level.')
+    add('-i', '--input',
+        metavar='PATH',
+        help='The [incr tsdb()] profile to use as input.')
+    add('-o', '--output',
+        metavar='PATH',
+        help='The [incr tsdb()] profile to output.')
+    add('-r', '--relations',
+        metavar='PATH',
+        help='The relations file to use for the output profile. If not '
+             'specified and the --input-profile option is used, the '
+             'relations file is copied from the input profile.')
+    add('-s', '--select',
+        metavar='TBL[:COL[@COL..]]',
+        help='Print the contents of each row in TBL. If COLs are specified, '
+             'only print contents of these columns. See also the section '
+             'about DATA SPECIFIERS. e.g. '
+             '--select item:i-input@i-wf')
+    add('-a', '--apply',
+        nargs=2, metavar=('TBL:COL[@COL..]', 'EXPR'),
+        action='append', dest='applicators',
+        help='Apply EXPR to the contents of COL for each COL for each row '
+             'in TBL. See also the section about DATA SPECIFIERS and '
+             'FILTER/APPLY EXPRESSIONS. e.g. '
+             '--apply result:mrs "mrs.convert(x, \'mrx\', \'dmrx\')"')
+    add('-f', '--filter',
+        nargs=2, metavar=('TBL[:COL[@COL..]]', 'EXPR'),
+        action='append', dest='filters',
+        help='Ignore rows where EXPR returns a non-true value. TBL restricts '
+             'the filter to rows of that table. Specifying COLs makes the '
+             'filter run for each COL, but only if the COL exists in the '
+             'table. It is an error if neither TBL nor COLs are specified. '
+             'See also the section about DATA SPECIFIERS and FILTER/APPLY '
+             'EXPRESSIONS. Filters do not cascade by default (See '
+             '--cascade-filters). e.g. '
+             '--filter item "int(row[\'i-length\']) < 5"')
+    add('--cascade-filters',
+        action='store_true',
+        help='If --filter is used, the filter applies to dependent tables '
+             'as well. For example, `parse` rows sharing an `i-id` with a '
+             'filtered `item` will be filtered as well. This effect is '
+             'transitive, so `result` rows sharing a `parse-id` with a '
+             '`parse` row filtered by the cascade will also be filtered.')
+    #add('-S', '--source-grammar', metavar='PATH')
+    #add('-T', '--target-grammar', metavar='PATH')
+    #add('-X', '--transfer-grammar', metavar='PATH')
+    #add('-G', '--grammar', metavar='PATH')
+    #add('commands', nargs='*')
+
+    args = parser.parse_args()
+    logging.basicConfig(level=50-(args.verbosity*10))
+
+    main(args)

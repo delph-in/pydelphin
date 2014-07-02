@@ -193,6 +193,21 @@ class XmrsPath(object):
         return self.path
 
 
+def explore_paths(xmrs):
+    if xmrs.ltop is None:
+        raise Exception('Cannot explore without an LTOP')
+    ltop_nodeid = xmrs.find_scope_head(xmrs.ltop)
+    return _explore_paths(xmrs, ltop_nodeid, [])
+
+def _explore_paths(xmrs, nodeid, visited):
+    args = [tuple([a.argname] + list(get_arg_op_and_target(xmrs, a)))
+            for a in xmrs.get_outbound_args(nodeid, allow_unbound=False)]
+    argstr = ('{}' if len(args) == 1 else '({})').format(' & '.join(
+        ':{}{}'.format(name, op) for name, op, tgt in args
+    ))
+    return ['{}{}'.format(str(xmrs.get_ep(nodeid).pred), argstr)]
+
+
 def get_paths(xmrs, **kwargs):
     for nid in xmrs.nodeids:
         for (eppath, preds) in get_ep_paths(xmrs, nid, **kwargs):
