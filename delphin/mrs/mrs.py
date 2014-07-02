@@ -71,8 +71,8 @@ def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
     # if there's no MRS lnk, get the min cfrom and max cto (if not using
     # charspan lnks, it will get -1 and -1 anyway)
     if lnk is None:
-        lnk = Lnk.charspan(min(ep.cfrom for ep in rels),
-                           max(ep.cto for ep in rels))
+        lnk = Lnk.charspan(min([ep.cfrom for ep in rels] or [-1]),
+                           max([ep.cto for ep in rels] or [-1]))
     return Xmrs(hook=hook, eps=rels,
                 hcons=hcons, icons=icons,
                 lnk=lnk, surface=surface, identifier=identifier)
