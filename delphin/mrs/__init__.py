@@ -47,13 +47,14 @@ from .dmrs import Dmrs
 __all__ = [Hook, Lnk, Node, ElementaryPredication, MrsVariable,
            Argument, HandleConstraint, Pred, Link, Xmrs, Mrs, Dmrs]
 
-from . import simplemrs, mrx, dmrx, eds
+from . import simplemrs, mrx, dmrx, eds, simpledmrs
 
 serialization_formats = {
     'simplemrs': simplemrs,
     'mrx': mrx,
     'dmrx': dmrx,
-    'eds': eds
+    'eds': eds,
+    'simpledmrs': simpledmrs
 }
 
 
