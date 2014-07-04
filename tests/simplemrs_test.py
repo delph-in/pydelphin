@@ -3,8 +3,8 @@ from collections import OrderedDict
 from delphin.mrs import (Mrs, ElementaryPredication as EP, Pred, Argument,
                          MrsVariable, Lnk)
 from delphin.mrs.hcons import qeq
-from delphin.codecs import simplemrs
-from delphin.codecs.simplemrs import tokenize # for convenience
+from delphin.mrs import simplemrs
+from delphin.mrs.simplemrs import tokenize # for convenience
 from delphin._exceptions import MrsDecodeError
 
 # "dogs sleep." with ACE and the ERG
