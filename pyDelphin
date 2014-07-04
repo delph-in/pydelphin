@@ -29,12 +29,18 @@ def main(args):
         out_profile = prepare_output_profile(cfg, in_profile)
 
     if args.select:
-        table, cols = itsdb.get_data_specifier(args.select)
-        print('\n'.join(
-            in_profile.select(
-                table, cols, mode='row', key_filter=cfg['cascade_filters']
-            )
-        ))
+        keyfilter = cfg['cascade_filters']
+        if args.join:
+            rows = in_profile.join(*args.join, key_filter=keyfilter)
+            # Adding : is just for robustness. We need something like
+            # :table:col@table@col, but may have gotten table:col@table@col
+            if not args.select.startswith(':'):
+                args.select = ':' + args.select
+            table, cols = itsdb.get_data_specifier(args.select)
+        else:
+            table, cols = itsdb.get_data_specifier(args.select)
+            rows = in_profile.read_table(table, key_filter=keyfilter)
+        print('\n'.join(itsdb.select_rows(cols, rows, mode='row')))
 
     #for command in args.commands:
     #    out_profile = None
@@ -318,6 +324,14 @@ FILTER/APPLY EXPRESSIONS
              'filtered `item` will be filtered as well. This effect is '
              'transitive, so `result` rows sharing a `parse-id` with a '
              '`parse` row filtered by the cascade will also be filtered.')
+    add('--join',
+        nargs=2, metavar=('TBL1', 'TBL2'),
+        help='Join TBL1 and TBL2 on the first key shared by both. A --select '
+             'operation can then omit the TBL of the data specifier in order '
+             'to select from the joined table (--apply and --filter still '
+             'operate on the original profile), and COL specifiers must be '
+             'prefixed with the respective table. e.g. '
+             '--join parse result --select parse:i-id@result:mrs')
     #add('-S', '--source-grammar', metavar='PATH')
     #add('-T', '--target-grammar', metavar='PATH')
     #add('-X', '--transfer-grammar', metavar='PATH')

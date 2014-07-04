@@ -179,6 +179,23 @@ def apply_rows(applicators, rows):
         yield row
 
 
+def select_rows(cols, rows, mode='list'):
+    mode = mode.lower()
+    if mode == 'list':
+        cast = lambda cols, data: data
+    elif mode == 'dict':
+        cast = lambda cols, data: dict(zip(cols, data))
+    elif mode == 'row':
+        cast = lambda cols, data: encode_row(data)
+    else:
+        raise ItsdbError('Invalid mode for select operation: {}\n'
+                         '  Valid options include: list, dict, row'
+                         .format(mode))
+    for row in rows:
+        data = [row.get(c) for c in cols]
+        yield cast(cols, data)
+
+
 ##############################################################################
 # Profile class
 
@@ -242,7 +259,7 @@ class TsdbProfile:
         self.applicators[table].append((cols, function))
 
     def build_index(self):
-        self._index = dict()
+        self._index = {key: None for key, _ in _primary_keys}
         for (keyname, table) in _primary_keys:
             ids = set()
             for row in self.read_table(table):
@@ -260,9 +277,14 @@ class TsdbProfile:
 
     def _open_table(self, table_name):
         tbl_filename = os.path.join(self.root, table_name)
+        gz_filename = tbl_filename + '.gz'
+        if os.path.exists(tbl_filename) and os.path.exists(gz_filename):
+            logging.warning('Both gzipped and plaintext files for table "{}" '
+                            'were found; attempting to use the plaintext one.'
+                            .format(table_name))
         if os.path.exists(tbl_filename):
             f = open(tbl_filename)
-        elif os.path.exists(tbl_filename + '.gz'):
+        elif os.path.exists(gz_filename):
             f = gzip.open(tbl_filename + '.gz', mode='rt')
         else:
             raise ItsdbError(
@@ -299,7 +321,7 @@ class TsdbProfile:
         if key_filter:
             for f in self.relations[table_name]:
                 key = f.name
-                if f.key and (key in self._index):
+                if f.key and (self._index.get(key) is not None):
                     ids = self._index[key]
                     # Can't keep local variables (like ids) in the scope of
                     # the lambda expression, so make it a default argument.
@@ -307,7 +329,7 @@ class TsdbProfile:
                     function = lambda r, x, ids=ids: x in ids
                     filters.append(([key], function))
         applicators = self.applicators[table_name]
-        rows = self.read_raw_table(table_name)
+        rows = list(self.read_raw_table(table_name))
         return filter_rows(filters, apply_rows(applicators, rows))
 
     def select(self, table, cols, mode='list', key_filter=True):
@@ -333,22 +355,28 @@ class TsdbProfile:
           A generator of data for each row in table. The data structure
           is specified by the `mode` parameter.
         """
-        mode = mode.lower()
-        if mode == 'list':
-            cast = lambda cols, data: data
-        elif mode == 'dict':
-            cast = lambda cols, data: dict(zip(cols, data))
-        elif mode == 'row':
-            cast = lambda cols, data: encode_row(data)
-        else:
-            raise ItsdbError('Invalid mode for select operation: {}\n'
-                             '  Valid options include: list, dict, row'
-                             .format(mode))
         if cols is None:
             cols = [c.name for c in self.relations[table]]
-        for row in self.read_table(table, key_filter=key_filter):
-            data = [row.get(c) for c in cols]
-            yield cast(cols, data)
+        rows = self.read_table(table, key_filter=key_filter)
+        for row in select_rows(cols, rows, mode=mode):
+            yield row
+
+    def join(self, table1, table2, key_filter=True):
+        get_keys = lambda t: (f.name for f in self.relations[t] if f.key)
+        keys = set(get_keys(table1)).intersection(get_keys(table2))
+        key = keys.pop()
+        if key is None:
+            raise StopIteration
+        for row1 in self.read_table(table1, key_filter=key_filter):
+            for row2 in self.read_table(table2, key_filter=key_filter):
+                if row1[key] == row2[key]:
+                    joinedrow = OrderedDict(
+                        [('{}:{}'.format(table1, k), v)
+                         for k, v in row1.items()] +
+                        [('{}:{}'.format(table2, k), v)
+                         for k, v in row2.items()]
+                    )
+                    yield joinedrow
 
     def write_table(self, table_name, rows, append=False, gzip=False):
         _write_table(self.root,
