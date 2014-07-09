@@ -45,6 +45,8 @@ def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
     >>>     hcons=[HandleConstraint(ltop, 'qeq', rain_label)]
     >>> )
     """
+    return Xmrs.from_mrs(Hook(ltop=ltop, index=index), rels, hcons, icons,
+                         lnk, surface, identifier)
     # default values or run generators
     rels = list(rels or [])
     hcons = list(hcons or [])
