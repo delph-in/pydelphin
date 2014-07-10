@@ -30,6 +30,21 @@ codecs to read and write such representations can be found in
 #     scope. When more than one |EP| share a label, they share a scope,
 #     and are said to be in an **EP Conjunction**.
 
+# check dependencies
+
+import imp
+try:
+    imp.find_module('networkx')
+except ImportError as ex:
+    msg = '''\n
+The `networkx` package is required for the `delphin.mrs` package.
+You can install `networkx` in several ways:
+  * With your operating system\'s package manager
+    (e.g. `apt-get install python-networkx`)
+  * With PIP (e.g. `pip install networkx`)
+  * Or from the project homepage: http://networkx.github.io'''
+    raise ImportError(msg) from ex
+
 # these may be order-sensitive
 from .hook import Hook
 from .lnk import Lnk
