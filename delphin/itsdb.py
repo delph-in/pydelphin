@@ -118,10 +118,16 @@ def escape(string):
     return string
 
 
+_character_unescapes = {'\\s': _field_delimiter, '\\n': '\n', '\\\\': '\\'}
+_unescape_func = lambda m: _character_unescapes[m.group(0)]
+_unescape_re = re.compile(r'(\\s|\\n|\\\\)')
+
+
 def unescape(string):
-    for char, esc in _character_escapes:
-        string = string.replace(esc, char)
-    return string
+    return _unescape_re.sub(_unescape_func, string, re.UNICODE)
+    # for char, esc in _character_escapes:
+    #     string = string.replace(esc, char)
+    # return string
 
 
 def _write_table(profile_dir, table_name, rows, fields,
@@ -329,7 +335,7 @@ class TsdbProfile:
                     function = lambda r, x, ids=ids: x in ids
                     filters.append(([key], function))
         applicators = self.applicators[table_name]
-        rows = list(self.read_raw_table(table_name))
+        rows = self.read_raw_table(table_name)
         return filter_rows(filters, apply_rows(applicators, rows))
 
     def select(self, table, cols, mode='list', key_filter=True):
@@ -367,16 +373,21 @@ class TsdbProfile:
         key = keys.pop()
         if key is None:
             raise StopIteration
+        # this join method stores the whole of table2 in memory, but it is
+        # MUCH faster than a nested loop method. Most profiles will fit in
+        # memory anyway, so it's a decent tradeoff
+        table2_data = defaultdict(list)
+        for row in self.read_table(table2, key_filter=key_filter):
+            table2_data[row[key]].append(row)
         for row1 in self.read_table(table1, key_filter=key_filter):
-            for row2 in self.read_table(table2, key_filter=key_filter):
-                if row1[key] == row2[key]:
-                    joinedrow = OrderedDict(
-                        [('{}:{}'.format(table1, k), v)
-                         for k, v in row1.items()] +
-                        [('{}:{}'.format(table2, k), v)
-                         for k, v in row2.items()]
-                    )
-                    yield joinedrow
+            for row2 in table2_data.get(row1[key], []):
+                joinedrow = OrderedDict(
+                    [('{}:{}'.format(table1, k), v)
+                     for k, v in row1.items()] +
+                    [('{}:{}'.format(table2, k), v)
+                     for k, v in row2.items()]
+                )
+                yield joinedrow
 
     def write_table(self, table_name, rows, append=False, gzip=False):
         _write_table(self.root,

@@ -118,3 +118,10 @@ def convert(txt, src_fmt, tgt_fmt, single=True, **kwargs):
         single=single,
         **kwargs
     )
+
+
+def sorted_eps(eps):
+    return sorted(eps, key=lambda ep: (ep.cfrom,
+                                       ep.cto,
+                                       -ep.is_quantifier(),
+                                       ep.pred.lemma))

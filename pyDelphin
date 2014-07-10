@@ -40,7 +40,8 @@ def main(args):
         else:
             table, cols = itsdb.get_data_specifier(args.select)
             rows = in_profile.read_table(table, key_filter=keyfilter)
-        print('\n'.join(itsdb.select_rows(cols, rows, mode='row')))
+        for row in itsdb.select_rows(cols, rows, mode='row'):
+            print(row)
 
     #for command in args.commands:
     #    out_profile = None
@@ -162,9 +163,11 @@ def prepare_input_profile(cfg):
                for ds, f in cfg.get('filters', [])]
     applicators = [make_itsdb_action(ds, f)
                    for ds, f in cfg.get('applicators', [])]
+    index = len(filters) > 0
     prof = itsdb.TsdbProfile(cfg['input'],
                              filters=filters,
-                             applicators=applicators)
+                             applicators=applicators,
+                             index=index)
     return prof
 
 

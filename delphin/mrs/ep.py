@@ -5,13 +5,6 @@ from .var import AnchorMixin
 from .config import (CVARG, CONSTARG)
 
 
-def sort_eps(eps):
-    return sorted(eps, key=lambda ep: (ep.cfrom,
-                                       ep.cto,
-                                       -ep.is_quantifier(),
-                                       ep.pred.lemma))
-
-
 class ElementaryPredication(LnkMixin, AnchorMixin):
     """
     An elementary predication (EP) combines a predicate with various
