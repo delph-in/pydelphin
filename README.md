@@ -155,8 +155,9 @@ $ ./pyDelphin --input ~/logon/dfki/jacy/tsdb/gold/mrs \
 
 ## Installation and Requirements
 
-pyDelphin is developed for [Python 3](http://python.org/download/). At
-this time, no third-party libraries are necessary.
+pyDelphin is developed for [Python 3](http://python.org/download/). The
+[NetworkX](http://networkx.github.io/) library is necessary for the MRS
+package. At this time, no other third-party libraries are necessary.
 
 Likely pyDelphin does not need to be installed to be used. You can
 adjust `PYTHONPATH` to include the pyDelphin directory, or copy the
