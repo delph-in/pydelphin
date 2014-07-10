@@ -37,11 +37,12 @@ try:
     imp.find_module('networkx')
 except ImportError as ex:
     msg = '''\n
-The `networkx` package is required for the `delphin.mrs` package.
+The `networkx` package is required for the `delphin.mrs`   package.
 You can install `networkx` in several ways:
-  * With your operating system\'s package manager
-    (e.g. `apt-get install python-networkx`)
-  * With PIP (e.g. `pip install networkx`)
+  * With your operating system\'s package manager (e.g.
+    `apt-get install python3-networkx` or `pacman -S python-networkx)
+  * With PIP (e.g. `pip install networkx`); make sure you're installing
+    for Python3 (you may need to use `pip3` instead of `pip`)
   * Or from the project homepage: http://networkx.github.io'''
     raise ImportError(msg) from ex
 
