@@ -311,7 +311,7 @@ class Xmrs(LnkMixin):
             # head = self.labelset_head(lbl)
             # for n in ns:
             #     links.append(Link(head, n, post=EQ_POST))
-        return links
+        return sorted(links, key=lambda link: (link.start, link.end))
 
     # query methods
     def select_nodes(self, nodeid=None, pred=None):
@@ -466,95 +466,3 @@ class Xmrs(LnkMixin):
 
     # def get_hcons(self, hi_var):
     #     return self._var_to_hcons.get(hi_var)
-
-    # def _ltop_links(self):
-    #     ltop = self.ltop
-    #     if ltop is None:
-    #         raise StopIteration
-    #     if ltop in self._label_to_nids:
-    #         for target in self.label_set_heads(ltop):
-    #             yield Link(LTOP_NODEID, target, post=HEQ_POST)
-    #     elif ltop in self._var_to_hcons:
-    #         for target in self.qeq_targets(ltop):
-    #             yield Link(LTOP_NODEID, target, post=H_POST)
-
-    # def _variable_links(self):
-        # get_cv = self.get_cv
-        # for srcnid, ep in self._nid_to_ep.items():
-        #     for arg in ep.args:
-        #         argtype = arg.type
-        #         var = arg.value
-        #         if argtype == VARIABLE_ARG and var in self._cv_to_nid:
-        #             tgtnid = self._cv_to_nid[var]
-        #             if ep.label == self.get_ep(tgtnid).label:
-        #                 post = EQ_POST
-        #             else:
-        #                 post = NEQ_POST
-        #             tgtnids = [tgtnid]
-        #         elif argtype == LABEL_ARG:
-        #             tgtnids = list(self.label_set_heads(var))
-        #             post = HEQ_POST
-        #         elif argtype == HCONS_ARG:
-        #             tgtnids = list(self.qeq_targets(var))
-        #             post = H_POST
-        #         else:
-        #             continue  # INTRINSIC_ARG or CONSTANT_ARG
-        #         # special case for quantifiers
-        #         srccv = ep.cv
-        #         qfer_match = lambda x: get_cv(x) == srccv
-        #         tgtqfers = list(filter(qfer_match, tgtnids))
-        #         if len(tgtqfers) > 1:
-        #             logging.error('Multiple quantifiers: {}'
-        #                           .format(tgtqfers))
-        #         elif len(tgtqfers) == 1:
-        #             tgtnids = [tgtqfers[0]]
-        #         for tgtnid in tgtnids:
-        #             yield Link(srcnid, tgtnid, arg.argname, post)
-
-    # def _eq_links(self, links):
-    #     """
-    #     Return the list of /EQ links with no pre-slash argument name.
-    #     These links are necessary for expressing label equality when it
-    #     cannot be expressed through variable links. For example, in "The
-    #     dog whose tail wagged barked", there will be an /EQ link between
-    #     _wag_v_1 and _dog_n_1 (since they share a scope but dog is not
-    #     an argument of wag, at least in the expected parse).
-    #     """
-    #     g = self._graph
-    #     for label in g.labels:
-    #         in_degs = g.subgraph(nids).in_degree(nids)
-    #         unattested_eqs = list(filter(lambda p: p[1] == 0,
-    #                                      .items()))
-    #     # First find the subgraphs whose label equality is given by
-    #     # variable links.
-    #     lbl_groups = defaultdict(lambda: defaultdict(set))
-    #     get_label = self.get_label
-    #     for link in filter(lambda x: x.post == EQ_POST, links):
-    #         start = link.start
-    #         end = link.end
-    #         lbl = get_label(start)
-    #         groups = lbl_groups[lbl]
-    #         new_group = groups.get(start, {start}) | groups.get(end, {end})
-    #         # need to update references for all in new_group
-    #         for nid in new_group:
-    #             lbl_groups[lbl][nid] = new_group
-    #     # add any in a label set that aren't evidenced by links
-    #     for lbl, nids in self._label_to_nids.items():
-    #         groups = lbl_groups[lbl]
-    #         for nid in nids:
-    #             if nid not in groups:
-    #                 groups[nid] = {nid}
-    #     # When there's more than 1 group per label, we need /EQ links.
-    #     # The nodes to use are selected simply by CFROM order (if
-    #     # available).
-    #     for lbl, groups in lbl_groups.items():
-    #         # Change nid:set to [set] where the set is the same object
-    #         # FIXME: this is an awful way to do it.. is there a better way?
-    #         groups = list({id(grp): grp for grp in groups.values()}.values())
-    #         if len(groups) < 2:
-    #             continue
-    #         targets = [min(grp, key=lambda x: self._nid_to_ep[x].cfrom)
-    #                    for grp in groups]
-    #         start = targets[0]
-    #         for end in targets[1:]:
-    #             yield Link(start, end, post=EQ_POST)
