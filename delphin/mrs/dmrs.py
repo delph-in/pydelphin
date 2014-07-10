@@ -61,9 +61,9 @@ def Dmrs(nodes=None, links=None,
         eps.append(ep)
 
     icons = None  # future feature
-    return Xmrs(hook=hook, eps=eps,
-                hcons=hcons, icons=icons,
-                lnk=lnk, surface=surface, identifier=identifier)
+    return Xmrs.from_mrs(hook=hook, rels=eps,
+                         hcons=hcons, icons=icons,
+                         lnk=lnk, surface=surface, identifier=identifier)
 
 
 def _make_labels(nodes, links, vgen):

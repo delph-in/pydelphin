@@ -1,5 +1,9 @@
 from itertools import chain, combinations
+from operator import itemgetter
 from networkx import DiGraph
+
+first = itemgetter(0)
+second = itemgetter(1)
 
 
 class AccumulationDict(dict):
@@ -49,13 +53,16 @@ def powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
-
 class XmrsDiGraph(DiGraph):
     def __init__(self, data=None, name='', **attr):
         DiGraph.__init__(self, data=data, name=name, attr=attr)
         self.nodeids = [] if data is None else data.nodeids
+        self.labels = set([] if data is None else data.labels)
 
     def subgraph(self, nbunch):
         sg = DiGraph.subgraph(self, nbunch)
         sg.nodeids = list(nbunch)
+        node = sg.node
+        sg.labels = set(node[nid]['label'] for nid in nbunch
+                        if 'label' in node[nid])
         return XmrsDiGraph(sg)
