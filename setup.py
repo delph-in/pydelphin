@@ -40,5 +40,8 @@ setup(
     author_email='goodman.m.w@gmail.com',
     description='Libraries and scripts for DELPH-IN data.',
     packages=['delphin'],
-    cmdclass={'test':TestCommand}
+    cmdclass={'test':TestCommand},
+    install_requires=[
+        'networkx',
+    ]
 )
