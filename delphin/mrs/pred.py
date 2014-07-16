@@ -177,9 +177,7 @@ class Pred(object):
         return (match.group('lemma'), match.group('pos'),
                 match.group('sense'), match.group('end'))
 
-    def is_quantifier(self):
-        return self.pos == QUANTIFIER_SORT
-
+    @property
     def short_form(self):
         """
         Return the pred string without quotes or a _rel suffix.
@@ -191,3 +189,6 @@ class Pred(object):
             '_cat_n_1'
         """
         return self.string.strip('"').rsplit('_', 1)[0]
+`
+    def is_quantifier(self):
+        return self.pos == QUANTIFIER_SORT

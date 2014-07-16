@@ -37,7 +37,7 @@ def serialize(ms, pretty_print=True, color=False, **kwargs):
                 ed.format(
                     membership=connected,  # if m.is_connected(ep.nodeid)?
                     id=ep.cv if not ep.is_quantifier() else next(q_ids),
-                    pred=ep.pred.short_form(),
+                    pred=ep.pred.short_form,
                     lnk=str(ep.lnk),
                     carg=carg.format(constant=ep.carg) if ep.carg else '',
                     dep_list=(

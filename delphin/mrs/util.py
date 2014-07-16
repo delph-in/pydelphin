@@ -61,8 +61,8 @@ class XmrsDiGraph(DiGraph):
 
     def subgraph(self, nbunch):
         sg = DiGraph.subgraph(self, nbunch)
-        sg.nodeids = list(nbunch)
         node = sg.node
+        sg.nodeids = [nid for nid in nbunch if 'ep' in node[nid]]
         sg.labels = set(node[nid]['label'] for nid in nbunch
                         if 'label' in node[nid])
         return XmrsDiGraph(sg)

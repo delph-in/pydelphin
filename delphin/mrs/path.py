@@ -219,7 +219,7 @@ def get_ep_paths(xmrs, nid, path=None, max_depth=-1, allow_bare_args=False):
     if max_depth == 0:
         raise StopIteration
     pred = xmrs.get_pred(nid)
-    path = '{}{}'.format(path or '', pred.short_form())
+    path = '{}{}'.format(path or '', pred.short_form)
     args = xmrs.get_outbound_args(nid, allow_unbound=False)
     for argset in powerset(args):
         numargs = len(argset)

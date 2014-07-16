@@ -358,12 +358,13 @@ class Xmrs(LnkMixin):
                 nids.append(nid)
         return nids
 
-    # def get_outbound_args(self, nodeid, allow_unbound=True):
-    #     for arg in self.get_args(nodeid):
-    #         if arg.argname == CVARG:
-    #             continue
-    #         if allow_unbound or arg.value in self.introduced_variables:
-    #             yield arg
+    def get_outbound_args(self, nodeid, allow_unbound=True):
+        g = self._graph
+        for src, tgt, data in g.out_edges_iter(nodeid, data=True):
+            if src == tgt:
+                continue
+            if allow_unbound or tgt in g.nodeids or tgt in g.labels:
+                yield data['arg']
 
     # def get_quantifier(self, nodeid):
     #     try:
@@ -401,7 +402,10 @@ class Xmrs(LnkMixin):
             return max(sg.in_degree(heads).items(), key=second)[0]
 
     def subgraph(self, nodeids):
-        sg = self._graph.subgraph(nodeids).copy()
+        g = self._graph
+        labels = set(g.node[nid]['label'] for nid in nodeids)
+        cvs = set(g.node[nid]['ep'].cv for nid in nodeids)
+        sg = g.subgraph(chain(labels, cvs, nodeids)).copy()
         # may need some work to calculate hook or lnk here
         return Xmrs(graph=sg)
 
