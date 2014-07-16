@@ -189,6 +189,6 @@ class Pred(object):
             '_cat_n_1'
         """
         return self.string.strip('"').rsplit('_', 1)[0]
-`
+
     def is_quantifier(self):
         return self.pos == QUANTIFIER_SORT
