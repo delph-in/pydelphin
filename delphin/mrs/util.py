@@ -60,6 +60,7 @@ class XmrsDiGraph(DiGraph):
         self.labels = set([] if data is None else data.labels)
 
     def subgraph(self, nbunch):
+        nbunch = list(nbunch)
         sg = DiGraph.subgraph(self, nbunch)
         node = sg.node
         sg.nodeids = [nid for nid in nbunch if 'ep' in node[nid]]

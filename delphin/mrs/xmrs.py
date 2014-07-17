@@ -79,7 +79,7 @@ class Xmrs(LnkMixin):
         identifier: a discourse-utterance id
     """
 
-    def __init__(self, hook=None, graph=None,
+    def __init__(self, graph=None, hook=None,
                  lnk=None, surface=None, identifier=None):
         self._graph = graph
 
@@ -125,7 +125,7 @@ class Xmrs(LnkMixin):
         if lnk is None:
             lnk = Lnk.charspan(min([ep.cfrom for ep in eps] or [-1]),
                                max([ep.cto for ep in eps] or [-1]))
-        return cls(hook, graph, lnk, surface, identifier)
+        return cls(graph, hook, lnk, surface, identifier)
 
     def __repr__(self):
         if self.surface is not None:
@@ -158,7 +158,7 @@ class Xmrs(LnkMixin):
         """
         The list of |MrsVariables|.
         """
-        return self.introduced_variables().union(
+        return self.introduced_variables.union(
             [self.hook.ltop, self.hook.index] +
             [arg.value for ep in self.eps for arg in ep.args
              if isinstance(arg.value, MrsVariable)] +
@@ -173,8 +173,8 @@ class Xmrs(LnkMixin):
         labels, or holes (the HI variable of a QEQ).
         """
         return set(
-            chain.from_iterable([(ep.cv, ep.label) for ep in self.eps]) +
-            [hc.hi for hc in self.hcons]
+            list(chain.from_iterable([(ep.cv, ep.label) for ep in self.eps]))
+            + [hc.hi for hc in self.hcons]
         )
 
     @property
@@ -349,9 +349,9 @@ class Xmrs(LnkMixin):
     def select_nodeids(self, cv=None, label=None, pred=None):
         g = self._graph
         nids = []
-        datamatch = lambda d: (cv is None or data['ep'].cv == cv and
-                               pred is None or data['ep'].pred == pred and
-                               label is None or data['label'] == label)
+        datamatch = lambda d: ((cv is None or d['ep'].cv == cv) and
+                               (pred is None or d['ep'].pred == pred) and
+                               (label is None or d['label'] == label))
         for nid in g.nodeids:
             data = g.node[nid]
             if datamatch(data):
@@ -405,7 +405,7 @@ class Xmrs(LnkMixin):
         g = self._graph
         labels = set(g.node[nid]['label'] for nid in nodeids)
         cvs = set(g.node[nid]['ep'].cv for nid in nodeids)
-        sg = g.subgraph(chain(labels, cvs, nodeids)).copy()
+        sg = g.subgraph(chain(labels, cvs, nodeids))
         # may need some work to calculate hook or lnk here
         return Xmrs(graph=sg)
 
@@ -417,7 +417,7 @@ class Xmrs(LnkMixin):
         )
         for sg in map(self.subgraph, product(*nidsets)):
             if connected is not None and sg.is_connected() != connected:
-                    continue
+                continue
             yield sg
 
     def is_connected(self):
