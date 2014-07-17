@@ -41,7 +41,7 @@ def install():
         
 def parse(sent, onlyMRS=False, parameters="", bestparse=False):
     if onlyMRS == True:
-            parameters+=" -T"
+            parameters+=" -T "
     pipe_sent_in = "echo " +sent+" | "
     cmd = pipe_sent_in + ace_cmd +" 2> silence"
     ace_output = [p.strip() for p in os.popen(cmd) 
