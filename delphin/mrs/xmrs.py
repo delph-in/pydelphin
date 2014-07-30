@@ -120,11 +120,6 @@ class Xmrs(LnkMixin):
         hcons = list(hcons or [])
         icons = list(icons or [])
         graph = build_graph(hook, eps, args, hcons, icons)
-        # if there's no top-level lnk, get the min cfrom and max cto (if
-        # not using charspan lnks, it will get -1 and -1 anyway)
-        if lnk is None:
-            lnk = Lnk.charspan(min([ep.cfrom for ep in eps] or [-1]),
-                               max([ep.cto for ep in eps] or [-1]))
         return cls(graph, hook, lnk, surface, identifier)
 
     def __repr__(self):

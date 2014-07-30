@@ -16,7 +16,11 @@ from delphin.mrs.config import (HANDLESORT,
                                 CHARSPAN, CHARTSPAN, EDGE, TOKENS)
 from delphin._exceptions import MrsDecodeError
 
-strict = False
+# versions are:
+#  * '1.0' long running standard
+#  * '1.1' added support for MRS-level lnk, surface and EP-level surface
+_default_version = '1.1'
+_latest_version = '1.1'
 
 _left_bracket = r'['
 _right_bracket = r']'
@@ -188,7 +192,7 @@ def deserialize(string):
         yield read_mrs(tokens)
 
 
-def read_mrs(tokens):
+def read_mrs(tokens, version='1.1'):
     """Decode a sequence of Simple-MRS tokens. Assume LTOP, INDEX, RELS,
        and HCONS occur in that order."""
     # variables needs to be passed to any function that can call read_variable
@@ -198,9 +202,10 @@ def read_mrs(tokens):
         validate_token(tokens.pop(0), _left_bracket)
         ltop = index = surface = lnk = None
         # SimpleMRS extension for encoding surface string
-        if tokens[0].startswith('"') and tokens[0].endswith('"'):
-            surface = tokens.pop(0)[1:-1] # get rid of first quotes
+        if tokens[0] == _left_angle:
             lnk = read_lnk(tokens)
+        if tokens[0].startswith('"'): # and tokens[0].endswith('"'):
+            surface = tokens.pop(0)[1:-1] # get rid of first quotes
         if tokens[0] == _ltop:
             _, ltop = read_featval(tokens, feat=_ltop, variables=variables)
         if tokens[0] == _index:
@@ -208,7 +213,7 @@ def read_mrs(tokens):
         rels = read_rels(tokens, variables=variables)
         hcons = read_hcons(tokens, variables=variables)
         validate_token(tokens.pop(0), _right_bracket)
-        m = Mrs(ltop, index, rels, hcons, surface=surface)
+        m = Mrs(ltop, index, rels, hcons, lnk=lnk, surface=surface)
     except IndexError:
         unexpected_termination_error()
     return m
@@ -301,13 +306,18 @@ def read_ep(tokens, variables=None):
     validate_token(tokens.pop(0), _left_bracket)
     pred = Pred.string_or_grammar_pred(tokens.pop(0))
     lnk = read_lnk(tokens)
+    if tokens[0].startswith('"'):
+        surface = tokens.pop(0)[1:-1] # get rid of first quotes
+    else:
+        surface = None
     _, label = read_featval(tokens, feat=_lbl, sort=HANDLESORT,
                             variables=variables)
     args = []
     while tokens[0] != _right_bracket:
         args.append(read_argument(tokens, variables=variables))
     tokens.pop(0)  # we know this is a right bracket
-    return ElementaryPredication(pred, label, args=args, lnk=lnk)
+    return ElementaryPredication(pred, label, args=args,
+                                 lnk=lnk, surface=surface)
 
 
 def read_argument(tokens, variables=None):
