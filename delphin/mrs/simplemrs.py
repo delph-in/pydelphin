@@ -17,10 +17,10 @@ from delphin.mrs.config import (HANDLESORT,
 from delphin._exceptions import MrsDecodeError
 
 # versions are:
-#  * '1.0' long running standard
-#  * '1.1' added support for MRS-level lnk, surface and EP-level surface
-_default_version = '1.1'
-_latest_version = '1.1'
+#  * 1.0 long running standard
+#  * 1.1 added support for MRS-level lnk, surface and EP-level surface
+_default_version = 1.1
+_latest_version = 1.1
 
 _left_bracket = r'['
 _right_bracket = r']'
@@ -192,7 +192,7 @@ def deserialize(string):
         yield read_mrs(tokens)
 
 
-def read_mrs(tokens, version='1.1'):
+def read_mrs(tokens, version=_default_version):
     """Decode a sequence of Simple-MRS tokens. Assume LTOP, INDEX, RELS,
        and HCONS occur in that order."""
     # variables needs to be passed to any function that can call read_variable
@@ -409,27 +409,34 @@ def unset_colors():
         lambda x: x
 
 
-def serialize(ms, pretty_print=False, color=False):
+def serialize(ms, version=_default_version, pretty_print=False, color=False):
     """Serialize an MRS structure into a SimpleMRS string."""
     if not color:
         unset_colors()
     delim = '\n' if pretty_print else _default_mrs_delim
-    return delim.join(serialize_mrs(m, pretty_print=pretty_print) for m in ms)
+    return delim.join(
+        serialize_mrs(m, version=version, pretty_print=pretty_print)
+        for m in ms
+    )
 
 
-def serialize_mrs(m, pretty_print=False):
+def serialize_mrs(m, version=_default_version, pretty_print=False):
     # note that listed_vars is modified as a side-effect of the lower
     # functions
     listed_vars = set()
     toks = []
-    if not strict and m.surface is not None:
-        toks += ["\"{}\"{}".format(m.surface, serialize_lnk(m.lnk))]
+    if version >= 1.1:
+        if m.lnk is not None:
+            toks.append(serialize_lnk(m.lnk))
+        if m.surface is not None:
+            toks.append('"{}"'.format(m.surface))
     if m.ltop is not None:
         toks += [serialize_argument(_ltop, m.ltop, listed_vars)]
     if m.index is not None:
         toks += [serialize_argument(_index, m.index, listed_vars)]
     #toks = [' '.join(toks)]
-    toks += [serialize_rels(m.rels, listed_vars, pretty_print=pretty_print)]
+    toks += [serialize_rels(m.rels, listed_vars, version=version,
+                            pretty_print=pretty_print)]
     toks += [' '.join([serialize_hcons(m.hcons, listed_vars)])]
     delim = ' ' if not pretty_print else '\n  '
     return '{} {} {}'.format(_left_bracket, delim.join(toks), _right_bracket)
@@ -462,16 +469,18 @@ def serialize_variable(var, listed_vars):
     return ' '.join(toks)
 
 
-def serialize_rels(rels, listed_vars, pretty_print=False):
+def serialize_rels(rels, listed_vars, version=_default_version,
+                   pretty_print=False):
     """Serialize a RELS list of EPs into the SimpleMRS encoding."""
     delim = ' ' if not pretty_print else '\n          '
     string = ' '.join([_rels + _colon, _left_angle])
-    string += ' ' + delim.join(serialize_ep(ep, listed_vars) for ep in rels)
+    string += ' ' + delim.join(serialize_ep(ep, listed_vars, version=version)
+                               for ep in rels)
     string += ' ' + _right_angle
     return string
 
 
-def serialize_ep(ep, listed_vars):
+def serialize_ep(ep, listed_vars, version=_default_version):
     """Serialize an Elementary Predication into the SimpleMRS encoding."""
     toks = [_left_bracket]
     if ep.is_quantifier():
@@ -479,6 +488,9 @@ def serialize_ep(ep, listed_vars):
     else:
         predstr = green(bold(ep.pred.string))
     toks += [predstr + serialize_lnk(ep.lnk)]
+    if version >= 1.1:
+        if ep.surface is not None:
+            toks.append('"{}"'.format(ep.surface))
     toks += [serialize_argument(_lbl, ep.label, listed_vars)]
     # if ep.cv is not None:
     #     toks += [serialize_argument(CVARG, ep.cv, listed_vars)]
