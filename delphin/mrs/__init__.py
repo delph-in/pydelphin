@@ -37,7 +37,7 @@ try:
     imp.find_module('networkx')
 except ImportError as ex:
     msg = '''\n
-The `networkx` package is required for the `delphin.mrs`   package.
+The `networkx` package is required for the `delphin.mrs` package.
 You can install `networkx` in several ways:
   * With your operating system\'s package manager (e.g.
     `apt-get install python3-networkx` or `pacman -S python-networkx)
@@ -47,15 +47,10 @@ You can install `networkx` in several ways:
     raise ImportError(msg) from ex
 
 # these may be order-sensitive
-from .hook import Hook
-from .lnk import Lnk
-from .node import Node
-from .ep import ElementaryPredication
-from .var import MrsVariable
-from .arg import Argument
-from .hcons import HandleConstraint
-from .pred import Pred
-from .link import Link
+from .components import (
+  Hook, Lnk, Node, ElementaryPredication, MrsVariable, Argument,
+  HandleConstraint, Pred, Link
+)
 from .xmrs import Xmrs
 from .mrs import Mrs
 from .dmrs import Dmrs

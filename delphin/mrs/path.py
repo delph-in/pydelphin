@@ -1,7 +1,7 @@
 import re
 from collections import deque
 from itertools import product
-from .pred import is_valid_pred_string
+from .components import is_valid_pred_string
 from .util import powerset
 
 # Something like this:

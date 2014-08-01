@@ -10,7 +10,7 @@ from collections import OrderedDict
 import re
 from delphin.mrs import (Mrs, ElementaryPredication, Argument, Pred,
                          MrsVariable, Lnk, HandleConstraint)
-from delphin.mrs.var import (sort_vid_split, sort_vid_re)
+from delphin.mrs.components import (sort_vid_split, sort_vid_re)
 from delphin.mrs.config import (HANDLESORT,
                                 QEQ, LHEQ, OUTSCOPES,
                                 CHARSPAN, CHARTSPAN, EDGE, TOKENS)

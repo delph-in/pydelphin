@@ -7,9 +7,10 @@ from itertools import chain, product
 # from functools import lru_cache
 import networkx as nx
 from delphin._exceptions import XmrsStructureError
-from . import (Hook, MrsVariable, ElementaryPredication, Node, Link,
-               HandleConstraint, Lnk)
-from .lnk import LnkMixin
+from .components import (
+    Hook, MrsVariable, ElementaryPredication, Node, Link, HandleConstraint,
+    Lnk, LnkMixin
+)
 from .config import (LTOP_NODEID, FIRST_NODEID,
                      ANCHOR_SORT, HANDLESORT, CVARSORT,
                      CVARG, QEQ, INTRINSIC_ARG, VARIABLE_ARG, HOLE_ARG,

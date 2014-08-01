@@ -1,7 +1,7 @@
 import logging
-from .lnk import Lnk
-from .hook import Hook
-from .var import MrsVariable
+from .components import (
+    Lnk, Hook, MrsVariable
+)
 from .xmrs import Xmrs
 from .config import (FIRST_NODEID, ANCHOR_SORT)
 

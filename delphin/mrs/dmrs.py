@@ -1,8 +1,6 @@
-from .hook import Hook
-from .var import VarGenerator
-from .ep import ElementaryPredication
-from .arg import Argument
-from .hcons import qeq
+from .components import (
+    Hook, VarGenerator, ElementaryPredication, Argument, qeq
+)
 from .xmrs import Xmrs
 from .config import (HANDLESORT, CVARG, CONSTARG, LTOP_NODEID, RSTR,
                      EQ_POST, HEQ_POST, H_POST, NIL_POST)

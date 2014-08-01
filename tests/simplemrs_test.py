@@ -2,7 +2,7 @@ import unittest
 from collections import OrderedDict
 from delphin.mrs import (Mrs, ElementaryPredication as EP, Pred, Argument,
                          MrsVariable, Lnk)
-from delphin.mrs.hcons import qeq
+from delphin.mrs.components import qeq
 from delphin.mrs import simplemrs
 from delphin.mrs.simplemrs import tokenize # for convenience
 from delphin._exceptions import MrsDecodeError
