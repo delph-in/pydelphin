@@ -92,7 +92,8 @@ def loads(s, single=False):
         return ms
 
 
-def dump(fh, ms, single=False, pretty_print=False, color=False, **kwargs):
+def dump(fh, ms, single=False, version=_default_version,
+         pretty_print=False, color=False, **kwargs):
     """
     Serialize Xmrs objects to a SimpleMRS representation and write to a
     file
@@ -111,13 +112,15 @@ def dump(fh, ms, single=False, pretty_print=False, color=False, **kwargs):
     """
     print(dumps(ms,
                 single=single,
+                version=version,
                 pretty_print=pretty_print,
                 color=color,
                 **kwargs),
           file=fh)
 
 
-def dumps(ms, single=False, pretty_print=False, color=False, **kwargs):
+def dumps(ms, single=False, version=_default_version,
+          pretty_print=False, color=False, **kwargs):
     """
     Serialize an Xmrs object to a SimpleMRS representation
 
@@ -134,7 +137,8 @@ def dumps(ms, single=False, pretty_print=False, color=False, **kwargs):
     """
     if single:
         ms = [ms]
-    return serialize(ms, pretty_print=pretty_print, color=color)
+    return serialize(ms, version=version,
+                     pretty_print=pretty_print, color=color, **kwargs)
 
 
 # for convenience
