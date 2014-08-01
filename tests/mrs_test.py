@@ -1,15 +1,84 @@
 # -*- coding: UTF-8 -*-
 from collections import OrderedDict
 import unittest
-from delphin.mrs import (Xmrs, Mrs, Dmrs, ElementaryPredication as EP, Node,
-                         Pred, Argument, Link, MrsVariable, HandleConstraint,
-                         Lnk, Hook)
-from delphin.mrs.components import AnchorMixin
-from delphin.mrs.config import (QEQ, LHEQ, OUTSCOPES, CVARSORT,
-                                EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
-                                CHARSPAN, CHARTSPAN, TOKENS, EDGE,
-                                GRAMMARPRED, REALPRED, STRINGPRED,
-                                LTOP_NODEID, FIRST_NODEID, ANCHOR_SORT)
+from delphin.mrs.components import (
+    MrsVariable, AnchorMixin, Lnk, LnkMixin, Hook,
+    Argument, Link, HandleConstraint,
+    Pred, Node, ElementaryPredication as EP
+)
+from delphin.mrs.config import (
+    QEQ, LHEQ, OUTSCOPES, CVARSORT, CVARG, CONSTARG,
+    EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
+    CHARSPAN, CHARTSPAN, TOKENS, EDGE,
+    GRAMMARPRED, REALPRED, STRINGPRED,
+    LTOP_NODEID, FIRST_NODEID, ANCHOR_SORT,
+    INTRINSIC_ARG, VARIABLE_ARG, CONSTANT_ARG, HOLE_ARG, HCONS_ARG, LABEL_ARG)
+
+
+class TestMrsVariable(unittest.TestCase):
+    def test_construct(self):
+        self.assertRaises(TypeError, MrsVariable)
+        self.assertRaises(TypeError, MrsVariable, 1)
+        self.assertRaises(TypeError, MrsVariable, sort='h')
+        self.assertRaises(TypeError, MrsVariable, 1, properties={'a':1})
+        v = MrsVariable(1, 'h')
+        self.assertNotEqual(v, None)
+
+    def test_values(self):
+        v = MrsVariable(1, 'x')
+        self.assertEqual(v.vid, 1)
+        self.assertEqual(v.sort, 'x')
+        self.assertEqual(len(v.properties), 0)
+        v = MrsVariable(10, 'event', properties={'a':1})
+        self.assertEqual(v.vid, 10)
+        self.assertEqual(v.sort, 'event')
+        self.assertEqual(v.properties, {'a':1})
+
+    def test_str(self):
+        v = MrsVariable(1, 'x')
+        self.assertEqual(str(v), 'x1')
+        v = MrsVariable(10, 'individual')
+        self.assertEqual(str(v), 'individual10')
+
+    def test_equality(self):
+        v = MrsVariable(1, 'x')
+        self.assertEqual(v, MrsVariable(1, 'x'))
+        self.assertEqual(v, 'x1')
+        self.assertNotEqual(v, 'x2')
+        self.assertNotEqual(v, 'e1')
+        self.assertNotEqual(v, 'x')
+        self.assertEqual(v, 1)
+
+    def test_hashable(self):
+        v1 = MrsVariable(1, 'x')
+        v2 = MrsVariable(2, 'e')
+        d = {v1:'one', v2:'two'}
+        self.assertEqual(d[v1], 'one')
+        self.assertEqual(d['x1'], 'one')
+        self.assertEqual(d[v2], 'two')
+        self.assertRaises(KeyError, d.__getitem__, v1.vid)
+        self.assertRaises(KeyError, d.__getitem__, v1.sort)
+        # note: it's invalid to have two variables with different VIDs
+        v3 = MrsVariable(2, 'x')
+        d[v3] = 'three'
+        self.assertEqual(len(d), 3)
+        self.assertEqual(d[v3], 'three')
+
+
+class TestAnchorMixin(unittest.TestCase):
+    def test_inherit(self):
+        class NoNodeId(AnchorMixin):
+            pass
+        n = NoNodeId()
+        self.assertRaises(AttributeError, getattr, n, 'anchor')
+        class WithNodeId(AnchorMixin):
+            def __init__(self):
+                self.nodeid = 0
+        n = WithNodeId()
+        self.assertEqual(n.anchor, MrsVariable(0, ANCHOR_SORT))
+        n.anchor = MrsVariable(1, ANCHOR_SORT)
+        self.assertEqual(n.anchor, MrsVariable(1, ANCHOR_SORT))
+
 
 class TestLnk(unittest.TestCase):
     def testLnkTypes(self):
@@ -60,6 +129,164 @@ class TestLnk(unittest.TestCase):
         self.assertRaises(TypeError, Lnk.edge, None)
         self.assertRaises(TypeError, Lnk.edge, (1,))
         self.assertRaises(ValueError, Lnk.edge, 'a')
+
+
+class TestLnkMixin(unittest.TestCase):
+    def test_inherit(self):
+        class NoLnk(LnkMixin):
+            pass
+        n = NoLnk()
+        self.assertEqual(n.cfrom, -1)
+        self.assertEqual(n.cto, -1)
+        class WithNoneLnk(LnkMixin):
+            def __init__(self):
+                self.lnk = None
+        n = WithNoneLnk()
+        self.assertEqual(n.cfrom, -1)
+        self.assertEqual(n.cto, -1)
+        class WithNonCharspanLnk(LnkMixin):
+            def __init__(self):
+                self.lnk = Lnk.chartspan(0,1)
+        n = WithNonCharspanLnk()
+        self.assertEqual(n.cfrom, -1)
+        self.assertEqual(n.cto, -1)
+        class WithCharspanLnk(LnkMixin):
+            def __init__(self):
+                self.lnk = Lnk.charspan(0,1)
+        n = WithCharspanLnk()
+        self.assertEqual(n.cfrom, 0)
+
+
+class TestHook(unittest.TestCase):
+    def test_construct(self):
+        h = Hook()
+        self.assertEqual(h.ltop, None)
+        self.assertEqual(h.index, None)
+        self.assertEqual(h.xarg, None)
+        h = Hook(ltop=MrsVariable(1, 'h'), index=MrsVariable(2, 'e'),
+                 xarg=MrsVariable(3, 'x'))
+        self.assertEqual(h.ltop, 'h1')
+        self.assertEqual(h.index, 'e2')
+        self.assertEqual(h.xarg, 'x3')
+
+
+class TestArgument(unittest.TestCase):
+    def test_construct(self):
+        a = Argument(1, 'ARG', 'val')
+        self.assertEqual(a.nodeid, 1)
+        self.assertEqual(a.argname, 'ARG')
+        self.assertEqual(a.value, 'val')
+
+    def test_MrsArgument(self):
+        a = Argument.mrs_argument('ARG', 'val')
+        self.assertEqual(a.nodeid, None)
+        self.assertEqual(a.argname, 'ARG')
+        self.assertEqual(a.value, 'val')
+
+    def test_RmrsArgument(self):
+        a = Argument.rmrs_argument(MrsVariable(1, ANCHOR_SORT), 'ARG', 'val')
+        self.assertEqual(a.nodeid, 1)
+        self.assertEqual(a.argname, 'ARG')
+        self.assertEqual(a.value, 'val')
+
+    def test_equality(self):
+        a1 = Argument(None, 'ARG', 'val')
+        a2 = Argument(1, 'ARG', 'val')
+        a3 = Argument(2, 'ARG', 'val')
+        a4 = Argument(None, 'FOO', 'val')
+        a5 = Argument(None, 'FOO', 'bar')
+        self.assertEqual(a1, a1)
+        self.assertEqual(a1, a2)
+        self.assertNotEqual(a2, a3)
+        self.assertNotEqual(a1, a4)
+        self.assertNotEqual(a4, a5)
+
+    def test_infer_type(self):
+        a = Argument(None, CVARG, MrsVariable(1, 'x'))
+        self.assertEqual(a.infer_argument_type(), INTRINSIC_ARG)
+        a = Argument(None, 'ARG', MrsVariable(1, 'x'))
+        self.assertEqual(a.infer_argument_type(), VARIABLE_ARG)
+        a = Argument(None, 'ARG', MrsVariable(1, 'h'))
+        self.assertEqual(a.infer_argument_type(), HOLE_ARG)
+        # fake an Xmrs where h0 is QEQ'd and others are not
+        class FakeXmrs(object):
+            def get_hcons(self, var):
+                if var == 'h0':
+                    return 1  # any value is ok for now
+                return None
+        x = FakeXmrs()
+        a = Argument(None, 'ARG', MrsVariable(0, 'h'))
+        self.assertEqual(a.infer_argument_type(xmrs=x), HCONS_ARG)
+        a = Argument(None, 'ARG', MrsVariable(1, 'h'))
+        self.assertEqual(a.infer_argument_type(xmrs=x), LABEL_ARG)
+        a = Argument(None, CONSTARG, 'constant')
+        self.assertEqual(a.infer_argument_type(), CONSTANT_ARG)
+        a = Argument(None, 'OTHER', 'constant')
+        self.assertEqual(a.infer_argument_type(), CONSTANT_ARG)
+
+
+class TestLink(unittest.TestCase):
+    def test_construct(self):
+        self.assertRaises(TypeError, Link)
+        self.assertRaises(TypeError, Link, 0)
+        l = Link(0, 1)
+        self.assertEqual(l.start, 0)
+        self.assertEqual(l.end, 1)
+        self.assertEqual(l.argname, None)
+        self.assertEqual(l.post, None)
+        l = Link('0', '1')
+        self.assertEqual(l.start, 0)
+        self.assertEqual(l.end, 1)
+        self.assertEqual(l.argname, None)
+        self.assertEqual(l.post, None)
+        l = Link(0, 1, argname='ARG')
+        self.assertEqual(l.start, 0)
+        self.assertEqual(l.end, 1)
+        self.assertEqual(l.argname, 'ARG')
+        self.assertEqual(l.post, None)
+        l = Link(0, 1, post='NEQ')
+        self.assertEqual(l.start, 0)
+        self.assertEqual(l.end, 1)
+        self.assertEqual(l.argname, None)
+        self.assertEqual(l.post, 'NEQ')
+        l = Link(0, 1, argname='ARG', post='NEQ')
+        self.assertEqual(l.start, 0)
+        self.assertEqual(l.end, 1)
+        self.assertEqual(l.argname, 'ARG')
+        self.assertEqual(l.post, 'NEQ')
+
+
+class TestHandleConstraint(unittest.TestCase):
+    def test_construct(self):
+        h1 = MrsVariable(1, 'handle')
+        h2 = MrsVariable(2, 'handle')
+        self.assertRaises(TypeError, HandleConstraint)
+        self.assertRaises(TypeError, HandleConstraint, h1)
+        self.assertRaises(TypeError, HandleConstraint, h1, QEQ)
+        # planned:
+        # self.assertRaises(MrsHconsException, HandleConstraint, h1, QEQ, h1)
+        hc = HandleConstraint(h1, QEQ, h2)
+        self.assertEqual(hc.hi, h1)
+        self.assertEqual(hc.relation, QEQ)
+        self.assertEqual(hc.lo, h2)
+        hc = HandleConstraint(h1, LHEQ, h2)
+        self.assertEqual(hc.relation, LHEQ)
+
+    def test_equality(self):
+        h1 = MrsVariable(1, 'h')
+        h2 = MrsVariable(2, 'h')
+        hc1 = HandleConstraint(h1, QEQ, h2)
+        self.assertEqual(hc1, HandleConstraint(h1, QEQ, h2))
+        self.assertNotEqual(hc1, HandleConstraint(h2, QEQ, h1))
+        self.assertNotEqual(hc1, HandleConstraint(h1, LHEQ, h2))
+
+    def test_hashable(self):
+        hc1 = HandleConstraint(MrsVariable(1, 'h'), QEQ, MrsVariable(2, 'h'))
+        hc2 = HandleConstraint(MrsVariable(3, 'h'), QEQ, MrsVariable(4, 'h'))
+        d = {hc1:1, hc2:2}
+        self.assertEqual(d[hc1], 1)
+        self.assertEqual(d[hc2], 2)
+
 
 class TestPred(unittest.TestCase):
     def testGpred(self):
@@ -148,111 +375,6 @@ class TestPred(unittest.TestCase):
         self.assertNotEqual(Pred.string_or_grammar_pred('_dog_n_rel'),
                             Pred.string_or_grammar_pred('dog_n_rel'))
 
-class TestMrsVariable(unittest.TestCase):
-    def test_construct(self):
-        self.assertRaises(TypeError, MrsVariable)
-        self.assertRaises(TypeError, MrsVariable, 1)
-        self.assertRaises(TypeError, MrsVariable, sort='h')
-        self.assertRaises(TypeError, MrsVariable, 1, properties={'a':1})
-        v = MrsVariable(1, 'h')
-        self.assertNotEqual(v, None)
-
-    def test_values(self):
-        v = MrsVariable(1, 'x')
-        self.assertEqual(v.vid, 1)
-        self.assertEqual(v.sort, 'x')
-        self.assertEqual(len(v.properties), 0)
-        v = MrsVariable(10, 'event', properties={'a':1})
-        self.assertEqual(v.vid, 10)
-        self.assertEqual(v.sort, 'event')
-        self.assertEqual(v.properties, {'a':1})
-
-    def test_str(self):
-        v = MrsVariable(1, 'x')
-        self.assertEqual(str(v), 'x1')
-        v = MrsVariable(10, 'individual')
-        self.assertEqual(str(v), 'individual10')
-
-    def test_equality(self):
-        v = MrsVariable(1, 'x')
-        self.assertEqual(v, MrsVariable(1, 'x'))
-        self.assertEqual(v, 'x1')
-        self.assertNotEqual(v, 'x2')
-        self.assertNotEqual(v, 'e1')
-        self.assertNotEqual(v, 'x')
-        self.assertEqual(v, 1)
-
-    def test_hashable(self):
-        v1 = MrsVariable(1, 'x')
-        v2 = MrsVariable(2, 'e')
-        d = {v1:'one', v2:'two'}
-        self.assertEqual(d[v1], 'one')
-        self.assertEqual(d['x1'], 'one')
-        self.assertEqual(d[v2], 'two')
-        self.assertRaises(KeyError, d.__getitem__, v1.vid)
-        self.assertRaises(KeyError, d.__getitem__, v1.sort)
-        # note: it's invalid to have two variables with different VIDs
-        v3 = MrsVariable(2, 'x')
-        d[v3] = 'three'
-        self.assertEqual(len(d), 3)
-        self.assertEqual(d[v3], 'three')
-
-class TestAnchorMixin(unittest.TestCase):
-    def test_inherit(self):
-        class NoNodeId(AnchorMixin):
-            pass
-        n = NoNodeId()
-        self.assertRaises(AttributeError, getattr, n, 'anchor')
-        class WithNodeId(AnchorMixin):
-            def __init__(self):
-                self.nodeid = 0
-        n = WithNodeId()
-        self.assertEqual(n.anchor, MrsVariable(0, ANCHOR_SORT))
-        n.anchor = MrsVariable(1, ANCHOR_SORT)
-        self.assertEqual(n.anchor, MrsVariable(1, ANCHOR_SORT))
-
-class TestHook(unittest.TestCase):
-    def test_construct(self):
-        h = Hook()
-        self.assertEqual(h.ltop, None)
-        self.assertEqual(h.index, None)
-        self.assertEqual(h.xarg, None)
-        h = Hook(ltop=MrsVariable(1, 'h'), index=MrsVariable(2, 'e'),
-                 xarg=MrsVariable(3, 'x'))
-        self.assertEqual(h.ltop, 'h1')
-        self.assertEqual(h.index, 'e2')
-        self.assertEqual(h.xarg, 'x3')
-
-class TestHandleConstraint(unittest.TestCase):
-    def test_construct(self):
-        h1 = MrsVariable(1, 'handle')
-        h2 = MrsVariable(2, 'handle')
-        self.assertRaises(TypeError, HandleConstraint)
-        self.assertRaises(TypeError, HandleConstraint, h1)
-        self.assertRaises(TypeError, HandleConstraint, h1, QEQ)
-        # planned:
-        # self.assertRaises(MrsHconsException, HandleConstraint, h1, QEQ, h1)
-        hc = HandleConstraint(h1, QEQ, h2)
-        self.assertEqual(hc.hi, h1)
-        self.assertEqual(hc.relation, QEQ)
-        self.assertEqual(hc.lo, h2)
-        hc = HandleConstraint(h1, LHEQ, h2)
-        self.assertEqual(hc.relation, LHEQ)
-
-    def test_equality(self):
-        h1 = MrsVariable(1, 'h')
-        h2 = MrsVariable(2, 'h')
-        hc1 = HandleConstraint(h1, QEQ, h2)
-        self.assertEqual(hc1, HandleConstraint(h1, QEQ, h2))
-        self.assertNotEqual(hc1, HandleConstraint(h2, QEQ, h1))
-        self.assertNotEqual(hc1, HandleConstraint(h1, LHEQ, h2))
-
-    def test_hashable(self):
-        hc1 = HandleConstraint(MrsVariable(1, 'h'), QEQ, MrsVariable(2, 'h'))
-        hc2 = HandleConstraint(MrsVariable(3, 'h'), QEQ, MrsVariable(4, 'h'))
-        d = {hc1:1, hc2:2}
-        self.assertEqual(d[hc1], 1)
-        self.assertEqual(d[hc2], 2)
 
 class TestNode(unittest.TestCase):
     def test_construct(self):
@@ -317,6 +439,7 @@ class TestNode(unittest.TestCase):
                  sortinfo=OrderedDict([(CVARSORT, 'x'), ('PER', '3')]))
         self.assertEqual(n.get_property('PER'), '3')
 
+
 class TestElementaryPredication(unittest.TestCase):
     def test_construct(self):
         self.assertRaises(TypeError, EP)
@@ -330,64 +453,38 @@ class TestElementaryPredication(unittest.TestCase):
         self.assertEqual(e.anchor, None)
         self.assertEqual(e.nodeid, None)
         e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'),
-               anchor=MrsVariable(vid=10000, sort='h'))
-        self.assertEqual(e.anchor, MrsVariable(vid=10000, sort='h'))
+               anchor=MrsVariable(vid=10000, sort=ANCHOR_SORT))
+        self.assertEqual(e.anchor, MrsVariable(vid=10000, sort=ANCHOR_SORT))
         self.assertEqual(e.nodeid, 10000)
 
-    def test_lnk(self):
-        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'))
-        self.assertEqual(e.lnk, None)
-        self.assertEqual(e.cfrom, -1)
-        self.assertEqual(e.cto, -1)
-        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'),
-               lnk=Lnk.charspan(0,1))
-        self.assertEqual(e.lnk, Lnk.charspan(0,1))
-        self.assertEqual(e.cfrom, 0)
-        self.assertEqual(e.cto, 1)
-
     def test_properties(self):
-        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'))
+        p = Pred.stringpred('_dog_n_rel')
+        lbl = MrsVariable(vid=1, sort='h')
+        e = EP(p, lbl)
         self.assertEqual(len(e.properties), 0)
+        v = MrsVariable(vid=2, sort='x', properties={'num': 'sg'})
+        # properties only come from intrinsic arg
+        e = EP(p, lbl, args=[Argument.mrs_argument('ARG1', v)])
+        self.assertEqual(len(e.properties), 0)
+        e = EP(p, lbl, args=[Argument.mrs_argument(CVARG, v)])
+        self.assertEqual(len(e.properties), 1)
+        self.assertEqual(e.properties['num'], 'sg')
 
     def test_args(self):
-        pass
-
-    def test_cv(self):
-        pass
-    def test_get_property(self):
-        pass
-    def test_get_arg(self):
-        pass
-
-    #def test_basic(self):
-    #    eq = self.assertEqual
-    #    EP = ElementaryPredication
-    #    # minimum EP has pred and a label
-    #    self.assertRaises(TypeError, EP)
-    #    self.assertRaises(TypeError, EP, Pred.stringpred('_dog_n_rel'))
-    #    e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'))
-    #    eq(e.pred, '_dog_n_rel')
-    #    eq(e.label, MrsVariable(vid=1, sort='h'))
-    #    eq(e.cv, None)
-    #    eq(len(e.args), 0)
-    #    eq(e.lnk, None)
-    #    eq(len(e.properties), 0)
-    #    eq(e.anchor, None)
-    #    eq(e.carg, None)
-
-    #def test_modify(self):
-    #    eq = self.assertEqual
-    #    EP = ElementaryPredication
-    #    e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'))
-    #    e.pred = Pred.stringpred('_cat_n_rel')
-    #    eq(e.pred, '_cat_n_rel')
-    #    #eq(
-
-    #def test_mrs_ep(self):
-    #    eq = self.assertEqual
-    #    EP = ElementaryPredication
-    #    #e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'),
-    #    #       a
+        p = Pred.stringpred('_chase_v_rel')
+        lbl = MrsVariable(vid=1, sort='h')
+        e = EP(p, lbl)
+        self.assertEqual(len(e.args), 0)
+        v1 = MrsVariable(vid=2, sort='e', properties={'tense': 'pres'})
+        e = EP(p, lbl, args=[Argument.mrs_argument(CVARG, v1)])
+        self.assertEqual(len(e.args), 1)
+        self.assertEqual(e.arg_value(CVARG), v1)
+        v2 = MrsVariable(vid=3, sort='x', properties={'num': 'sg'})
+        e = EP(p, lbl, args=[Argument.mrs_argument(CVARG, v1),
+                             Argument.mrs_argument('ARG1', v2)])
+        self.assertEqual(len(e.args), 2)
+        self.assertEqual(e.arg_value(CVARG), v1)
+        self.assertEqual(e.arg_value('ARG1'), v2)
 
 #class TestXmrs(unittest.TestCase):
 #    def test_empty(self):

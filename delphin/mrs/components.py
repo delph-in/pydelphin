@@ -276,10 +276,13 @@ class LnkMixin(object):
         The initial character position in the surface string. Defaults
         to -1 if there is no valid cfrom value.
         """
-        if self.lnk is not None and self.lnk.type == CHARSPAN:
-            return self.lnk.data[0]
-        else:
-            return -1
+        cfrom = -1
+        try:
+            if self.lnk.type == CHARSPAN:
+                cfrom = self.lnk.data[0]
+        except AttributeError:
+            pass  # use default cfrom of -1
+        return cfrom
 
     @property
     def cto(self):
@@ -287,10 +290,13 @@ class LnkMixin(object):
         The final character position in the surface string. Defaults
         to -1 if there is no valid cto value.
         """
-        if self.lnk is not None and self.lnk.type == CHARSPAN:
-            return self.lnk.data[1]
-        else:
-            return -1
+        cto = -1
+        try:
+            if self.lnk.type == CHARSPAN:
+                cto = self.lnk.data[1]
+        except AttributeError:
+            pass  # use default cto of -1
+        return cto
 
 
 class Hook(object):
@@ -386,6 +392,21 @@ class Argument(AnchorMixin):
         self._type = value
 
 
+class Link(object):
+    """DMRS-style Links are a way of representing arguments without
+       variables. A Link encodes a start and end node, the argument
+       name, and label information (e.g. label equality, qeq, etc)."""
+    def __init__(self, start, end, argname=None, post=None):
+        self.start = int(start)
+        self.end = int(end)
+        self.argname = argname
+        self.post = post
+
+    def __repr__(self):
+        return 'Link({} -> {}, {}/{})'.format(self.start, self.end,
+                                              self.argname, self.post)
+
+
 class HandleConstraint(object):
     """A relation between two handles."""
 
@@ -412,21 +433,6 @@ class HandleConstraint(object):
 
 def qeq(hi, lo):
     return HandleConstraint(hi, QEQ, lo)
-
-
-class Link(object):
-    """DMRS-style Links are a way of representing arguments without
-       variables. A Link encodes a start and end node, the argument
-       name, and label information (e.g. label equality, qeq, etc)."""
-    def __init__(self, start, end, argname=None, post=None):
-        self.start = int(start)
-        self.end = int(end)
-        self.argname = argname
-        self.post = post
-
-    def __repr__(self):
-        return 'Link({} -> {}, {}/{})'.format(self.start, self.end,
-                                              self.argname, self.post)
 
 
 # PREDICATES AND PREDICATIONS
