@@ -5,7 +5,6 @@ from .config import (
     CVARG, CONSTARG,
     INTRINSIC_ARG, VARIABLE_ARG, HOLE_ARG, LABEL_ARG, HCONS_ARG, CONSTANT_ARG,
     HANDLESORT, CVARSORT, ANCHOR_SORT, QUANTIFIER_SORT,
-    CHARSPAN, CHARTSPAN, TOKENS, EDGE,
     GRAMMARPRED, REALPRED, STRINGPRED,
     QEQ
 )
@@ -196,8 +195,17 @@ class Lnk(object):
         '<@1>'
 
     """
+
+    # These types determine how a lnk on an EP or MRS are to be
+    # interpreted, and thus determine the data type/structure of the
+    # lnk data.
+    CHARSPAN = 0  # Character span; a pair of offsets
+    CHARTSPAN = 1  # Chart vertex span: a pair of indices
+    TOKENS = 2  # Token numbers: a list of indices
+    EDGE = 3  # An edge identifier: a number
+
     def __init__(self, data, type):
-        if type not in (CHARSPAN, CHARTSPAN, TOKENS, EDGE):
+        if type not in (Lnk.CHARSPAN, Lnk.CHARTSPAN, Lnk.TOKENS, Lnk.EDGE):
             raise ValueError('Invalid lnk type: {}'.format(type))
         self.type = type
         self.data = data
@@ -211,7 +219,7 @@ class Lnk(object):
             start: the initial character position (cfrom)
             end: the final character position (cto)
         """
-        return cls((int(start), int(end)), CHARSPAN)
+        return cls((int(start), int(end)), Lnk.CHARSPAN)
 
     @classmethod
     def chartspan(cls, start, end):
@@ -222,7 +230,7 @@ class Lnk(object):
             start: the initial chart vertex
             end: the final chart vertex
         """
-        return cls((int(start), int(end)), CHARTSPAN)
+        return cls((int(start), int(end)), Lnk.CHARTSPAN)
 
     @classmethod
     def tokens(cls, tokens):
@@ -232,7 +240,7 @@ class Lnk(object):
         Args:
             tokens: a list of token identifiers
         """
-        return cls(tuple(map(int, tokens)), TOKENS)
+        return cls(tuple(map(int, tokens)), Lnk.TOKENS)
 
     @classmethod
     def edge(cls, edge):
@@ -242,16 +250,16 @@ class Lnk(object):
         Args:
             edge: an edge identifier
         """
-        return cls(int(edge), EDGE)
+        return cls(int(edge), Lnk.EDGE)
 
     def __str__(self):
-        if self.type == CHARSPAN:
+        if self.type == Lnk.CHARSPAN:
             return '<{}:{}>'.format(self.data[0], self.data[1])
-        elif self.type == CHARTSPAN:
+        elif self.type == Lnk.CHARTSPAN:
             return '<{}#{}>'.format(self.data[0], self.data[2])
-        elif self.type == EDGE:
+        elif self.type == Lnk.EDGE:
             return '<@{}>'.format(self.data)
-        elif self.type == TOKENS:
+        elif self.type == Lnk.TOKENS:
             return '<{}>'.format(' '.join(self.data))
 
     def __repr__(self):
@@ -268,7 +276,7 @@ class LnkMixin(object):
     This class provides the :py:attr:`~delphin.mrs.lnk.LnkMixin.cfrom`
     and :py:attr:`~delphin.mrs.lnk.LnkMixin.cto` properties so they are
     always available (defaulting to a value of -1 if there is no lnk or
-    if the lnk is not a CHARSPAN type).
+    if the lnk is not a Lnk.CHARSPAN type).
     """
     @property
     def cfrom(self):
@@ -278,7 +286,7 @@ class LnkMixin(object):
         """
         cfrom = -1
         try:
-            if self.lnk.type == CHARSPAN:
+            if self.lnk.type == Lnk.CHARSPAN:
                 cfrom = self.lnk.data[0]
         except AttributeError:
             pass  # use default cfrom of -1
@@ -292,7 +300,7 @@ class LnkMixin(object):
         """
         cto = -1
         try:
-            if self.lnk.type == CHARSPAN:
+            if self.lnk.type == Lnk.CHARSPAN:
                 cto = self.lnk.data[1]
         except AttributeError:
             pass  # use default cto of -1

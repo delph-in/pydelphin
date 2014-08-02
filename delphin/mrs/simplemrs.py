@@ -11,9 +11,7 @@ import re
 from delphin.mrs import (Mrs, ElementaryPredication, Argument, Pred,
                          MrsVariable, Lnk, HandleConstraint)
 from delphin.mrs.components import (sort_vid_split, sort_vid_re)
-from delphin.mrs.config import (HANDLESORT,
-                                QEQ, LHEQ, OUTSCOPES,
-                                CHARSPAN, CHARTSPAN, EDGE, TOKENS)
+from delphin.mrs.config import (HANDLESORT, QEQ, LHEQ, OUTSCOPES)
 from delphin._exceptions import MrsDecodeError
 
 # versions are:
@@ -513,15 +511,15 @@ def serialize_lnk(lnk):
     s = ""
     if lnk is not None:
         s = _left_angle
-        if lnk.type == CHARSPAN:
+        if lnk.type == Lnk.CHARSPAN:
             cfrom, cto = lnk.data
             s += ''.join([str(cfrom), _colon, str(cto)])
-        elif lnk.type == CHARTSPAN:
+        elif lnk.type == Lnk.CHARTSPAN:
             cfrom, cto = lnk.data
             s += ''.join([str(cfrom), _hash, str(cto)])
-        elif lnk.type == TOKENS:
+        elif lnk.type == Lnk.TOKENS:
             s += ' '.join([str(t) for t in lnk.data])
-        elif lnk.type == EDGE:
+        elif lnk.type == Lnk.EDGE:
             s += ''.join([_at, str(lnk.data)])
         s += _right_angle
     return gray(s)

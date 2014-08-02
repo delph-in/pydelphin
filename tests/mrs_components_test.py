@@ -9,7 +9,6 @@ from delphin.mrs.components import (
 from delphin.mrs.config import (
     QEQ, LHEQ, OUTSCOPES, CVARSORT, CVARG, CONSTARG,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
-    CHARSPAN, CHARTSPAN, TOKENS, EDGE,
     GRAMMARPRED, REALPRED, STRINGPRED,
     LTOP_NODEID, FIRST_NODEID, ANCHOR_SORT,
     INTRINSIC_ARG, VARIABLE_ARG, CONSTANT_ARG, HOLE_ARG, HCONS_ARG, LABEL_ARG)
@@ -88,7 +87,7 @@ class TestLnk(unittest.TestCase):
 
     def testCharSpanLnk(self):
         lnk = Lnk.charspan(0, 1)
-        self.assertEqual(lnk.type, CHARSPAN)
+        self.assertEqual(lnk.type, Lnk.CHARSPAN)
         self.assertEqual(lnk.data, (0,1))
         lnk = Lnk.charspan('0', '1')
         self.assertEqual(lnk.data, (0,1))
@@ -99,7 +98,7 @@ class TestLnk(unittest.TestCase):
 
     def testChartSpanLnk(self):
         lnk = Lnk.chartspan(0, 1)
-        self.assertEqual(lnk.type, CHARTSPAN)
+        self.assertEqual(lnk.type, Lnk.CHARTSPAN)
         self.assertEqual(lnk.data, (0,1))
         lnk = Lnk.chartspan('0', '1')
         self.assertEqual(lnk.data, (0,1))
@@ -110,7 +109,7 @@ class TestLnk(unittest.TestCase):
 
     def testTokensLnk(self):
         lnk = Lnk.tokens([1, 2, 3])
-        self.assertEqual(lnk.type, TOKENS)
+        self.assertEqual(lnk.type, Lnk.TOKENS)
         self.assertEqual(lnk.data, (1,2,3))
         lnk = Lnk.tokens(['1'])
         self.assertEqual(lnk.data, (1,))
@@ -122,7 +121,7 @@ class TestLnk(unittest.TestCase):
 
     def testEdgeLnk(self):
         lnk = Lnk.edge(1)
-        self.assertEqual(lnk.type, EDGE)
+        self.assertEqual(lnk.type, Lnk.EDGE)
         self.assertEqual(lnk.data, 1)
         lnk = Lnk.edge('1')
         self.assertEqual(lnk.data, 1)
