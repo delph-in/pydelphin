@@ -13,8 +13,7 @@ from collections import OrderedDict
 from io import BytesIO
 import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
-from delphin.mrs.config import (GRAMMARPRED, STRINGPRED, REALPRED,
-                                QUANTIFIER_SORT, EQ_POST)
+from delphin.mrs.config import (QUANTIFIER_SORT, EQ_POST)
 
 
 _graphtype = 'dmrs'

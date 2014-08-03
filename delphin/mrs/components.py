@@ -3,9 +3,7 @@ import logging
 from collections import OrderedDict
 from .config import (
     CVARG, CONSTARG,
-    INTRINSIC_ARG, VARIABLE_ARG, HOLE_ARG, LABEL_ARG, HCONS_ARG, CONSTANT_ARG,
     HANDLESORT, CVARSORT, ANCHOR_SORT, QUANTIFIER_SORT,
-    GRAMMARPRED, REALPRED, STRINGPRED,
     QEQ
 )
 
@@ -341,6 +339,13 @@ class Argument(AnchorMixin):
         value: the MrsVariable or constant value of the argument
     """
 
+    INTRINSIC_ARG = 0  # ARG0, conventionally
+    VARIABLE_ARG = 1  # The value is the ARG0 of some other EP
+    HANDLE_ARG = 2  # The value is a handle (supertype of next two)
+    LABEL_ARG = 3  # The value is the label of some other EP(s)
+    HCONS_ARG = 4  # The value is the hi variable of an HCONS
+    CONSTANT_ARG = 5  # The value is a constant (e.g. a string)
+
     def __init__(self, nodeid, argname, value):
         self.nodeid = nodeid
         self.argname = argname
@@ -372,22 +377,22 @@ class Argument(AnchorMixin):
 
     def infer_argument_type(self, xmrs=None):
         if self.argname == CVARG:
-            return INTRINSIC_ARG
+            return Argument.INTRINSIC_ARG
         elif isinstance(self.value, MrsVariable):
             if self.value.sort == HANDLESORT:
-                # if there's no xmrs given, then use HOLE_ARG as it
+                # if there's no xmrs given, then use HANDLE_ARG as it
                 # is the supertype of LABEL_ARG and HCONS_ARG
                 if xmrs is not None:
                     if xmrs.get_hcons(self.value) is not None:
-                        return HCONS_ARG
+                        return Argument.HCONS_ARG
                     else:
-                        return LABEL_ARG
+                        return Argument.LABEL_ARG
                 else:
-                    return HOLE_ARG
+                    return Argument.HANDLE_ARG
             else:
-                return VARIABLE_ARG
+                return Argument.VARIABLE_ARG
         else:
-            return CONSTANT_ARG
+            return Argument.CONSTANT_ARG
 
     @property
     def type(self):
@@ -537,6 +542,11 @@ class Pred(object):
         False
     """
 
+    # Pred types (used mainly in input/output, not internally in pyDelphin)
+    GRAMMARPRED = 0  # only a string allowed (quoted or not)
+    REALPRED = 1  # may explicitly define lemma, pos, sense
+    STRINGPRED = 2  # quoted string form of realpred
+
     def __init__(self, predtype, lemma=None, pos=None, sense=None):
         """Extract the lemma, pos, and sense (if applicable) from a pred
            string, if given, or construct a pred string from those
@@ -568,14 +578,14 @@ class Pred(object):
     @classmethod
     def stringpred(cls, predstr):
         lemma, pos, sense, end = Pred.split_pred_string(predstr.strip('"\''))
-        pred = cls(STRINGPRED, lemma=lemma, pos=pos, sense=sense)
+        pred = cls(Pred.STRINGPRED, lemma=lemma, pos=pos, sense=sense)
         pred.string = predstr
         return pred
 
     @classmethod
     def grammarpred(cls, predstr):
         lemma, pos, sense, end = Pred.split_pred_string(predstr.strip('"\''))
-        pred = cls(GRAMMARPRED, lemma=lemma, pos=pos, sense=sense)
+        pred = cls(Pred.GRAMMARPRED, lemma=lemma, pos=pos, sense=sense)
         pred.string = predstr
         return pred
 
@@ -588,7 +598,7 @@ class Pred(object):
 
     @classmethod
     def realpred(cls, lemma, pos, sense=None):
-        pred = cls(REALPRED, lemma=lemma, pos=pos, sense=sense)
+        pred = cls(Pred.REALPRED, lemma=lemma, pos=pos, sense=sense)
         string_tokens = list(filter(bool, [lemma, pos, str(sense or '')]))
         pred.string = '_'.join([''] + string_tokens + ['rel'])
         return pred

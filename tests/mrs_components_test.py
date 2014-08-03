@@ -9,10 +9,8 @@ from delphin.mrs.components import (
 from delphin.mrs.config import (
     QEQ, LHEQ, OUTSCOPES, CVARSORT, CVARG, CONSTARG,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
-    GRAMMARPRED, REALPRED, STRINGPRED,
     LTOP_NODEID, FIRST_NODEID, ANCHOR_SORT,
-    INTRINSIC_ARG, VARIABLE_ARG, CONSTANT_ARG, HOLE_ARG, HCONS_ARG, LABEL_ARG)
-
+)
 
 class TestMrsVariable(unittest.TestCase):
     def test_construct(self):
@@ -202,11 +200,11 @@ class TestArgument(unittest.TestCase):
 
     def test_infer_type(self):
         a = Argument(None, CVARG, MrsVariable(1, 'x'))
-        self.assertEqual(a.infer_argument_type(), INTRINSIC_ARG)
+        self.assertEqual(a.infer_argument_type(), Argument.INTRINSIC_ARG)
         a = Argument(None, 'ARG', MrsVariable(1, 'x'))
-        self.assertEqual(a.infer_argument_type(), VARIABLE_ARG)
+        self.assertEqual(a.infer_argument_type(), Argument.VARIABLE_ARG)
         a = Argument(None, 'ARG', MrsVariable(1, 'h'))
-        self.assertEqual(a.infer_argument_type(), HOLE_ARG)
+        self.assertEqual(a.infer_argument_type(), Argument.HANDLE_ARG)
         # fake an Xmrs where h0 is QEQ'd and others are not
         class FakeXmrs(object):
             def get_hcons(self, var):
@@ -215,13 +213,13 @@ class TestArgument(unittest.TestCase):
                 return None
         x = FakeXmrs()
         a = Argument(None, 'ARG', MrsVariable(0, 'h'))
-        self.assertEqual(a.infer_argument_type(xmrs=x), HCONS_ARG)
+        self.assertEqual(a.infer_argument_type(xmrs=x), Argument.HCONS_ARG)
         a = Argument(None, 'ARG', MrsVariable(1, 'h'))
-        self.assertEqual(a.infer_argument_type(xmrs=x), LABEL_ARG)
+        self.assertEqual(a.infer_argument_type(xmrs=x), Argument.LABEL_ARG)
         a = Argument(None, CONSTARG, 'constant')
-        self.assertEqual(a.infer_argument_type(), CONSTANT_ARG)
+        self.assertEqual(a.infer_argument_type(), Argument.CONSTANT_ARG)
         a = Argument(None, 'OTHER', 'constant')
-        self.assertEqual(a.infer_argument_type(), CONSTANT_ARG)
+        self.assertEqual(a.infer_argument_type(), Argument.CONSTANT_ARG)
 
 
 class TestLink(unittest.TestCase):
@@ -290,7 +288,7 @@ class TestHandleConstraint(unittest.TestCase):
 class TestPred(unittest.TestCase):
     def testGpred(self):
         p = Pred.grammarpred('pron_rel')
-        self.assertEqual(p.type, GRAMMARPRED)
+        self.assertEqual(p.type, Pred.GRAMMARPRED)
         self.assertEqual(p.string, 'pron_rel')
         self.assertEqual(p.lemma, 'pron')
         self.assertEqual(p.pos, None)
@@ -301,7 +299,7 @@ class TestPred(unittest.TestCase):
         self.assertEqual(p.pos, 'q')
         self.assertEqual(p.sense, None)
         p = Pred.grammarpred('abc_def_ghi_rel')
-        self.assertEqual(p.type, GRAMMARPRED)
+        self.assertEqual(p.type, Pred.GRAMMARPRED)
         self.assertEqual(p.string, 'abc_def_ghi_rel')
         # pos must be a single character, so we get abc_def, ghi, rel
         self.assertEqual(p.lemma, 'abc_def')
@@ -310,19 +308,19 @@ class TestPred(unittest.TestCase):
 
     def testSpred(self):
         p = Pred.stringpred('_dog_n_rel')
-        self.assertEqual(p.type, STRINGPRED)
+        self.assertEqual(p.type, Pred.STRINGPRED)
         self.assertEqual(p.string, '_dog_n_rel')
         self.assertEqual(p.lemma, 'dog')
         self.assertEqual(p.pos, 'n')
         self.assertEqual(p.sense, None)
         p = Pred.stringpred('_犬_n_rel')
-        self.assertEqual(p.type, STRINGPRED)
+        self.assertEqual(p.type, Pred.STRINGPRED)
         self.assertEqual(p.string, '_犬_n_rel')
         self.assertEqual(p.lemma, '犬')
         self.assertEqual(p.pos, 'n')
         self.assertEqual(p.sense, None)
         p = Pred.stringpred('"_dog_n_1_rel"')
-        self.assertEqual(p.type, STRINGPRED)
+        self.assertEqual(p.type, Pred.STRINGPRED)
         self.assertEqual(p.string, '"_dog_n_1_rel"')
         self.assertEqual(p.lemma, 'dog')
         self.assertEqual(p.pos, 'n')
@@ -334,28 +332,28 @@ class TestPred(unittest.TestCase):
 
     def testStringOrGrammarPred(self):
         p = Pred.string_or_grammar_pred('_dog_n_rel')
-        self.assertEqual(p.type, STRINGPRED)
+        self.assertEqual(p.type, Pred.STRINGPRED)
         p = Pred.string_or_grammar_pred('pron_rel')
-        self.assertEqual(p.type, GRAMMARPRED)
+        self.assertEqual(p.type, Pred.GRAMMARPRED)
 
     def testRealPred(self):
         # basic, no sense arg
         p = Pred.realpred('dog', 'n')
-        self.assertEqual(p.type, REALPRED)
+        self.assertEqual(p.type, Pred.REALPRED)
         self.assertEqual(p.string, '_dog_n_rel')
         self.assertEqual(p.lemma, 'dog')
         self.assertEqual(p.pos, 'n')
         self.assertEqual(p.sense, None)
         # try with arg names, unicode, and sense
         p = Pred.realpred(lemma='犬', pos='n', sense='1')
-        self.assertEqual(p.type, REALPRED)
+        self.assertEqual(p.type, Pred.REALPRED)
         self.assertEqual(p.string, '_犬_n_1_rel')
         self.assertEqual(p.lemma, '犬')
         self.assertEqual(p.pos, 'n')
         self.assertEqual(p.sense, '1')
         # in case sense is int, not str
         p = Pred.realpred('dog', 'n', 1)
-        self.assertEqual(p.type, REALPRED)
+        self.assertEqual(p.type, Pred.REALPRED)
         self.assertEqual(p.string, '_dog_n_1_rel')
         self.assertEqual(p.lemma, 'dog')
         self.assertEqual(p.pos, 'n')

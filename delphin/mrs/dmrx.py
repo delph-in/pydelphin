@@ -13,8 +13,7 @@ from collections import OrderedDict
 from io import BytesIO
 import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
-from delphin.mrs.config import (GRAMMARPRED, STRINGPRED, REALPRED,
-                                QUANTIFIER_SORT)
+from delphin.mrs.config import QUANTIFIER_SORT
 
 # Import LXML if available, otherwise fall back to another etree implementation
 try:
@@ -213,10 +212,10 @@ def encode_node(node):
 
 
 def encode_pred(pred):
-    if pred.type == GRAMMARPRED:
+    if pred.type == Pred.GRAMMARPRED:
         e = etree.Element('gpred')
         e.text = pred.string.strip('"\'')
-    elif pred.type in (REALPRED, STRINGPRED):
+    elif pred.type in (Pred.REALPRED, Pred.STRINGPRED):
         attributes = {}
         if pred.lemma is not None:
             attributes['lemma'] = pred.lemma

@@ -9,21 +9,10 @@ FIRST_NODEID   = 10000 # the nodeid assigned to the first node
 UNKNOWNSORT    = 'u' # when nothing is known about the sort
 HANDLESORT     = 'h' # for scopal relations
 QUANTIFIER_SORT= 'q' # for quantifier preds
-# Pred
-GRAMMARPRED    = 'grammarpred' # only a string allowed
-REALPRED       = 'realpred'    # may explicitly define lemma, pos, sense
-STRINGPRED     = 'stringpred'  # string-form of realpred
 # HCONS
 QEQ            = 'qeq'
 LHEQ           = 'lheq'
 OUTSCOPES      = 'outscopes'
-# ARGUMENTS
-INTRINSIC_ARG  = 'IntrinsicArgument'
-VARIABLE_ARG   = 'VariableArgument'
-HOLE_ARG       = 'HoleArgument' # supertype of LABEL_ARG and HCONS_ARG
-LABEL_ARG      = 'LabelArgument'
-HCONS_ARG      = 'HconsArgument'
-CONSTANT_ARG   = 'ConstantArgument'
 # MRS strings
 CVARG          = 'ARG0'
 CONSTARG       = 'CARG'

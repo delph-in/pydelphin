@@ -8,13 +8,12 @@ from itertools import chain, product
 import networkx as nx
 from delphin._exceptions import XmrsStructureError
 from .components import (
-    Hook, MrsVariable, ElementaryPredication, Node, Link, HandleConstraint,
-    Lnk, LnkMixin
+    Hook, MrsVariable, ElementaryPredication, Node, Argument, Link,
+    HandleConstraint, Lnk, LnkMixin
 )
 from .config import (LTOP_NODEID, FIRST_NODEID,
                      ANCHOR_SORT, HANDLESORT, CVARSORT,
-                     CVARG, QEQ, INTRINSIC_ARG, VARIABLE_ARG, HOLE_ARG,
-                     LABEL_ARG, HCONS_ARG, CONSTANT_ARG,
+                     CVARG, QEQ,
                      EQ_POST, NEQ_POST, HEQ_POST, H_POST)
 from .util import AccumulationDict as AccDict, XmrsDiGraph, first, second
 
@@ -50,7 +49,7 @@ def build_graph(hook, eps, args, hcons, icons):
         nid = arg.nodeid
         attrs = {'rargname': arg.argname, 'arg': arg}
         tgt = arg.value
-        if arg.type == CONSTANT_ARG:
+        if arg.type == Argument.CONSTANT_ARG:
             continue
             # g.node[ep.nodeid][arg.argname] = str(val)
         elif tgt in cv_to_nid:

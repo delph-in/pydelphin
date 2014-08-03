@@ -13,8 +13,7 @@ from io import BytesIO
 from delphin.mrs import (Mrs, ElementaryPredication, Argument, Pred,
                          MrsVariable, Lnk, HandleConstraint)
 from delphin._exceptions import MrsDecodeError
-from delphin.mrs.config import (GRAMMARPRED, STRINGPRED, REALPRED,
-                                CVARG, CONSTARG)
+from delphin.mrs.config import (CVARG, CONSTARG)
 
 # Import LXML if available, otherwise fall back to another etree implementation
 try:
@@ -175,11 +174,9 @@ def decode_args(elem):
     for e in elem.findall('fvpair'):
         argname = e.find('rargname').text.upper()
         if e.find('constant') is not None:
-            # argtype = CONSTANTARG
             argval = e.find('constant').text
         elif e.find('var') is not None:
             argval = decode_var(e.find('var'))
-            # argtype = HOLE_ARG if argval.sort == HANDLESORT else VARIABLEARG
         args.append(Argument.mrs_argument(argname, argval))
     return args
 
@@ -290,13 +287,13 @@ def encode_ep(ep, listed_vars):
 
 def encode_pred(pred):
     p = None
-    if pred.type == GRAMMARPRED:
+    if pred.type == Pred.GRAMMARPRED:
         p = etree.Element('pred')
         p.text = pred.string
-    elif pred.type == STRINGPRED:
+    elif pred.type == Pred.STRINGPRED:
         p = etree.Element('spred')
         p.text = pred.string
-    elif pred.type == REALPRED:
+    elif pred.type == Pred.REALPRED:
         attributes = {'lemma': pred.lemma, 'pos': pred.pos}
         if pred.sense is not None:
             attributes['sense'] = pred.sense

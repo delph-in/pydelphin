@@ -328,12 +328,6 @@ def read_argument(tokens, variables=None):
     if variables is None:
         variables = {}
     argname, value = read_featval(tokens, variables=variables)
-    # argtype = CONSTANTARG # default in case others don't match
-    # if isinstance(value, MrsVariable):
-    #     if value.sort == HANDLESORT:
-    #         argtype = HOLE_ARG
-    #     else:
-    #         argtype = VARIABLEARG
     return Argument.mrs_argument(argname, value)
 
 
