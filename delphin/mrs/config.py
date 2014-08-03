@@ -9,13 +9,6 @@ FIRST_NODEID   = 10000 # the nodeid assigned to the first node
 UNKNOWNSORT    = 'u' # when nothing is known about the sort
 HANDLESORT     = 'h' # for scopal relations
 QUANTIFIER_SORT= 'q' # for quantifier preds
-# lnk types
-# These types determine how a lnk on an EP or MRS are to be interpreted,
-# and thus determine the data type/structure of the lnk data
-CHARSPAN       = 'charspan'  # Character span; a pair of offsets
-CHARTSPAN      = 'chartspan' # Chart vertex span: a pair of indices
-TOKENS         = 'tokens'    # Token numbers: a list of indices
-EDGE           = 'edge'      # An edge identifier: a number
 # Pred
 GRAMMARPRED    = 'grammarpred' # only a string allowed
 REALPRED       = 'realpred'    # may explicitly define lemma, pos, sense
