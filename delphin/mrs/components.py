@@ -725,6 +725,13 @@ class Node(LnkMixin):
         return self.pred.is_quantifier()
 
 
+def sorted_eps(eps):
+    return sorted(eps, key=lambda ep: (ep.cfrom,
+                                       ep.cto,
+                                       -ep.is_quantifier(),
+                                       ep.pred.lemma))
+
+
 class ElementaryPredication(LnkMixin, AnchorMixin):
     """
     An elementary predication (EP) combines a predicate with various

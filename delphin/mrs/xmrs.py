@@ -70,10 +70,8 @@ class Xmrs(LnkMixin):
     Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
 
     Args:
+        graph: a graph of the \*MRS structure
         hook: a |Hook| object to contain the ltop, xarg, and index
-        eps: an iterable of |ElementaryPredications|
-        hcons: an iterable of |HandleConstraints|
-        icons: an iterable of IndividualConstraints (planned feature)
         lnk: the |Lnk| object associating the Xmrs to the surface form
         surface: the surface string
         identifier: a discourse-utterance id
@@ -124,7 +122,7 @@ class Xmrs(LnkMixin):
 
     def __repr__(self):
         if self.surface is not None:
-            stringform = self.surface
+            stringform = '"{}"'.format(self.surface)
         else:
             stringform = ' '.join(ep.pred.lemma for ep in self.eps)
         return 'Xmrs({})'.format(stringform)
@@ -353,14 +351,6 @@ class Xmrs(LnkMixin):
                 nids.append(nid)
         return nids
 
-    def get_outbound_args(self, nodeid, allow_unbound=True):
-        g = self._graph
-        for src, tgt, data in g.out_edges_iter(nodeid, data=True):
-            if src == tgt:
-                continue
-            if allow_unbound or tgt in g.nodeids or tgt in g.labels:
-                yield data['arg']
-
     # def get_quantifier(self, nodeid):
     #     try:
     #         ep = self._nid_to_ep[nodeid]
@@ -404,20 +394,35 @@ class Xmrs(LnkMixin):
         # may need some work to calculate hook or lnk here
         return Xmrs(graph=sg)
 
-    def find_subgraphs_by_preds(self, preds, connected=None):
-        preds = list(preds)
-        nidsets = list(
-            filter(lambda ps: len(set(ps)) == len(ps),
-                   map(lambda p: self.select_nodeids(pred=p), preds))
-        )
-        for sg in map(self.subgraph, product(*nidsets)):
-            if connected is not None and sg.is_connected() != connected:
-                continue
-            yield sg
-
     def is_connected(self):
         return nx.is_weakly_connected(self._graph)
 
+    def is_well_formed(self):
+        """
+        Return True if the Xmrs is well-formed, False otherwise.
+
+        A well-formed Xmrs has the following properties (note, `node`
+        below refers to a node in the graph, but is more like an EP than
+        a DMRS Node):
+          * The graph of nodes form a net (i.e. are connected).
+            Connectivity can be established with variable arguments,
+            QEQs, or label-equality.
+          * All nodes have a label
+          * The lo-handle for each QEQ must exist as the label of a node
+          * All nominal nodes have a quantifier
+        """
+        g = self._graph
+        return (
+            self.is_connected() and
+            all(g.node[nid].get('label', None) in g.labels
+                for nid in g.nodeids) and
+            all(d['qeq'].lo in g.labels
+                for nid in g.nodeids
+                for _, _, d in g.out_edges_iter(nid, data=True)
+                if 'qeq' in d)
+        )
+
+ 
     def get_nodeid(self, cv, quantifier=False):
         if cv not in self._graph:
             return None
@@ -464,3 +469,22 @@ class Xmrs(LnkMixin):
 
     # def get_hcons(self, hi_var):
     #     return self._var_to_hcons.get(hi_var)
+
+def get_outbound_args(xmrs, nodeid, allow_unbound=True):
+    g = xmrs._graph
+    for src, tgt, data in g.out_edges_iter(nodeid, data=True):
+        if src == tgt:
+            continue
+        if allow_unbound or tgt in g.nodeids or tgt in g.labels:
+            yield data['arg']
+
+def find_subgraphs_by_preds(xmrs, preds, connected=None):
+    preds = list(preds)
+    nidsets = list(
+        filter(lambda ps: len(set(ps)) == len(ps),
+               map(lambda p: xmrs.select_nodeids(pred=p), preds))
+    )
+    for sg in map(xmrs.subgraph, product(*nidsets)):
+        if connected is not None and sg.is_connected() != connected:
+            continue
+        yield sg
