@@ -64,7 +64,7 @@ def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
 #         #for arg in ep.args:
 #         #    arg.anchor = anchor
 
-#     # maybe validation can do further finishing, like adding CVs or
+#     # maybe validation can do further finishing, like adding IVs or
 #     # setting argument types
 #     validate(ltop, index, rels, hcons, icons, lnk, surface, identifier)
 
@@ -85,8 +85,8 @@ def Mrs(ltop=None, index=None, rels=None, hcons=None, icons=None,
 #     lbls = set(ep.label for ep in rels)
 #     hcmap = {hc.lo: hc for hc in hcons}
 #     for ep in rels:
-#         if ep.cv is None:
-#             logging.warning('The EP for {} is missing a characteristic '
+#         if ep.iv is None:
+#             logging.warning('The EP for {} is missing an intrinsic '
 #                             'variable.'.format(ep.pred))
 #         for arg in ep.args:
 #             if arg.value in hcmap and hcmap[arg.value].lo not in lbls:

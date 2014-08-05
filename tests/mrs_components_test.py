@@ -7,7 +7,7 @@ from delphin.mrs.components import (
     Pred, Node, ElementaryPredication as EP
 )
 from delphin.mrs.config import (
-    QEQ, LHEQ, OUTSCOPES, CVARSORT, CVARG, CONSTARG,
+    QEQ, LHEQ, OUTSCOPES, CVARSORT, IVARG_ROLE, CONSTARG_ROLE,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
     LTOP_NODEID, FIRST_NODEID, ANCHOR_SORT,
 )
@@ -199,7 +199,7 @@ class TestArgument(unittest.TestCase):
         self.assertNotEqual(a4, a5)
 
     def test_infer_type(self):
-        a = Argument(None, CVARG, MrsVariable(1, 'x'))
+        a = Argument(None, IVARG_ROLE, MrsVariable(1, 'x'))
         self.assertEqual(a.infer_argument_type(), Argument.INTRINSIC_ARG)
         a = Argument(None, 'ARG', MrsVariable(1, 'x'))
         self.assertEqual(a.infer_argument_type(), Argument.VARIABLE_ARG)
@@ -216,7 +216,7 @@ class TestArgument(unittest.TestCase):
         self.assertEqual(a.infer_argument_type(xmrs=x), Argument.HCONS_ARG)
         a = Argument(None, 'ARG', MrsVariable(1, 'h'))
         self.assertEqual(a.infer_argument_type(xmrs=x), Argument.LABEL_ARG)
-        a = Argument(None, CONSTARG, 'constant')
+        a = Argument(None, CONSTARG_ROLE, 'constant')
         self.assertEqual(a.infer_argument_type(), Argument.CONSTANT_ARG)
         a = Argument(None, 'OTHER', 'constant')
         self.assertEqual(a.infer_argument_type(), Argument.CONSTANT_ARG)
@@ -463,7 +463,7 @@ class TestElementaryPredication(unittest.TestCase):
         # properties only come from intrinsic arg
         e = EP(p, lbl, args=[Argument.mrs_argument('ARG1', v)])
         self.assertEqual(len(e.properties), 0)
-        e = EP(p, lbl, args=[Argument.mrs_argument(CVARG, v)])
+        e = EP(p, lbl, args=[Argument.mrs_argument(IVARG_ROLE, v)])
         self.assertEqual(len(e.properties), 1)
         self.assertEqual(e.properties['num'], 'sg')
 
@@ -473,14 +473,14 @@ class TestElementaryPredication(unittest.TestCase):
         e = EP(p, lbl)
         self.assertEqual(len(e.args), 0)
         v1 = MrsVariable(vid=2, sort='e', properties={'tense': 'pres'})
-        e = EP(p, lbl, args=[Argument.mrs_argument(CVARG, v1)])
+        e = EP(p, lbl, args=[Argument.mrs_argument(IVARG_ROLE, v1)])
         self.assertEqual(len(e.args), 1)
-        self.assertEqual(e.arg_value(CVARG), v1)
+        self.assertEqual(e.arg_value(IVARG_ROLE), v1)
         v2 = MrsVariable(vid=3, sort='x', properties={'num': 'sg'})
-        e = EP(p, lbl, args=[Argument.mrs_argument(CVARG, v1),
+        e = EP(p, lbl, args=[Argument.mrs_argument(IVARG_ROLE, v1),
                              Argument.mrs_argument('ARG1', v2)])
         self.assertEqual(len(e.args), 2)
-        self.assertEqual(e.arg_value(CVARG), v1)
+        self.assertEqual(e.arg_value(IVARG_ROLE), v1)
         self.assertEqual(e.arg_value('ARG1'), v2)
 
 #class TestXmrs(unittest.TestCase):
@@ -496,30 +496,30 @@ class TestElementaryPredication(unittest.TestCase):
 #class TestXmrsLinks(unittest.TestCase):
 #    def setUp(self):
 #        ltop = MrsVariable(0,'h')
-#        sleep_cv = MrsVariable(1,'e')
+#        sleep_iv = MrsVariable(1,'e')
 #        sleep_lbl = MrsVariable(2, 'h')
 #        dog_lbl = MrsVariable(3, 'h')
-#        dog_cv = MrsVariable(4, 'x')
+#        dog_iv = MrsVariable(4, 'x')
 #        a_lbl = MrsVariable(5, 'h')
 #        a_hole = MrsVariable(6, 'h')
 #        a_body = MrsVariable(7, 'h')
 #        big_lbl = MrsVariable(8, 'h')
-#        big_cv = MrsVariable(9, 'e')
+#        big_iv = MrsVariable(9, 'e')
 #
 #        self.xmrs = Xmrs(
-#            hook=Hook(ltop=ltop,index=sleep_cv),
+#            hook=Hook(ltop=ltop,index=sleep_iv),
 #            nodes=[Node(10000, Pred.stringpred('_a_q_rel')),
 #                   Node(10001, Pred.stringpred('_big_a_1_rel')),
 #                   Node(10002, Pred.stringpred('_dog_n_1_rel')),
 #                   Node(10003, Pred.stringpred('_sleep_v_1_rel'))],
 #            args=[Argument(10000, 'RSTR', a_hole),
 #                  Argument(10000, 'BODY', a_body),
-#                  Argument(10001, 'ARG1', dog_cv),
-#                  Argument(10003, 'ARG1', dog_cv)],
+#                  Argument(10001, 'ARG1', dog_iv),
+#                  Argument(10003, 'ARG1', dog_iv)],
 #            hcons=[HandleConstraint(ltop, QEQ, sleep_lbl),
 #                   HandleConstraint(a_hole, QEQ, dog_lbl)],
-#            cvs=[(10000, dog_cv), (10001, big_cv), (10002, dog_cv),
-#                 (10003, sleep_cv)],
+#            ivs=[(10000, dog_iv), (10001, big_iv), (10002, dog_iv),
+#                 (10003, sleep_iv)],
 #            labels=[(10000, a_lbl), (10001, dog_lbl), (10002, dog_lbl),
 #                    (10003, sleep_lbl)])
 #

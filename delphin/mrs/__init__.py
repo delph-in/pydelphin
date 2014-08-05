@@ -23,10 +23,10 @@ Internally, an |Xmrs| object may be built up of various
 """
 
 # notes for future documentation:
-# cvs: the variable of the intrinsic
-#     argument of an |EP|. Conventionally, the sort of a CV is either
-#     ``e`` or ``x``. CVs are sometimes called "distinguished
-#     variables", "intrinsic variables", or "ARG0s"
+# ivs: the variable of the intrinsic
+#     argument of an |EP|. Conventionally, the sort of a IV is either
+#     ``e`` or ``x``. IVs are sometimes called "distinguished
+#     variables", "characteristic variables", or "ARG0s"
 # labels: Every |EP| has a label, which is used to define quantifier
 #     scope. When more than one |EP| share a label, they share a scope,
 #     and are said to be in an **EP Conjunction**.

@@ -36,7 +36,7 @@ def serialize(ms, pretty_print=True, color=False, **kwargs):
             ed_list=''.join(
                 ed.format(
                     membership=connected,  # if m.is_connected(ep.nodeid)?
-                    id=ep.cv if not ep.is_quantifier() else next(q_ids),
+                    id=ep.iv if not ep.is_quantifier() else next(q_ids),
                     pred=ep.pred.short_form,
                     lnk=str(ep.lnk),
                     carg=carg.format(constant=ep.carg) if ep.carg else '',
@@ -46,7 +46,7 @@ def serialize(ms, pretty_print=True, color=False, **kwargs):
                             for a in m.get_outbound_args(ep.nodeid,
                                                          allow_unbound=False)
                         ) if not ep.is_quantifier() else
-                        dep.format(argname='BV', value=ep.cv)
+                        dep.format(argname='BV', value=ep.iv)
                     ),
                     delim=delim
                 )

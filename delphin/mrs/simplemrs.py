@@ -488,8 +488,8 @@ def serialize_ep(ep, listed_vars, version=_default_version):
         if ep.surface is not None:
             toks.append('"{}"'.format(ep.surface))
     toks += [serialize_argument(_lbl, ep.label, listed_vars)]
-    # if ep.cv is not None:
-    #     toks += [serialize_argument(CVARG, ep.cv, listed_vars)]
+    # if ep.iv is not None:
+    #     toks += [serialize_argument(IVARG_ROLE, ep.iv, listed_vars)]
     for arg in ep.args:
         toks += [serialize_argument(arg.argname, arg.value, listed_vars)]
     # add the constant if it exists (currently done as a regular arg above)

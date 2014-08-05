@@ -13,7 +13,7 @@ from io import BytesIO
 from delphin.mrs import (Mrs, ElementaryPredication, Argument, Pred,
                          MrsVariable, Lnk, HandleConstraint)
 from delphin._exceptions import MrsDecodeError
-from delphin.mrs.config import (CVARG, CONSTARG)
+from delphin.mrs.config import IVARG_ROLE
 
 # Import LXML if available, otherwise fall back to another etree implementation
 try:
@@ -166,10 +166,10 @@ def decode_pred(elem):
 
 def decode_args(elem):
     # <!ELEMENT fvpair (rargname, (var|constant))>
-    # cv is the characteristic variable (probably ARG0, given by CVARG)
-    # carg is the constant arg (e.g. a quoted string; given by CONSTARG)
+    # iv is the intrinsic variable (probably ARG0, given by IVARG_ROLE)
+    # carg is the constant arg (e.g. a quoted string; given by CONSTARG_ROLE)
     # This code assumes that only cargs have constant values, and all
-    # other args (including CVs) have var values.
+    # other args (including IVs) have var values.
     args = []
     for e in elem.findall('fvpair'):
         argname = e.find('rargname').text.upper()
@@ -274,8 +274,8 @@ def encode_ep(ep, listed_vars):
     e = etree.Element('ep', attrib=attributes)
     e.append(encode_pred(ep.pred))
     e.append(encode_label(ep.label))
-    if ep.cv is not None:
-        e.append(encode_arg(CVARG, encode_variable(ep.cv, listed_vars)))
+    if ep.iv is not None:
+        e.append(encode_arg(IVARG_ROLE, encode_variable(ep.iv, listed_vars)))
     for arg in ep.args:
         if isinstance(arg.value, MrsVariable):
             e.append(encode_arg(arg.argname,

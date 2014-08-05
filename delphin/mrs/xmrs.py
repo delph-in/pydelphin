@@ -12,32 +12,30 @@ from .components import (
     HandleConstraint, Lnk, LnkMixin
 )
 from .config import (LTOP_NODEID, FIRST_NODEID,
-                     ANCHOR_SORT, HANDLESORT, CVARSORT,
-                     CVARG, QEQ,
                      EQ_POST, NEQ_POST, HEQ_POST, H_POST)
 from .util import AccumulationDict as AccDict, XmrsDiGraph, first, second
 
 
 def build_graph(hook, eps, args, hcons, icons):
-    cv_to_nid = {ep.cv: ep.nodeid for ep in eps if not ep.is_quantifier()}
-    # bv_to_nid = {ep.cv: ep.nodeid for ep in eps if ep.is_quantifier()}
+    iv_to_nid = {ep.iv: ep.nodeid for ep in eps if not ep.is_quantifier()}
+    # bv_to_nid = {ep.iv: ep.nodeid for ep in eps if ep.is_quantifier()}
     # lbl_to_nids = AccDict(or_, ((ep.label, {ep.nodeid}) for ep in eps))
     var_to_hcons = {hc.hi: hc for hc in hcons}
     g = XmrsDiGraph()
     for ep in eps:
         nid = ep.nodeid
         lbl = ep.label
-        cv = ep.cv
+        iv = ep.iv
         g.nodeids.append(nid)
         g.labels.add(lbl)
         g.add_node(nid, {'ep': ep, 'label': lbl})
         g.add_node(lbl)
         g.add_edge(lbl, nid)
-        g.add_node(cv)
-        if cv in cv_to_nid:
-            g.add_edge(cv, nid, {'cv': True})  # intrinsic arg
+        g.add_node(iv)
+        if iv in iv_to_nid:
+            g.add_edge(iv, nid, {'iv': True})  # intrinsic arg
         else:
-            g.add_edge(cv, nid, {'bv': True})  # quantifier
+            g.add_edge(iv, nid, {'bv': True})  # quantifier
     if hook.ltop is not None:
         g.add_node(LTOP_NODEID, label=hook.ltop)
         if hook.ltop in var_to_hcons:
@@ -52,11 +50,11 @@ def build_graph(hook, eps, args, hcons, icons):
         if arg.type == Argument.CONSTANT_ARG:
             continue
             # g.node[ep.nodeid][arg.argname] = str(val)
-        elif tgt in cv_to_nid:
+        elif tgt in iv_to_nid:
             # ARG0s (including quantifiers) don't get an arg edge
-            if tgt == g.node[nid]['ep'].cv:
+            if tgt == g.node[nid]['ep'].iv:
                 continue
-            tgt = cv_to_nid[tgt]
+            tgt = iv_to_nid[tgt]
         elif tgt in var_to_hcons:
             hc = var_to_hcons[tgt]
             tgt = hc.lo
@@ -68,17 +66,20 @@ def build_graph(hook, eps, args, hcons, icons):
 class Xmrs(LnkMixin):
     """
     Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
-
-    Args:
-        graph: a graph of the \*MRS structure
-        hook: a |Hook| object to contain the ltop, xarg, and index
-        lnk: the |Lnk| object associating the Xmrs to the surface form
-        surface: the surface string
-        identifier: a discourse-utterance id
     """
 
     def __init__(self, graph=None, hook=None,
                  lnk=None, surface=None, identifier=None):
+        """
+        Basic constructor, meant to be called by classmethods (below)
+
+        Args:
+            graph: a graph of the \*MRS structure
+            hook: a |Hook| object to contain the ltop, xarg, and index
+            lnk: the |Lnk| object associating the Xmrs to the surface form
+            surface: the surface string
+            identifier: a discourse-utterance id
+        """
         self._graph = graph
 
         # Some members relate to the whole MRS
@@ -100,6 +101,18 @@ class Xmrs(LnkMixin):
     @classmethod
     def from_mrs(cls, hook=None, rels=None, hcons=None, icons=None,
                  lnk=None, surface=None, identifier=None):
+        """
+        Construct an Xmrs from MRS components.
+
+        Args:
+            hook: a |Hook| object
+            rels: an iterable of |EP| objects (with arguments specified)
+            hcons: an iterable of |HandleConstraint| objects
+            icons: an iterable of |IndividualConstraint| objects
+            lnk: a |Lnk| object
+            surface: the surface string
+            identifier: a discourse-utterance id
+        """
         eps = list(rels or [])
         # first give eps a nodeid (this is propagated to args)
         for i, ep in enumerate(eps):
@@ -113,6 +126,19 @@ class Xmrs(LnkMixin):
     @classmethod
     def from_rmrs(cls, hook=None, eps=None, args=None, hcons=None, icons=None,
                   lnk=None, surface=None, identifier=None):
+        """
+        Construct an Xmrs from RMRS components.
+
+        Args:
+            hook: a |Hook| object
+            eps: an iterable of |EP| objects
+            args: an iterable of |Argument| objects
+            hcons: an iterable of |HandleConstraint| objects
+            icons: an iterable of |IndividualConstraint| objects
+            lnk: a |Lnk| object
+            surface: the surface string
+            identifier: a discourse-utterance id
+        """
         if hook is None:
             hook = Hook()
         hcons = list(hcons or [])
@@ -149,7 +175,7 @@ class Xmrs(LnkMixin):
     @property
     def variables(self):
         """
-        The list of |MrsVariables|.
+        The list of all |MrsVariable| objects specified in the Xmrs.
         """
         return self.introduced_variables.union(
             [self.hook.ltop, self.hook.index] +
@@ -161,24 +187,24 @@ class Xmrs(LnkMixin):
     @property
     def introduced_variables(self):
         """
-        The list of the |MrsVariables| that are introduced in the Xmrs.
-        Introduced |MrsVariables| exist as characteristic variables,
-        labels, or holes (the HI variable of a QEQ).
+        The list of the |MrsVariables| that are _introduced_ in the
+        Xmrs. Introduced |MrsVariables| exist as intrinsic
+        variables, labels, or holes (the HI variable of a QEQ).
         """
         return set(
-            list(chain.from_iterable([(ep.cv, ep.label) for ep in self.eps]))
+            list(chain.from_iterable([(ep.iv, ep.label) for ep in self.eps]))
             + [hc.hi for hc in self.hcons]
         )
 
     @property
-    def characteristic_variables(self):
+    def intrinsic_variables(self):
         """
-        The list of characteristic variables.
+        The list of intrinsic variables.
         """
-        return list(ep.cv for ep in self.eps if not ep.is_quantifier())
+        return list(ep.iv for ep in self.eps if not ep.is_quantifier())
 
-    #: A synonym for :py:meth:`characteristic_variables`
-    cvs = characteristic_variables
+    #: A synonym for :py:meth:`intrinsic_variables`
+    ivs = intrinsic_variables
 
     @property
     def bound_variables(self):
@@ -186,7 +212,7 @@ class Xmrs(LnkMixin):
         The list of bound variables (i.e. the value of the intrinsic
         argument of quantifiers).
         """
-        return list(ep.cv for ep in self.eps if ep.is_quantifier())
+        return list(ep.iv for ep in self.eps if ep.is_quantifier())
 
     #: A synonym for :py:meth:`bound_variables`
     bvs = bound_variables
@@ -259,8 +285,8 @@ class Xmrs(LnkMixin):
         The list of |Links|.
         """
         # Return the set of links for the XMRS structure. Links exist
-        # for every non-characteristic argument that has a variable
-        # that is the characteristic variable of some other predicate,
+        # for every non-intrinsic argument that has a variable
+        # that is the intrinsic variable of some other predicate,
         # as well as for label equalities when no argument link exists
         # (even considering transitivity).
         links = []
@@ -269,7 +295,7 @@ class Xmrs(LnkMixin):
         labels = g.labels
         attested_eqs = defaultdict(set)
         for s, t, d in g.out_edges_iter([LTOP_NODEID] + g.nodeids, data=True):
-            # if s == t or g.node[s]['ep'].cv == g.node[t]['ep'].cv:
+            # if s == t or g.node[s]['ep'].iv == g.node[t]['ep'].iv:
             #     continue  # ignore ARG0s
             s_lbl = g.node[s]['label']
             if t in nids:
@@ -315,14 +341,14 @@ class Xmrs(LnkMixin):
                                (pred is None or n.pred == pred))
         return list(filter(nodematch, self.nodes))
 
-    def select_eps(self, anchor=None, cv=None, label=None, pred=None):
+    def select_eps(self, anchor=None, iv=None, label=None, pred=None):
         """
         Return the list of all |EPs| that have the matching *anchor*,
-        *cv*, *label*, and or *pred* values. If none match, return an
+        *iv*, *label*, and or *pred* values. If none match, return an
         empty list.
         """
         epmatch = lambda n: ((anchor is None or n.anchor == anchor) and
-                             (cv is None or n.cv == cv) and
+                             (iv is None or n.iv == iv) and
                              (label is None or n.label == label) and
                              (pred is None or n.pred == pred))
         return list(filter(epmatch, self.eps))
@@ -339,10 +365,10 @@ class Xmrs(LnkMixin):
                               (value is None or a.value == value))
         return list(filter(argmatch, self.args))
 
-    def select_nodeids(self, cv=None, label=None, pred=None):
+    def select_nodeids(self, iv=None, label=None, pred=None):
         g = self._graph
         nids = []
-        datamatch = lambda d: ((cv is None or d['ep'].cv == cv) and
+        datamatch = lambda d: ((iv is None or d['ep'].iv == iv) and
                                (pred is None or d['ep'].pred == pred) and
                                (label is None or d['label'] == label))
         for nid in g.nodeids:
@@ -355,7 +381,7 @@ class Xmrs(LnkMixin):
     #     try:
     #         ep = self._nid_to_ep[nodeid]
     #         if not ep.is_quantifier():
-    #             return self._bv_to_nid[ep.cv]
+    #             return self._bv_to_nid[ep.iv]
     #     except KeyError:
     #         pass
     #     return None
@@ -389,8 +415,8 @@ class Xmrs(LnkMixin):
     def subgraph(self, nodeids):
         g = self._graph
         labels = set(g.node[nid]['label'] for nid in nodeids)
-        cvs = set(g.node[nid]['ep'].cv for nid in nodeids)
-        sg = g.subgraph(chain(labels, cvs, nodeids))
+        ivs = set(g.node[nid]['ep'].iv for nid in nodeids)
+        sg = g.subgraph(chain(labels, ivs, nodeids))
         # may need some work to calculate hook or lnk here
         return Xmrs(graph=sg)
 
@@ -423,11 +449,11 @@ class Xmrs(LnkMixin):
         )
 
  
-    def get_nodeid(self, cv, quantifier=False):
-        if cv not in self._graph:
+    def get_nodeid(self, iv, quantifier=False):
+        if iv not in self._graph:
             return None
-        edge_type = 'bv' if quantifier else 'cv'
-        edges = self._graph.out_edges_iter(cv, data=True)
+        edge_type = 'bv' if quantifier else 'iv'
+        edges = self._graph.out_edges_iter(iv, data=True)
         try:
             return next(t for _, t, d in edges if d.get(edge_type, False))
         except StopIteration:
@@ -446,10 +472,10 @@ class Xmrs(LnkMixin):
     #     except KeyError:
     #         return None
 
-    # def get_cv(self, nodeid):
+    # def get_iv(self, nodeid):
     #     try:
     #         ep = self._nid_to_ep[nodeid]
-    #         return ep.cv
+    #         return ep.iv
     #     except KeyError:
     #         return None
 

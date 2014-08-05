@@ -2,7 +2,7 @@ from .components import (
     Hook, VarGenerator, ElementaryPredication, Argument, qeq
 )
 from .xmrs import Xmrs
-from .config import (HANDLESORT, CVARG, CONSTARG, LTOP_NODEID, RSTR,
+from .config import (HANDLESORT, IVARG_ROLE, CONSTARG_ROLE, LTOP_NODEID, RSTR,
                      EQ_POST, HEQ_POST, H_POST, NIL_POST)
 
 
@@ -11,10 +11,10 @@ def Dmrs(nodes=None, links=None,
          **kwargs):
     vgen = VarGenerator(starting_vid=0)
     labels = _make_labels(nodes, links, vgen)
-    cvs = _make_cvs(nodes, vgen)
+    ivs = _make_ivs(nodes, vgen)
     hook = Hook(ltop=labels[LTOP_NODEID])  # no index for now
-    # initialize args with ARG0 for characteristic variables
-    args = {nid: [Argument(nid, CVARG, cv)] for nid, cv in cvs.items()}
+    # initialize args with ARG0 for intrinsic variables
+    args = {nid: [Argument(nid, IVARG_ROLE, iv)] for nid, iv in ivs.items()}
     hcons = []
     for l in links:
         if l.start not in args:
@@ -34,11 +34,11 @@ def Dmrs(nodes=None, links=None,
                 hcons += [qeq(hole, labels[l.end])]
                 args[l.start].append(Argument(l.start, l.argname, hole))
                 # if the arg is RSTR, it's a quantifier, so we can
-                # find its characteristic variable now
+                # find its intrinsic variable now
                 if l.argname.upper() == RSTR:
-                    cvs[l.start] = cvs[l.end]
+                    ivs[l.start] = ivs[l.end]
                     args[l.start].append(
-                        Argument(l.start, CVARG, cvs[l.start])
+                        Argument(l.start, IVARG_ROLE, ivs[l.start])
                     )
             elif l.post == HEQ_POST:
                 args[l.start].append(
@@ -46,13 +46,13 @@ def Dmrs(nodes=None, links=None,
                 )
             else:  # NEQ_POST or EQ_POST
                 args[l.start].append(
-                    Argument(l.start, l.argname, cvs[l.end])
+                    Argument(l.start, l.argname, ivs[l.end])
                 )
     eps = []
     for node in nodes:
         nid = node.nodeid
         if node.carg is not None:
-            args[nid].append(Argument(nid, CONSTARG, node.carg))
+            args[nid].append(Argument(nid, CONSTARG_ROLE, node.carg))
         ep = ElementaryPredication.from_node(
             labels[nid], node, (args.get(nid) or None)
         )
@@ -80,12 +80,12 @@ def _make_labels(nodes, links, vgen):
     return labels
 
 
-def _make_cvs(nodes, vgen):
-    cvs = {}
+def _make_ivs(nodes, vgen):
+    ivs = {}
     for node in nodes:
-        # quantifiers share their CV with the quantifiee. It will be
+        # quantifiers share their IV with the quantifiee. It will be
         # selected later during argument construction
         if not node.is_quantifier():
-            cvs[node.nodeid] = vgen.new(node.cvarsort,
+            ivs[node.nodeid] = vgen.new(node.cvarsort,
                                         node.properties or None)
-    return cvs
+    return ivs

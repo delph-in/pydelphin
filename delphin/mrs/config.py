@@ -14,8 +14,8 @@ QEQ            = 'qeq'
 LHEQ           = 'lheq'
 OUTSCOPES      = 'outscopes'
 # MRS strings
-CVARG          = 'ARG0'
-CONSTARG       = 'CARG'
+IVARG_ROLE     = 'ARG0'
+CONSTARG_ROLE  = 'CARG'
 # RMRS strings
 ANCHOR_SORT    = HANDLESORT # LKB output is like h10001, but in papers it's a1
 # DMRS strings

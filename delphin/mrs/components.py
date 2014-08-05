@@ -2,7 +2,7 @@ import re
 import logging
 from collections import OrderedDict
 from .config import (
-    CVARG, CONSTARG,
+    IVARG_ROLE, CONSTARG_ROLE,
     HANDLESORT, CVARSORT, ANCHOR_SORT, QUANTIFIER_SORT,
     QEQ
 )
@@ -24,10 +24,10 @@ class MrsVariable(object):
     bearers of the properties of an |EP| (thus the name "variable
     properties"). MrsVariables are used for several purposes:
     
-    * **characteristic variables** (aka CVs)
+    * **intrinsic variables** (aka IVs)
     * **handles** (labels or holes)
     * **anchors** (a nodeid with a sort)
-    * **variable argument values** (CVs, labels, holes, or
+    * **variable argument values** (IVs, labels, holes, or
       underspecified variables for unexpressed arguments)
 
     Example:
@@ -122,7 +122,7 @@ class MrsVariable(object):
         which don't have variables, in order to capture the sortal type
         of a |Node|.
         """
-        # FIXME: currently gets CVARSORT even if the var is not a CV
+        # FIXME: currently gets CVARSORT even if the var is not a IV
         sortinfo = OrderedDict([(CVARSORT, self.sort)])
         sortinfo.update(self.properties)
         return sortinfo
@@ -376,7 +376,7 @@ class Argument(AnchorMixin):
         return cls(anchor.vid, argname, value)
 
     def infer_argument_type(self, xmrs=None):
-        if self.argname == CVARG:
+        if self.argname == IVARG_ROLE:
             return Argument.INTRINSIC_ARG
         elif isinstance(self.value, MrsVariable):
             if self.value.sort == HANDLESORT:
@@ -739,8 +739,8 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
 
     EPs must have a |Pred| and a |MrsVariable| *label*. Well-formed EPs
     will have an intrinsic argument (e.g. ARG0) on their *args* list,
-    which specifies the characteristic variable (CV), though it is not
-    required by pyDelphin. However, some methods use an index of CVs to
+    which specifies the intrinsic variable (IV), though it is not
+    required by pyDelphin. However, some methods use an index of IVs to
     calculate semantic structure, so the absence of an intrinsic
     argument could cause unexpected behavior.
 
@@ -757,17 +757,17 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
     def __init__(self, pred, label, anchor=None, args=None,
                  lnk=None, surface=None, base=None):
         self.label = label
-        # first args, then can get CV
+        # first args, then can get IV
         self.argdict = OrderedDict((a.argname, a) for a in (args or []))
         # Only fill in other attributes if pred is given, otherwise ignore.
         # This behavior is to help enable the from_node classmethod.
         self._node = None
         if pred is not None:
-            cv = self.cv
+            iv = self.iv
             self._node = Node(
                 anchor.vid if anchor else None,
                 pred,
-                sortinfo=cv.sortinfo if cv else None,
+                sortinfo=iv.sortinfo if iv else None,
                 lnk=lnk,
                 surface=surface,
                 base=base,
@@ -782,7 +782,7 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
 
     def __repr__(self):
         return 'ElementaryPredication({}[{}])'.format(str(self.pred),
-                                                      str(self.cv or '?'))
+                                                      str(self.iv or '?'))
 
     def __str__(self):
         return self.__repr__()
@@ -815,7 +815,7 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
 
     @property
     def sortinfo(self):
-        return self.cv.sortinfo
+        return self.iv.sortinfo
 
     @property
     def lnk(self):
@@ -847,19 +847,22 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
     # these properties are specific to the EP's qualities
 
     @property
-    def cv(self):
-        return self.arg_value(CVARG)
+    def intrinsic_variable(self):
+        return self.arg_value(IVARG_ROLE)
+
+    #: A synonym for :py:meth:`intrinsic_variable`
+    iv = intrinsic_variable
 
     @property
     def properties(self):
         try:
-            return self.cv.properties
-        except AttributeError:  # in case cv is None
+            return self.iv.properties
+        except AttributeError:  # in case iv is None
             return OrderedDict()
 
     @property
     def carg(self):
-        return self.arg_value(CONSTARG)
+        return self.arg_value(CONSTARG_ROLE)
 
     @property
     def args(self):
