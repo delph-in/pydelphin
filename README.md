@@ -23,7 +23,7 @@ Here's a brief example of using the `itsdb` library:
 
 ```python3
 >>> from delphin import itsdb
->>> prof = itsdb.TsdbProfile('/home/goodmami/logon/dfki/jacy/tsdb/gold/mrs')
+>>> prof = itsdb.ItsdbProfile('/home/goodmami/logon/dfki/jacy/tsdb/gold/mrs')
 >>> for row in prof.read_table('item'):
 ...     print(row.get('i-input'))
 雨 が 降っ た ．

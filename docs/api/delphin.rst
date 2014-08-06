@@ -6,11 +6,9 @@ Subpackages
 
 .. toctree::
 
-    delphin.codecs
     delphin.itsdb
     delphin.mrs
-    delphin.tdl
-
+    
 Module contents
 ---------------
 

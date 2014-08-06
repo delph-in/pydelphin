@@ -73,7 +73,7 @@ def update_profile(args):
     backup_profile = util.unique_filename(profile_dir + '.bak')
     shutil.copytree(profile_dir, backup_profile,
                     ignore=shutil.ignore_patterns(*['.svn']))
-    profile = itsdb.TsdbProfile(backup_profile)
+    profile = itsdb.ItsdbProfile(backup_profile)
     profile.write_profile(profile_dir, args.relations)
     if args.overwrite:
         shutil.rmtree(backup_profile)
@@ -87,7 +87,7 @@ def extract_fields(args):
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
     profile_dir = os.path.normpath(args.profile)
-    profile = itsdb.TsdbProfile(profile_dir)
+    profile = itsdb.ItsdbProfile(profile_dir)
     for row in profile.read_table(args.table):
         print(args.field_delimiter.join(str(row.get(f)) for f in args.fields))
 

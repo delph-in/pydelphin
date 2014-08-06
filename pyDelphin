@@ -164,7 +164,7 @@ def prepare_input_profile(cfg):
     applicators = [make_itsdb_action(ds, f)
                    for ds, f in cfg.get('applicators', [])]
     index = len(filters) > 0
-    prof = itsdb.TsdbProfile(cfg['input'],
+    prof = itsdb.ItsdbProfile(cfg['input'],
                              filters=filters,
                              applicators=applicators,
                              index=index)
@@ -179,7 +179,7 @@ def prepare_output_profile(cfg, in_profile):
     in_profile.write_profile(outdir,
                              relations_filename=relations,
                              key_filter=cfg['cascade_filters'])
-    prof = itsdb.TsdbProfile(outdir)
+    prof = itsdb.ItsdbProfile(outdir)
     return prof
 
 
