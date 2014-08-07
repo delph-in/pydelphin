@@ -1,6 +1,7 @@
 import re
 import logging
 from collections import OrderedDict
+from delphin._exceptions import XmrsStructureError
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE,
     HANDLESORT, CVARSORT, ANCHOR_SORT, QUANTIFIER_SORT,
@@ -874,6 +875,20 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
             return arg.value
         except KeyError:
             return None
+
+    def add_argument(self, arg):
+        if arg.nodeid is None:
+            arg.nodeid = self.nodeid
+        elif arg.nodeid != self.nodeid:
+            raise XmrsStructureError(
+                "Argument's nodeid must match the EP's (or be None)."
+            )
+        if arg.argname in self.argdict:
+            raise XmrsStructureError(
+                "Argument with role {} already exists in the EP."
+                .format(arg.argname)
+            )
+        self.argdict[arg.argname] = arg
 
     def is_quantifier(self):
         return self.pred.is_quantifier()

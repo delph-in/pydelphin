@@ -1,8 +1,9 @@
 import unittest
 from collections import OrderedDict
-from delphin.mrs import (Mrs, ElementaryPredication as EP, Pred, Argument,
-                         MrsVariable, Lnk)
-from delphin.mrs.components import qeq
+from delphin.mrs import Mrs
+from delphin.mrs.components import (
+    Hook, ElementaryPredication as EP, Pred, Argument, MrsVariable, Lnk, qeq
+)
 from delphin.mrs import simplemrs
 from delphin.mrs.simplemrs import tokenize # for convenience
 from delphin._exceptions import MrsDecodeError
@@ -110,7 +111,7 @@ class TestDeserialize(unittest.TestCase):
                                 Argument.mrs_argument('ARG1', self.vars1['x2'])],
                           lnk=Lnk.charspan(5, 11))
         self.mrs1 = Mrs(
-            ltop=self.vars1['h0'], index=self.vars1['e1'],
+            hook=Hook(ltop=self.vars1['h0'], index=self.vars1['e1']),
             rels=[self.mrs1ep1, self.mrs1ep2, self.mrs1ep3],
             hcons=[qeq(self.vars1['h4'], self.vars1['h6'])]
         )

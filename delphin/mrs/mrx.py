@@ -10,8 +10,10 @@
 
 from collections import OrderedDict
 from io import BytesIO
-from delphin.mrs import (Mrs, ElementaryPredication, Argument, Pred,
-                         MrsVariable, Lnk, HandleConstraint)
+from delphin.mrs import Mrs
+from delphin.mrs.components import (
+    ElementaryPredication, Argument, Pred, MrsVariable, Lnk, HandleConstraint
+)
 from delphin._exceptions import MrsDecodeError
 from delphin.mrs.config import IVARG_ROLE
 
@@ -88,8 +90,8 @@ def decode_mrs(elem):
     global _vars
     _vars = {}
     # normalize_vars(elem) # try to make all vars have a sort
-    return Mrs(ltop=decode_label(elem.find('label')),
-               index=decode_var(elem.find('var')),
+    return Mrs(hook=Hook(ltop=decode_label(elem.find('label')),
+                         index=decode_var(elem.find('var'))),
                rels=list(map(decode_ep, elem.iter('ep'))),
                hcons=list(map(decode_hcons, elem.iter('hcons'))),
                lnk=decode_lnk(elem.get('cfrom'), elem.get('cto')),

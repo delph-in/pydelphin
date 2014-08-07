@@ -19,7 +19,7 @@ CONSTARG_ROLE  = 'CARG'
 # RMRS strings
 ANCHOR_SORT    = HANDLESORT # LKB output is like h10001, but in papers it's a1
 # DMRS strings
-RSTR           = 'RSTR' # DMRS establishes that quantifiers have a RSTR link
+RSTR_ROLE      = 'RSTR' # DMRS establishes that quantifiers have a RSTR link
 EQ_POST        = 'EQ'
 HEQ_POST       = 'HEQ'
 NEQ_POST       = 'NEQ'

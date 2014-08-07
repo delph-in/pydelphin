@@ -8,9 +8,11 @@
 
 from collections import OrderedDict
 import re
-from delphin.mrs import (Mrs, ElementaryPredication, Argument, Pred,
-                         MrsVariable, Lnk, HandleConstraint)
-from delphin.mrs.components import (sort_vid_split, sort_vid_re)
+from delphin.mrs import Mrs
+from delphin.mrs.components import (
+    Hook, ElementaryPredication, Argument, Pred,
+    MrsVariable, Lnk, HandleConstraint, sort_vid_split, sort_vid_re
+)
 from delphin.mrs.config import (HANDLESORT, QEQ, LHEQ, OUTSCOPES)
 from delphin._exceptions import MrsDecodeError
 
@@ -215,7 +217,11 @@ def read_mrs(tokens, version=_default_version):
         rels = read_rels(tokens, variables=variables)
         hcons = read_hcons(tokens, variables=variables)
         validate_token(tokens.pop(0), _right_bracket)
-        m = Mrs(ltop, index, rels, hcons, lnk=lnk, surface=surface)
+        m = Mrs(hook=Hook(ltop=ltop, index=index),
+                rels=rels,
+                hcons=hcons,
+                lnk=lnk,
+                surface=surface)
     except IndexError:
         unexpected_termination_error()
     return m

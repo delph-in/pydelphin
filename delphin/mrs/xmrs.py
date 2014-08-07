@@ -11,12 +11,237 @@ from .components import (
     Hook, MrsVariable, ElementaryPredication, Node, Argument, Link,
     HandleConstraint, Lnk, LnkMixin
 )
-from .config import (LTOP_NODEID, FIRST_NODEID,
-                     EQ_POST, NEQ_POST, HEQ_POST, H_POST)
+from .config import (
+    HANDLESORT, IVARG_ROLE, CONSTARG_ROLE, LTOP_NODEID, FIRST_NODEID,
+    RSTR_ROLE, EQ_POST, NEQ_POST, HEQ_POST, H_POST, NIL_POST
+)
 from .util import AccumulationDict as AccDict, XmrsDiGraph, first, second
 
 
-def build_graph(hook, eps, args, hcons, icons):
+def Mrs(hook=None, rels=None, hcons=None, icons=None,
+        lnk=None, surface=None, identifier=None):
+    """
+    Construct an |Xmrs| using MRS components.
+
+    Formally, Minimal Recursion Semantics (MRS) have a top handle, a
+    bag of |ElementaryPredications|, and a bag of |HandleConstraints|.
+    All |Arguments|, including intrinsic arguments and constant
+    arguments, are expected to be contained by the |EPs|.
+
+    Args:
+        hook: A |Hook| object to contain LTOP, INDEX, etc.
+        rels: An iterable of |ElementaryPredications|
+        hcons: An iterable of |HandleConstraints|
+        icons: An iterable of IndividualConstraints (planned feature)
+        lnk: The |Lnk| object associating the MRS to the surface form
+        surface: The surface string
+        identifier: A discourse-utterance id
+    Returns:
+        An |Xmrs| object
+
+    Example:
+
+    >>> ltop = MrsVariable(vid=0, sort='h')
+    >>> rain_label = MrsVariable(vid=1, sort='h')
+    >>> index = MrsVariable(vid=2, sort='e')
+    >>> m = Mrs(
+    >>>     hook=Hook(ltop=ltop, index=index),
+    >>>     rels=[ElementaryPredication(
+    >>>         Pred.stringpred('_rain_v_1_rel'),
+    >>>         label=rain_label,
+    >>>         args=[Argument.mrs_argument('ARG0', index)]
+    >>>         )
+    >>>     ],
+    >>>     hcons=[HandleConstraint(ltop, 'qeq', rain_label)]
+    >>> )
+    """
+    if hook is None:
+        hook = Hook()
+    eps = list(rels or [])
+    hcons = list(hcons or [])
+    icons = list(icons or [])
+    # first give eps a nodeid (this is propagated to args)
+    next_nodeid = FIRST_NODEID
+    for ep in eps:
+        if ep.nodeid is not None and ep.nodeid >= next_nodeid:
+            next_nodeid = ep.nodeid + 1
+    for i, ep in enumerate(eps):
+        if ep.nodeid is None:
+            ep.nodeid = next_nodeid + i
+    graph = build_graph(hook, eps, hcons, icons)
+    return Xmrs(graph, hook, lnk, surface, identifier)
+
+
+def Rmrs(hook=None, eps=None, args=None, hcons=None, icons=None,
+         lnk=None, surface=None, identifier=None):
+    """
+    Construct an |Xmrs| from RMRS components.
+
+    Robust Minimal Recursion Semantics (RMRS) are like MRS, but all
+    |EPs| have an anchor (or nodeid), and |Arguments| are not contained
+    by the source |EPs|, but instead reference the anchor of their |EP|.
+
+    Args:
+        hook: A |Hook| object
+        eps: An iterable of |EP| objects
+        args: An iterable of |Argument| objects
+        hcons: An iterable of |HandleConstraint| objects
+        icons: An iterable of |IndividualConstraint| objects
+        lnk: A |Lnk| object
+        surface: The surface string
+        identifier: A discourse-utterance id
+    Returns:
+        An |Xmrs| object
+
+    Example:
+
+    >>> ltop = MrsVariable(vid=0, sort='h')
+    >>> rain_label = MrsVariable(vid=1, sort='h')
+    >>> rain_anchor = MrsVariable(vid=10000, sort='h')
+    >>> index = MrsVariable(vid=2, sort='e')
+    >>> m = Rmrs(
+    >>>     hook=Hook(ltop=ltop, index=index),
+    >>>     eps=[ElementaryPredication(
+    >>>         Pred.stringpred('_rain_v_1_rel'),
+    >>>         label=rain_label,
+    >>>         anchor=rain_anchor
+    >>>         )
+    >>>     ],
+    >>>     args=[Argument.rmrs_argument(rain_anchor, 'ARG0', index)],
+    >>>     hcons=[HandleConstraint(ltop, 'qeq', rain_label)]
+    >>> )
+    """
+    if hook is None:
+        hook = Hook()
+    eps = list(eps or [])
+    args = list(args or [])
+    for arg in args:
+        if arg.nodeid is None:
+            raise XmrsStructureError("RMRS args must have an anchor/nodeid.")
+    # make the EPs more MRS-like (with arguments)
+    for ep in eps:
+        if ep.nodeid is None:
+            raise XmrsStructureError("RMRS EPs must have an anchor/nodeid.")
+        argdict = OrderedDict((a.argname, a) for a in args
+                              if a.nodeid == ep.nodeid)
+        ep.argdict = argdict
+    hcons = list(hcons or [])
+    icons = list(icons or [])
+    graph = build_graph(hook, eps, hcons, icons)
+    return Xmrs(graph, hook, lnk, surface, identifier)
+
+def Dmrs(nodes=None, links=None,
+         lnk=None, surface=None, identifier=None,
+         **kwargs):
+    """
+    Construct an |Xmrs| using DMRS components.
+
+    Dependency Minimal Recursion Semantics (DMRS) have a list of |Node|
+    objects and a list of |Link| objects. There are no variables or
+    handles, so these will need to be created in order to make an |Xmrs|
+    object. A |Link| from the nodeid 0 (which does not have its own
+    |Node|)
+
+    Args:
+        nodes: An iterable of |Node| objects
+        links: An iterable of |Link| objects
+        lnk: The |Lnk| object associating the MRS to the surface form
+        surface: The surface string
+        identifier: A discourse-utterance id
+    Returns:
+        An |Xmrs| object
+
+    Example:
+
+    >>> rain = Node(10000, Pred.stringpred('_rain_v_1_rel'),
+    >>>             sortinfo={'cvarsort': 'e'})
+    >>> ltop_link = Link(0, 10000, post='H')
+    >>> d = Dmrs([rain], [ltop_link])
+    """
+    from .components import (VarGenerator, qeq)
+    vgen = VarGenerator(starting_vid=0)
+    labels = _make_labels(nodes, links, vgen)
+    ivs = _make_ivs(nodes, vgen)
+    hook = Hook(ltop=labels[LTOP_NODEID])  # no index for now
+    # initialize args with ARG0 for intrinsic variables
+    args = {nid: [Argument(nid, IVARG_ROLE, iv)] for nid, iv in ivs.items()}
+    hcons = []
+    for l in links:
+        if l.start not in args:
+            args[l.start] = []
+        # FIXME: I don't have a clear answer about how LTOP links are
+        # constructed, so I will assume that H_POST or NIL_POST
+        # assumes a QEQ. Label equality would have been captured by
+        # _make_labels() earlier.
+        if l.start == LTOP_NODEID:
+            if l.post == H_POST or l.post == NIL_POST:
+                hcons += [qeq(labels[LTOP_NODEID], labels[l.end])]
+        else:
+            if l.argname is None:
+                continue  # don't make an argument for bare EQ links
+            if l.post == H_POST:
+                hole = vgen.new(HANDLESORT)
+                hcons += [qeq(hole, labels[l.end])]
+                args[l.start].append(Argument(l.start, l.argname, hole))
+                # if the arg is RSTR, it's a quantifier, so we can
+                # find its intrinsic variable now
+                if l.argname.upper() == RSTR_ROLE:
+                    ivs[l.start] = ivs[l.end]
+                    args[l.start].append(
+                        Argument(l.start, IVARG_ROLE, ivs[l.start])
+                    )
+            elif l.post == HEQ_POST:
+                args[l.start].append(
+                    Argument(l.start, l.argname, labels[l.end])
+                )
+            else:  # NEQ_POST or EQ_POST
+                args[l.start].append(
+                    Argument(l.start, l.argname, ivs[l.end])
+                )
+    eps = []
+    for node in nodes:
+        nid = node.nodeid
+        if node.carg is not None:
+            args[nid].append(Argument(nid, CONSTARG_ROLE, node.carg))
+        ep = ElementaryPredication.from_node(
+            labels[nid], node, (args.get(nid) or None)
+        )
+        eps.append(ep)
+
+    icons = None  # future feature
+    return Mrs(hook=hook, rels=eps,
+               hcons=hcons, icons=icons,
+               lnk=lnk, surface=surface, identifier=identifier)
+
+
+def _make_labels(nodes, links, vgen):
+    labels = {}
+    labels[LTOP_NODEID] = vgen.new(HANDLESORT)  # reserve h0 for ltop
+    for l in links:
+        if l.post == EQ_POST:
+            lbl = (labels.get(l.start) or
+                   labels.get(l.end) or
+                   vgen.new(HANDLESORT))
+            labels[l.start] = labels[l.end] = lbl
+    # create any remaining uninstantiated labels
+    for n in nodes:
+        if n.nodeid not in labels:
+            labels[n.nodeid] = vgen.new(HANDLESORT)
+    return labels
+
+
+def _make_ivs(nodes, vgen):
+    ivs = {}
+    for node in nodes:
+        # quantifiers share their IV with the quantifiee. It will be
+        # selected later during argument construction
+        if not node.is_quantifier():
+            ivs[node.nodeid] = vgen.new(node.cvarsort,
+                                        node.properties or None)
+    return ivs
+
+
+def build_graph(hook, eps, hcons, icons):
     iv_to_nid = {ep.iv: ep.nodeid for ep in eps if not ep.is_quantifier()}
     # bv_to_nid = {ep.iv: ep.nodeid for ep in eps if ep.is_quantifier()}
     # lbl_to_nids = AccDict(or_, ((ep.label, {ep.nodeid}) for ep in eps))
@@ -43,7 +268,7 @@ def build_graph(hook, eps, args, hcons, icons):
             g.add_edge(LTOP_NODEID, hc.lo, {'hcons': hc})
         else:
             g.add_edge(LTOP_NODEID, hook.ltop)
-    for arg in args:
+    for arg in chain.from_iterable(ep.args for ep in eps):
         nid = arg.nodeid
         attrs = {'rargname': arg.argname, 'arg': arg}
         tgt = arg.value
@@ -67,36 +292,6 @@ class Xmrs(LnkMixin):
     """
     Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
     """
-
-    def __init__(self, graph=None, hook=None,
-                 lnk=None, surface=None, identifier=None):
-        """
-        Basic constructor, meant to be called by classmethods (below)
-
-        Args:
-            graph: a graph of the \*MRS structure
-            hook: a |Hook| object to contain the ltop, xarg, and index
-            lnk: the |Lnk| object associating the Xmrs to the surface form
-            surface: the surface string
-            identifier: a discourse-utterance id
-        """
-        self._graph = graph
-
-        # Some members relate to the whole MRS
-        #: The |Hook| object contains the LTOP, INDEX, and XARG
-        self.hook = hook or Hook()
-        #: A |Lnk| object to associate the Xmrs to the surface form
-        self.lnk = lnk  # Lnk object (MRS-level lnk spans the whole input)
-        #: The surface string
-        self.surface = surface   # The surface string
-        #: A discourse-utterance id
-        self.identifier = identifier  # Associates an utterance with the RMRS
-
-        # set the proper argument types (at least distinguish label
-        # equality from HCONS)
-        # for ep in eps:
-        #     for arg in ep.args:
-        #         arg.type = arg.infer_argument_type(xmrs=self)
 
     @classmethod
     def from_mrs(cls, hook=None, rels=None, hcons=None, icons=None,
@@ -145,6 +340,36 @@ class Xmrs(LnkMixin):
         icons = list(icons or [])
         graph = build_graph(hook, eps, args, hcons, icons)
         return cls(graph, hook, lnk, surface, identifier)
+
+    def __init__(self, graph=None, hook=None,
+                 lnk=None, surface=None, identifier=None):
+        """
+        Basic constructor, meant to be called by classmethods (below)
+
+        Args:
+            graph: a graph of the \*MRS structure
+            hook: a |Hook| object to contain the ltop, xarg, and index
+            lnk: the |Lnk| object associating the Xmrs to the surface form
+            surface: the surface string
+            identifier: a discourse-utterance id
+        """
+        self._graph = graph
+
+        # Some members relate to the whole MRS
+        #: The |Hook| object contains the LTOP, INDEX, and XARG
+        self.hook = hook or Hook()
+        #: A |Lnk| object to associate the Xmrs to the surface form
+        self.lnk = lnk  # Lnk object (MRS-level lnk spans the whole input)
+        #: The surface string
+        self.surface = surface   # The surface string
+        #: A discourse-utterance id
+        self.identifier = identifier  # Associates an utterance with the RMRS
+
+        # set the proper argument types (at least distinguish label
+        # equality from HCONS)
+        # for ep in eps:
+        #     for arg in ep.args:
+        #         arg.type = arg.infer_argument_type(xmrs=self)
 
     def __repr__(self):
         if self.surface is not None:
@@ -203,7 +428,7 @@ class Xmrs(LnkMixin):
         """
         return list(ep.iv for ep in self.eps if not ep.is_quantifier())
 
-    #: A synonym for :py:meth:`intrinsic_variables`
+    #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.intrinsic_variables`
     ivs = intrinsic_variables
 
     @property
@@ -214,7 +439,7 @@ class Xmrs(LnkMixin):
         """
         return list(ep.iv for ep in self.eps if ep.is_quantifier())
 
-    #: A synonym for :py:meth:`bound_variables`
+    #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.bound_variables`
     bvs = bound_variables
 
     @property
@@ -257,7 +482,8 @@ class Xmrs(LnkMixin):
         return [g.node[nid]['ep'] for nid in g.nodeids]
         # copy(ep) for ep in self._nid_to_ep.values()]
 
-    rels = eps  # just a synonym
+    #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.eps`
+    rels = eps
 
     @property
     def args(self):

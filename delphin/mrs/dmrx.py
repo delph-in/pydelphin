@@ -15,11 +15,7 @@ import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
 from delphin.mrs.config import QUANTIFIER_SORT
 
-# Import LXML if available, otherwise fall back to another etree implementation
-try:
-    from lxml import etree
-except ImportError:
-    import xml.etree.ElementTree as etree
+import xml.etree.ElementTree as etree
 
 ##############################################################################
 ##############################################################################
