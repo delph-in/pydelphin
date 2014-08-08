@@ -17,11 +17,7 @@ from delphin.mrs.components import (
 from delphin._exceptions import MrsDecodeError
 from delphin.mrs.config import IVARG_ROLE
 
-# Import LXML if available, otherwise fall back to another etree implementation
-try:
-    from lxml import etree
-except ImportError:
-    import xml.etree.ElementTree as etree
+import xml.etree.ElementTree as etree
 
 ##############################################################################
 ##############################################################################

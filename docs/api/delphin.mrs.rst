@@ -11,6 +11,11 @@ Mrs
 
 .. autofunction:: delphin.mrs.Mrs
 
+RMRS
+^^^^
+
+.. autofunction:: delphin.mrs.Rmrs
+
 Dmrs
 ^^^^
 

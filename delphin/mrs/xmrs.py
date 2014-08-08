@@ -293,58 +293,12 @@ class Xmrs(LnkMixin):
     Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
     """
 
-    @classmethod
-    def from_mrs(cls, hook=None, rels=None, hcons=None, icons=None,
-                 lnk=None, surface=None, identifier=None):
-        """
-        Construct an Xmrs from MRS components.
-
-        Args:
-            hook: a |Hook| object
-            rels: an iterable of |EP| objects (with arguments specified)
-            hcons: an iterable of |HandleConstraint| objects
-            icons: an iterable of |IndividualConstraint| objects
-            lnk: a |Lnk| object
-            surface: the surface string
-            identifier: a discourse-utterance id
-        """
-        eps = list(rels or [])
-        # first give eps a nodeid (this is propagated to args)
-        for i, ep in enumerate(eps):
-            if ep.nodeid is None:
-                ep.nodeid = FIRST_NODEID + i
-        # then extract args
-        args = chain.from_iterable(ep.args for ep in eps)
-        return Xmrs.from_rmrs(hook, eps, args, hcons, icons,
-                              lnk, surface, identifier)
-
-    @classmethod
-    def from_rmrs(cls, hook=None, eps=None, args=None, hcons=None, icons=None,
-                  lnk=None, surface=None, identifier=None):
-        """
-        Construct an Xmrs from RMRS components.
-
-        Args:
-            hook: a |Hook| object
-            eps: an iterable of |EP| objects
-            args: an iterable of |Argument| objects
-            hcons: an iterable of |HandleConstraint| objects
-            icons: an iterable of |IndividualConstraint| objects
-            lnk: a |Lnk| object
-            surface: the surface string
-            identifier: a discourse-utterance id
-        """
-        if hook is None:
-            hook = Hook()
-        hcons = list(hcons or [])
-        icons = list(icons or [])
-        graph = build_graph(hook, eps, args, hcons, icons)
-        return cls(graph, hook, lnk, surface, identifier)
-
     def __init__(self, graph=None, hook=None,
                  lnk=None, surface=None, identifier=None):
         """
-        Basic constructor, meant to be called by classmethods (below)
+        Xmrs can be instantiated directly, but it is meant to be created
+        by the constructor methods :py:meth:`Mrs`, :py:meth:`Rmrs`, or
+        :py:meth:`Dmrs`.
 
         Args:
             graph: a graph of the \*MRS structure
