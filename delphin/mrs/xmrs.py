@@ -639,11 +639,21 @@ class Xmrs(LnkMixin):
         except StopIteration:
             return None
 
-    # def get_ep(self, nodeid):
-    #     try:
-    #         return self.copy(self._nid_to_ep[nodeid])
-    #     except KeyError:
-    #         return None
+    def get_ep(self, nodeid):
+        try:
+            return self._graph.node[nodeid]['ep']
+        except KeyError:
+            return None
+
+    def get_node(self, nodeid):
+        ep = self.get_ep(nodeid)
+        node = None
+        if ep is not None:
+            node = ep._node
+        return node
+
+    def get_arg(self, nodeid, rargname):
+        ep = self.get_ep(nodeid).get_arg(rargname)
 
     # def get_args(self, nodeid):
     #     try:
@@ -675,6 +685,19 @@ class Xmrs(LnkMixin):
 
     # def get_hcons(self, hi_var):
     #     return self._var_to_hcons.get(hi_var)
+
+def find_argument_target(xmrs, nodeid, rargname):
+    g = xmrs._graph
+    tgt = next((tgt for src, tgt, data in g.out_edges_iter(nodeid, data=True)
+                if data['rargname'] == rargname),
+               None)
+    if tgt in g.nodeids:
+        return tgt
+    elif tgt in g.labels:
+        return xmrs.labelset_head(tgt)
+    else:
+        return None
+
 
 def get_outbound_args(xmrs, nodeid, allow_unbound=True):
     g = xmrs._graph

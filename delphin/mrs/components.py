@@ -869,9 +869,12 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
     def args(self):
         return list(self.argdict.values())
 
-    def arg_value(self, argname):
+    def get_arg(self, rargname):
+        return self.argdict.get(rargname)
+
+    def arg_value(self, rargname):
         try:
-            arg = self.argdict[argname]
+            arg = self.argdict[rargname]
             return arg.value
         except KeyError:
             return None

@@ -14,7 +14,7 @@ from delphin.mrs import Mrs
 from delphin.mrs.components import (
     ElementaryPredication, Argument, Pred, MrsVariable, Lnk, HandleConstraint
 )
-from delphin._exceptions import MrsDecodeError
+from delphin._exceptions import XmrsDeserializationError as XDE
 from delphin.mrs.config import IVARG_ROLE
 
 import xml.etree.ElementTree as etree
@@ -112,8 +112,8 @@ def decode_var(elem, sort=None):
     props = decode_extrapairs(elem.iter('extrapair'))
     if vid in _vars:
         if srt != _vars[vid].sort:
-            raise MrsDecodeError('Variable {}{} has a conflicting sort with {}'
-                                 .format(srt, vid, str(_vars[vid])))
+            raise XDE('Variable {}{} has a conflicting sort with {}'
+                      .format(srt, vid, str(_vars[vid])))
         _vars[vid].properties.update(props)
     else:
         _vars[vid] = MrsVariable(vid=vid, sort=srt, properties=props)

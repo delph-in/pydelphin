@@ -6,7 +6,7 @@ from delphin.mrs.components import (
 )
 from delphin.mrs import simplemrs
 from delphin.mrs.simplemrs import tokenize # for convenience
-from delphin._exceptions import MrsDecodeError
+from delphin._exceptions import XmrsDeserializationError as XDE
 
 # "dogs sleep." with ACE and the ERG
 compact_mrs = '''[LTOP:h0 INDEX:e1[e SF:prop TENSE:pres MOOD:indicative \
@@ -70,8 +70,7 @@ class TestHelperFunctions(unittest.TestCase):
         eq = self.assertEqual
         eq(simplemrs.validate_token('ARG0','ARG0'), None)
         eq(simplemrs.validate_token('arg0','ARG0'), None)
-        self.assertRaises(MrsDecodeError,
-                          simplemrs.validate_token, 'ARG0', '[')
+        self.assertRaises(XDE, simplemrs.validate_token, 'ARG0', '[')
 
     def test_is_variable(self):
         eq = self.assertEqual
@@ -123,10 +122,8 @@ class TestDeserialize(unittest.TestCase):
         eq(rfv(tokenize('CARG: 3')), ('CARG', '3'))
         eq(rfv(tokenize('LBL: h1'), feat='LBL', sort='h'),
            ('LBL', MrsVariable(vid=1, sort='h')))
-        self.assertRaises(MrsDecodeError, rfv, tokenize('LBL: h1'),
-                          feat='ARG1')
-        self.assertRaises(MrsDecodeError, rfv, tokenize('LBL: h1'),
-                          sort='x')
+        self.assertRaises(XDE, rfv, tokenize('LBL: h1'), feat='ARG1')
+        self.assertRaises(XDE, rfv, tokenize('LBL: h1'), sort='x')
         props = OrderedDict(PROP='val')
         eq(rfv(tokenize('ARG1: x1 [ x PROP: val ]')),
            ('ARG1', MrsVariable(vid=1, sort='x', properties=props)))
@@ -137,9 +134,9 @@ class TestDeserialize(unittest.TestCase):
         eq(rv(tokenize('h1')), MrsVariable(vid=1, sort='h'))
         eq(rv(tokenize('x1 [ x PROP: val ]')),
            MrsVariable(vid=1, sort='x', properties=OrderedDict(PROP='val')))
-        self.assertRaises(MrsDecodeError, rv, tokenize('x1 [ e PROP: val ]'))
-        self.assertRaises(MrsDecodeError, rv, tokenize('h1 [ h PROP: val ]'))
-        self.assertRaises(MrsDecodeError, rv, tokenize('x1'),
+        self.assertRaises(XDE, rv, tokenize('x1 [ e PROP: val ]'))
+        self.assertRaises(XDE, rv, tokenize('h1 [ h PROP: val ]'))
+        self.assertRaises(XDE, rv, tokenize('x1'),
                           variables={'1':MrsVariable(vid=1, sort='h')})
 
     def test_read_props(self):
@@ -169,7 +166,7 @@ class TestDeserialize(unittest.TestCase):
         eq = self.assertEqual
         read_ep = simplemrs.read_ep
         rep = lambda s: read_ep(tokenize(s))
-        #TODO self.assertRaises(MrsDecodeError, rep, '[ ]')
+        #TODO self.assertRaises(XDE, rep, '[ ]')
         eq(rep('[ udef_q_rel<0:4> LBL: h3 ARG0: x2 '
                '[ x PERS: 3 NUM: pl IND: + ] RSTR: h4 BODY: h5 ]'),
            self.mrs1ep1)

@@ -14,7 +14,7 @@ from delphin.mrs.components import (
     MrsVariable, Lnk, HandleConstraint, sort_vid_split, sort_vid_re
 )
 from delphin.mrs.config import (HANDLESORT, QEQ, LHEQ, OUTSCOPES)
-from delphin._exceptions import MrsDecodeError
+from delphin._exceptions import XmrsDeserializationError as XDE
 
 # versions are:
 #  * 1.0 long running standard
@@ -185,8 +185,7 @@ def is_variable(token):
 
 
 def invalid_token_error(token, expected):
-    raise MrsDecodeError('Invalid token: "{}"\tExpected: "{}"'
-                         .format(token, expected))
+    raise XDE('Invalid token: "{}"\tExpected: "{}"'.format(token, expected))
 
 
 def deserialize(string):
@@ -253,19 +252,19 @@ def read_variable(tokens, sort=None, variables=None):
     srt, vid = sort_vid_split(var)
     # consider something like not(srt <= sort) in the case of subsumptive sorts
     if sort is not None and srt != sort:
-        raise MrsDecodeError('Variable {} has sort "{}", expected "{}"'.format(
-                             var, srt, sort))
+        raise XDE('Variable {} has sort "{}", expected "{}"'
+                  .format(var, srt, sort))
     vartype, props = read_props(tokens)
     if vartype is not None and srt != vartype:
-        raise MrsDecodeError('Variable "{}" and its cvarsort "{}" are '
-                             'not the same.'.format(var, vartype))
+        raise XDE('Variable "{}" and its cvarsort "{}" are not the same.'
+                  .format(var, vartype))
     if srt == 'h' and props:
-        raise MrsDecodeError('Handle variable "{}" has a non-empty '
-                             'property set {}.'.format(var, props))
+        raise XDE('Handle variable "{}" has a non-empty property set {}.'
+                  .format(var, props))
     if vid in variables:
         if srt != variables[vid].sort:
-            raise MrsDecodeError('Variable {} has a conflicting sort with {}'
-                                 .format(var, str(variables[vid])))
+            raise XDE('Variable {} has a conflicting sort with {}'
+                      .format(var, str(variables[vid])))
         variables[vid].properties.update(props)
     else:
         variables[vid] = MrsVariable(vid=vid, sort=srt, properties=props)
@@ -398,7 +397,7 @@ def read_hcons(tokens, variables=None):
 
 
 def unexpected_termination_error():
-    raise MrsDecodeError('Invalid MRS: Unexpected termination.')
+    raise XDE('Invalid MRS: Unexpected termination.')
 
 ##############################################################################
 ##############################################################################
