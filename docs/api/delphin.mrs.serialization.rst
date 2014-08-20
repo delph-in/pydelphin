@@ -4,8 +4,8 @@
 Serialization Formats
 ---------------------
 
-SimpleMRS Codec
----------------
+SimpleMRS
+^^^^^^^^^
 
 .. automodule:: delphin.mrs.simplemrs
     :members: load, loads, dump, dumps, load_one, loads_one, dump_one,
@@ -13,8 +13,8 @@ SimpleMRS Codec
     :undoc-members:
     :show-inheritance:
     
-MRX Codec
----------
+MRX
+^^^
 
 .. automodule:: delphin.mrs.mrx
     :members: load, loads, dump, dumps, load_one, loads_one, dump_one,
@@ -22,8 +22,8 @@ MRX Codec
     :undoc-members:
     :show-inheritance:
 
-DMRX Codec
-----------
+DMRX
+^^^^
 
 .. automodule:: delphin.mrs.dmrx
     :members: load, loads, dump, dumps, load_one, loads_one, dump_one,

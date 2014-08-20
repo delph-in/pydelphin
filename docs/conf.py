@@ -126,6 +126,8 @@ rst_epilog = '''
      :py:class:`HandleConstraints <delphin.mrs.components.HandleConstraint>`
 .. |IndividualConstraint| replace::
      :py:class:`~<delphin.mrs.components.IndividualConstraint>`
+.. |IndividualConstraints| replace::
+     :py:class:`IndividualConstraints <delphin.mrs.components.IndividualConstraint>`
 .. |Node| replace:: :py:class:`~delphin.mrs.components.Node`
 .. |Nodes| replace:: :py:class:`Nodes<delphin.mrs.components.Node>`
 .. |Link| replace:: :py:class:`~delphin.mrs.components.Link`
