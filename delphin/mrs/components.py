@@ -1,6 +1,6 @@
 import re
 import logging
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from delphin._exceptions import XmrsStructureError
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE,
@@ -448,6 +448,9 @@ class HandleConstraint(object):
 def qeq(hi, lo):
     return HandleConstraint(hi, QEQ, lo)
 
+
+IndividualConstraint = namedtuple('IndividualConstraint',
+                                  ['target', 'relation', 'clause'])
 
 # PREDICATES AND PREDICATIONS
 

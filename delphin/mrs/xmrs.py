@@ -242,11 +242,9 @@ def _make_ivs(nodes, vgen):
 
 
 def build_graph(hook, eps, hcons, icons):
-    iv_to_nid = {ep.iv: ep.nodeid for ep in eps if not ep.is_quantifier()}
-    # bv_to_nid = {ep.iv: ep.nodeid for ep in eps if ep.is_quantifier()}
-    # lbl_to_nids = AccDict(or_, ((ep.label, {ep.nodeid}) for ep in eps))
-    var_to_hcons = {hc.hi: hc for hc in hcons}
     g = XmrsDiGraph()
+    if hook.ltop is not None:
+        g.add_edge(LTOP_NODEID, hook.ltop)
     for ep in eps:
         nid = ep.nodeid
         lbl = ep.label
@@ -254,37 +252,21 @@ def build_graph(hook, eps, hcons, icons):
         g.nodeids.append(nid)
         g.labels.add(lbl)
         g.add_node(nid, {'ep': ep, 'label': lbl})
-        g.add_node(lbl)
         g.add_edge(lbl, nid)
-        g.add_node(iv)
-        if iv in iv_to_nid:
-            g.add_edge(iv, nid, {'iv': True})  # intrinsic arg
-        else:
+        if ep.is_quantifier():
             g.add_edge(iv, nid, {'bv': True})  # quantifier
-    if hook.ltop is not None:
-        g.add_node(LTOP_NODEID, label=hook.ltop)
-        if hook.ltop in var_to_hcons:
-            hc = var_to_hcons[hook.ltop]
-            g.add_edge(LTOP_NODEID, hc.lo, {'hcons': hc})
+            g.node[iv]['bv'] = ep.nodeid
         else:
-            g.add_edge(LTOP_NODEID, hook.ltop)
-    for arg in chain.from_iterable(ep.args for ep in eps):
-        nid = arg.nodeid
-        attrs = {'rargname': arg.argname, 'arg': arg}
-        tgt = arg.value
-        if arg.type == Argument.CONSTANT_ARG:
-            continue
-            # g.node[ep.nodeid][arg.argname] = str(val)
-        elif tgt in iv_to_nid:
-            # ARG0s (including quantifiers) don't get an arg edge
-            if tgt == g.node[nid]['ep'].iv:
-                continue
-            tgt = iv_to_nid[tgt]
-        elif tgt in var_to_hcons:
-            hc = var_to_hcons[tgt]
-            tgt = hc.lo
-            attrs['hcons'] = hc
-        g.add_edge(nid, tgt, attrs)
+            g.add_edge(iv, nid, {'iv': True})  # intrinsic arg
+            g.node[iv]['iv'] = ep.nodeid
+        for arg in ep.args:
+            g.add_edge(ep.nodeid, arg.value, {'rargname': arg.argname })
+    for hc in hcons:
+        g.add_edge(hc.hi, hc.lo, {'relation': hc.relation})
+        g.node[hc.hi]['hcons'] = hc
+    for ic in icons:
+        g.add_edge(ic.target, ic.clause, {'relation': ic.relation})
+        g.node[ic.target]['icons'] = ic
     return g
 
 
@@ -349,7 +331,7 @@ class Xmrs(LnkMixin):
         The list of `anchors`.
         """
         # does not return LTOP anchor
-        return list(ep.anchor for ep in self._nid_to_ep.values())
+        return list(ep.anchor for ep in self.eps)
 
     @property
     def variables(self):
@@ -358,8 +340,7 @@ class Xmrs(LnkMixin):
         """
         return self.introduced_variables.union(
             [self.hook.ltop, self.hook.index] +
-            [arg.value for ep in self.eps for arg in ep.args
-             if isinstance(arg.value, MrsVariable)] +
+            [a.value for a in self.args if isinstance(a.value, MrsVariable)] +
             [hc.lo for hc in self.hcons]
         )
 
@@ -444,20 +425,23 @@ class Xmrs(LnkMixin):
         """
         The list of all |Arguments|.
         """
-        g = self._graph
-        nids = g.nodeids
-        return [ed['arg'] for _, _, ed in g.out_edges_iter(nids, data=True)]
-        # return [arg
-        #         for ep in self._nid_to_ep.values()
-        #         for arg in ep.args]
+        return list(chain.from_iterable(ep.args for ep in self.eps))
 
     @property
     def hcons(self):
         """
         The list of all |HandleConstraints|.
         """
-        return list(ed['hcons'] for _, _, ed in self._graph.edges(data=True)
-                    if 'hcons' in ed)
+        nodes = self._graph.nodes(data=True)
+        return sorted((data['hcons'] for _, data in nodes if 'hcons' in data),
+                      key=lambda hc: hc.hi.vid)
+
+    @property
+    def icons(self):
+        """The list of all |IndividualConstraints|."""
+        nodes = self._graph.nodes(data=True)
+        return sorted((data['icons'] for _, data in nodes if 'icons' in data),
+                      key=lambda ic: ic.target.vid)
 
     @property
     def links(self):
@@ -475,22 +459,24 @@ class Xmrs(LnkMixin):
         labels = g.labels
         attested_eqs = defaultdict(set)
         for s, t, d in g.out_edges_iter([LTOP_NODEID] + g.nodeids, data=True):
-            # if s == t or g.node[s]['ep'].iv == g.node[t]['ep'].iv:
-            #     continue  # ignore ARG0s
-            s_lbl = g.node[s]['label']
-            if t in nids:
+            t_d = g.node[t]
+            if t_d.get('iv') == s or t_d.get('bv') == s:
+                continue  # ignore ARG0s
+            s_lbl = g.node[s].get('label')
+            if 'iv' in t_d:
+                t = t_d['iv']
                 t_lbl = g.node[t]['label']
                 if s_lbl == t_lbl:
                     post = EQ_POST
                     attested_eqs[s_lbl].update([s, t])
                 else:
                     post = NEQ_POST
-            elif t in labels:
+            elif 'hcons' in t_d:
+                t = self.labelset_head(t_d['hcons'].lo)
+                post = H_POST
+            elif t in g.labels:
                 t = self.labelset_head(t)
-                if 'hcons' in d:
-                    post = H_POST
-                else:
-                    post = HEQ_POST
+                post = HEQ_POST
             else:
                 continue  # maybe log this
             links.append(Link(s, t, d.get('rargname'), post))
@@ -632,12 +618,7 @@ class Xmrs(LnkMixin):
     def get_nodeid(self, iv, quantifier=False):
         if iv not in self._graph:
             return None
-        edge_type = 'bv' if quantifier else 'iv'
-        edges = self._graph.out_edges_iter(iv, data=True)
-        try:
-            return next(t for _, t, d in edges if d.get(edge_type, False))
-        except StopIteration:
-            return None
+        return self._graph.node[iv].get('bv' if quantifier else 'iv')
 
     def get_ep(self, nodeid):
         try:
@@ -646,14 +627,16 @@ class Xmrs(LnkMixin):
             return None
 
     def get_node(self, nodeid):
-        ep = self.get_ep(nodeid)
-        node = None
-        if ep is not None:
-            node = ep._node
-        return node
+        try:
+            return self.get_ep(nodeid)._node
+        except AttributeError:
+            return None
 
     def get_arg(self, nodeid, rargname):
-        ep = self.get_ep(nodeid).get_arg(rargname)
+        try:
+            return self.get_ep(nodeid).get_arg(rargname)
+        except AttributeError:
+            return None
 
     # def get_args(self, nodeid):
     #     try:
@@ -688,24 +671,38 @@ class Xmrs(LnkMixin):
 
 def find_argument_target(xmrs, nodeid, rargname):
     g = xmrs._graph
-    tgt = next((tgt for src, tgt, data in g.out_edges_iter(nodeid, data=True)
-                if data['rargname'] == rargname),
-               None)
-    if tgt in g.nodeids:
+    try:
+        tgt = xmrs.get_arg(nodeid, rargname).value
+        tgt_attr = g.node[tgt]
+        # intrinsic variable
+        if 'iv' in tgt_attr:
+            return tgt_attr['iv']
+        # hcons; tgt is a hole
+        if 'hcons' in tgt_attr:
+            tgt = tgt_attr['hcons'].lo
+        # label or hcons lo variable (see previous if block)
+        if tgt in g.labels:
+            return xmrs.labelset_head(tgt)
+        # otherwise likely a constant or unbound variable
         return tgt
-    elif tgt in g.labels:
-        return xmrs.labelset_head(tgt)
-    else:
+    # nodeid or rargname were missing, or tgt wasn't a node
+    except (AttributeError, KeyError):
         return None
-
 
 def get_outbound_args(xmrs, nodeid, allow_unbound=True):
     g = xmrs._graph
-    for src, tgt, data in g.out_edges_iter(nodeid, data=True):
-        if src == tgt:
+    ep = xmrs.get_ep(nodeid)
+    for arg in ep.args:
+        nid = arg.nodeid
+        tgt = arg.value
+        data = g.node.get(tgt, {})
+        # ignore intrinsic arguments
+        if data.get('iv') == nid or data.get('bv') == nid:
             continue
-        if allow_unbound or tgt in g.nodeids or tgt in g.labels:
-            yield data['arg']
+        is_outbound = 'iv' in data or 'hcons' in data or tgt in g.labels
+        if (allow_unbound or is_outbound):
+            yield arg
+
 
 def find_subgraphs_by_preds(xmrs, preds, connected=None):
     preds = list(preds)
