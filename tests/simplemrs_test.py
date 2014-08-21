@@ -45,7 +45,7 @@ class TestHelperFunctions(unittest.TestCase):
     def test_tokenize(self):
         # break up punctuation and symbols
         eq = self.assertEqual
-        t = tokenize
+        t = lambda x: list(tokenize(x))  # convert to list for comparisons
         eq(t('[A:a0]'), ['[','A',':','a0',']'])
         eq(t('[ABC:abc1[abc D:d E3F:g]]'),
             ['[','ABC',':','abc1','[','abc','D',':','d', 'E3F',':','g',']',']'])
@@ -179,7 +179,6 @@ class TestDeserialize(unittest.TestCase):
     def test_read_lnk(self):
         eq = self.assertEqual
         rl = simplemrs.read_lnk
-        eq(rl(tokenize('')), None)
         eq(rl(tokenize('<>')), None)
         eq(rl(tokenize('<0:1>')), Lnk.charspan(0,1))
         eq(rl(tokenize('<@1>')), Lnk.edge(1))

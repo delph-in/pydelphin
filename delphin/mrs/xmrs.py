@@ -462,9 +462,9 @@ class Xmrs(LnkMixin):
             t_d = g.node[t]
             if t_d.get('iv') == s or t_d.get('bv') == s:
                 continue  # ignore ARG0s
-            s_lbl = g.node[s].get('label')
             if 'iv' in t_d:
                 t = t_d['iv']
+                s_lbl = g.node[s].get('label')  # LTOP_NODEID has no label
                 t_lbl = g.node[t]['label']
                 if s_lbl == t_lbl:
                     post = EQ_POST
