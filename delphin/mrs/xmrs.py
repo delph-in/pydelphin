@@ -319,25 +319,19 @@ class Xmrs(LnkMixin):
 
     @property
     def nodeids(self):
-        """
-        The list of `nodeids`.
-        """
+        """The list of `nodeids`."""
         # does not return LTOP nodeid
         return list(self._graph.nodeids)
 
     @property
     def anchors(self):
-        """
-        The list of `anchors`.
-        """
+        """The list of `anchors`."""
         # does not return LTOP anchor
         return list(ep.anchor for ep in self.eps)
 
     @property
     def variables(self):
-        """
-        The list of all |MrsVariable| objects specified in the Xmrs.
-        """
+        """The list of all |MrsVariable| objects specified in the Xmrs."""
         return self.introduced_variables.union(
             [self.hook.ltop, self.hook.index] +
             [a.value for a in self.args if isinstance(a.value, MrsVariable)] +
@@ -358,9 +352,7 @@ class Xmrs(LnkMixin):
 
     @property
     def intrinsic_variables(self):
-        """
-        The list of intrinsic variables.
-        """
+        """The list of intrinsic variables."""
         return list(ep.iv for ep in self.eps if not ep.is_quantifier())
 
     #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.intrinsic_variables`
@@ -379,40 +371,30 @@ class Xmrs(LnkMixin):
 
     @property
     def labels(self):
-        """
-        The list of labels of the |EPs| in the Xmrs.
-        """
+        """The list of labels of the |EPs| in the Xmrs."""
         g = self._graph
         return list(set(g.node[nid]['label'] for nid in g.nodeids))
         # set(ep.label for ep in self._nid_to_ep.values()))
 
     @property
     def ltop(self):
-        """
-        The LTOP |MrsVariable|, if it exists, otherwise None.
-        """
+        """The LTOP |MrsVariable|, if it exists, otherwise None."""
         return self.hook.ltop
 
     @property
     def index(self):
-        """
-        The INDEX |MrsVariable|, if it exists, otherwise None.
-        """
+        """The INDEX |MrsVariable|, if it exists, otherwise None."""
         return self.hook.index
 
     @property
     def nodes(self):
-        """
-        The list of |Nodes|.
-        """
+        """The list of |Nodes|."""
         return [ep._node for ep in self.eps]
         # [copy(ep._node) for nid, ep in self._nid_to_ep.items()]
 
     @property
     def eps(self):
-        """
-        The list of |ElementaryPredications|.
-        """
+        """The list of |ElementaryPredications|."""
         g = self._graph
         return [g.node[nid]['ep'] for nid in g.nodeids]
         # copy(ep) for ep in self._nid_to_ep.values()]
@@ -422,16 +404,12 @@ class Xmrs(LnkMixin):
 
     @property
     def args(self):
-        """
-        The list of all |Arguments|.
-        """
+        """The list of all |Arguments|."""
         return list(chain.from_iterable(ep.args for ep in self.eps))
 
     @property
     def hcons(self):
-        """
-        The list of all |HandleConstraints|.
-        """
+        """The list of all |HandleConstraints|."""
         nodes = self._graph.nodes(data=True)
         return sorted((data['hcons'] for _, data in nodes if 'hcons' in data),
                       key=lambda hc: hc.hi.vid)
@@ -445,9 +423,7 @@ class Xmrs(LnkMixin):
 
     @property
     def links(self):
-        """
-        The list of |Links|.
-        """
+        """The list of |Links|."""
         # Return the set of links for the XMRS structure. Links exist
         # for every non-intrinsic argument that has a variable
         # that is the intrinsic variable of some other predicate,
@@ -497,60 +473,70 @@ class Xmrs(LnkMixin):
             #     links.append(Link(head, n, post=EQ_POST))
         return sorted(links, key=lambda link: (link.start, link.end))
 
-    # query methods
-    def select_nodes(self, nodeid=None, pred=None):
+    # accessor functions
+    def get_nodeid(self, iv, quantifier=False):
         """
-        Return the list of all |Nodes| that have the matching *nodeid*
-        and/or *pred* values. If none match, return an empty list.
-        """
-        nodematch = lambda n: ((nodeid is None or n.nodeid == nodeid) and
-                               (pred is None or n.pred == pred))
-        return list(filter(nodematch, self.nodes))
+        Retrieve the nodeid of an |EP| given an intrinsic variable, or
+        return None if no matching |EP| is found.
 
-    def select_eps(self, anchor=None, iv=None, label=None, pred=None):
+        Args:
+            iv: The intrinsic variable of the |EP|.
+            quantifier: If True and `iv` is the bound variable of a
+                quantifier, return the nodeid of the quantifier. False
+                by default.
         """
-        Return the list of all |EPs| that have the matching *anchor*,
-        *iv*, *label*, and or *pred* values. If none match, return an
-        empty list.
-        """
-        epmatch = lambda n: ((anchor is None or n.anchor == anchor) and
-                             (iv is None or n.iv == iv) and
-                             (label is None or n.label == label) and
-                             (pred is None or n.pred == pred))
-        return list(filter(epmatch, self.eps))
+        if iv not in self._graph:
+            return None
+        return self._graph.node[iv].get('bv' if quantifier else 'iv')
 
-    def select_args(self, anchor=None, argname=None, value=None):
+    def get_ep(self, nodeid):
         """
-        Return the list of all |Arguments| that have the matching
-        *anchor*, *argname*, and/or *value* values. If none match,
-        return an empty list.
+        Retrieve the |EP| with the given nodeid, or None if no |EPs|
+        match.
+
+        Args:
+            nodeid: The nodeid of the |EP| to return.
         """
-        argmatch = lambda a: ((anchor is None or a.anchor == anchor) and
-                              (argname is None or
-                               a.argname.upper() == argname.upper()) and
-                              (value is None or a.value == value))
-        return list(filter(argmatch, self.args))
+        try:
+            return self._graph.node[nodeid]['ep']
+        except KeyError:
+            return None
 
-    def select_nodeids(self, iv=None, label=None, pred=None):
-        g = self._graph
-        nids = []
-        datamatch = lambda d: ((iv is None or d['ep'].iv == iv) and
-                               (pred is None or d['ep'].pred == pred) and
-                               (label is None or d['label'] == label))
-        for nid in g.nodeids:
-            data = g.node[nid]
-            if datamatch(data):
-                nids.append(nid)
-        return nids
+    def get_node(self, nodeid):
+        """
+        Return the |Node| with the given nodeid, or None if no |Nodes|
+        match.
 
-    # def get_quantifier(self, nodeid):
-    #     try:
-    #         ep = self._nid_to_ep[nodeid]
-    #         if not ep.is_quantifier():
-    #             return self._bv_to_nid[ep.iv]
-    #     except KeyError:
-    #         pass
-    #     return None
+        Args:
+            nodeid: The nodeid of the |Node| to return.
+        """
+        try:
+            return self.get_ep(nodeid)._node
+        except AttributeError:
+            return None
+
+    def get_arg(self, nodeid, rargname):
+        """
+        Return the |Argument| from the given nodeid and the argument's
+        role name.
+
+        Args:
+            nodeid: The nodeid of the |EP| specifying the |Argument|.
+            rargname: The role name of the argument (e.g. ARG1)
+        """
+        try:
+            return self.get_ep(nodeid).get_arg(rargname)
+        except AttributeError:
+            return None
+
+    #def get_link(self, nodeid, rargname):
+    #    ...
+
+    # def get_hcons(self, hi_var):
+    #     return self._var_to_hcons.get(hi_var)
+
+    #def get_icons(self, target):
+    #    ...
 
     def labelset(self, label):
         return set(nx.node_boundary(self._graph, [label]))
@@ -614,60 +600,73 @@ class Xmrs(LnkMixin):
                 if 'qeq' in d)
         )
 
- 
-    def get_nodeid(self, iv, quantifier=False):
-        if iv not in self._graph:
-            return None
-        return self._graph.node[iv].get('bv' if quantifier else 'iv')
 
-    def get_ep(self, nodeid):
-        try:
-            return self._graph.node[nodeid]['ep']
-        except KeyError:
-            return None
+# query methods
+def select_nodeids(xmrs, iv=None, label=None, pred=None):
+    """
+    Return the list of all nodeids whose respective |EP| has the
+    matching *iv* (intrinsic variable), *label*, or *pred* values. If
+    none match, return an empty list.
+    """
+    g = xmrs._graph
+    nids = []
+    datamatch = lambda d: ((iv is None or d['ep'].iv == iv) and
+                           (pred is None or d['ep'].pred == pred) and
+                           (label is None or d['label'] == label))
+    for nid in g.nodeids:
+        data = g.node[nid]
+        if datamatch(data):
+            nids.append(nid)
+    return nids
 
-    def get_node(self, nodeid):
-        try:
-            return self.get_ep(nodeid)._node
-        except AttributeError:
-            return None
 
-    def get_arg(self, nodeid, rargname):
-        try:
-            return self.get_ep(nodeid).get_arg(rargname)
-        except AttributeError:
-            return None
+def select_nodes(xmrs, nodeid=None, pred=None):
+    """
+    Return the list of all |Nodes| that have the matching *nodeid*
+    and/or *pred* values. If none match, return an empty list.
+    """
+    nodematch = lambda n: ((nodeid is None or n.nodeid == nodeid) and
+                           (pred is None or n.pred == pred))
+    return list(filter(nodematch, xmrs.nodes))
 
-    # def get_args(self, nodeid):
-    #     try:
-    #         ep = self._nid_to_ep[nodeid]
-    #         return ep.args
-    #     except KeyError:
-    #         return None
 
-    # def get_iv(self, nodeid):
-    #     try:
-    #         ep = self._nid_to_ep[nodeid]
-    #         return ep.iv
-    #     except KeyError:
-    #         return None
+def select_eps(xmrs, anchor=None, iv=None, label=None, pred=None):
+    """
+    Return the list of all |EPs| that have the matching *anchor*,
+    *iv*, *label*, and or *pred* values. If none match, return an
+    empty list.
+    """
+    epmatch = lambda n: ((anchor is None or n.anchor == anchor) and
+                         (iv is None or n.iv == iv) and
+                         (label is None or n.label == label) and
+                         (pred is None or n.pred == pred))
+    return list(filter(epmatch, xmrs.eps))
 
-    # def get_label(self, nodeid):
-    #     try:
-    #         ep = self._nid_to_ep[nodeid]
-    #         return ep.label
-    #     except KeyError:
-    #         return None
 
-    # def get_pred(self, nodeid):
-    #     try:
-    #         ep = self._nid_to_ep[nodeid]
-    #         return ep.pred
-    #     except KeyError:
-    #         return None
+def select_args(xmrs, anchor=None, rargname=None, value=None):
+    """
+    Return the list of all |Arguments| that have the matching
+    *anchor*, *rargname*, and/or *value* values. If none match,
+    return an empty list.
+    """
+    argmatch = lambda a: ((anchor is None or a.anchor == anchor) and
+                          (rargname is None or
+                           a.argname.upper() == rargname.upper()) and
+                          (value is None or a.value == value))
+    return list(filter(argmatch, xmrs.args))
 
-    # def get_hcons(self, hi_var):
-    #     return self._var_to_hcons.get(hi_var)
+
+def select_links(xmrs, source=None, target=None, rargname=None, post=None):
+    pass
+
+
+def select_hcons(xmrs, hi=None, relation=None, lo=None):
+    pass
+
+
+def select_icons(xmrs, target=None, relation=None, clause=None):
+    pass
+
 
 def find_argument_target(xmrs, nodeid, rargname):
     g = xmrs._graph
@@ -688,6 +687,7 @@ def find_argument_target(xmrs, nodeid, rargname):
     # nodeid or rargname were missing, or tgt wasn't a node
     except (AttributeError, KeyError):
         return None
+
 
 def get_outbound_args(xmrs, nodeid, allow_unbound=True):
     g = xmrs._graph
