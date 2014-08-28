@@ -10,6 +10,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from importlib import import_module
 from delphin import itsdb, mrs
+from delphin.mrs.components import sorted_eps
 
 _rcfilename = '.pydelphinrc'
 
@@ -67,7 +68,7 @@ def load_config(args):
     elif os.path.exists(os.path.join(os.getcwd(), _rcfilename)):
         args.config = os.path.join(os.getcwd(), _rcfilename)
     elif os.path.exists(os.path.join(os.environ['HOME'], _rcfilename)):
-        args.config = os.path.join(args.output, _rcfilename)
+        args.config = os.path.join(os.environ['HOME'], _rcfilename)
     else:
         sys.exit('No config file found. Exiting.')
 
