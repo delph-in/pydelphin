@@ -36,7 +36,7 @@ _primary_keys = [
 # Non-class (i.e. static) functions
 
 Field = namedtuple('Field', ['name', 'datatype', 'key', 'other', 'comment'])
-Field.__doc__ = '''
+'''
 A tuple describing a column in an [incr tsdb()] profile.
 
 Args:
