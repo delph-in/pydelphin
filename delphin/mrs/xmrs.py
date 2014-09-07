@@ -708,7 +708,7 @@ def find_subgraphs_by_preds(xmrs, preds, connected=None):
     preds = list(preds)
     nidsets = list(
         filter(lambda ps: len(set(ps)) == len(ps),
-               map(lambda p: xmrs.select_nodeids(pred=p), preds))
+               map(lambda p: select_nodeids(xmrs, pred=p), preds))
     )
     for sg in map(xmrs.subgraph, product(*nidsets)):
         if connected is not None and sg.is_connected() != connected:
