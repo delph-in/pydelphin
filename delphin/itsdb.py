@@ -1,4 +1,5 @@
-import os
+import os.path
+from os import mkdir
 import re
 import gzip
 import logging
@@ -335,6 +336,35 @@ def select_rows(cols, rows, mode='list'):
     for row in rows:
         data = [row.get(c) for c in cols]
         yield cast(cols, data)
+
+
+def make_skeleton(path, relations, item_rows, gzip=False):
+    """
+    Instantiate a new profile skeleton (only the relations file and
+    item file) from an existing relations file and a list of rows
+    for the item table.
+
+    Args:
+        path: the destination directory of the skeleton---must not
+              already exist, as it will be created
+        relations: the path to the relations file
+        item_rows: the rows to use for the item file
+        gzip: if True, the item file will be compressed
+    Returns:
+        An ItsdbProfile containing the skeleton data (but the profile
+        data will already have been written to disk).
+    Raises:
+        ItsdbError if the destination directory could not be created.
+    """
+    try:
+        os.makedirs(path)
+    except OSError:
+        raise ItsdbError('Path already exists: {}.'.format(path))
+    import shutil
+    shutil.copyfile(relations, os.path.join(path, _relations_filename))
+    prof = ItsdbProfile(path, index=False)
+    prof.write_table('item', item_rows, gzip=gzip)
+    return prof
 
 
 ##############################################################################
