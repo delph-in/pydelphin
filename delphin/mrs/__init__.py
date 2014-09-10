@@ -57,16 +57,6 @@ from .xmrs import Xmrs, Mrs, Dmrs, Rmrs
 __all__ = [Hook, Lnk, Node, ElementaryPredication, MrsVariable,
            Argument, HandleConstraint, Pred, Link, Xmrs, Mrs, Dmrs]
 
-from . import simplemrs, mrx, dmrx, eds, simpledmrs
-
-serialization_formats = {
-    'simplemrs': simplemrs,
-    'mrx': mrx,
-    'dmrx': dmrx,
-    'eds': eds,
-    'simpledmrs': simpledmrs
-}
-
 
 def convert(txt, src_fmt, tgt_fmt, single=True, **kwargs):
     """
@@ -105,8 +95,17 @@ def convert(txt, src_fmt, tgt_fmt, single=True, **kwargs):
         dmrx       The XML format of DMRS
         =========  ============================
     """
-    reader = serialization_formats[src_fmt.lower()]
-    writer = serialization_formats[tgt_fmt.lower()]
+    from importlib import import_module
+    try:
+        reader = import_module('{}.{}'.format('delphin.mrs', src_fmt.lower()))
+    except ImportError as ex:
+        msg = '\nCannot find serializer: {}'.format(src_fmt.lower())
+        raise ImportError(msg) from ex
+    try:
+        writer = import_module('{}.{}'.format('delphin.mrs', tgt_fmt.lower()))
+    except ImportError as ex:
+        msg = '\nCannot find serializer: {}'.format(tgt_fmt.lower())
+        raise ImportError(msg) from ex
     return writer.dumps(
         reader.loads(txt, single=single),
         single=single,
