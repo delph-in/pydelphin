@@ -566,9 +566,16 @@ class Xmrs(LnkMixin):
 
     def subgraph(self, nodeids):
         g = self._graph
+        nbunch = list(nodeids)
         labels = set(g.node[nid]['label'] for nid in nodeids)
-        ivs = set(g.node[nid]['ep'].iv for nid in nodeids)
-        sg = g.subgraph(chain(labels, ivs, nodeids))
+        nbunch.extend(labels)
+        for nid in nodeids:
+            nbunch.append(g.node[nid]['ep'].iv)
+            for succ in g.successors_iter(nid):
+                hc = g.node[succ].get('hcons')
+                if hc is not None and hc.lo in labels:
+                    nbunch.append(hc.hi)
+        sg = g.subgraph(nbunch)
         # may need some work to calculate hook or lnk here
         return Xmrs(graph=sg)
 
@@ -689,6 +696,13 @@ def find_argument_target(xmrs, nodeid, rargname):
         return None
 
 
+def find_quantifier(xmrs, nodeid):
+    ep = xmrs.get_ep(nodeid)
+    if ep.is_quantifier() or 'bv' not in xmrs._graph.node[ep.iv]:
+        return None
+    return xmrs._graph.node[ep.iv]['bv']
+
+
 def get_outbound_args(xmrs, nodeid, allow_unbound=True):
     g = xmrs._graph
     ep = xmrs.get_ep(nodeid)
@@ -706,6 +720,8 @@ def get_outbound_args(xmrs, nodeid, allow_unbound=True):
 
 def find_subgraphs_by_preds(xmrs, preds, connected=None):
     preds = list(preds)
+    # find all lists of nodeids such that the lists have no repeated nids;
+    # keep them as a list (fixme: why not just get sets?)
     nidsets = list(
         filter(lambda ps: len(set(ps)) == len(ps),
                map(lambda p: select_nodeids(xmrs, pred=p), preds))
