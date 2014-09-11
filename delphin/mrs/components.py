@@ -681,6 +681,7 @@ class Pred(object):
         return self.pos == QUANTIFIER_SORT
 
 
+@total_ordering
 class Node(LnkMixin):
     """
     A very simple predication for DMRSs. Nodes don't have |Arguments|
@@ -732,6 +733,15 @@ class Node(LnkMixin):
                 self.base == other.base and
                 self.carg == other.carg)
 
+    def __lt__(self, other):
+        x1 = (self.cfrom, self.cto, -self.is_quantifier(), self.pred.lemma)
+        try:
+            x2 = (other.cfrom, other.cto, -other.is_quantifier(),
+                  other.pred.lemma)
+            return x1 < x2
+        except AttributeError:
+            return False  # comparing Node to non-Node means Node is greater?
+
     @property
     def cvarsort(self):
         """
@@ -759,13 +769,7 @@ class Node(LnkMixin):
         return self.pred.is_quantifier()
 
 
-def sorted_eps(eps):
-    return sorted(eps, key=lambda ep: (ep.cfrom,
-                                       ep.cto,
-                                       -ep.is_quantifier(),
-                                       ep.pred.lemma))
-
-
+@total_ordering
 class ElementaryPredication(LnkMixin, AnchorMixin):
     """
     An elementary predication (EP) combines a predicate with various
@@ -825,6 +829,12 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
         return (self.label == other.label and
                 self.argdict == other.argdict and
                 self._node == other._node)
+
+    def __lt__(self, other):
+        try:
+            return self._node < other._node
+        except AttributeError:
+            return False  # comparing EP to non-EP means EP is greater?
 
     # these properties provide an interface to the node attributes
 

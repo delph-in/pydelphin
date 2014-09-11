@@ -10,7 +10,6 @@ from collections import OrderedDict
 from copy import deepcopy
 from importlib import import_module
 from delphin import itsdb, mrs
-from delphin.mrs.components import sorted_eps
 
 _rcfilename = '.pydelphinrc'
 
