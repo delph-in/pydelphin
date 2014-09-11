@@ -1,6 +1,7 @@
 import re
 import logging
 from collections import OrderedDict, namedtuple
+from functools import total_ordering
 from delphin._exceptions import XmrsStructureError
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE,
@@ -14,9 +15,13 @@ sort_vid_re = re.compile(r'^(\w*\D)(\d+)$')
 
 
 def sort_vid_split(vs):
-    return sort_vid_re.match(vs).groups()
+    try:
+        sort, vid = sort_vid_re.match(vs).groups()
+        return sort, vid
+    except AttributeError:
+        raise ValueError('Invalid variable string: {}'.format(str(vs)))
 
-
+@total_ordering
 class MrsVariable(object):
     """An MrsVariable has an id (vid), sort, and sometimes properties.
 
@@ -86,25 +91,50 @@ class MrsVariable(object):
             an instantiated MrsVariable object if the string represents
             an MrsVariable, or None otherwise
         """
-        srt_vid = sort_vid_split(varstring)
-        if srt_vid:
-            sort, vid = srt_vid
+        try:
+            sort, vid = sort_vid_split(varstring)
             return cls(vid, sort)
-        return None
+        except (ValueError, TypeError):
+            return None
 
     def __eq__(self, other):
-        if isinstance(other, MrsVariable):
+        # try both as MrsVariables
+        try:
             return self.vid == other.vid and self.sort == other.sort
-        else:
-            # it could be a vid like 1 or '1'
-            try:
-                return self.vid == int(other)
-            # or a string like 'x1'
-            except ValueError:
-                return str(self) == other
-            # other is not an int nor a string
-            except TypeError:
-                return False
+        except AttributeError:
+            pass  # other is not an MrsVariable
+        # attempt as string
+        try:
+            sort, vid = sort_vid_split(other)
+            return self.sort == sort and self.vid == int(vid)
+        except (ValueError, TypeError):
+            pass  # doesn't match a variable
+        # try again as vid only
+        try:
+            vid = int(other)
+            return self.vid == vid
+        except (ValueError, TypeError):
+            pass  # nope.. return False
+        return False            
+
+    def __lt__(self, other):
+        vid1 = self.vid
+        # only compare vids for lt
+        try:
+            return vid1 < int(other)
+        except (ValueError, TypeError):
+            pass  # not an int or MrsVariable
+        # try as a string
+        try:
+            sort, vid2 = sort_vid_split(other)
+            return vid1 < int(vid2)
+        except (ValueError, TypeError):
+            pass  # not a string... no good output
+        raise ValueError('Cannot compare MrsVariable to {} of type {}'
+                         .format(str(other), type(other)))
+
+    def __int__(self):
+        return self.vid
 
     def __hash__(self):
         return hash(str(self))
