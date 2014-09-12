@@ -16,13 +16,6 @@ from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
 from delphin.mrs.config import (QUANTIFIER_SORT, EQ_POST)
 
 
-_graphtype = 'dmrs'
-_graph = '{graphtype} {graphid}{{{dmrsproperties}{nodes}{links}}}'
-_dmrsproperties = ''
-_node = '{nodeid} [{pred}{lnk}{sortinfo}];'
-_sortinfo = ' {cvarsort} {properties}'
-_link = '{from}:{pre}/{post} {arrow} {to};'
-
 ##############################################################################
 ##############################################################################
 # Pickle-API methods
@@ -49,7 +42,7 @@ def dump(fh, ms, **kwargs):
 def dumps(ms, single=False, pretty_print=False, **kwargs):
     if single:
         ms = [ms]
-    return encode(ms, pretty_print=pretty_print)
+    return encode(ms, indent=2 if pretty_print else None)
 
 # for convenience
 
@@ -62,41 +55,24 @@ dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 ##############################################################################
 # Decoding
 
+tokenizer = re.compile(r'("[^"\\]*(?:\\.[^"\\]*)*"'
+                       r'|[^\s:#@\[\]<>"]+'
+                       r'|[:#@\[\]<>])')
+
 def decode(fh):
-    """Decode a DMRX-encoded DMRS structure."""
-    # <!ELEMENT dmrs-list (dmrs)*>
-    # if memory becomes a big problem, consider catching start events,
-    # get the root element (later start events can be ignored), and
-    # root.clear() after decoding each mrs
-    for event, elem in etree.iterparse(fh, events=('end',)):
-        if elem.tag == 'dmrs':
-            yield decode_dmrs(elem)
-            elem.clear()
+    """Decode a SimpleDmrs-encoded DMRS structure."""
+    # (dmrs { ... })*
 
 def decode_dmrs(elem):
-    # <!ELEMENT dmrs (node|link)*>
-    # <!ATTLIST dmrs
-    #           cfrom CDATA #REQUIRED
-    #           cto   CDATA #REQUIRED
-    #           surface   CDATA #IMPLIED
-    #           ident     CDATA #IMPLIED >
-    elem = elem.find('.')  # in case elem is an ElementTree rather than Element
-    return Dmrs(nodes=list(map(decode_node, elem.iter('node'))),
-                links=list(map(decode_link, elem.iter('link'))),
-                lnk=decode_lnk(elem),
-                surface=elem.get('surface'),
-                identifier=elem.get('ident'))
+    # dmrs { NODES LINKS }
+    return Dmrs(nodes=list(map(decode_node)),
+                links=list(map(decode_link)),
+                lnk=None,
+                surface=None,
+                identifier=None)
 
 
 def decode_node(elem):
-    # <!ELEMENT node ((realpred|gpred), sortinfo)>
-    # <!ATTLIST node
-    #           nodeid CDATA #REQUIRED
-    #           cfrom CDATA #REQUIRED
-    #           cto   CDATA #REQUIRED
-    #           surface   CDATA #IMPLIED
-    #           base      CDATA #IMPLIED
-    #           carg CDATA #IMPLIED >
     return Node(pred=decode_pred(elem.find('*[1]')),
                 nodeid=elem.get('nodeid'),
                 sortinfo=decode_sortinfo(elem.find('sortinfo')),
@@ -107,12 +83,6 @@ def decode_node(elem):
 
 
 def decode_pred(elem):
-    # <!ELEMENT realpred EMPTY>
-    # <!ATTLIST realpred
-    #           lemma CDATA #REQUIRED
-    #           pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
-    #           sense CDATA #IMPLIED >
-    # <!ELEMENT gpred (#PCDATA)>
     if elem.tag == 'gpred':
         return Pred.grammarpred(elem.text)
     elif elem.tag == 'realpred':
@@ -122,30 +92,10 @@ def decode_pred(elem):
 
 
 def decode_sortinfo(elem):
-    # <!ELEMENT sortinfo EMPTY>
-    # <!ATTLIST sortinfo
-    #           cvarsort (x|e|i|u) #IMPLIED
-    #           num  (sg|pl|u) #IMPLIED
-    #           pers (1|2|3|1-or-3|u) #IMPLIED
-    #           gend (m|f|n|m-or-f|u) #IMPLIED
-    #           sf (prop|ques|comm|prop-or-ques|u) #IMPLIED
-    #           tense (past|pres|fut|tensed|untensed|u) #IMPLIED
-    #           mood (indicative|subjunctive|u) #IMPLIED
-    #           prontype (std_pron|zero_pron|refl|u) #IMPLIED
-    #           prog (plus|minus|u) #IMPLIED
-    #           perf (plus|minus|u) #IMPLIED
-    #           ind  (plus|minus|u) #IMPLIED >
-    # note: Just accept any properties, since these are ERG-specific
     return elem.attrib
 
 
 def decode_link(elem):
-    # <!ELEMENT link (rargname, post)>
-    # <!ATTLIST link
-    #           from CDATA #REQUIRED
-    #           to   CDATA #REQUIRED >
-    # <!ELEMENT rargname (#PCDATA)>
-    # <!ELEMENT post (#PCDATA)>
     return Link(start=elem.get('from'),
                 end=elem.get('to'),
                 argname=elem.find('rargname').text,
@@ -159,35 +109,53 @@ def decode_lnk(elem):
 ##############################################################################
 # Encoding
 
-_strict = False
+_graphtype = 'dmrs'
+_graph = '{graphtype} {graphid}{{{dmrsproperties}{nodes}{links}}}'
+_dmrsproperties = ''
+_node = '{indent}{nodeid} [{pred}{lnk}{sortinfo}];'
+_sortinfo = ' {cvarsort} {properties}'
+_link = '{indent}{start}:{pre}/{post} {arrow} {end};'
 
-def encode(ms, strict=False, encoding='unicode', pretty_print=False, indent=2):
-    ss = []
-    for m in ms:
-        s = _graph.format(**{
-            'graphtype': _graphtype,
-            'graphid': '',
-            'dmrsproperties': _dmrsproperties.format(str(m.lnk)),
-            'nodes': ''.join(_node.format(**{
-                'nodeid': n.nodeid,
-                'pred': str(n.pred),
-                'lnk': '' if n.lnk is None else str(n.lnk),
-                'sortinfo': '' if not n.sortinfo else _sortinfo.format(**{
-                    'cvarsort': n.cvarsort,
-                    'properties': ' '.join('{}={}'.format(k, v)
-                                           for k, v in n.properties.items())
-                    })
-                })
-                for n in m.nodes),
-            'links': ''.join(_link.format(**{
-                'from': l.start,
-                'pre': l.argname or '',
-                'post': l.post,
-                'arrow': '->' if l.argname or l.post != EQ_POST else '--',
-                'to': l.end
-                })
-                for l in m.links)
-            })
-        s = s.replace(';',';\n  ').replace('{','{\n  ').replace('  }','}')
-        ss.append(s)
-    return '\n'.join(ss)
+def encode(ms, encoding='unicode', indent=2):
+    delim = '\n' if indent is not None else ' '
+    return delim.join(encode_dmrs(m, indent=indent) for m in ms)
+
+def encode_dmrs(m, indent=2):
+    if indent is not None:
+        delim = '\n'
+        space = ' ' * indent
+    else:
+        delim = ''
+        space = ' '
+
+    nodes = [
+        _node.format(
+            indent=space,
+            nodeid=n.nodeid,
+            pred=str(n.pred),
+            lnk='' if n.lnk is None else str(n.lnk),
+            sortinfo=(
+                '' if not n.sortinfo else
+                _sortinfo.format(
+                    cvarsort=n.cvarsort,
+                    properties=' '.join('{}={}'.format(k, v)
+                                        for k, v in n.properties.items()),
+                )
+            )
+        )
+        for n in m.nodes
+    ]
+
+    links = [
+        _link.format(
+            indent=space,
+            start=l.start,
+            pre=l.argname or '',
+            post=l.post,
+            arrow='->' if l.argname or l.post != EQ_POST else '--',
+            end=l.end
+        )
+        for l in m.links
+    ]
+
+    return delim.join(['dmrs {'] + nodes + links + ['}'])
