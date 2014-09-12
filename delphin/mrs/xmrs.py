@@ -550,19 +550,21 @@ class Xmrs(LnkMixin):
         return lblset.issuperset(nids)
 
     def labelset_head(self, label, single=True):
-        g = self._graph
         lblset = self.labelset(label)
-        sg = g.subgraph(lblset)
-        heads = list(h for h, od in sg.out_degree(lblset).items() if od == 0)
+        sg = self.subgraph(lblset)
+        g = sg._graph
+        # out degree is 1 for ARG0; <= 1 in case a deviant grammar does not
+        # use ARG0 for some nodes
+        heads = list(h for h, od in g.out_degree(lblset).items() if od <= 1)
         head_count = len(heads)
         if head_count == 0:
             raise XmrsStructureError('No head found for label {}.'
                                      .format(label))
         if not single:
-            return list(map(first, sorted(sg.in_degree(heads).items(),
+            return list(map(first, sorted(g.in_degree(heads).items(),
                                           key=second, reverse=True)))
         else:
-            return max(sg.in_degree(heads).items(), key=second)[0]
+            return max(g.in_degree(heads).items(), key=second)[0]
 
     def subgraph(self, nodeids):
         g = self._graph
