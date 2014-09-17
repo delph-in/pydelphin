@@ -664,7 +664,6 @@ class Pred(object):
         return (match.group('lemma'), match.group('pos'),
                 match.group('sense'), match.group('end'))
 
-    @property
     def short_form(self):
         """
         Return the pred string without quotes or a _rel suffix.

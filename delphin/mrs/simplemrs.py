@@ -30,6 +30,7 @@ _right_angle = r'>'
 _colon = r':'
 _hash = r'#'
 _at = r'@'
+_top = r'TOP'
 _ltop = r'LTOP'
 _index = r'INDEX'
 _rels = r'RELS'
@@ -197,7 +198,7 @@ def deserialize(string):
 
 def read_mrs(tokens, version=_default_version):
     """Decode a sequence of Simple-MRS tokens. Assume LTOP, INDEX, RELS,
-       and HCONS occur in that order."""
+       HCONS, and ICONS occur in that order."""
     # variables needs to be passed to any function that can call read_variable
     variables = {}
     # [ LTOP : handle INDEX : variable RELS : rels-list HCONS : hcons-list ]
@@ -209,8 +210,8 @@ def read_mrs(tokens, version=_default_version):
             lnk = read_lnk(tokens)
         if tokens[0].startswith('"'): # and tokens[0].endswith('"'):
             surface = tokens.popleft()[1:-1] # get rid of first quotes
-        if tokens[0] == _ltop:
-            _, ltop = read_featval(tokens, feat=_ltop, variables=variables)
+        if tokens[0] in (_ltop, _top):
+            _, ltop = read_featval(tokens, variables=variables)
         if tokens[0] == _index:
             _, index = read_featval(tokens, feat=_index, variables=variables)
         rels = read_rels(tokens, variables=variables)
@@ -455,7 +456,9 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
         if m.surface is not None:
             toks.append('"{}"'.format(m.surface))
     if m.ltop is not None:
-        toks += [serialize_argument(_ltop, m.ltop, listed_vars)]
+        toks += [serialize_argument(
+            _top if version >= 1.1 else _ltop, m.ltop, listed_vars
+        )]
     if m.index is not None:
         toks += [serialize_argument(_index, m.index, listed_vars)]
     if m.rels is not None:

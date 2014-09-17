@@ -15,7 +15,7 @@ from .config import (
     HANDLESORT, IVARG_ROLE, CONSTARG_ROLE, LTOP_NODEID, FIRST_NODEID,
     RSTR_ROLE, EQ_POST, NEQ_POST, HEQ_POST, H_POST, NIL_POST
 )
-from .util import AccumulationDict as AccDict, XmrsDiGraph, first, second
+from .util import XmrsDiGraph, first, second
 
 
 def Mrs(hook=None, rels=None, hcons=None, icons=None,
@@ -484,6 +484,8 @@ class Xmrs(LnkMixin):
             quantifier: If True and `iv` is the bound variable of a
                 quantifier, return the nodeid of the quantifier. False
                 by default.
+        Returns:
+            An integer nodeid.
         """
         if iv not in self._graph:
             return None
@@ -496,6 +498,8 @@ class Xmrs(LnkMixin):
 
         Args:
             nodeid: The nodeid of the |EP| to return.
+        Returns:
+            An |ElementaryPredication| or None.
         """
         try:
             return self._graph.node[nodeid]['ep']
@@ -509,6 +513,8 @@ class Xmrs(LnkMixin):
 
         Args:
             nodeid: The nodeid of the |Node| to return.
+        Returns:
+            A |Node| or None.
         """
         try:
             return self.get_ep(nodeid)._node
@@ -523,6 +529,8 @@ class Xmrs(LnkMixin):
         Args:
             nodeid: The nodeid of the |EP| specifying the |Argument|.
             rargname: The role name of the argument (e.g. ARG1)
+        Returns:
+            An |Argument| or None.
         """
         try:
             return self.get_ep(nodeid).get_arg(rargname)
@@ -539,17 +547,45 @@ class Xmrs(LnkMixin):
     #    ...
 
     def labelset(self, label):
+        """
+        Return the set of nodeids for |EPs| that share a label.
+
+        Args:
+            label: The label that returned nodeids share.
+        Returns:
+            A set of nodeids, which may be an empty set.
+        """
         return set(nx.node_boundary(self._graph, [label]))
         # alternatively:
         # return list(self._graph.adj[label].keys())
 
-    def in_labelset(self, nids, label=None):
+    def in_labelset(self, nodeids, label=None):
+        """
+        Test if all nodeids share a label.
+
+        Args:
+            nodeids: An iterable of nodeids.
+            label: If given, all nodeids must share this label.
+        Returns:
+            True if all nodeids share a label, otherwise False.
+        """
         if label is None:
-            label = self._graph.node[next(iter(nids))]['label']
+            label = self._graph.node[next(iter(nodeids))]['label']
         lblset = self.labelset(label)
-        return lblset.issuperset(nids)
+        return lblset.issuperset(nodeids)
 
     def labelset_head(self, label, single=True):
+        """
+        Return the head(s) of the labelset selected by `label`.
+
+        Args:
+            label: The label from which to find head nodes/EPs.
+            single: If False, find all possible heads, otherwise find
+                the most "heady" one.
+        Returns:
+            A nodeid, if single is True, otherwise an iterable of
+            nodeids.
+        """
         lblset = self.labelset(label)
         sg = self.subgraph(lblset)
         g = sg._graph
@@ -567,6 +603,18 @@ class Xmrs(LnkMixin):
             return max(g.in_degree(heads).items(), key=second)[0]
 
     def subgraph(self, nodeids):
+        """
+        Return an |Xmrs| object representing the subgraph containing
+        only the specified nodeids. Necessary variables are also
+        included. in order to connect any nodes that are connected in
+        the original Xmrs.
+
+        Args:
+            nodeids: The nodeids of the nodes/EPs to include in the
+                subgraph.
+        Returns:
+            An |Xmrs| object.
+        """
         g = self._graph
         nbunch = list(nodeids)
         labels = set(g.node[nid]['label'] for nid in nodeids)
@@ -582,6 +630,11 @@ class Xmrs(LnkMixin):
         return Xmrs(graph=sg)
 
     def is_connected(self):
+        """
+        Return True if the Xmrs represents a connected graph.
+        Subgraphs can be connected through things like arguments,
+        QEQs, and label equalities.
+        """
         return nx.is_weakly_connected(self._graph)
 
     def is_well_formed(self):
@@ -666,46 +719,130 @@ def select_args(xmrs, anchor=None, rargname=None, value=None):
 
 
 def select_links(xmrs, source=None, target=None, rargname=None, post=None):
-    pass
+    """
+    Return the list of all |Links| that have the matching *source*,
+    *target*, *rargname*, and/or *post* values. If none match, return
+    an empty list.
+    """
+    linkmatch = lambda l: (
+        (source is None or l.source == source) and
+        (target is None or l.target == target) and
+        (rargname is None or l.argname == rargname) and
+        (post is None or l.post == post))
+    return list(filter(linkmatch, xmrs.links))
 
 
 def select_hcons(xmrs, hi=None, relation=None, lo=None):
-    pass
+    """
+    Return the list of all |HandleConstraints| that have the matching
+    *hi*, *relation*, and/or *lo* values. If none match, return an
+    empty list.
+    """
+    hcmatch = lambda hc: (
+        (hi is None or hc.hi == hi) and
+        (relation is None or hc.relation == relation) and
+        (lo is None or hc.lo == lo))
+    return list(filter(hcmatch, xmrs.hcons))
 
 
 def select_icons(xmrs, target=None, relation=None, clause=None):
-    pass
+    """
+    Return the list of all |IndividualConstraints| that have the
+    matching *target*, *relation*, and/or *clause* values. If none
+    match, return an empty list.
+    """
+    icmatch = lambda ic: (
+        (target is None or ic.target == target) and
+        (relation is None or ic.relation == relation) and
+        (clause is None or ic.clause == clause))
+    return list(filter(icmatch, xmrs.icons))
 
 
 def find_argument_target(xmrs, nodeid, rargname):
+    """
+    Return the target of an argument (rather than just the variable).
+
+    Args:
+        xmrs: The |Xmrs| object to use.
+        nodeid: The nodeid (or anchor) of the argument.
+        rargname: The role-argument name of the argument.
+    Returns:
+        The object that is the target of the argument. Possible values
+        include:
+
+        ================== =====  =================================
+             Arg value     e.g.               Target
+        ================== =====  =================================
+        intrinsic variable x4     nodeid; of the EP with the IV
+        hole variable      h0     nodeid; the HCONS's labelset head
+        label              h1     nodeid; the label's labelset head
+        unbound variable   i3     the variable itself
+        constant           "IBM"  the constant itself
+        ================== =====  =================================
+
+    Note:
+        If the argument value is an intrinsic variable whose target is
+        an EP that has a quantifier, the non-quantifier EP's nodeid
+        will be returned. With this nodeid, one can then use
+        :py:meth:`find_quantifier` to get its quantifier's nodeid.
+    """
     g = xmrs._graph
+    tgt = None
     try:
-        tgt = xmrs.get_arg(nodeid, rargname).value
-        tgt_attr = g.node[tgt]
+        tgt_val = xmrs.get_arg(nodeid, rargname).value
+        tgt_attr = g.node[tgt_val]
+
         # intrinsic variable
         if 'iv' in tgt_attr:
-            return tgt_attr['iv']
-        # hcons; tgt is a hole
+            tgt = tgt_attr['iv']
+
+        # hcons; tgt_val is a hole
         if 'hcons' in tgt_attr:
-            tgt = tgt_attr['hcons'].lo
+            tgt_val = tgt_attr['hcons'].lo
         # label or hcons lo variable (see previous if block)
-        if tgt in g.labels:
-            return xmrs.labelset_head(tgt)
+        if tgt_val in g.labels:
+            tgt = xmrs.labelset_head(tgt_val)
+
         # otherwise likely a constant or unbound variable
-        return tgt
-    # nodeid or rargname were missing, or tgt wasn't a node
+        tgt = tgt_val
+
+    # nodeid or rargname were missing, or tgt_val wasn't a node
     except (AttributeError, KeyError):
-        return None
+        logging.warning('Cannot find argument target; argument is '
+                        'invalid: {}:{}'.format(nodeid, rargname))
+    return tgt
 
 
 def find_quantifier(xmrs, nodeid):
+    """
+    Return the nodeid of the quantifier of the EP given by `nodeid`.
+
+    Args:
+        xmrs: The |Xmrs| object to use.
+        nodeid: The nodeid of the quantified EP/node.
+    Returns:
+        The nodeid of the quantifier for `nodeid`. If `nodeid` is not
+        in the Xmrs, it itself is a quantifier, or if it does not have
+        a quantifier, None is returned.
+    """
     ep = xmrs.get_ep(nodeid)
-    if ep.is_quantifier() or 'bv' not in xmrs._graph.node[ep.iv]:
+    if not ep or ep.is_quantifier() or 'bv' not in xmrs._graph.node[ep.iv]:
         return None
     return xmrs._graph.node[ep.iv]['bv']
 
 
 def get_outbound_args(xmrs, nodeid, allow_unbound=True):
+    """
+    Yield the |Arguments| of `nodeid` that point to other EPs/nodes.
+
+    Args:
+        xmrs: The |Xmrs| object to use.
+        nodeid: The nodeid of the EP/node whose arguments to yield.
+        allow_unbound: If True, also yield arguments that point to
+            unbound (e.g. dropped) EPs/nodes or constants.
+    Yields:
+        |Arguments| whose targets are not the given `nodeid`.
+    """
     g = xmrs._graph
     ep = xmrs.get_ep(nodeid)
     for arg in ep.args:
@@ -721,6 +858,19 @@ def get_outbound_args(xmrs, nodeid, allow_unbound=True):
 
 
 def find_subgraphs_by_preds(xmrs, preds, connected=None):
+    """
+    Yield subgraphs matching a list of preds. Because preds may match
+    multiple EPs/nodes in the Xmrs, more than one subgraph is
+    possible.
+
+    Args:
+        xmrs: The |Xmrs| object to use.
+        preds: An iterable of |Preds| to include in subgraphs.
+        connected: If True, all yielded subgraphs must be connected,
+            as determined by :py:meth:`Xmrs.is_connected`.
+    Yields:
+        |Xmrs| objects for the found subgraphs.
+    """
     preds = list(preds)
     # find all lists of nodeids such that the lists have no repeated nids;
     # keep them as a list (fixme: why not just get sets?)
