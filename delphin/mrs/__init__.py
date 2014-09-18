@@ -7,19 +7,19 @@ MRS, there are the related formalisms Robust Minimal Recursion Semantics
 (DMRS; Copestake, 2009). In pyDelphin, the greater MRS formalism is
 referred to as \*MRS (so "MRS" then refers to the original formalism),
 and the |Xmrs| class is implemented to handle all of them (note: RMRS
-support is planned).
+support is postponed until a need is established).
 
 Users will interact mostly with |Xmrs| objects, but will not often
-instantiate them directly. Instead, they are created by
-:ref:`deserializing<serialization>` one of the various formats (such as
-SimpleMRS, MRX, DMRX, and so on). No matter what serialization format
-(or formalism) is used to load a \*MRS structure, it will be stored the
-same way in memory, so any queries or actions taken on these structures
-will use the same methods.
+instantiate them directly. Instead, they are created by serializing
+one of the various formats (such as :py:mod:`~delphin.mrs.simplemrs`,
+:py:mod:`~delphin.mrs.mrx`, or :py:mod:`~delphin.mrs.dmrx`). No matter
+what serialization format (or formalism) is used to load a \*MRS
+structure, it will be stored the same way in memory, so any queries or
+actions taken on these structures will use the same methods.
 
-Internally, an |Xmrs| object may be built up of various
-:ref:`component classes<components>`, such as |ElementaryPredication|,
-|Node|, or |HandleConstraint|.
+Internally, an |Xmrs| object may be built up of various component
+classes, such as |ElementaryPredication|, |Node|, or
+|HandleConstraint|.
 """
 
 # notes for future documentation:

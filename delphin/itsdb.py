@@ -1,3 +1,15 @@
+"""
+The `itsdb` module makes it easy to work with [incr tsdb()] profiles.
+The :py:class:`ItsdbProfile` class works with whole profiles, but it
+generally relies on the module-level functions to do its work (such
+as :py:func:`get_relations` or :py:func:`decode_row`). Queries over
+profiles can be customized through the use of
+:py:func:`filters<filter_rows>`,
+:py:func:`applicators<apply_rows>`, and
+:py:func:`selectors<select_rows>`. In addition, one can create a new
+skeleton using the :py:func:`make_skeleton` function.
+"""
+
 import os.path
 from os import mkdir
 import re
@@ -342,7 +354,9 @@ def make_skeleton(path, relations, item_rows, gzip=False):
     """
     Instantiate a new profile skeleton (only the relations file and
     item file) from an existing relations file and a list of rows
-    for the item table.
+    for the item table. For standard relations files, it is suggested
+    to have, as a minimum, the `i-id` and `i-input` fields in the
+    item rows.
 
     Args:
         path: the destination directory of the skeleton---must not

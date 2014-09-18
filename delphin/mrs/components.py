@@ -161,6 +161,11 @@ class MrsVariable(object):
 class AnchorMixin(object):
     @property
     def anchor(self):
+        """
+        The anchor of the |EP|, |Node|, or |Argument| is just the
+        nodeid wrapped in an MrsVariable. In |Xmrs| functions, integer
+        nodeids are used instead of anchors.
+        """
         if self.nodeid is not None:
             return MrsVariable(vid=self.nodeid, sort=ANCHOR_SORT)
         return None

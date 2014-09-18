@@ -106,7 +106,7 @@ modindex_common_prefix = ['delphin.']
 
 # global substitutions and things
 rst_epilog = '''
-.. |Xmrs| replace:: :py:class:`~delphin.mrs.Xmrs`
+.. |Xmrs| replace:: :py:class:`~delphin.mrs.xmrs.Xmrs`
 .. |Hook| replace:: :py:class:`~delphin.mrs.components.Hook`
 .. |Lnk| replace:: :py:class:`~delphin.mrs.components.Lnk`
 .. |ElementaryPredication| replace::

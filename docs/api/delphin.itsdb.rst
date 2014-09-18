@@ -30,6 +30,8 @@ Module Functions and Basic Classes
 
 .. autofunction:: delphin.itsdb.select_rows
 
+.. autofunction:: delphin.itsdb.make_skeleton
+
 ItsdbProfile Objects
 --------------------
 

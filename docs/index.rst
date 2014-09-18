@@ -20,12 +20,17 @@ parsing or generation. It has been used for refreshing [incr tsdb()]
 profiles to new schemas, converting MRS formalisms, extracting features
 for sentiment classification, and more.
 
-Contents:
+
+Currently there are two packages of pyDelphin:
 
 .. toctree::
    :glob:
-   :maxdepth: 1
+   :maxdepth: 2
 
+   api/delphin.itsdb
+   api/delphin.mrs
+
+.. additional info
    setup
    tutorial
    pyDelphin
