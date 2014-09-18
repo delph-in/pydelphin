@@ -21,6 +21,12 @@ class TestMrsVariable(unittest.TestCase):
         v = MrsVariable(1, 'h')
         self.assertNotEqual(v, None)
 
+    def test_from_string(self):
+        self.assertRaises(ValueError, MrsVariable.from_string('1x'))
+        self.assertRaises(ValueError, MrsVariable.from_string('var'))
+        v = MrsVariable.from_string('x1')
+        self.assertNotEqual(v, None)
+
     def test_values(self):
         v = MrsVariable(1, 'x')
         self.assertEqual(v.vid, 1)
@@ -30,6 +36,10 @@ class TestMrsVariable(unittest.TestCase):
         self.assertEqual(v.vid, 10)
         self.assertEqual(v.sort, 'event')
         self.assertEqual(v.properties, {'a':1})
+        v = MrsVariable.from_string('event10')
+        self.assertEqual(v.vid, 10)
+        self.assertEqual(v.sort, 'event')
+        self.assertEqual(len(v.properties), 0)
 
     def test_str(self):
         v = MrsVariable(1, 'x')
@@ -60,6 +70,14 @@ class TestMrsVariable(unittest.TestCase):
         d[v3] = 'three'
         self.assertEqual(len(d), 3)
         self.assertEqual(d[v3], 'three')
+
+    def test_sort_vid_split(self):
+        svs = MrsVariable.sort_vid_split
+        self.assertEqual(svs('x1'), ('x', '1'))
+        self.assertEqual(svs('event10'), ('event', '10'))
+        self.assertRaises(ValueError, svs, 'x')
+        self.assertRaises(ValueError, svs, '1')
+        self.assertRaises(ValueError, svs, '1x')
 
 
 class TestAnchorMixin(unittest.TestCase):

@@ -2,7 +2,8 @@ import unittest
 from collections import OrderedDict
 from delphin.mrs import Mrs
 from delphin.mrs.components import (
-    Hook, ElementaryPredication as EP, Pred, Argument, MrsVariable, Lnk, qeq
+    Hook, ElementaryPredication as EP, Pred, Argument, MrsVariable, Lnk,
+    HandleConstraint
 )
 from delphin.mrs import simplemrs
 from delphin.mrs.simplemrs import tokenize # for convenience
@@ -112,7 +113,7 @@ class TestDeserialize(unittest.TestCase):
         self.mrs1 = Mrs(
             hook=Hook(ltop=self.vars1['h0'], index=self.vars1['e1']),
             rels=[self.mrs1ep1, self.mrs1ep2, self.mrs1ep3],
-            hcons=[qeq(self.vars1['h4'], self.vars1['h6'])]
+            hcons=[HandleConstraint.qeq(self.vars1['h4'], self.vars1['h6'])]
         )
 
     def test_read_featval(self):

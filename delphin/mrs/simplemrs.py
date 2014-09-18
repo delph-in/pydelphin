@@ -11,8 +11,7 @@ import re
 from delphin.mrs import Mrs
 from delphin.mrs.components import (
     Hook, ElementaryPredication, Argument, Pred,
-    MrsVariable, Lnk, HandleConstraint, IndividualConstraint,
-    sort_vid_split, sort_vid_re
+    MrsVariable, Lnk, HandleConstraint, IndividualConstraint
 )
 from delphin.mrs.config import (HANDLESORT, QEQ, LHEQ, OUTSCOPES)
 from delphin._exceptions import XmrsDeserializationError as XDE
@@ -182,7 +181,11 @@ def validate_tokens(tokens, expected):
 
 
 def is_variable(token):
-    return sort_vid_re.match(token) is not None
+    try:
+        MrsVariable.sort_vid_split(token)
+        return True
+    except ValueError:
+        return False
 
 
 def invalid_token_error(token, expected):
@@ -252,7 +255,7 @@ def read_variable(tokens, sort=None, variables=None):
     if variables is None:
         variables = {}
     var = tokens.popleft()
-    srt, vid = sort_vid_split(var)
+    srt, vid = MrsVariable.sort_vid_split(var)
     # consider something like not(srt <= sort) in the case of subsumptive sorts
     if sort is not None and srt != sort:
         raise XDE('Variable {} has sort "{}", expected "{}"'

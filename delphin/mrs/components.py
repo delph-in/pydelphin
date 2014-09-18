@@ -11,16 +11,6 @@ from .config import (
 
 # VARIABLES, LNKS, and HOOKS
 
-sort_vid_re = re.compile(r'^(\w*\D)(\d+)$')
-
-
-def sort_vid_split(vs):
-    try:
-        sort, vid = sort_vid_re.match(vs).groups()
-        return sort, vid
-    except AttributeError:
-        raise ValueError('Invalid variable string: {}'.format(str(vs)))
-
 @total_ordering
 class MrsVariable(object):
     """An MrsVariable has an id (vid), sort, and sometimes properties.
@@ -92,7 +82,7 @@ class MrsVariable(object):
             an MrsVariable, or None otherwise
         """
         try:
-            sort, vid = sort_vid_split(varstring)
+            sort, vid = MrsVariable.sort_vid_split(varstring)
             return cls(vid, sort)
         except (ValueError, TypeError):
             return None
@@ -105,7 +95,7 @@ class MrsVariable(object):
             pass  # other is not an MrsVariable
         # attempt as string
         try:
-            sort, vid = sort_vid_split(other)
+            sort, vid = MrsVariable.sort_vid_split(other)
             return self.sort == sort and self.vid == int(vid)
         except (ValueError, TypeError):
             pass  # doesn't match a variable
@@ -126,7 +116,7 @@ class MrsVariable(object):
             pass  # not an int or MrsVariable
         # try as a string
         try:
-            sort, vid2 = sort_vid_split(other)
+            sort, vid2 = MrsVariable.sort_vid_split(other)
             return vid1 < int(vid2)
         except (ValueError, TypeError):
             pass  # not a string... no good output
@@ -157,6 +147,14 @@ class MrsVariable(object):
         sortinfo = OrderedDict([(CVARSORT, self.sort)])
         sortinfo.update(self.properties)
         return sortinfo
+
+    @staticmethod
+    def sort_vid_split(vs):
+        try:
+            sort, vid = re.match(r'^(\w*\D)(\d+)$', vs).groups()
+            return sort, vid
+        except AttributeError:
+            raise ValueError('Invalid variable string: {}'.format(str(vs)))
 
 
 # I'm not sure this belongs here, but anchors are MrsVariables...
@@ -459,6 +457,10 @@ class HandleConstraint(object):
         self.relation = relation
         self.lo = lo
 
+    @classmethod
+    def qeq(cls, hi, lo):
+        return cls(hi, QEQ, lo)
+
     def __eq__(self, other):
         return (self.hi == other.hi and
                 self.relation == other.relation and
@@ -475,53 +477,10 @@ class HandleConstraint(object):
         return self.__repr__()
 
 
-def qeq(hi, lo):
-    return HandleConstraint(hi, QEQ, lo)
-
-
 IndividualConstraint = namedtuple('IndividualConstraint',
                                   ['target', 'relation', 'clause'])
 
 # PREDICATES AND PREDICATIONS
-
-pred_re = re.compile(
-    r'_?(?P<lemma>.*?)_'  # match until last 1 or 2 parts
-    r'((?P<pos>[a-z])_)?'  # pos is always only 1 char
-    r'((?P<sense>([^_\\]|(?:\\.))+)_)?'  # no unescaped _s
-    r'(?P<end>rel(ation)?)$',  # NB only _rel is valid
-    re.IGNORECASE
-)
-
-
-def is_valid_pred_string(s, suffix_required=True):
-    """
-    Return True if the given predicate string represents a valid Pred,
-    False otherwise. If suffix_required is False, abbreviated Pred
-    strings will be accepted (e.g. _dog_n_1 instead of _dog_n_1_rel)
-    """
-    s = s.strip('"')
-    if not suffix_required and s.rsplit('_', 1)[-1] not in ('rel', 'relation'):
-        s += '_rel'
-    return pred_re.match(s) is not None
-
-
-def normalize_pred_string(s):
-    """
-    Make pred strings more consistent by removing quotes and using the
-    _rel suffix.
-    """
-    s = s.strip('"')
-    match = pred_re.match(s) or pred_re.match(s + '_rel')
-    if match:
-        d = match.groupdict()
-        tokens = [d['lemma']]
-        if d['pos']:
-            tokens.append(d['pos'])
-        if d['sense']:
-            tokens.append(d['sense'])
-        tokens.append('rel')
-        return '_'.join(tokens)
-    return None
 
 
 class Pred(object):
@@ -575,7 +534,13 @@ class Pred(object):
         >>> p1 == p3
         False
     """
-
+    pred_re = re.compile(
+        r'_?(?P<lemma>.*?)_'  # match until last 1 or 2 parts
+        r'((?P<pos>[a-z])_)?'  # pos is always only 1 char
+        r'((?P<sense>([^_\\]|(?:\\.))+)_)?'  # no unescaped _s
+        r'(?P<end>rel(ation)?)$',  # NB only _rel is valid
+        re.IGNORECASE
+    )
     # Pred types (used mainly in input/output, not internally in pyDelphin)
     GRAMMARPRED = 0  # only a string allowed (quoted or not)
     REALPRED = 1  # may explicitly define lemma, pos, sense
@@ -625,7 +590,7 @@ class Pred(object):
 
     @staticmethod
     def string_or_grammar_pred(predstr):
-        if predstr.strip('"\'').startswith('_'):
+        if predstr.strip('"').lstrip("'").startswith('_'):
             return Pred.stringpred(predstr)
         else:
             return Pred.grammarpred(predstr)
@@ -656,13 +621,47 @@ class Pred(object):
         if not predstr.lower().endswith('_rel'):
             logging.warn('Predicate does not end in "_rel": {}'
                          .format(predstr))
-        match = pred_re.search(predstr)
+        match = Pred.pred_re.search(predstr)
         if match is None:
             logging.warn('Unexpected predicate string: {}'.format(predstr))
             return (predstr, None, None, None)
         # _lemma_pos(_sense)?_end
         return (match.group('lemma'), match.group('pos'),
                 match.group('sense'), match.group('end'))
+
+    @staticmethod
+    def is_valid_pred_string(predstr, suffix_required=True):
+        """
+        Return True if the given predicate string represents a valid
+        Pred, False otherwise. If suffix_required is False,
+        abbreviated Pred strings will be accepted (e.g. _dog_n_1
+        instead of _dog_n_1_rel)
+        """
+        predstr = predstr.strip('"').lstrip("'")
+        if (not suffix_required and
+            predstr.rsplit('_', 1)[-1] not in ('rel', 'relation')):
+            predstr += '_rel'
+        return Pred.pred_re.match(predstr) is not None
+
+    @staticmethod
+    def normalize_pred_string(predstr):
+        """
+        Make pred strings more consistent by removing quotes and using
+        the _rel suffix.
+        """
+        predstr = predstr.strip('"').lstrip("'")
+        match = (Pred.pred_re.match(predstr) or
+                 Pred.pred_re.match(predstr + '_rel'))
+        if match:
+            d = match.groupdict()
+            tokens = [d['lemma']]
+            if d['pos']:
+                tokens.append(d['pos'])
+            if d['sense']:
+                tokens.append(d['sense'])
+            tokens.append('rel')
+            return '_'.join(tokens)
+        return None
 
     def short_form(self):
         """
@@ -674,7 +673,7 @@ class Pred(object):
             >>> p.short_form()
             '_cat_n_1'
         """
-        return self.string.strip('"').rsplit('_', 1)[0]
+        return self.string.strip('"').lstrip("'").rsplit('_', 1)[0]
 
     def is_quantifier(self):
         return self.pos == QUANTIFIER_SORT

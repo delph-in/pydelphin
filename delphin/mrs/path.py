@@ -1,7 +1,7 @@
 import re
 from collections import deque
 from itertools import product
-from .components import is_valid_pred_string
+from .components import Pred
 from .util import powerset
 
 # Something like this:
@@ -150,7 +150,7 @@ def _traverse_ep(xmrs, obj, steps, context=None):
     elif step == '#':
         nid = steps.popleft()
         eps = xmrs.select_nodes(nodeid=nid)
-    elif is_valid_pred_string(step, suffix_required=False):
+    elif Pred.is_valid_pred_string(step, suffix_required=False):
         eps = xmrs.select_nodes(pred=step)
     else:
         raise Exception("Invalid ep: {}".format(''.join([step] + steps)))
