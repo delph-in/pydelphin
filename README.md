@@ -13,9 +13,14 @@ accomplishing some tasks such as refreshing [incr tsdb()] profiles to a new
 schema, creating sub-profiles, or converting between MRS representations
 (SimpleMRS, MRS XML, DMRS, etc.).
 
+* [Documentation](#documentation)
 * [Usage Examples](#usage-examples)
 * [Installation and Requirements](#installation-and-requirements)
 * [Libraries](#libraries)
+
+#### Documentation
+
+API documentation is available here: http://pydelphin.readthedocs.org
 
 #### Usage Examples
 
