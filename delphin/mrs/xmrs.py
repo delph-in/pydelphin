@@ -3,7 +3,7 @@ from itertools import chain
 # consider using this:
 # from functools import lru_cache
 import networkx as nx
-from delphin._exceptions import XmrsStructureError
+from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .components import (
     Hook, MrsVariable, ElementaryPredication, Node, Argument, Link,
     HandleConstraint, Lnk, LnkMixin
@@ -288,7 +288,7 @@ class Xmrs(LnkMixin):
             surface: the surface string
             identifier: a discourse-utterance id
         """
-        self._graph = graph
+        self._graph = graph or XmrsDiGraph()
 
         # Some members relate to the whole MRS
         #: The |Hook| object contains the LTOP, INDEX, and XARG
@@ -331,11 +331,15 @@ class Xmrs(LnkMixin):
     @property
     def variables(self):
         """The list of all |MrsVariable| objects specified in the Xmrs."""
-        return self.introduced_variables.union(
-            [self.hook.ltop, self.hook.index] +
+        all_vars = set(self.introduced_variables).union(
             [a.value for a in self.args if isinstance(a.value, MrsVariable)] +
             [hc.lo for hc in self.hcons]
         )
+        if self.hook.ltop is not None:
+            all_vars.update([self.hook.ltop])
+        if self.hook.index is not None:
+            all_vars.update([self.hook.index])
+        return sorted(all_vars)
 
     @property
     def introduced_variables(self):
@@ -344,10 +348,10 @@ class Xmrs(LnkMixin):
         Xmrs. Introduced |MrsVariables| exist as intrinsic
         variables, labels, or holes (the HI variable of a QEQ).
         """
-        return set(
+        return sorted(set(
             list(chain.from_iterable([(ep.iv, ep.label) for ep in self.eps]))
             + [hc.hi for hc in self.hcons]
-        )
+        ))
 
     @property
     def intrinsic_variables(self):
@@ -378,7 +382,7 @@ class Xmrs(LnkMixin):
     @property
     def ltop(self):
         """The LTOP |MrsVariable|, if it exists, otherwise None."""
-        return self.hook.ltop
+        return self.hook.top
 
     #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.ltop`
     top = ltop
@@ -635,7 +639,10 @@ class Xmrs(LnkMixin):
         Subgraphs can be connected through things like arguments,
         QEQs, and label equalities.
         """
-        return nx.is_weakly_connected(self._graph)
+        try:
+            return nx.is_weakly_connected(self._graph)
+        except nx.exception.NetworkXPointlessConcept:
+            raise XmrsError("Connectivity is undefined for an empty Xmrs.")
 
     def is_well_formed(self):
         """
