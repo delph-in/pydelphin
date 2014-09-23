@@ -316,11 +316,12 @@ class Xmrs(LnkMixin):
     def __hash__(self):
         # isomorphic MRSs should hash to the same thing, but
         # calculating isomorphism is expensive. Approximate it.
-        return hash(' '.join(sorted(
-            '{}:{}'.format(ep.pred.short_form(),
-                           len(ep.argdict)
+        return hash(' '.join(
+            sorted(
+                '{}:{}'.format(ep.pred.short_form(), len(ep.argdict))
+                for ep in self.eps
             )
-        )))
+        ))
 
     def __eq__(self, other):
         # actual equality is more than isomorphism, all variables and
