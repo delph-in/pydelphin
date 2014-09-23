@@ -54,7 +54,7 @@ def Mrs(hook=None, rels=None, hcons=None, icons=None,
     """
     if hook is None:
         hook = Hook()
-    eps = list(rels or [])
+    eps = sorted(rels or [])  # sorted to try and make nodeids predictable
     hcons = list(hcons or [])
     icons = list(icons or [])
     # first give eps a nodeid (this is propagated to args)
@@ -312,6 +312,32 @@ class Xmrs(LnkMixin):
         else:
             stringform = ' '.join(ep.pred.lemma for ep in self.eps)
         return 'Xmrs({})'.format(stringform)
+
+    def __hash__(self):
+        # isomorphic MRSs should hash to the same thing, but
+        # calculating isomorphism is expensive. Approximate it.
+        return hash(' '.join(sorted(
+            '{}:{}'.format(ep.pred.short_form(),
+                           len(ep.argdict)
+            )
+        )))
+
+    def __eq__(self, other):
+        # actual equality is more than isomorphism, all variables and
+        # things must have the same form, not just the same shape
+        if not isinstance(other, Xmrs):
+            return False
+        if self.hook != other.hook:
+            return False
+        eps1 = self.eps
+        eps2 = other.eps
+        if len(eps1) != len(eps2):
+            return False
+        zipped_eps = zip(sorted(eps1), sorted(eps2))
+        for ep1, ep2 in zipped_eps:
+            if ep1 != ep2:
+                return False
+        return True
 
     # Interface layer to the internal representations (and part of the
     # public API)

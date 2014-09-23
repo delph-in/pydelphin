@@ -362,6 +362,15 @@ class Hook(object):
             self.top, self.index, self.xarg
         )
 
+    def __eq__(self, other):
+        if not isinstance(other, Hook):
+            return False
+        return (
+            self.top == other.top and
+            self.index == other.index and
+            self.xarg == other.xarg
+        )
+
     # for compatibility
     @property
     def ltop(self):
