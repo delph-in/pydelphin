@@ -1,6 +1,6 @@
 
 from itertools import count
-from delphin.mrs.xmrs import get_outbound_args
+from delphin.mrs.query import get_outbound_args
 
 def dump(fh, ms, single=False, pretty_print=True, color=False, **kwargs):
     print(dumps(ms,
