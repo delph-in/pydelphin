@@ -250,7 +250,9 @@ def build_graph(hook, eps, hcons, icons):
         iv = ep.iv
         g.nodeids.append(nid)
         g.labels.add(lbl)
-        g.add_node(nid, {'ep': ep, 'label': lbl})
+        g.add_node(nid, {'pred': ep.pred, 'label': lbl, 'lnk': ep.lnk,
+                         'surface': ep.surface, 'base': ep.base,
+                         'rargs': OrderedDict()})
         g.add_edge(lbl, nid)
         if ep.is_quantifier():
             g.add_edge(iv, nid, {'bv': True})  # quantifier
@@ -260,6 +262,7 @@ def build_graph(hook, eps, hcons, icons):
             g.node[iv]['iv'] = ep.nodeid
         for arg in ep.args:
             g.add_edge(ep.nodeid, arg.value, {'rargname': arg.argname })
+            g.node[nid]['rargs'][arg.argname] = arg.value
     for hc in hcons:
         g.add_edge(hc.hi, hc.lo, {'relation': hc.relation})
         g.node[hc.hi]['hcons'] = hc
@@ -353,7 +356,7 @@ class Xmrs(LnkMixin):
     def anchors(self):
         """The list of `anchors`."""
         # does not return LTOP anchor
-        return list(ep.anchor for ep in self.eps)
+        return list(map(MrsVariable.anchor, self.nodeids))
 
     @property
     def variables(self):
@@ -422,13 +425,12 @@ class Xmrs(LnkMixin):
     @property
     def nodes(self):
         """The list of |Nodes|."""
-        return [ep._node for ep in self.eps]
+        return list(map(self.get_node, self.nodeids))
 
     @property
     def eps(self):
         """The list of |ElementaryPredications|."""
-        g = self._graph
-        return [g.node[nid]['ep'] for nid in g.nodeids]
+        return list(map(self.get_ep, self.nodeids))
 
     #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.eps`
     rels = eps
@@ -533,7 +535,19 @@ class Xmrs(LnkMixin):
             An |ElementaryPredication| or None.
         """
         try:
-            return self._graph.node[nodeid]['ep']
+            d = self._graph.node[nodeid]
+            args = [Argument(nodeid, rargname, value)
+                    for rargname, value in d['rargs'].items()]
+            ep = ElementaryPredication(
+                d['pred'],
+                d['label'],
+                anchor=MrsVariable.anchor(nodeid),
+                args=args,
+                lnk=d.get('lnk'),
+                surface=d.get('surface'),
+                base=d.get('base')
+            )
+            return ep
         except KeyError:
             return None
 
@@ -548,7 +562,17 @@ class Xmrs(LnkMixin):
             A |Node| or None.
         """
         try:
-            return self.get_ep(nodeid)._node
+            d = self._graph.node[nodeid]
+            node = Node(
+                nodeid,
+                d['pred'],
+                sortinfo=d['rargs'][IVARG_ROLE].sortinfo,
+                lnk=d.get('lnk'),
+                surface=d.get('surface'),
+                base=d.get('base'),
+                carg=d['rargs'].get(CONSTARG_ROLE)
+            )
+            return node
         except AttributeError:
             return None
 
@@ -659,6 +683,9 @@ class Xmrs(LnkMixin):
         sg = g.subgraph(nbunch)
         # may need some work to calculate hook or lnk here
         return Xmrs(graph=sg)
+
+    def relabel_nodes(self, mapping):
+        self._graph = g.relabel_nodes(mapping)
 
     def is_connected(self):
         """

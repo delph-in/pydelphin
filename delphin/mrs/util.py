@@ -1,6 +1,6 @@
 from itertools import chain, combinations
 from operator import itemgetter
-from networkx import DiGraph
+from networkx import DiGraph, relabel_nodes
 
 first = itemgetter(0)
 second = itemgetter(1)
@@ -67,3 +67,9 @@ class XmrsDiGraph(DiGraph):
         sg.labels = set(node[nid]['label'] for nid in nbunch
                         if 'label' in node[nid])
         return XmrsDiGraph(sg)
+
+    def relabel_nodes(self, mapping):
+        g = relabel_nodes(self, mapping)
+        g.nodeids = [mapping.get(n, n) for n in self.nodeids]
+        g.labels = set(self.labels)
+        return XmrsDiGraph(data=g)

@@ -87,6 +87,10 @@ class MrsVariable(object):
         except (ValueError, TypeError):
             return None
 
+    @classmethod
+    def anchor(cls, vid):
+        return cls(vid, ANCHOR_SORT)
+
     def __eq__(self, other):
         # try both as MrsVariables
         try:
