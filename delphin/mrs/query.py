@@ -9,8 +9,8 @@ def select_nodeids(xmrs, iv=None, label=None, pred=None):
     """
     g = xmrs._graph
     nids = []
-    datamatch = lambda d: ((iv is None or d['ep'].iv == iv) and
-                           (pred is None or d['ep'].pred == pred) and
+    datamatch = lambda d: ((iv is None or d['iv'] == iv) and
+                           (pred is None or d['pred'] == pred) and
                            (label is None or d['label'] == label))
     for nid in g.nodeids:
         data = g.node[nid]

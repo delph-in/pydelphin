@@ -250,9 +250,10 @@ def build_graph(hook, eps, hcons, icons):
         iv = ep.iv
         g.nodeids.append(nid)
         g.labels.add(lbl)
-        g.add_node(nid, {'pred': ep.pred, 'label': lbl, 'lnk': ep.lnk,
-                         'surface': ep.surface, 'base': ep.base,
-                         'rargs': OrderedDict()})
+        g.add_node(nid, {
+            'pred': ep.pred, 'iv': iv, 'label': lbl, 'lnk': ep.lnk,
+            'surface': ep.surface, 'base': ep.base, 'rargs': OrderedDict()
+        })
         g.add_edge(lbl, nid)
         if ep.is_quantifier():
             g.add_edge(iv, nid, {'bv': True})  # quantifier
@@ -261,7 +262,7 @@ def build_graph(hook, eps, hcons, icons):
             g.add_edge(iv, nid, {'iv': True})  # intrinsic arg
             g.node[iv]['iv'] = ep.nodeid
         for arg in ep.args:
-            g.add_edge(ep.nodeid, arg.value, {'rargname': arg.argname })
+            g.add_edge(nid, arg.value, {'rargname': arg.argname })
             g.node[nid]['rargs'][arg.argname] = arg.value
     for hc in hcons:
         g.add_edge(hc.hi, hc.lo, {'relation': hc.relation})
@@ -675,7 +676,7 @@ class Xmrs(LnkMixin):
         labels = set(g.node[nid]['label'] for nid in nodeids)
         nbunch.extend(labels)
         for nid in nodeids:
-            nbunch.append(g.node[nid]['ep'].iv)
+            nbunch.append(g.node[nid]['iv'])
             for succ in g.successors_iter(nid):
                 hc = g.node[succ].get('hcons')
                 if hc is not None and hc.lo in labels:
@@ -685,7 +686,7 @@ class Xmrs(LnkMixin):
         return Xmrs(graph=sg)
 
     def relabel_nodes(self, mapping):
-        self._graph = g.relabel_nodes(mapping)
+        self._graph = self._graph.relabel_nodes(mapping)
 
     def is_connected(self):
         """

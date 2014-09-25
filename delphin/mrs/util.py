@@ -63,13 +63,18 @@ class XmrsDiGraph(DiGraph):
         nbunch = list(nbunch)
         sg = DiGraph.subgraph(self, nbunch)
         node = sg.node
-        sg.nodeids = [nid for nid in nbunch if 'ep' in node[nid]]
+        sg.nodeids = [nid for nid in nbunch if 'pred' in node[nid]]
         sg.labels = set(node[nid]['label'] for nid in nbunch
                         if 'label' in node[nid])
         return XmrsDiGraph(sg)
 
     def relabel_nodes(self, mapping):
         g = relabel_nodes(self, mapping)
+        # also need to fix where we store it ourselves
+        for tnid in mapping.values():
+            iv = g.node[tnid]['iv']
+            v = 'bv' if g.node[tnid]['pred'].is_quantifier() else 'iv'
+            g.node[iv][v] = tnid
         g.nodeids = [mapping.get(n, n) for n in self.nodeids]
         g.labels = set(self.labels)
         return XmrsDiGraph(data=g)
