@@ -255,12 +255,13 @@ def build_graph(hook, eps, hcons, icons):
             'surface': ep.surface, 'base': ep.base, 'rargs': OrderedDict()
         })
         g.add_edge(lbl, nid)
-        if ep.is_quantifier():
-            g.add_edge(iv, nid, {'bv': True})  # quantifier
-            g.node[iv]['bv'] = ep.nodeid
-        else:
-            g.add_edge(iv, nid, {'iv': True})  # intrinsic arg
-            g.node[iv]['iv'] = ep.nodeid
+        if iv is not None:  # check for robustness; missing ivs aren't valid
+            if ep.is_quantifier():
+                g.add_edge(iv, nid, {'bv': True})  # quantifier
+                g.node[iv]['bv'] = ep.nodeid
+            else:
+                g.add_edge(iv, nid, {'iv': True})  # intrinsic arg
+                g.node[iv]['iv'] = ep.nodeid
         for arg in ep.args:
             g.add_edge(nid, arg.value, {'rargname': arg.argname })
             g.node[nid]['rargs'][arg.argname] = arg.value
@@ -564,18 +565,19 @@ class Xmrs(LnkMixin):
         """
         try:
             d = self._graph.node[nodeid]
-            node = Node(
-                nodeid,
-                d['pred'],
-                sortinfo=d['rargs'][IVARG_ROLE].sortinfo,
-                lnk=d.get('lnk'),
-                surface=d.get('surface'),
-                base=d.get('base'),
-                carg=d['rargs'].get(CONSTARG_ROLE)
-            )
-            return node
         except AttributeError:
             return None
+        iv = d.get('iv')
+        node = Node(
+            nodeid,
+            d['pred'],
+            sortinfo=None if iv is None else iv.sortinfo,
+            lnk=d.get('lnk'),
+            surface=d.get('surface'),
+            base=d.get('base'),
+            carg=d['rargs'].get(CONSTARG_ROLE)
+        )
+        return node
 
     def get_arg(self, nodeid, rargname):
         """
@@ -643,6 +645,8 @@ class Xmrs(LnkMixin):
             nodeids.
         """
         lblset = self.labelset(label)
+        if len(lblset) == 1:
+            return list(lblset) if not single else lblset.pop()
         sg = self.subgraph(lblset)
         g = sg._graph
         # out degree is 1 for ARG0; <= 1 in case a deviant grammar does not
