@@ -17,6 +17,7 @@ import gzip
 import logging
 from collections import defaultdict, namedtuple, OrderedDict
 from delphin._exceptions import ItsdbError
+from delphin.util import safe_int
 
 ##############################################################################
 # Module variables
@@ -348,6 +349,30 @@ def select_rows(cols, rows, mode='list'):
     for row in rows:
         data = [row.get(c) for c in cols]
         yield cast(cols, data)
+
+
+def match_rows(rows1, rows2, key, sort_keys=True):
+    """
+    Yield triples of (value, left_rows, right_rows) where `left_rows`
+    and `right_rows` are lists of rows that share the same column
+    value for `key`.
+    """
+    matched = OrderedDict()
+    for i, rows in enumerate([rows1, rows2]):
+        for row in rows:
+            val = row[key]
+            try:
+                data = matched[val]
+            except KeyError:
+                matched[val] = ([], [])
+                data = matched[val]
+            data[i].append(row)
+    vals = matched.keys()
+    if sort_keys:
+        vals = sorted(vals, key=safe_int)
+    for val in vals:
+        left, right = matched[val]
+        yield (val, left, right)
 
 
 def make_skeleton(path, relations, item_rows, gzip=False):

@@ -16,38 +16,71 @@ _rcfilename = '.pydelphinrc'
 
 def main(args):
     cfg = load_config(args)
-    if not validate(args, cfg):
-        sys.exit('Exiting.')
+    args.func(args, cfg)
 
-    # if args.list:
-    #     list_commands(cfg)
-    #     sys.exit()
 
-    in_profile = prepare_input_profile(cfg)
+def select(args, cfg):
+    in_profile = prepare_input_profile(cfg['input'],
+                                       filters=cfg.get('filters'),
+                                       applicators=cfg.get('applicators'))
+    keyfilter = cfg['cascade_filters']
+    if args.join:
+        rows = in_profile.join(*args.join, key_filter=keyfilter)
+        # Adding : is just for robustness. We need something like
+        # :table:col@table@col, but may have gotten table:col@table@col
+        if not args.select.startswith(':'):
+            args.select = ':' + args.select
+        table, cols = itsdb.get_data_specifier(args.select)
+    else:
+        table, cols = itsdb.get_data_specifier(args.select)
+        rows = in_profile.read_table(table, key_filter=keyfilter)
+    for row in itsdb.select_rows(cols, rows, mode='row'):
+        print(row)
 
-    if args.output:
-        out_profile = prepare_output_profile(cfg, in_profile)
 
-    if args.select:
-        keyfilter = cfg['cascade_filters']
-        if args.join:
-            rows = in_profile.join(*args.join, key_filter=keyfilter)
-            # Adding : is just for robustness. We need something like
-            # :table:col@table@col, but may have gotten table:col@table@col
-            if not args.select.startswith(':'):
-                args.select = ':' + args.select
-            table, cols = itsdb.get_data_specifier(args.select)
-        else:
-            table, cols = itsdb.get_data_specifier(args.select)
-            rows = in_profile.read_table(table, key_filter=keyfilter)
-        for row in itsdb.select_rows(cols, rows, mode='row'):
-            print(row)
+def mkprof(args, cfg):
+    in_profile = prepare_input_profile(cfg['input'],
+                                       filters=cfg.get('filters'),
+                                       applicators=cfg.get('applicators'))
+    outdir = args.output
+    # copy relations file
+    relations = None
+    if hasattr(args, 'relations') and args.relations is not None:
+        relations = args.relations
+    elif hasattr(args, 'input'):
+        rel_fn = cfg.get('itsdb_relations_filename', 'relations')
+        relations = os.path.join(args.input, rel_fn)
+    assert(os.path.isfile(relations))
+    if args.skeleton:
+        rows = in_profile.read_table('item', key_filter=cfg['cascade_filters'])
+        itsdb.make_skeleton(outdir, relations, rows)
+    else:
+        prepare_output_directory(outdir, cfg)
+        in_profile.write_profile(outdir,
+                                 relations_filename=relations,
+                                 key_filter=cfg['cascade_filters'])
+    prof = itsdb.ItsdbProfile(outdir, index=False)
+    return prof
 
-    #for command in args.commands:
-    #    out_profile = None
-    #    cmd = make_command(command, cfg)
-    #    interface = get_interface(cmd['interface'])
-    #    interface.do(cmd)
+
+def compare(args, cfg):
+    from delphin.mrs.compare import compare_bags
+    from delphin.mrs import simplemrs
+    test_profile = prepare_input_profile(cfg['input'],
+                                         filters=cfg.get('filters'),
+                                         applicators=cfg.get('applicators'))
+    gold_profile = prepare_input_profile(args.gold)
+    matched_rows = itsdb.match_rows(
+        test_profile.read_table('result'),
+        gold_profile.read_table('result'),
+        'parse-id'
+    )
+    for (key, testrows, goldrows) in matched_rows:
+        (test_unique, shared, gold_unique) = compare_bags(
+            [simplemrs.loads_one(row['mrs']) for row in testrows],
+            [simplemrs.loads_one(row['mrs']) for row in goldrows]
+        )
+        print('{}\t<{},{},{}>'.format(key, test_unique, shared, gold_unique))
 
 
 def load_config(args):
@@ -79,9 +112,9 @@ def load_config(args):
     cfg.update({
         'verbosity': args.verbosity,
         'input': args.input or cfg.get('input'),
-        'output': args.output or cfg.get('output'),
-        'relations': args.relations or cfg.get('relations'),
-        'select': args.select or cfg.get('select'),
+        #'output': args.output or cfg.get('output'),
+        #'relations': args.relations or cfg.get('relations'),
+        #'select': args.select or cfg.get('select'),
         'applicators': args.applicators or cfg.get('applicators', []),
         'filters': args.filters or cfg.get('filters', []),
         'cascade_filters': args.cascade_filters or
@@ -152,34 +185,14 @@ def validate(args, cfg):
     return valid
 
 
-def list_commands(config):
-    print('Commands:')
-    for c, cmd in config['commands'].items():
-        print('  {}: {}'.format(c, cmd.get('description')))
-
-
-def prepare_input_profile(cfg):
-    filters = [make_itsdb_action(ds, f)
-               for ds, f in cfg.get('filters', [])]
-    applicators = [make_itsdb_action(ds, f)
-                   for ds, f in cfg.get('applicators', [])]
+def prepare_input_profile(path, filters=None, applicators=None):
+    filters = [make_itsdb_action(ds, f) for ds, f in (filters or [])]
+    applicators = [make_itsdb_action(ds, f) for ds, f in (applicators or [])]
     index = len(filters) > 0
-    prof = itsdb.ItsdbProfile(cfg['input'],
-                             filters=filters,
-                             applicators=applicators,
-                             index=index)
-    return prof
-
-
-def prepare_output_profile(cfg, in_profile):
-    outdir = cfg['output']
-    prepare_output_directory(outdir, cfg)
-    # copy relations file
-    relations = cfg.get('relations')
-    in_profile.write_profile(outdir,
-                             relations_filename=relations,
-                             key_filter=cfg['cascade_filters'])
-    prof = itsdb.ItsdbProfile(outdir)
+    prof = itsdb.ItsdbProfile(path,
+                              filters=filters,
+                              applicators=applicators,
+                              index=index)
     return prof
 
 
@@ -201,6 +214,12 @@ def prepare_output_directory(path, config):
         json.dump(config, open(rcpath, 'w'), indent=2)
     else:
         logging.warning('Config file path already exists: {}'.format(rcpath))
+
+
+def list_commands(config):
+    print('Commands:')
+    for c, cmd in config['commands'].items():
+        print('  {}: {}'.format(c, cmd.get('description')))
 
 
 def make_command(command, cfg):
@@ -271,7 +290,7 @@ FILTER/APPLY EXPRESSIONS
     )
     add = parser.add_argument
     add('-c', '--config',
-        metavar='PATH',
+        metavar='CFG',
         help='The configuration file describing possible commands.')
     # the --list option is a specific kind of help that uses the config.
     # When it is not used, --outdir and a command are required, but we
@@ -288,20 +307,6 @@ FILTER/APPLY EXPRESSIONS
     add('-i', '--input',
         metavar='PATH',
         help='The [incr tsdb()] profile to use as input.')
-    add('-o', '--output',
-        metavar='PATH',
-        help='The [incr tsdb()] profile to output.')
-    add('-r', '--relations',
-        metavar='PATH',
-        help='The relations file to use for the output profile. If not '
-             'specified and the --input-profile option is used, the '
-             'relations file is copied from the input profile.')
-    add('-s', '--select',
-        metavar='TBL[:COL[@COL..]]',
-        help='Print the contents of each row in TBL. If COLs are specified, '
-             'only print contents of these columns. See also the section '
-             'about DATA SPECIFIERS. e.g. '
-             '--select item:i-input@i-wf')
     add('-a', '--apply',
         nargs=2, metavar=('TBL:COL[@COL..]', 'EXPR'),
         action='append', dest='applicators',
@@ -327,19 +332,54 @@ FILTER/APPLY EXPRESSIONS
              'filtered `item` will be filtered as well. This effect is '
              'transitive, so `result` rows sharing a `parse-id` with a '
              '`parse` row filtered by the cascade will also be filtered.')
-    add('--join',
-        nargs=2, metavar=('TBL1', 'TBL2'),
+
+    subparsers = parser.add_subparsers(help='sub-command help')
+
+    select_parser = subparsers.add_parser(
+        'select', help='select data from a profile'
+    )
+    select_parser.add_argument(
+        'select', metavar='TBL[:COL[@COL..]]',
+        help='Print the contents of each row in TBL. If COLs are specified, '
+             'only print contents of these columns. See also the section '
+             'about DATA SPECIFIERS. e.g. item:i-input@i-wf'
+    )
+    select_parser.add_argument(
+        '--join', nargs=2, metavar=('TBL1', 'TBL2'),
         help='Join TBL1 and TBL2 on the first key shared by both. A --select '
              'operation can then omit the TBL of the data specifier in order '
              'to select from the joined table (--apply and --filter still '
              'operate on the original profile), and COL specifiers must be '
              'prefixed with the respective table. e.g. '
-             '--join parse result --select parse:i-id@result:mrs')
-    #add('-S', '--source-grammar', metavar='PATH')
-    #add('-T', '--target-grammar', metavar='PATH')
-    #add('-X', '--transfer-grammar', metavar='PATH')
-    #add('-G', '--grammar', metavar='PATH')
-    #add('commands', nargs='*')
+             'select --join parse result parse:i-id@result:mrs'
+    )
+    select_parser.set_defaults(func=select)
+
+
+    mkprof_parser = subparsers.add_parser('mkprof', help='write a new profile')
+    mkprof_parser.add_argument(
+        'output', metavar='PROFILE',
+        help='The [incr tsdb()] profile to output.'
+    )
+    mkprof_parser.add_argument(
+        '-r', '--relations',
+        metavar='PATH',
+        help='The relations file to use for the output profile. If not '
+             'specified and the --input-profile option is used, the '
+             'relations file is copied from the input profile.'
+    )
+    mkprof_parser.add_argument(
+        '--skeleton', action='store_true',
+        help="Output a skeleton (only 'item' and 'relations' files)."
+    )
+    mkprof_parser.set_defaults(func=mkprof)
+
+    compare_parser = subparsers.add_parser('compare', help='compare two profiles')
+    compare_parser.add_argument(
+        'gold', metavar='PROFILE',
+        help='The gold profile to compare against.'
+    )
+    compare_parser.set_defaults(func=compare)
 
     args = parser.parse_args()
     logging.basicConfig(level=50-(args.verbosity*10))
