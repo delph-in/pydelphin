@@ -11,12 +11,12 @@ skeleton using the :py:func:`make_skeleton` function.
 """
 
 import os
-import os.path
 import re
 from gzip import open as gzopen
 import logging
 from io import TextIOWrapper, BufferedReader
 from collections import defaultdict, namedtuple, OrderedDict
+from itertools import chain
 from delphin._exceptions import ItsdbError
 from delphin.util import safe_int
 
@@ -202,6 +202,14 @@ def unescape(string):
 
 def _write_table(profile_dir, table_name, rows, fields,
                  append=False, gzip=False):
+    # don't gzip if empty
+    rows = iter(rows)
+    try:
+        first_row = next(rows)
+    except StopIteration:
+        gzip = False
+    else:
+        rows = chain([first_row], rows)
     if gzip and append:
         logging.warning('Appending to a gzip file may result in '
                         'inefficient compression.')
