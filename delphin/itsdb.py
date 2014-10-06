@@ -10,11 +10,12 @@ profiles can be customized through the use of
 skeleton using the :py:func:`make_skeleton` function.
 """
 
+import os
 import os.path
-from os import mkdir
 import re
-import gzip
+from gzip import open as gzopen
 import logging
+from io import TextIOWrapper, BufferedReader
 from collections import defaultdict, namedtuple, OrderedDict
 from delphin._exceptions import ItsdbError
 from delphin.util import safe_int
@@ -212,8 +213,9 @@ def _write_table(profile_dir, table_name, rows, fields,
     tbl_filename = os.path.join(profile_dir, table_name)
     mode = 'a' if append else 'w'
     if gzip:
-        mode += 't'  # text mode for gzip
-        f = gzip.open(tbl_filename + '.gz', mode=mode)
+        # text mode only from py3.3; until then use TextIOWrapper
+        #mode += 't'  # text mode for gzip
+        f = TextIOWrapper(gzopen(tbl_filename + '.gz', mode=mode))
     else:
         f = open(tbl_filename, mode=mode)
 
@@ -435,8 +437,9 @@ class ItsdbProfile:
         """
 
         self.root = path
-        self.relations = get_relations(os.path.join(self.root,
-                                                    _relations_filename))
+        self.relations = get_relations(
+            os.path.join(self.root, _relations_filename)
+        )
 
         self.filters = defaultdict(list)
         self.applicators = defaultdict(list)
@@ -522,7 +525,10 @@ class ItsdbProfile:
         if os.path.exists(tbl_filename):
             f = open(tbl_filename)
         elif os.path.exists(gz_filename):
-            f = gzip.open(tbl_filename + '.gz', mode='rt')
+            # text mode only from py3.3; until then use TextIOWrapper
+            f = TextIOWrapper(
+                BufferedReader(gzopen(tbl_filename + '.gz', mode='r'))
+            )
         else:
             raise ItsdbError(
                 'Table {} does not exist at {}(.gz)'
@@ -634,7 +640,7 @@ class ItsdbProfile:
 
     def write_profile(self, profile_directory, relations_filename=None,
                       key_filter=True,
-                      append=False, gzip=False):
+                      append=False, gzip=None):
         """
         Write all tables (as specified by the relations) to a profile.
 
@@ -646,7 +652,8 @@ class ItsdbProfile:
             append: If True, append profile data to existing tables in
                 the output profile directory
             gzip: If True, compress tables using `gzip`. Table filenames
-                will have `.gz` appended.
+                will have `.gz` appended. If False, only write out text
+                files. If None, use whatever the original file was.
         """
         import shutil
         if relations_filename:
@@ -659,8 +666,15 @@ class ItsdbProfile:
         for table, fields in relations.items():
             # don't create new empty files if they didn't already exist
             # (likely was a skeleton rather than a profile)
-            if not os.path.exists(os.path.join(self.root, table)):
+            fn = os.path.join(self.root, table)
+            if os.path.exists(fn):
+                pass
+            elif os.path.exists(fn + '.gz'):
+                fn += '.gz'
+            else:
+                # warning or debug
                 continue
+            _gzip = gzip if gzip is not None else fn.endswith('.gz')
             rows = self.read_table(table, key_filter=key_filter)
             _write_table(profile_directory, table, rows, fields,
-                         append=append, gzip=gzip)
+                         append=append, gzip=_gzip)
