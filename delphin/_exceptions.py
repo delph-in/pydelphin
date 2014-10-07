@@ -21,3 +21,9 @@ class XmrsDeserializationError(XmrsError):
 
 class XmrsStructureError(XmrsError):
     pass
+
+class TdlError(PyDelphinException):
+    pass
+
+class TdlParsingError(TdlError):
+    pass
