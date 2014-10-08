@@ -19,8 +19,10 @@ tdl_re = re.compile(
 tdl_start_comment_re = re.compile(r'^\s*;|^\s*#\|')
 tdl_end_comment_re = re.compile(r'.*#\|\s*$')
 
+
 def tokenize(s):
     return tdl_re.findall(s)
+
 
 def lex(stream):
     """
@@ -103,33 +105,51 @@ class TdlInflRule(TdlType):
         TdlType.__init__(self, identifier, **kwargs)
         self.affix = affix
 
+
 def parse(f):
     for line_no, event, data in lex(f):
         data = deque(data)
-        if event == 'TYPEDEF':
-            yield parse_typedef(data)
+        try:
+            if event == 'TYPEDEF':
+                yield parse_typedef(data)
+        except TdlParsingError as ex:
+            ex.line_number = line_no
+            if hasattr(f, 'name'):
+                ex.filename = f.name
+            raise
+
 
 def parse_typedef(tokens):
     t = None
+    identifier = None  # in case of StopIteration on first token
     try:
         identifier = tokens.popleft()
         assignment = tokens.popleft()
-        affix = parse_affix(tokens)  # only for inflectional rules
-        supertypes = parse_supertypes(tokens)
+        affixes = parse_affixes(tokens)  # only for inflectional rules
+        supertypes, constraints, comment = parse_conjunction(tokens)
+        #supertypes = parse_supertypes(tokens)
+        #comment = parse_typedef_comment(tokens)
+        # there may be a '&' after the comment? Or maybe not..
+        #if tokens[0] == '&':
+        #    tokens.popleft()
+
+        #constraints = parse_conjunction(tokens)
+        assert tokens.popleft() == '.'
         # :+ doesn't need supertypes
         if assignment != ':+' and len(supertypes) == 0:
             raise TdlParsingError('Type definition requires supertypes.')
-        comment = parse_typedef_comment(tokens)
-
-        constraints = parse_conjunction(tokens)
-        assert tokens.popleft() == '.'
         t = TdlType(identifier, supertypes=supertypes,
                        constraints=constraints)
-    except StopIteration:
-        raise TdlParsingError('Unexpected termination.')
+    except AssertionError as ex:
+        msg = 'Remaining tokens: {}'.format(list(tokens))
+        raise TdlParsingError(msg, identifier=identifier) from ex
+    except StopIteration as ex:
+        msg = 'Unexpected termination.'
+        raise TdlParsingError(msg, identifier=identifier or '?') from ex
     return t
 
-def parse_affix(tokens):
+
+def parse_affixes(tokens):
     affixes = None
     if tokens[0] in ('%prefix', '%suffix'):
         affixes = []
@@ -140,35 +160,95 @@ def parse_affix(tokens):
             assert tokens.popleft() == ')'
     return affixes
 
-def parse_supertypes(tokens):
-    supertypes = []
-    while tokens[0] not in ('[', '.', '"', '/', '<', '#'):
-        supertypes.append(tokens.popleft())
-        if tokens[0] == '&':
-            tokens.popleft()
-    return supertypes
-
-def parse_typedef_comment(tokens):
-    comment = None
-    if tokens[0].startswith('"'):
-        comment = tokens.popleft()
-    return comment
 
 def parse_conjunction(tokens):
-    avm = {}
-    #assert next(tokens) == '['
-    #token = next(tokens)
-    #path = ''
-    #level = 1
-    #while level > 0:
-    #    if token == '[':
-    #        level += 1
-    #    elif token == ']':
-    #        level -= 1
-    return avm
+    supertypes = []
+    constraints = []
+    coreferences = []
+    comment = None
 
-def parse_term(tokens):
-    pass
+    tokens.appendleft('&')  # this just makes the loop simpler
+    while tokens[0] == '&':
+
+        tokens.popleft()  # get rid of '&'
+        cons = []
+        corefs = []
+        if tokens[0] == '.':
+            raise TdlParsingError('"." cannot appear after & in conjunction.')
+
+        # comments can appear after any supertype and before any avm, but let's
+        # be a bit more generous and just say they can appear at most once
+        if tokens[0].startswith('"'):
+            if comment is not None:
+                raise TdlParsingError('Only one comment string is allowed.')
+            comment = tokens.popleft()
+
+        # comments aren't followed by "&", so pretend nothing happened (i.e.
+        # use if, not elif)
+        if tokens[0] == '[':
+            cons, corefs = parse_avm(tokens)
+        elif tokens[0] == '<':
+            cons, corefs = parse_cons_list(tokens)
+        elif tokens[0] == '<!':
+            cons, corefs = parse_diff_list(tokens)
+        elif tokens[0] == '#':
+            tokens.popleft()
+            corefs = [(tokens.popleft(), [])]
+        else:
+            supertypes.append(tokens.popleft())
+
+        constraints.extend(cons)
+        coreferences.extend(corefs)
+
+    return supertypes, constraints, comment
+
+
+def parse_avm(tokens, path=None):
+    # [ attr-val (, attr-val)* ]
+    if path is None:
+        path = []
+    constraints = []
+    coreferences = []
+    curpath = []
+    assert tokens.popleft() == '['
+    tokens.appendleft(',')  # to make the loop simpler
+    while tokens[0] != ']':
+        assert tokens.popleft() == ','
+        for cons, corefs in parse_attr_vals(tokens):
+            raise Exception(cons)
+            cons = [('.'.join(path + path2), val) for path2, val in cons]
+            corefs = [(coref, '.'.join(path + path2)) for coref, path2 in corefs]
+            constraints.extend(cons)
+            corefs.extend(corefs)
+    # '[', '.', '"', '/', '<', '#'
+    assert tokens.popleft() == ']'
+    return constraints, coreferences
+
+
+def parse_attr_vals(tokens):
+    # PATH(.PATH)* val
+    path = [tokens.popleft()]
+    while tokens[0] == '.':
+        tokens.popleft()
+        path.append(tokens.popleft())
+    # treat string values separately so they don't become comment strings
+    if tokens[0].startswith('"'):
+        yield ((path, tokens.popleft()), [])
+    else:
+        supertypes, constraints, comment = parse_conjunction(tokens)
+        for (path2, val) in constraints:
+            yield ((path + path2, val), [])
+
+
+def parse_cons_list(tokens):
+    token = tokens.popleft()
+    while token != '>':
+        token = tokens.popleft()
+
+def parse_diff_list(tokens):
+    token = tokens.popleft()
+    while token != '!>':
+        token = tokens.popleft()
 
 
 if __name__ == '__main__':
