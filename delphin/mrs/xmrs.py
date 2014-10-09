@@ -680,7 +680,9 @@ class Xmrs(LnkMixin):
         labels = set(g.node[nid]['label'] for nid in nodeids)
         nbunch.extend(labels)
         for nid in nodeids:
-            nbunch.append(g.node[nid]['iv'])
+            iv = g.node[nid]['iv']
+            if iv is not None:
+                nbunch.append(iv)
             for succ in g.successors_iter(nid):
                 hc = g.node[succ].get('hcons')
                 if hc is not None and hc.lo in labels:

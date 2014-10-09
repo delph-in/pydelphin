@@ -73,8 +73,9 @@ class XmrsDiGraph(DiGraph):
         # also need to fix where we store it ourselves
         for tnid in mapping.values():
             iv = g.node[tnid]['iv']
-            v = 'bv' if g.node[tnid]['pred'].is_quantifier() else 'iv'
-            g.node[iv][v] = tnid
+            if iv is not None:
+                v = 'bv' if g.node[tnid]['pred'].is_quantifier() else 'iv'
+                g.node[iv][v] = tnid
         g.nodeids = [mapping.get(n, n) for n in self.nodeids]
         g.labels = set(self.labels)
         return XmrsDiGraph(data=g)
