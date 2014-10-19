@@ -8,11 +8,15 @@ class AceProcess(object):
 
     _cmdargs = []
 
-    def __init__(self, grm, cmdargs=None):
+    def __init__(self, grm, cmdargs=None, executable=None, **kwargs):
         self.grm = grm
         self.cmdargs = cmdargs or []
+        self.executable = executable or 'ace'
+        self._open()
+
+    def _open(self):
         self._p = Popen(
-            ['ace', '-g', self.grm] + self._cmdargs + self.cmdargs,
+            [self.executable, '-g', self.grm] + self._cmdargs + self.cmdargs,
             stdin=PIPE,
             stdout=PIPE,
             stderr=STDOUT,
@@ -51,9 +55,6 @@ class AceProcess(object):
 
 class AceParser(AceProcess):
 
-    def __init__(self, *args, **kwargs):
-        AceProcess.__init__(self, *args, **kwargs)
-
     def receive(self):
         response = {
             'NOTES': [],
@@ -63,13 +64,10 @@ class AceParser(AceProcess):
             'RESULTS': []
         }
 
-        failed = False
         blank = 0
 
         stdout = self._p.stdout
         line = stdout.readline().rstrip()
-        if line.startswith('NOTE: '):
-            failed = True
         while True:
             if line.strip() == '':
                 blank += 1
@@ -89,10 +87,6 @@ class AceParser(AceProcess):
                     'DERIV': deriv.strip()
                 })
             line = stdout.readline().rstrip()
-        #if not failed:
-        #    line = stdout.readline().rstrip()
-        #    assert line.startswith('NOTE:')
-        #    response['NOTES'].append(line.replace('NOTE: ', '', 1))
         return response
 
 
@@ -143,24 +137,24 @@ def compile(cfg_path, out_path, log=None):
     #debug('Compiled grammar written to {}'.format(abspath(out_path)), log)
 
 
-def parse_from_iterable(cfg_path, data):
-    with AceParser(cfg_path) as parser:
+def parse_from_iterable(cfg_path, data, **kwargs):
+    with AceParser(cfg_path, **kwargs) as parser:
         for datum in data:
             yield parser.interact(datum)
 
 
-def parse(cfg_path, datum):
-    return next(parse_from_iterable(cfg_path, [datum]))
+def parse(cfg_path, datum, **kwargs):
+    return next(parse_from_iterable(cfg_path, [datum], **kwargs))
 
 
-def generate_from_iterable(cfg_path, data):
-    with AceGenerator(cfg_path) as generator:
+def generate_from_iterable(cfg_path, data, **kwargs):
+    with AceGenerator(cfg_path, **kwargs) as generator:
         for datum in data:
             yield generator.interact(datum)
 
 
-def generate(cfg_path, datum):
-    return next(generate_from_iterable(cfg_path, [datum]))
+def generate(cfg_path, datum, **kwargs):
+    return next(generate_from_iterable(cfg_path, [datum], **kwargs))
 
 
 # def do(cmd):
