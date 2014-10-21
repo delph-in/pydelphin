@@ -2,8 +2,7 @@
 import re
 from pygments.lexer import RegexLexer, include, bygroups
 from pygments.token import (
-    Text, Error, Keyword, Name, Literal, String, Number,
-    Operator, Punctuation, Comment
+    Text, Keyword, Name, String, Operator, Punctuation, Comment
 )
 
 tdl_break_characters = re.escape(r'<>!=:.#&,[];$()^/')
@@ -53,7 +52,7 @@ class TdlLexer(RegexLexer):
             (r'\[', Punctuation, 'avm'),
             (r'<!', Punctuation, 'difflist'),
             (r'<', Punctuation, 'conslist'),
-            (r'#\w+', Name.Label),
+            (r'#[^\s{}]+'.format(tdl_break_characters), Name.Label),
             include('strings'),
             (r'\*top\*', Keyword.Constant),
             (r'\.\.\.', Name),
@@ -65,8 +64,8 @@ class TdlLexer(RegexLexer):
             (r'\s+', Text),
             (r'\]', Punctuation, '#pop'),
             (r',', Punctuation),
-            (r'((?:[^\s{0}]+)(?:\s*\.\s*[^\s{0}]+)*)'.format(tdl_break_characters),
-             Name.Attribute, 'conjunction')
+            (r'((?:[^\s{0}]+)(?:\s*\.\s*[^\s{0}]+)*)'
+             .format(tdl_break_characters), Name.Attribute, 'conjunction')
         ],
         'conslist': [
             (r'>', Punctuation, '#pop'),
