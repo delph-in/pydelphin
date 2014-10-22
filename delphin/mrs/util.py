@@ -1,6 +1,8 @@
 from itertools import chain, combinations
 from operator import itemgetter
 from networkx import DiGraph, relabel_nodes
+from delphin._exceptions import XmrsStructureError
+
 
 first = itemgetter(0)
 second = itemgetter(1)
@@ -58,6 +60,32 @@ class XmrsDiGraph(DiGraph):
         DiGraph.__init__(self, data=data, name=name, attr=attr)
         self.nodeids = [] if data is None else data.nodeids
         self.labels = set([] if data is None else data.labels)
+        self.refresh()
+
+    def refresh(self):
+        seen = set()
+        for nid in self.nodeids:
+            n = self.node[nid]
+            if n.get('iv') is not None:
+                iv = n['iv']
+                if iv not in self.node:
+                    raise XmrsStructureError(
+                        'Intrinsic variable ({}) of node {} is missing from '
+                        'the Xmrs graph.'
+                        .format(iv, nid)
+                    )
+                # clear the first time
+                if iv not in seen:
+                    self.node[iv]['bv'] = None
+                    self.node[iv]['iv'] = None
+                    seen.add(iv)
+                if n['pred'].is_quantifier():
+                    self.add_edge(iv, nid, {'bv': True})  # quantifier
+                    self.node[iv]['bv'] = nid
+                else:
+                    self.add_edge(iv, nid, {'iv': True})  # intrinsic arg
+                    self.node[iv]['iv'] = nid
+
 
     def subgraph(self, nbunch):
         nbunch = list(nbunch)
@@ -66,7 +94,10 @@ class XmrsDiGraph(DiGraph):
         sg.nodeids = [nid for nid in nbunch if 'pred' in node[nid]]
         sg.labels = set(node[nid]['label'] for nid in nbunch
                         if 'label' in node[nid])
-        return XmrsDiGraph(sg)
+        g = XmrsDiGraph(sg)
+        g.refresh()
+        return g
+
 
     def relabel_nodes(self, mapping):
         g = relabel_nodes(self, mapping)

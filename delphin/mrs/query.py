@@ -164,7 +164,11 @@ def find_quantifier(xmrs, nodeid):
         a quantifier, None is returned.
     """
     ep = xmrs.get_ep(nodeid)
-    if not ep or ep.is_quantifier() or 'bv' not in xmrs._graph.node[ep.iv]:
+    if (not ep or
+        ep.is_quantifier() or
+        ep.iv not in xmrs._graph.node or
+        'bv' not in xmrs._graph.node[ep.iv]):
+        # in some subgraphs, an IV might not exist even when specified
         return None
     return xmrs._graph.node[ep.iv]['bv']
 

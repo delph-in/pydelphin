@@ -255,13 +255,6 @@ def build_graph(hook, eps, hcons, icons):
             'surface': ep.surface, 'base': ep.base, 'rargs': OrderedDict()
         })
         g.add_edge(lbl, nid)
-        if iv is not None:  # check for robustness; missing ivs aren't valid
-            if ep.is_quantifier():
-                g.add_edge(iv, nid, {'bv': True})  # quantifier
-                g.node[iv]['bv'] = ep.nodeid
-            else:
-                g.add_edge(iv, nid, {'iv': True})  # intrinsic arg
-                g.node[iv]['iv'] = ep.nodeid
         for arg in ep.args:
             g.add_edge(nid, arg.value, {'rargname': arg.argname })
             g.node[nid]['rargs'][arg.argname] = arg.value
@@ -271,6 +264,7 @@ def build_graph(hook, eps, hcons, icons):
     for ic in icons:
         g.add_edge(ic.target, ic.clause, {'relation': ic.relation})
         g.node[ic.target]['icons'] = ic
+    g.refresh()  # sets up back-links from IVs to nodes and quantifiers
     return g
 
 
@@ -473,7 +467,7 @@ class Xmrs(LnkMixin):
             t_d = g.node[t]
             if t_d.get('iv') == s or t_d.get('bv') == s:
                 continue  # ignore ARG0s
-            if 'iv' in t_d:
+            if 'iv' in t_d and t_d['iv'] is not None:
                 t = t_d['iv']
                 s_lbl = g.node[s].get('label')  # LTOP_NODEID has no label
                 t_lbl = g.node[t]['label']
@@ -676,8 +670,8 @@ class Xmrs(LnkMixin):
             An |Xmrs| object.
         """
         g = self._graph
-        nbunch = list(nodeids)
-        labels = set(g.node[nid]['label'] for nid in nodeids)
+        nbunch = list(OrderedDict.fromkeys(nodeids))  # remove dupes
+        labels = set(g.node[nid]['label'] for nid in nbunch)
         nbunch.extend(labels)
         for nid in nodeids:
             iv = g.node[nid]['iv']
