@@ -310,7 +310,7 @@ class Xmrs(LnkMixin):
             stringform = '"{}"'.format(self.surface)
         else:
             stringform = ' '.join(ep.pred.lemma for ep in self.eps)
-        return 'Xmrs({})'.format(stringform)
+        return '<Xmrs object ({}) at {}>'.format(stringform, id(self))
 
     def __hash__(self):
         # isomorphic MRSs should hash to the same thing, but

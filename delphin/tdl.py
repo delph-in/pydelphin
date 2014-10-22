@@ -98,7 +98,9 @@ class TdlType(object):
         if self.comment:
             info.append('comment={}'.format(self.comment))
         post = '' if not info else ', '.join([''] + info)
-        return "TdlType('{}'{})".format(self.identifier, post)
+        return "<TdlType object ('{}'{}) at {}>".format(
+            self.identifier, post, id(self)
+        )
 
 class TdlInflRule(TdlType):
     def __init__(self, identifier, affix=None, **kwargs):
@@ -253,7 +255,18 @@ def parse_diff_list(tokens):
 
 if __name__ == '__main__':
     import sys
-    for x in lex(open(sys.argv[1], 'r')):
-        print(x)
+    from pygments import highlight
+    from pygments.formatters import HtmlFormatter
+    from delphin.extra.highlight import TdlLexer
+    lexer = TdlLexer()
+    formatter = HtmlFormatter(style='pastie')
+    print('<html>\n<style>')
+    print(formatter.get_style_defs('.highlight'))
+    print('</style>')
+    print(highlight(open(sys.argv[1], 'r').read(), lexer, formatter))
+    print('</html>')
+
+    #for x in lex(open(sys.argv[1], 'r')):
+    #    print(x)
     #for line in sys.stdin:
     #    print(tokenize(line))

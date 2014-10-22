@@ -134,7 +134,9 @@ class MrsVariable(object):
         return hash(str(self))
 
     def __repr__(self):
-        return 'MrsVariable({}{})'.format(self.sort, self.vid)
+        return '<MrsVariable object ({}{}) at {}>'.format(
+            self.sort, self.vid, id(self)
+        )
 
     def __str__(self):
         return '{}{}'.format(str(self.sort), str(self.vid))
@@ -299,7 +301,7 @@ class Lnk(object):
             return '<{}>'.format(' '.join(self.data))
 
     def __repr__(self):
-        return str(self)
+        return '<Lnk object {} at {}>'.format(str(self), id(self))
 
     def __eq__(self, other):
         return self.type == other.type and self.data == other.data
@@ -362,8 +364,8 @@ class Hook(object):
         self.xarg = xarg
 
     def __repr__(self):
-        return 'Hook(top={} index={} xarg={})'.format(
-            self.top, self.index, self.xarg
+        return '<Hook object (top={} index={} xarg={}) at {}>'.format(
+            self.top, self.index, self.xarg, id(self)
         )
 
     def __eq__(self, other):
@@ -411,8 +413,9 @@ class Argument(AnchorMixin):
         self._type = None
 
     def __repr__(self):
-        return 'Argument({nodeid}:{argname}:{value})'\
-               .format(**self.__dict__)
+        return '<Argument object ({}:{}:{}) at {}>'.format(
+            self.nodeid, self.argname, self.value, id(self)
+        )
 
     def __eq__(self, other):
         # ignore missing nodeid?
@@ -474,8 +477,9 @@ class Link(object):
         self.post = post
 
     def __repr__(self):
-        return 'Link({} -> {}, {}/{})'.format(self.start, self.end,
-                                              self.argname, self.post)
+        return '<Link object ({}:{}/{} -> {}) at {}>'.format(
+            self.start, self.argname, self.post, self.end, id(self)
+        )
 
 
 class HandleConstraint(object):
@@ -499,12 +503,9 @@ class HandleConstraint(object):
         return hash(repr(self))
 
     def __repr__(self):
-        return 'HandleConstraint({})'.format(
-               ' '.join([str(self.hi), self.relation, str(self.lo)]))
-
-    def __str__(self):
-        return self.__repr__()
-
+        return '<HandleConstraint object ({} {} {}) at {}>'.format(
+               str(self.hi), self.relation, str(self.lo), id(self)
+        )
 
 IndividualConstraint = namedtuple('IndividualConstraint',
                                   ['target', 'relation', 'clause'])
@@ -598,7 +599,7 @@ class Pred(object):
         return self.string.strip('"\'') == other.strip('"\'')
 
     def __repr__(self):
-        return self.string
+        return '<Pred object {} at {}>'.format(self.string, id(self))
 
     def __hash__(self):
         return hash(self.string)
@@ -740,11 +741,10 @@ class Node(LnkMixin):
         # accessor method
         self.get_property = self.sortinfo.get
 
-    def __str__(self):
-        return self.__repr__()
-
     def __repr__(self):
-        return 'Node({}[{}])'.format(self.nodeid, self.pred)
+        return '<Node object ({} [{}{}]) at {}>'.format(
+            self.nodeid, self.pred.string, str(self.lnk), id(self)
+        )
 
     def __eq__(self, other):
         # not doing self.__dict__ == other.__dict__ right now, because
@@ -846,11 +846,9 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
         return ep
 
     def __repr__(self):
-        return 'ElementaryPredication({}[{}])'.format(str(self.pred),
-                                                      str(self.iv or '?'))
-
-    def __str__(self):
-        return self.__repr__()
+        return '<ElementaryPredication object ({} ({})) at {}>'.format(
+            self.pred.string, str(self.iv or '?'), id(self)
+        )
 
     def __eq__(self, other):
         return (self.label == other.label and
