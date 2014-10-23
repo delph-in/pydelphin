@@ -50,6 +50,22 @@ def dict_of_dicts(triples, dicttype=dict):
     return d
 
 
+# used for getting variable properties
+class ReadOnceDict(dict):
+    def __getitem__(self, key):
+        val = dict.__getitem__(self, key)
+        del self[key]
+        return val
+
+    def get(self, key, default=None):
+        if key in self:
+            val = dict.__getitem__(self, key)
+            del self[key]
+        else:
+            val = default
+        return val
+
+
 # adapted from recipe in itertools documentation
 def powerset(iterable):
     s = list(iterable)

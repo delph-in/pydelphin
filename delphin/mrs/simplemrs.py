@@ -14,6 +14,7 @@ from delphin.mrs.components import (
     MrsVariable, Lnk, HandleConstraint, IndividualConstraint
 )
 from delphin.mrs.config import (HANDLESORT, QEQ, LHEQ, OUTSCOPES)
+from delphin.mrs.util import ReadOnceDict
 from delphin._exceptions import XmrsDeserializationError as XDE
 
 # versions are:
@@ -451,6 +452,9 @@ def serialize(ms, version=_default_version, pretty_print=False, color=False):
 def serialize_mrs(m, version=_default_version, pretty_print=False):
     # note that listed_vars is modified as a side-effect of the lower
     # functions
+    g = m._graph
+    varprops = ReadOnceDict((v.vid, v.properties) for v in g.nodes()
+                            if isinstance(v, MrsVariable))
     listed_vars = set()
     toks = []
     if version >= 1.1:
@@ -459,14 +463,21 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
         if m.surface is not None:
             toks.append('"{}"'.format(m.surface))
     if m.ltop is not None:
-        toks += [serialize_argument(
-            _top if version >= 1.1 else _ltop, m.ltop, listed_vars
-        )]
+        toks.append(serialize_argument(
+            _top if version >= 1.1 else _ltop, m.ltop, varprops
+        ))
     if m.index is not None:
-        toks += [serialize_argument(_index, m.index, listed_vars)]
-    if m.rels is not None:
-        toks += [serialize_rels(m.rels, listed_vars, version=version,
-                                pretty_print=pretty_print)]
+        toks.append(serialize_argument(
+            _index, m.index, varprops
+        ))
+    delim = ' ' if not pretty_print else '\n          '
+    toks.append('RELS: < {eps} >'.format(
+        eps=delim.join(serialize_ep(g, nid, varprops, version=version)
+                       for nid in g.nodeids)
+    ))
+    #if len(g.nodeids) is not None:
+    #    toks += [serialize_rels(g, listed_vars, version=version,
+    #                            pretty_print=pretty_print)]
     if m.hcons is not None:
         toks += [' '.join([serialize_hcons(m.hcons, listed_vars)])]
     if version >= 1.1 and m.icons:  # `is not None` if you want "ICONS: < >""
@@ -475,65 +486,42 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
     return '{} {} {}'.format(_left_bracket, delim.join(toks), _right_bracket)
 
 
-def serialize_argument(rargname, value, listed_vars):
+def serialize_argument(rargname, value, varprops):
     """Serialize an MRS argument into the SimpleMRS format."""
+    _argument = '{rargname}: {value}{props}'
     if isinstance(value, MrsVariable):
-        return ' '.join([magenta(rargname) + _colon,
-                         serialize_variable(value, listed_vars)])
+        props = varprops.get(value.vid, {})
+        var = bold(str(value))
+        return _argument.format(
+            rargname=magenta(rargname),
+            value=yellow(var) if value.sort == HANDLESORT else blue(var),
+            props='' if not props else ' [ {} ]'.format(
+                ' '.join(map('{0[0]}: {0[1]}'.format, props.items())))
+        )
     else:
-        return ' '.join([red(rargname) + _colon, str(value)])
+        return _argument.format(
+            rargname=red(rargname),
+            value=str(value),
+            props=''
+        )
 
 
-def serialize_variable(var, listed_vars):
-    """Serialize an MRS variable, and any variable properties, into the
-       SimpleMRS format."""
-    if var.sort == HANDLESORT:
-        varstr = yellow(bold(str(var)))
-    else:
-        varstr = blue(bold(str(var)))
-    toks = [varstr]
-    # only serialize the variable properties if they haven't been already
-    if var.vid not in listed_vars and var.properties:
-        toks += [_left_bracket, var.sort]
-        for propkey, propval in var.properties.items():
-            toks += [propkey.upper() + _colon, propval]
-        toks += [_right_bracket]
-    listed_vars.add(var.vid)
-    return ' '.join(toks)
-
-
-def serialize_rels(rels, listed_vars, version=_default_version,
-                   pretty_print=False):
-    """Serialize a RELS list of EPs into the SimpleMRS encoding."""
-    delim = ' ' if not pretty_print else '\n          '
-    string = ' '.join([_rels + _colon, _left_angle])
-    string += ' ' + delim.join(serialize_ep(ep, listed_vars, version=version)
-                               for ep in rels)
-    string += ' ' + _right_angle
-    return string
-
-
-def serialize_ep(ep, listed_vars, version=_default_version):
+def serialize_ep(g, nid, varprops, version=_default_version):
     """Serialize an Elementary Predication into the SimpleMRS encoding."""
-    toks = [_left_bracket]
-    if ep.is_quantifier():
-        predstr = darkgreen(ep.pred.string)
-    else:
-        predstr = green(bold(ep.pred.string))
-    toks += [predstr + serialize_lnk(ep.lnk)]
-    if version >= 1.1:
-        if ep.surface is not None:
-            toks.append('"{}"'.format(ep.surface))
-    toks += [serialize_argument(_lbl, ep.label, listed_vars)]
-    # if ep.iv is not None:
-    #     toks += [serialize_argument(IVARG_ROLE, ep.iv, listed_vars)]
-    for arg in ep.args:
-        toks += [serialize_argument(arg.argname, arg.value, listed_vars)]
-    # add the constant if it exists (currently done as a regular arg above)
-    # if ep.carg is not None:
-    #     toks += [serialize_const(CONSTARG, ep.carg)]
-    toks += [_right_bracket]
-    return ' '.join(toks)
+    node = g.node[nid]
+    arglist = ' '.join([serialize_argument(rarg, val, varprops)
+                        for rarg, val in node['rargs'].items()])
+    surface = None if version < 1.1 else node['surface']
+    pred = node['pred']
+    predstr = pred.string 
+    return '[ {pred}{lnk}{surface} LBL: {label}{s}{args} ]'.format(
+        pred=darkgreen(predstr) if pred.is_quantifier() else green(predstr),
+        lnk=serialize_lnk(node['lnk']),
+        surface=' "{}"'.format(surface) if surface is not None else '',
+        label=yellow(bold(str(node['label']))),
+        s=' ' if arglist else '',
+        args=arglist
+    )
 
 
 def serialize_lnk(lnk):
@@ -566,9 +554,7 @@ def serialize_hcons(hcons, listed_vars):
             rel = _lheq
         elif hcon.relation == OUTSCOPES:
             rel = _outscopes
-        toks += [serialize_variable(hcon.hi, listed_vars),
-                 rel,
-                 serialize_variable(hcon.lo, listed_vars)]
+        toks += [yellow(bold(str(hcon.hi))), rel, yellow(bold(str(hcon.lo)))]
     toks += [_right_angle]
     return ' '.join(toks)
 
@@ -576,8 +562,8 @@ def serialize_icons(icons, listed_vars):
     """Serialize |IndividualConstraints| into the SimpleMRS encoding."""
     toks = [_icons + _colon, _left_angle]
     for icon in icons:
-        toks += [serialize_variable(icon.target, listed_vars),
+        toks += [blue(bold(str(icon.target))),
                  icon.relation,
-                 serialize_variable(icon.clause, listed_vars)]
+                 blue(bold(str(icon.clause)))]
     toks += [_right_angle]
     return ' '.join(toks)
