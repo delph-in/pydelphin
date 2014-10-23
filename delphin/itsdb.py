@@ -101,6 +101,7 @@ def get_relations(path):
             relations[current_table].append(
                 Field(name, datatype, key, props, comment)
             )
+    f.close()
     return relations
 
 

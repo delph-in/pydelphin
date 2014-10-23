@@ -105,8 +105,9 @@ def load_config(args):
         sys.exit('No config file found. Exiting.')
 
     logging.debug('Loading the config file found at {}'.format(args.config))
-    cfg = json.loads(strip_json_comments(open(args.config,'r')),
-                     object_pairs_hook=OrderedDict)
+    with open(args.config, 'r') as config:
+        cfg = json.loads(strip_json_comments(config),
+                         object_pairs_hook=OrderedDict)
 
     # override the loaded values with those from the command-line
     cfg.update({
@@ -211,7 +212,8 @@ def prepare_output_directory(path, config):
     # TODO: allow for multiple configs in same directory (e.g. (PID).rcfile)
     rcpath = os.path.join(path, _rcfilename)
     if not os.path.exists(rcpath):
-        json.dump(config, open(rcpath, 'w'), indent=2)
+        with open(rcpath, 'w') as config_file:
+            json.dump(config, config_file, indent=2)
     else:
         logging.warning('Config file path already exists: {}'.format(rcpath))
 
