@@ -649,11 +649,11 @@ class Pred(object):
             ('quant', None, None, 'rel')
         """
         if not predstr.lower().endswith('_rel'):
-            logging.warn('Predicate does not end in "_rel": {}'
-                         .format(predstr))
+            logging.debug('Predicate does not end in "_rel": {}'
+                          .format(predstr))
         match = Pred.pred_re.search(predstr)
         if match is None:
-            logging.warn('Unexpected predicate string: {}'.format(predstr))
+            logging.debug('Unexpected predicate string: {}'.format(predstr))
             return (predstr, None, None, None)
         # _lemma_pos(_sense)?_end
         return (match.group('lemma'), match.group('pos'),

@@ -1,5 +1,6 @@
 from collections import (OrderedDict, defaultdict)
 from itertools import chain
+import warnings
 # consider using this:
 # from functools import lru_cache
 import networkx as nx
@@ -464,27 +465,34 @@ class Xmrs(LnkMixin):
         labels = g.labels
         attested_eqs = defaultdict(set)
         for s, t, d in g.out_edges_iter([LTOP_NODEID] + g.nodeids, data=True):
-            t_d = g.node[t]
-            if t_d.get('iv') == s or t_d.get('bv') == s:
-                continue  # ignore ARG0s
-            if 'iv' in t_d and t_d['iv'] is not None:
-                t = t_d['iv']
-                s_lbl = g.node[s].get('label')  # LTOP_NODEID has no label
-                t_lbl = g.node[t]['label']
-                if s_lbl == t_lbl:
-                    post = EQ_POST
-                    attested_eqs[s_lbl].update([s, t])
+            try:
+                t_d = g.node[t]
+                if t_d.get('iv') == s or t_d.get('bv') == s:
+                    continue  # ignore ARG0s
+                if 'iv' in t_d and t_d['iv'] is not None:
+                    t = t_d['iv']
+                    s_lbl = g.node[s].get('label')  # LTOP_NODEID has no label
+                    t_lbl = g.node[t]['label']
+                    if s_lbl == t_lbl:
+                        post = EQ_POST
+                        attested_eqs[s_lbl].update([s, t])
+                    else:
+                        post = NEQ_POST
+                elif 'hcons' in t_d:
+                    t = self.labelset_head(t_d['hcons'].lo)
+                    post = H_POST
+                elif t in g.labels:
+                    t = self.labelset_head(t)
+                    post = HEQ_POST
                 else:
-                    post = NEQ_POST
-            elif 'hcons' in t_d:
-                t = self.labelset_head(t_d['hcons'].lo)
-                post = H_POST
-            elif t in g.labels:
-                t = self.labelset_head(t)
-                post = HEQ_POST
-            else:
-                continue  # maybe log this
-            links.append(Link(s, t, d.get('rargname'), post))
+                    continue  # maybe log this
+                links.append(Link(s, t, d.get('rargname'), post))
+            except XmrsError as ex:
+                warnings.warn(
+                    'Error creating a link for {}:{}:\n  {}'
+                    .format(s, d.get('rargname', ''), repr(ex))
+                )
+
         # now EQ links unattested by arg links
         for lbl in g.labels:
             # I'm pretty sure this does what we want
@@ -607,7 +615,13 @@ class Xmrs(LnkMixin):
         Returns:
             A set of nodeids, which may be an empty set.
         """
-        return set(nx.node_boundary(self._graph, [label]))
+        lblset = set(nx.node_boundary(self._graph, [label]))
+        if len(lblset) == 0:
+            raise XmrsStructureError(
+                'Cannot get labelset for {}. It is not used as a label.'
+                .format(str(label))
+            )
+        return lblset
         # alternatively:
         # return list(self._graph.adj[label].keys())
 
