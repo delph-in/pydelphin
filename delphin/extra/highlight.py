@@ -2,7 +2,9 @@
 import re
 from pygments.lexer import RegexLexer, include, bygroups
 from pygments.token import (
-    Text, Keyword, Name, String, Operator, Punctuation, Comment
+    Token, Whitespace, Text, Number, String,
+    Keyword, Name, Operator, Punctuation,
+    Comment, Error
 )
 
 tdl_break_characters = re.escape(r'<>!=:.#&,[];$()^/')
@@ -101,3 +103,129 @@ class TdlLexer(RegexLexer):
             (r'\.', Punctuation)
         ]
     }
+
+
+mrs_colorscheme = {
+    Token:              ('',            ''),
+
+    #Whitespace:         ('lightgray',   'darkgray'),
+    #Comment:            ('lightgray',   'darkgray'),
+    #Comment.Preproc:    ('teal',        'turquoise'),
+    #Keyword:            ('darkblue',    'blue'),
+    #Keyword.Type:       ('teal',        'turquoise'),
+    Operator.Word:      ('__',          '__'),  # HCONS or ICONS relations
+    Name.Builtin:       ('**',          '**'),  # LTOP, RELS, etc
+    # used for variables
+    Name.Label:         ('brown',       '*yellow*'),  # handles
+    Name.Function:      ('*purple*',    '*fuchsia*'),  # events
+    Name.Variable:      ('*darkblue*',  '*blue*'),  # ref-inds (x)
+    Name.Other:         ('*teal*',      '*turquoise*'),  # underspecified (i, p, u)
+    # role arguments
+    Name.Namespace:     ('__',          '__'),  # LBL
+    Name.Class:         ('__',          '__'),  # ARG0
+    Name.Constant:      ('darkred',     'red'),  # CARG
+    Name.Tag:           ('__',          '__'),  # others
+    #Name.Exception:     ('teal',        'turquoise'),
+    #Name.Decorator:     ('darkgray',    'lightgray'),
+    Name.Attribute:     ('darkgray',    'darkgray'),  # variable properties
+    String:             ('brown',       'brown'),
+    String.Symbol:      ('darkgreen',   'green'),
+    String.Other:       ('green',       'darkgreen'),
+    Number:             ('lightgray',   'lightgray'),  # lnk
+
+    # Generic.Deleted:    ('red',        'red'),
+    # Generic.Inserted:   ('darkgreen',  'green'),
+    # Generic.Heading:    ('**',         '**'),
+    # Generic.Subheading: ('*purple*',   '*fuchsia*'),
+    # Generic.Error:      ('red',        'red'),
+
+    Error:              ('_red_',       '_red_'),
+}
+
+
+class SimpleMrsLexer(RegexLexer):
+    name = 'SimpleMRS'
+    aliases = ['mrs']
+    filenames = ['*.mrs']
+
+    tokens = {
+        'root': [
+            (r'\s+', Text),
+            (r'\[|\]', Punctuation, 'mrs')
+        ],
+        'mrs': [
+            (r'\s+', Text),
+            include('strings'),
+            include('vars'),
+            (r'\]', Punctuation, '#pop'),
+            (r'<', Number, 'lnk'),
+            (r'(TOP|LTOP|INDEX)(\s*)(:)',
+             bygroups(Name.Builtin, Text, Punctuation)),
+            (r'(RELS|HCONS|ICONS)(\s*)(:)(\s*)(<)',
+             bygroups(Name.Builtin, Text, Punctuation, Text, Punctuation),
+             'list'),
+        ],
+        'strings': [
+            (r'"[^"\\]*(?:\\.[^"\\]*)*"', String.Double),
+            (r"'[^ \\]*(?:\\.[^ \\]*)*", String.Single),
+        ],
+        'vars': [
+            (r'(?:h|handle)\d+', Name.Label),
+            (r'(?:e|event)\d+', Name.Function, 'var'),
+            (r'(?:x|ref-ind)\d+', Name.Variable, 'var'),
+            (r'(?:i|individual|p|non_event|u|semarg)\d+', Name.Other, 'var'),
+        ],
+        'var': [
+            (r'\s+', Text),
+            (r'\[', Punctuation, 'proplist'),
+            (r'', Text, '#pop')
+        ],
+        'proplist': [
+            (r'\s+', Text),
+            (r'([^:\s]+)(\s*)(:)(\s*)([^\s]+)',
+             bygroups(Name.Attribute, Text, Punctuation, Text, Text)),
+            (r'\]', Punctuation, '#pop'),
+            (r'e|event|x|ref-ind', Name.Variable),
+            (r'\w+', Name.Other)
+        ],
+        'lnk': [
+            (r'\s+', Text),
+            (r'>', Number, '#pop'),
+            (r'\d+[:#]\d+|@\d+|\d+(?:\s+\d+)*', Number),
+        ],
+        'list': [
+            (r'\s+', Text),
+            (r'>', Punctuation, '#pop'),
+            (r'\[', Punctuation, ('ep', 'pred')),
+            include('vars'),
+            (r'qeq|outscopes|lheq|[^\s]+', Operator.Word),
+        ],
+        'ep': [
+            (r'\s+', Text),
+            (r'<', Number, 'lnk'),
+            (r'\]', Punctuation, '#pop'),
+            include('strings'),
+            (r'(LBL)(\s*)(:)',
+             bygroups(Name.Namespace, Text, Punctuation)),
+            (r'(ARG0)(\s*)(:)',
+             bygroups(Name.Class, Text, Punctuation)),
+            (r'(CARG)(\s*)(:)',
+             bygroups(Name.Constant, Text, Punctuation)),
+            (r'([^:\s]+)(\s*)(:)',
+             bygroups(Name.Tag, Text, Punctuation)),
+            include('vars')
+        ],
+        'pred': [
+            (r'\s+', Text),
+            (r'"[^"_\\]*(?:\\.[^"\\]*)*"', String.Symbol, '#pop'),
+            (r"'[^ _\\]*(?:\\.[^ \\]*?)*", String.Symbol, '#pop'),
+            (r'[^ <]+', String.Symbol, '#pop')
+        ]
+    }
+
+    def get_tokens_unprocessed(self, text):
+        for index, token, value in RegexLexer.get_tokens_unprocessed(self, text):
+            if token is String.Symbol and '_q_' in value:
+                yield index, String.Other, value
+            else:
+                yield index, token, value

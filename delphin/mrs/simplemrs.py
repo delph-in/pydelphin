@@ -17,6 +17,19 @@ from delphin.mrs.config import (HANDLESORT, QEQ, LHEQ, OUTSCOPES)
 from delphin.mrs.util import ReadOnceDict
 from delphin._exceptions import XmrsDeserializationError as XDE
 
+try:
+    from pygments import highlight as highlight_
+    from pygments.formatters import TerminalFormatter
+    from delphin.extra.highlight import SimpleMrsLexer, mrs_colorscheme
+    lexer = SimpleMrsLexer()
+    formatter = TerminalFormatter(bg='dark', colorscheme=mrs_colorscheme)
+    def highlight(text):
+        return highlight_(text, lexer, formatter)
+except ImportError:
+    # warnings.warn
+    def highlight(text):
+        return text
+
 # versions are:
 #  * 1.0 long running standard
 #  * 1.1 added support for MRS-level lnk, surface and EP-level surface
@@ -45,16 +58,6 @@ _valid_hcons = [_qeq, _lheq, _outscopes]
 
 # pretty-print options
 _default_mrs_delim = '\n'
-
-# color options
-bold = lambda x: '\x1b[1m{}\x1b[0m'.format(x)
-gray = lambda x: '\x1b[90m{}\x1b[39;49m'.format(x)
-red = lambda x: '\x1b[31m{}\x1b[39;49m'.format(x)
-magenta = lambda x: '\x1b[95m{}\x1b[39;49m'.format(x)
-blue = lambda x: '\x1b[94m{}\x1b[39;49m'.format(x)
-darkgreen = lambda x: '\x1b[32m{}\x1b[39;49m'.format(x)
-green = lambda x: '\x1b[92m{}\x1b[39;49m'.format(x)
-yellow = lambda x: '\x1b[33m{}\x1b[39;49m'.format(x)
 
 ##############################################################################
 ##############################################################################
@@ -432,21 +435,16 @@ def unexpected_termination_error():
 # Encoding
 
 
-def unset_colors():
-    global bold, gray, red, blue, magenta, darkgreen, green, yellow
-    bold = gray = red = blue = magenta = darkgreen = green = yellow =\
-        lambda x: x
-
-
 def serialize(ms, version=_default_version, pretty_print=False, color=False):
     """Serialize an MRS structure into a SimpleMRS string."""
-    if not color:
-        unset_colors()
     delim = '\n' if pretty_print else _default_mrs_delim
-    return delim.join(
+    output = delim.join(
         serialize_mrs(m, version=version, pretty_print=pretty_print)
         for m in ms
     )
+    if color:
+        output = highlight(output)
+    return output
 
 
 def serialize_mrs(m, version=_default_version, pretty_print=False):
@@ -458,10 +456,13 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
     listed_vars = set()
     toks = []
     if version >= 1.1:
+        header_toks = []
         if m.lnk is not None:
-            toks.append(serialize_lnk(m.lnk))
+            header_toks.append(serialize_lnk(m.lnk))
         if m.surface is not None:
-            toks.append('"{}"'.format(m.surface))
+            header_toks.append('"{}"'.format(m.surface))
+        if header_toks:
+            toks.append(' '.join(header_toks))
     if m.ltop is not None:
         toks.append(serialize_argument(
             _top if version >= 1.1 else _ltop, m.ltop, varprops
@@ -481,7 +482,7 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
     if m.hcons is not None:
         toks += [' '.join([serialize_hcons(m.hcons, listed_vars)])]
     if version >= 1.1 and m.icons:  # `is not None` if you want "ICONS: < >""
-        toks += [' '.join([serialize_icons(m.icons, listed_vars)])]        
+        toks += [' '.join([serialize_icons(m.icons, listed_vars)])]
     delim = ' ' if not pretty_print else '\n  '
     return '{} {} {}'.format(_left_bracket, delim.join(toks), _right_bracket)
 
@@ -491,16 +492,17 @@ def serialize_argument(rargname, value, varprops):
     _argument = '{rargname}: {value}{props}'
     if isinstance(value, MrsVariable):
         props = varprops.get(value.vid, {})
-        var = bold(str(value))
+        var = str(value)
         return _argument.format(
-            rargname=magenta(rargname),
-            value=yellow(var) if value.sort == HANDLESORT else blue(var),
-            props='' if not props else ' [ {} ]'.format(
+            rargname=rargname,
+            value=var,
+            props='' if not props else ' [ {} {} ]'.format(
+                value.sort,
                 ' '.join(map('{0[0]}: {0[1]}'.format, props.items())))
         )
     else:
         return _argument.format(
-            rargname=red(rargname),
+            rargname=rargname,
             value=str(value),
             props=''
         )
@@ -513,12 +515,12 @@ def serialize_ep(g, nid, varprops, version=_default_version):
                         for rarg, val in node['rargs'].items()])
     surface = None if version < 1.1 else node['surface']
     pred = node['pred']
-    predstr = pred.string 
+    predstr = pred.string
     return '[ {pred}{lnk}{surface} LBL: {label}{s}{args} ]'.format(
-        pred=darkgreen(predstr) if pred.is_quantifier() else green(predstr),
+        pred=predstr,
         lnk=serialize_lnk(node['lnk']),
         surface=' "{}"'.format(surface) if surface is not None else '',
-        label=yellow(bold(str(node['label']))),
+        label=str(node['label']),
         s=' ' if arglist else '',
         args=arglist
     )
@@ -541,7 +543,7 @@ def serialize_lnk(lnk):
         elif lnk.type == Lnk.EDGE:
             s += ''.join([_at, str(lnk.data)])
         s += _right_angle
-    return gray(s)
+    return s
 
 
 def serialize_hcons(hcons, listed_vars):
@@ -554,7 +556,7 @@ def serialize_hcons(hcons, listed_vars):
             rel = _lheq
         elif hcon.relation == OUTSCOPES:
             rel = _outscopes
-        toks += [yellow(bold(str(hcon.hi))), rel, yellow(bold(str(hcon.lo)))]
+        toks += [str(hcon.hi), rel, str(hcon.lo)]
     toks += [_right_angle]
     return ' '.join(toks)
 
@@ -562,8 +564,8 @@ def serialize_icons(icons, listed_vars):
     """Serialize |IndividualConstraints| into the SimpleMRS encoding."""
     toks = [_icons + _colon, _left_angle]
     for icon in icons:
-        toks += [blue(bold(str(icon.target))),
+        toks += [str(icon.target),
                  icon.relation,
-                 blue(bold(str(icon.clause)))]
+                 str(icon.clause)]
     toks += [_right_angle]
     return ' '.join(toks)
