@@ -137,24 +137,24 @@ def compile(cfg_path, out_path, log=None):
     #debug('Compiled grammar written to {}'.format(abspath(out_path)), log)
 
 
-def parse_from_iterable(cfg_path, data, **kwargs):
-    with AceParser(cfg_path, **kwargs) as parser:
+def parse_from_iterable(dat_file, data, **kwargs):
+    with AceParser(dat_file, **kwargs) as parser:
         for datum in data:
             yield parser.interact(datum)
 
 
-def parse(cfg_path, datum, **kwargs):
-    return next(parse_from_iterable(cfg_path, [datum], **kwargs))
+def parse(dat_file, datum, **kwargs):
+    return next(parse_from_iterable(dat_file, [datum], **kwargs))
 
 
-def generate_from_iterable(cfg_path, data, **kwargs):
-    with AceGenerator(cfg_path, **kwargs) as generator:
+def generate_from_iterable(dat_file, data, **kwargs):
+    with AceGenerator(dat_file, **kwargs) as generator:
         for datum in data:
             yield generator.interact(datum)
 
 
-def generate(cfg_path, datum, **kwargs):
-    return next(generate_from_iterable(cfg_path, [datum], **kwargs))
+def generate(dat_file, datum, **kwargs):
+    return next(generate_from_iterable(dat_file, [datum], **kwargs))
 
 
 # def do(cmd):
