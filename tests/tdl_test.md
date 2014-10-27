@@ -38,6 +38,8 @@ Lists
 ['<!', 'diff-list', ',', 'items', '!>']
 >>> list(tdl.tokenize('< ..., [] >'))
 ['<', '...', ',', '[', ']', '>']
+>>> list(tdl.tokenize('< [] . #rest >'))
+['<', '[', ']', '.', '#rest', '>']
 
 ```
 
@@ -85,9 +87,9 @@ Coreference
 
 ```python
 >>> list(tdl.tokenize('#coref'))
-['#', 'coref']
+['#coref']
 >>> list(tdl.tokenize('#coref-tag'))
-['#', 'coref-tag']
+['#coref-tag']
 
 ```
 
@@ -96,7 +98,7 @@ Inflectional Rules
 
 ```python
 >>> list(tdl.tokenize('%(letter-set (!v aeiou))'))
-['%', '(', 'letter-set', '(', '!', 'v', 'aeiou', ')', ')']
+['%', '(', 'letter-set', '(', '!v', 'aeiou', ')', ')']
 
 ```
 
@@ -152,7 +154,7 @@ Lettersets
 
 ```python
 >>> lex('%(letter-set (!v aeiou))')
-[(1, 'LETTERSET', ['%', '(', 'letter-set', '(', '!', 'v', 'aeiou', ')', ')'])]
+[(1, 'LETTERSET', ['%', '(', 'letter-set', '(', '!v', 'aeiou', ')', ')'])]
 
 ```
 
@@ -163,7 +165,7 @@ Type Parsing
 For convenience:
 
 ```python
->>> parse = lambda s: tdl.parse(StringIO(s))
+>>> parse = lambda s: next(tdl.parse(StringIO(s)))
 
 ```
 
@@ -171,10 +173,16 @@ Basic Subtyping
 ---------------
 
 ```python
->>> next(parse('type-name := supertype.'))
-TdlType('type-name', supertypes=['supertype'])
->>> next(parse('type := super1 & super2.'))
-TdlType('type', supertypes=['super1', 'super2'])
+>>> t = parse('type-name := supertype.')
+>>> t.identifier
+'type-name'
+>>> t.supertypes
+['supertype']
+>>> t = parse('type := super1 & super2.')
+>>> t.identifier
+'type'
+>>> t.supertypes
+['super1', 'super2']
 
 ```
 
@@ -182,7 +190,10 @@ Basic Features
 --------------
 
 ```python
->>> next(parse('type := super & [ ATTR val ].'))
-TdlType('type', supertypes=['super'], features=[('ATTR', 'val')])
+>>> t = parse('type := super & [ ATTR val ].')
+>>> t['ATTR'].supertypes
+['val']
+>>> t['attr'].supertypes
+['val']
 
 ```
