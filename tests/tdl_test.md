@@ -165,7 +165,7 @@ Type Parsing
 For convenience:
 
 ```python
->>> parse = lambda s: next(tdl.parse(StringIO(s)))
+>>> parsetdl = lambda s: next(tdl.parse(StringIO(s)))
 
 ```
 
@@ -173,12 +173,12 @@ Basic Subtyping
 ---------------
 
 ```python
->>> t = parse('type-name := supertype.')
+>>> t = parsetdl('type-name := supertype.')
 >>> t.identifier
 'type-name'
 >>> t.supertypes
 ['supertype']
->>> t = parse('type := super1 & super2.')
+>>> t = parsetdl('type := super1 & super2.')
 >>> t.identifier
 'type'
 >>> t.supertypes
@@ -190,10 +190,147 @@ Basic Features
 --------------
 
 ```python
->>> t = parse('type := super & [ ATTR val ].')
+>>> t = parsetdl('type := super & [ ATTR val ].')
+>>> list(t.features())  # doctest: +ELLIPSIS
+[('ATTR', <TdlDefinition object ...>)]
 >>> t['ATTR'].supertypes
 ['val']
 >>> t['attr'].supertypes
 ['val']
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR.SUB val ].')
+>>> list(t.features())  # doctest: +ELLIPSIS
+[('ATTR.SUB', <TdlDefinition object ...>)]
+>>> list(t.local_constraints())  # doctest: +ELLIPSIS
+[('ATTR.SUB', <TdlDefinition object ...>)]
+>>> list(t['ATTR'].features())  # doctest: +ELLIPSIS
+[('SUB', <TdlDefinition object ...>)]
+>>> t['ATTR'].supertypes
+[]
+>>> t['ATTR.SUB'].supertypes
+['val']
+>>> t['ATTR']['SUB'].supertypes
+['val']
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR [ SUB val ] ].')
+>>> list(t.features())  # doctest: +ELLIPSIS
+[('ATTR.SUB', <TdlDefinition object ...>)]
+>>> list(t.local_constraints())  # doctest: +ELLIPSIS
+[('ATTR.SUB', <TdlDefinition object ...>)]
+>>> list(t['ATTR'].features())  # doctest: +ELLIPSIS
+[('SUB', <TdlDefinition object ...>)]
+>>> t['ATTR'].supertypes
+[]
+>>> t['ATTR.SUB'].supertypes
+['val']
+>>> t['ATTR']['SUB'].supertypes
+['val']
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR1 val1, ATTR2 val2 ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('ATTR1', <TdlDefinition object (val1) ...>),
+ ('ATTR2', <TdlDefinition object (val2) ...>)]
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR [ SUB1 val1, SUB2 val2 ] ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('ATTR.SUB1', <TdlDefinition object (val1) ...>),
+ ('ATTR.SUB2', <TdlDefinition object (val2) ...>)]
+
+```
+
+Features with Supertypes
+------------------------
+
+```python
+>>> t = parsetdl('type := super & [ ATTR t & [ SUB val ] ].')
+>>> t.supertypes
+['super']
+>>> t['ATTR'].supertypes
+['t']
+>>> t['ATTR.SUB'].supertypes
+['val']
+>>> list(t.features())  # doctest: +ELLIPSIS
+[('ATTR', <TdlDefinition object (t) ...>)]
+>>> list(t.local_constraints())  # doctest: +ELLIPSIS
+[('ATTR.SUB', <TdlDefinition object (val) ...>)]
+
+```
+
+Normal Lists
+------------
+
+```python
+>>> t = parsetdl('type := super & [ ATTR < > ].')
+>>> list(t.features())
+[('ATTR', None)]
+>>> list(t.local_constraints())
+[('ATTR', None)]
+>>> t['ATTR'] is None
+True
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR < a > ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('ATTR.FIRST', <TdlDefinition object (a) ...>),
+ ('ATTR.REST', None)]
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR < a & [ SUB val ] > ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('ATTR.FIRST', <TdlDefinition object (a) ...>),
+ ('ATTR.REST', None)]
+>>> list(t['ATTR.FIRST'].features())  # doctest: +ELLIPSIS
+[('SUB', <TdlDefinition object (val) ...>)]
+>>> t['ATTR.FIRST.SUB'].supertypes
+['val']
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR < a, b > ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('ATTR.FIRST', <TdlDefinition object (a) ...>),
+ ('ATTR.REST.FIRST', <TdlDefinition object (b) ...>),
+ ('ATTR.REST.REST', None)]
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR < ... > ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS
+[('ATTR', <TdlDefinition object ...>)]
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR < a, ... > ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS
+[('ATTR.FIRST', <TdlDefinition object (a) ...>)]
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR < a . #rest > ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('ATTR.FIRST', <TdlDefinition object (a) ...>),
+ ('ATTR.REST', <TdlDefinition object ...>)]
+>>> t.coreferences
+[('#rest', 'ATTR.REST')]
 
 ```
