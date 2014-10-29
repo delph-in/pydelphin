@@ -326,11 +326,46 @@ True
 ```
 
 ```python
->>> t = parsetdl('type := super & [ ATTR < a . #rest > ].')
+>>> t = parsetdl('type := super & [ ATTR1 < a . #rest >, ATTR2 #rest ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.FIRST', <TdlDefinition object (a) ...>),
- ('ATTR.REST', <TdlDefinition object ...>)]
+[('ATTR1.FIRST', <TdlDefinition object (a) ...>),
+ ('ATTR1.REST', <TdlDefinition object ...>),
+ ('ATTR2', <TdlDefinition object ...>)]
 >>> t.coreferences
-[('#rest', 'ATTR.REST')]
+[('#rest', ['ATTR1.REST', 'ATTR2'])]
+
+```
+
+Diff Lists
+----------
+
+```python
+>>> t = parsetdl('type := super & [ ATTR <! !> ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('ATTR.LAST', <TdlDefinition object ...>),
+ ('ATTR.LIST', <TdlDefinition object ...>)]
+>>> t.coreferences
+[(None, ['ATTR.LIST', 'ATTR.LAST'])]
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR <! a !> ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('ATTR.LAST', <TdlDefinition object ...>),
+ ('ATTR.LIST.FIRST', <TdlDefinition object (a) ...>)]
+>>> t.coreferences
+[(None, ['ATTR.LIST.REST', 'ATTR.LAST'])]
+
+```
+
+```python
+>>> t = parsetdl('type := super & [ ATTR <! a, b !> ].')
+>>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('ATTR.LAST', <TdlDefinition object ...>),
+ ('ATTR.LIST.FIRST', <TdlDefinition object (a) ...>),
+ ('ATTR.LIST.REST.FIRST', <TdlDefinition object (b) ...>)]
+>>> t.coreferences
+[(None, ['ATTR.LIST.REST.REST', 'ATTR.LAST'])]
 
 ```

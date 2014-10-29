@@ -1,5 +1,5 @@
 import re
-from collections import deque, OrderedDict
+from collections import deque, defaultdict
 from itertools import chain
 from delphin._exceptions import TdlError, TdlParsingError
 
@@ -209,7 +209,7 @@ def parse_typedef(tokens):
         affixes = parse_affixes(tokens)  # only for inflectional rules
         tdldef, corefs, comment = parse_conjunction(tokens)
         # Now make coref paths a string instead of list
-        corefs = [(cr, '.'.join(path)) for cr, path in corefs]
+        corefs = _make_coreferences(corefs)
         #features = parse_conjunction(tokens)
         assert tokens.popleft() == '.'
         # :+ doesn't need supertypes
@@ -270,7 +270,7 @@ def parse_conjunction(tokens):
         elif tokens[0] == '<!':
             feats, corefs = parse_diff_list(tokens)
         elif tokens[0].startswith('#'):
-            corefs.append((tokens.popleft(), []))
+            corefs.append((tokens.popleft(), [[]]))
         else:
             supertypes.append(tokens.popleft())
 
@@ -313,7 +313,7 @@ def parse_attr_val(tokens):
     path = '.'.join(path)  # put it back together (maybe shouldn'ta broke it)
     # treat string values separately so they don't become comment strings
     value, corefs, comment = parse_conjunction(tokens)
-    corefs = [(c, [path] + p) for c, p in corefs]
+    corefs = [(c, [[path] + p for p in ps]) for c, ps in corefs]
     return ((path, value), corefs)  # discard comment here, i guess
 
 
@@ -327,7 +327,7 @@ def parse_cons_list(tokens):
         tokens.popleft()
         tdldef, corefs, _ = parse_conjunction(tokens)
         feats.append((last_path, tdldef))
-        corefs = [(c, [last_path] + p) for c, p in corefs]
+        corefs = [(c, [[last_path] + p for p in ps]) for c, ps in corefs]
         coreferences.extend(corefs)
     elif len(feats) == 0:  # < >
         feats = None  # list is null; nothing can be added
@@ -339,12 +339,18 @@ def parse_cons_list(tokens):
 def parse_diff_list(tokens):
     assert tokens.popleft() == '<!'
     feats, last_path, coreferences = _parse_list(tokens, ('!>'))
-    # prepend 'LIST' to all paths
-    feats = [('.'.join([_diff_list_list, path]), val) for path, val in feats]
     if not feats:
+        # always have the LIST path
+        feats.append((_diff_list_list, TdlDefinition()))
         last_path = _diff_list_list
+    else:
+        # prepend 'LIST' to all paths
+        feats = [('.'.join([_diff_list_list, path]), val)
+                 for path, val in feats]
+        last_path = '{}.{}'.format(_diff_list_list, last_path)
+    # always have the LAST path
     feats.append((_diff_list_last, TdlDefinition()))
-    coreferences.append((_diff_list_last, last_path))
+    coreferences.append((None, [[last_path], [_diff_list_last]]))
     assert tokens.popleft() == '!>'
     return (feats, coreferences)
 
@@ -356,7 +362,7 @@ def _parse_list(tokens, break_on):
     while tokens[0] not in break_on:
         tdldef, corefs, _ = parse_conjunction(tokens)
         feats.append((path, tdldef))
-        corefs = [(c, [path] + p) for c, p in corefs]
+        corefs = [(c, [[path] + p for p in ps]) for c, ps in corefs]
         coreferences.extend(corefs)
         if tokens[0] == ',':
             path = '{}.{}'.format(_list_tail, path)
@@ -365,6 +371,29 @@ def _parse_list(tokens, break_on):
             break
     path = path.replace(_list_head, _list_tail)
     return (feats, path, coreferences)
+
+
+def _make_coreferences(corefs):
+    corefs = [(cr, ['.'.join(p) for p in paths]) for cr, paths in corefs]
+    merged = defaultdict(list)
+    unlabeled = []
+    # unlabeled ones (e.g. from diff lists) don't have a coref tag, but
+    # probably already have all the paths-to-unify. Labeled ones likely
+    # only have one path each, so merge those with the same tag.
+    for (cr, paths) in corefs:
+        if cr is None:
+            unlabeled.append((cr, paths))
+        else:
+            merged[cr].extend(paths)
+    # now we can put them back together
+    corefs = list(merged.items()) + unlabeled
+    # just check that all have at least two paths
+    if not all(len(paths) >= 2 for cr, paths in corefs):
+        raise TdlError(
+            'Solitary coreference: {}\n{}'
+            .format(str(cr), repr(paths))
+        )
+    return corefs
 
 
 if __name__ == '__main__':
