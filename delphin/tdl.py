@@ -88,17 +88,11 @@ class TdlType(TdlDefinition):
         return self
 
     def __repr__(self):
-        info = []
-        if self.supertypes:
-            info.append('supertypes={}'.format(self.supertypes))
-        if self.features:
-            info.append('features={}'
-                        .format(sorted(self.features.items())))
-        if self.comment:
-            info.append('comment={}'.format(self.comment))
-        post = '' if not info else ', '.join([''] + info)
-        return "<TdlType object ('{}'{}) at {}>".format(
-            self.identifier, post, id(self)
+        stlist = ' & '.join(self.supertypes)
+        return "<TdlType object '{}'{} at {}>".format(
+            self.identifier,
+            '' if not self.supertypes else ' ({})'.format(stlist),
+            id(self)
         )
 
 
