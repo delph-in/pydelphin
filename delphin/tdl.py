@@ -181,7 +181,7 @@ def _nest_level(in_pattern, out_pattern, tokens):
     return sum(lookup.get(tok, 0) for tok in tokens)
 
 
-def parse(f):
+def parse(f):   
     for line_no, event, data in lex(f):
         data = deque(data)
         try:
@@ -250,27 +250,32 @@ def parse_conjunction(tokens):
 
         # comments can appear after any supertype and before any avm, but let's
         # be a bit more generous and just say they can appear at most once
-        if tokens[0].startswith('"'):
-            if comment is not None:
-                raise TdlParsingError('Only one comment string is allowed.')
-            comment = tokens.popleft()
+        #if tokens[0].startswith('"'):
+        #    if comment is not None:
+        #        raise TdlParsingError('Only one comment string is allowed.')
+        #    comment = tokens.popleft()
 
         # comments aren't followed by "&", so pretend nothing happened (i.e.
         # use if, not elif)
-        if tokens[0] == '[':
+        if tokens[0].startswith('#'):
+            # coreferences don't have features, so just add it and move on
+            coreferences.append((tokens.popleft(), [[]]))
+            continue
+        # other terms may have features or other coreferences
+        elif tokens[0] == '[':
             feats, corefs = parse_avm(tokens)
         elif tokens[0] == '<':
             feats, corefs = parse_cons_list(tokens)
         elif tokens[0] == '<!':
             feats, corefs = parse_diff_list(tokens)
-        elif tokens[0].startswith('#'):
-            corefs.append((tokens.popleft(), [[]]))
+        # strings and other types are caught here
         else:
             supertypes.append(tokens.popleft())
 
         if feats is None:
             features = None
         else:
+            assert features is not None
             features.extend(feats)
         coreferences.extend(corefs)
 
@@ -287,8 +292,9 @@ def parse_avm(tokens):
     features = []
     coreferences = []
     assert tokens.popleft() == '['
-    tokens.appendleft(',')  # to make the loop simpler
-    while tokens[0] == ',':
+    if tokens[0] != ']':  # non-empty AVM
+        tokens.appendleft(',')  # to make the loop simpler
+    while tokens[0] != ']':
         tokens.popleft()
         attrval, corefs = parse_attr_val(tokens)
         features.append(attrval)
@@ -305,7 +311,6 @@ def parse_attr_val(tokens):
         tokens.popleft()
         path.append(tokens.popleft())
     path = '.'.join(path)  # put it back together (maybe shouldn'ta broke it)
-    # treat string values separately so they don't become comment strings
     value, corefs, comment = parse_conjunction(tokens)
     corefs = [(c, [[path] + p for p in ps]) for c, ps in corefs]
     return ((path, value), corefs)  # discard comment here, i guess
@@ -392,7 +397,7 @@ def _make_coreferences(corefs):
 
 if __name__ == '__main__':
     import sys
-    for x in lex(open(sys.argv[1], 'r')):
+    for x in parse(open(sys.argv[1], 'r')):
        print(x)
     # for line in sys.stdin:
     #    print(tokenize(line))

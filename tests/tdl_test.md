@@ -232,6 +232,15 @@ For convenience:
 
 ### Basic Features
 
+An AVM with no features:
+
+```python
+>>> t = parsetdl('type := super & [].')
+>>> list(t.features())  # doctest: +ELLIPSIS
+[]
+
+```
+
 Simple feature and value; attribute names are case-insensitive:
 
 ```python
@@ -242,6 +251,21 @@ Simple feature and value; attribute names are case-insensitive:
 ['val']
 >>> t['attr'].supertypes
 ['val']
+
+```
+
+String values and integer values (just treated as types):
+
+```python
+>>> t = parsetdl('type := super & [ ATTR "val" ].')
+>>> list(t.features())  # doctest: +ELLIPSIS
+[('ATTR', <TdlDefinition object ("val") ...>)]
+>>> t = parsetdl("type := super & [ ATTR 'val ].")
+>>> list(t.features())  # doctest: +ELLIPSIS
+[('ATTR', <TdlDefinition object ('val) ...>)]
+>>> t = parsetdl('type := super & [ ATTR 1 ].')
+>>> list(t.features())  # doctest: +ELLIPSIS
+[('ATTR', <TdlDefinition object (1) ...>)]
 
 ```
 
