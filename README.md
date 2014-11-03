@@ -100,15 +100,28 @@ With `pyDelphin`, you can filter and select from [incr tsdb()] profiles,
 write sub-profiles, and apply operations to the data. The pyDelphin
 code takes care of filling in default values and escaping delimiters for
 you. For example, to select the `i-id` and `i-input` fields from the
-`item` table and print them to stdout, use the --select option:
+`item` table and print them to stdout, use the select sub-command:
 
 ```bash
 $ ./pyDelphin --input ~/logon/dfki/jacy/tsdb/gold/mrs \
-              --select item:i-id@i-input
+              select item:i-id@i-input
 11@雨 が 降っ た ．
 21@太郎 が 吠え た ．
 [..]
 ```
+
+The `pyDelphin` script has several sub-commands with their own options,
+similar to how Subversion has `svn commit` and `svn update`. The
+current set of sub-commands is:
+
+  * select  : selecting and printing data from an [incr tsdb()] profile
+  * mkprof  : output a new [incr tsdb()] profile or skeleton
+  * compare : compare bags of MRSs (a lightweight way to see if
+              performance has changed in a profile)
+
+Some options of pyDelphin work for all sub-commands, while others work
+only for a specific command. Try running `pyDelphin -h` to get global
+help, and `pyDelphin {command} -h` to get help specific to a `{command}`.
 
 If you want to, for example, remove the spaces in i-input, you can
 use `--apply` to apply a Python expression to the field. The
@@ -117,8 +130,8 @@ expression is applied on every column specified, and the variable
 
 ```bash
 $ ./pyDelphin --input ~/logon/dfki/jacy/tsdb/gold/mrs \
-              --select item:i-id@i-input \
-              --apply item:i-input "x.replace(' ','')"
+              --apply item:i-input "x.replace(' ','')" \
+              select item:i-id@i-input
 11@雨が降った．
 21@太郎が吠えた．
 [..]
@@ -130,8 +143,8 @@ row, so this is equivalent to the previous:
 
 ```bash
 $ ./pyDelphin --input ~/logon/dfki/jacy/tsdb/gold/mrs \
-              --select item:i-id@i-input \
-              --apply item:i-input "row['i-input'].replace(' ','')"
+              --apply item:i-input "row['i-input'].replace(' ','')" \
+              select item:i-id@i-input
 11@雨が降った．
 21@太郎が吠えた．
 [..]
@@ -145,8 +158,8 @@ as True or False. The command below finds all items that have the word
 
 ```bash
 $ ./pyDelphin --input ~/logon/dfki/jacy/tsdb/gold/mrs \
-              --select item:i-id@i-input \
-              --filter item:i-input "'雨' in x"
+              --filter item:i-input "'雨' in x" \
+              select item:i-id@i-input
 11@雨 が 降っ た ．
 71@太郎 が タバコ を 次郎 に 雨 が 降る と 賭け た ．
 81@太郎 が 雨 が 降っ た こと を 知っ て い た ．
@@ -158,14 +171,14 @@ items whose i-input contains the word "雨":
 
 ```bash
 $ ./pyDelphin --input ~/logon/dfki/jacy/tsdb/gold/mrs \
-              --select result:mrs \
-              --filter item:i-input "'雨' in x" --cascade-filters
+              --filter item:i-input "'雨' in x" --cascade-filters \
+              select result:mrs
 [ LTOP: h1 INDEX: e2 [ e TENSE: PAST MOOD: INDICATIVE PROG: - PERF: - SF: PROP ASPECT: DEFAULT_ASPECT PASS: - ] RELS: < [ udef_q_rel<0:1> LBL: h3 ARG0: x6 [ x PERS: 3 ] RSTR: h5 BODY: h4 ] [ "_ame_n_rel"<0:1> LBL: h7 ARG0: x6 ] [ "_furu_v_1_rel"<2:3> LBL: h8 ARG0: e2 ARG1: x6 ] > HCONS: < h5 qeq h7 > ]
 [ LTOP: h1 INDEX: e2 [ e TENSE: PAST MOOD: INDICATIVE PROG: + PERF: - SF: PROP ASPECT: DEFAULT_ASPECT PASS: - ] RELS: < [ def_q_rel<0:1> LBL: h3 ARG0: x4 RSTR: h5 BODY: h6 ] [ named_rel<0:1> LBL: h7 ARG0: x4 CARG: "tarou_2" ] [ udef_q_rel<2:3> LBL: h8 ARG0: x11 [ x PERS: 3 ] RSTR: h10 BODY: h9 ] [ "_ame_n_rel"<2:3> LBL: h12 ARG0: x11 ] [ "_furu_v_1_rel"<4:5> LBL: h13 ARG0: e14 [ e TENSE: PAST MOOD: INDICATIVE PROG: - PERF: - SF: PROP ASPECT: DEFAULT_ASPECT PASS: - ] ARG1: x11 ] [ "_koto_n_nom_rel"<6:7> LBL: h15 ARG0: x16 ARG1: h17 ] [ udef_q_rel<6:7> LBL: h18 ARG0: x16 RSTR: h20 BODY: h19 ] [ "_shiru_v_1_rel"<8:9> LBL: h21 ARG0: e2 ARG1: x4 ARG2: x16 ] > HCONS: < h5 qeq h7 h10 qeq h12 h20 qeq h15 h17 qeq h13 > ]
 ```
 
 Rather than selecting data to send to stdout, you can also output a
-new [incr tsdb()] profile with the `--output` option. The new profile
+new [incr tsdb()] profile with the `mkprof` sub-command. The new profile
 contains the tables and rows of the input profile after filters and
 applications have been used. By default, the relations file of the
 input profile is copied, but it is possible to use a different one
@@ -174,7 +187,7 @@ refreshes a profile to a new relations file:
 
 ```bash
 $ ./pyDelphin --input ~/logon/dfki/jacy/tsdb/gold/mrs \
-              --output ~/logon/dfki/jacy/tsdb/gold/mrs-refreshed \
+              mkprof ~/logon/dfki/jacy/tsdb/gold/mrs-refreshed \
               --relations ~/logon/lingo/lkb/src/tsdb/skeletons/english/Relations
 ```
 
@@ -184,8 +197,8 @@ with only items whose i-length is less than 10, do this:
 
 ```bash
 $ ./pyDelphin --input ~/logon/dfki/jacy/tsdb/gold/mrs \
-              --output ~/logon/dfki/jacy/tsdb/gold/mrs-short \
               --filter item:i-length "int(x) < 10"
+              mkprof ~/logon/dfki/jacy/tsdb/gold/mrs-short
 ```
 
 
