@@ -132,7 +132,7 @@ def encode_dmrs(m, indent=2):
         _node.format(
             indent=space,
             nodeid=n.nodeid,
-            pred=str(n.pred),
+            pred=n.pred.string,
             lnk='' if n.lnk is None else str(n.lnk),
             sortinfo=(
                 '' if not n.sortinfo else

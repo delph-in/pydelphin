@@ -1,8 +1,10 @@
 import re
-from collections import deque
+from collections import deque, defaultdict
 from itertools import product
 from .components import Pred
-from .util import powerset
+from delphin._exceptions import XmrsError
+
+class XmrsPathError(XmrsError): pass
 
 # Something like this:
 #
@@ -184,102 +186,93 @@ def find(xmrs, path):
 
 # GENERATING PATHS #########################################################
 
-class XmrsPath(object):
-    def __init__(self, path, preds):
-        self.path = path
-        self.preds = tuple(sorted(preds or []))
 
-    def __str__(self):
-        return self.path
+class XmrsPathNode(object):
+    
+    __slots__ = ('nodeid', 'pred', 'links')
+    
+    def __init__(self, nodeid, pred, links=None):
+        self.nodeid = nodeid
+        self.pred = pred
+        self.links = dict(links or [])
 
+    def __getitem__(self, key):
+        return self.links[key]
 
-def explore_paths(xmrs):
-    if xmrs.ltop is None:
-        raise Exception('Cannot explore without an LTOP')
-    ltop_nodeid = xmrs.find_scope_head(xmrs.ltop)
-    return _explore_paths(xmrs, ltop_nodeid, [])
-
-def _explore_paths(xmrs, nodeid, visited):
-    args = [tuple([a.argname] + list(get_arg_op_and_target(xmrs, a)))
-            for a in xmrs.get_outbound_args(nodeid, allow_unbound=False)]
-    argstr = ('{}' if len(args) == 1 else '({})').format(' & '.join(
-        ':{}{}'.format(name, op) for name, op, tgt in args
-    ))
-    return ['{}{}'.format(str(xmrs.get_ep(nodeid).pred), argstr)]
+    def __iter__(self):
+        return iter(self.links.items())
 
 
-def get_paths(xmrs, **kwargs):
-    for nid in xmrs.nodeids:
-        for (eppath, preds) in get_ep_paths(xmrs, nid, **kwargs):
-            yield XmrsPath(eppath, preds)
+def get_nodeids(path):
+    yield path.nodeid
+    for link, path_node in path:
+        for nid in get_nodeids(path_node):
+            yield nid
 
 
-def get_ep_paths(xmrs, nid, path=None, max_depth=-1, allow_bare_args=False):
-    # ep[argpaths]
-    if max_depth == 0:
-        raise StopIteration
-    pred = xmrs.get_pred(nid)
-    path = '{}{}'.format(path or '', pred.short_form())
-    args = xmrs.get_outbound_args(nid, allow_unbound=False)
-    for argset in powerset(args):
-        numargs = len(argset)
-        if numargs == 0:
-            yield (path, [pred])
-        else:
-            arg_path_conj = get_arg_path_conj(
-                xmrs, argset, path=path,
-                max_depth=max_depth,
-                allow_bare_args=allow_bare_args
-            )
-            for (subpath, subpreds) in arg_path_conj:
-                yield (subpath, [pred] + subpreds)
+def get_preds(path):
+    yield path.pred
+    for link, path_node in path:
+        for pred in get_preds(path_node):
+            yield pred
 
 
-def get_arg_path_conj(xmrs, args, path=None,
-                      max_depth=-1,
-                      allow_bare_args=False):
-    # :argpath or (:argpath [& :argpath]*)
-    if allow_bare_args:
-        yield join_subpaths(path, [':{}'.format(arg.argname) for arg in args])
-    # beware of magic below:
-    # first, get_subpaths is a function that gets subpaths for an arg
-    get_subpaths = lambda x: list(get_arg_paths(xmrs, x, max_depth=max_depth))
-    # then map that function on all args, and get all combinations of
-    # the subpaths with itertools.product.
-    subpath_sets = product(*list(map(get_subpaths, args)))
-    print(list(subpath_sets))
-    for subpaths, subpreds in subpath_sets:
-        yield (join_subpaths(path, [':{}'.format(sp) for sp in subpaths]),
-               subpreds)
+def sort_rargs(rargs):
+    # put LBL at the start, BODY at the end, otherwise alphabetically sort
+    return sorted(rargs, key=lambda x: (x != 'LBL', x == 'BODY', x))
 
 
-def join_subpaths(basepath, subpaths, joiner=' & '):
-    if len(subpaths) == 1:
-        pathstring = '{}{}'
-    elif len(subpaths) > 1:
-        pathstring = '{}({})'
+def format_path(path, rargsort=sort_rargs):
+    if path is None:
+        return ''
+    links = [':{}>{}'.format(rarg, format_path(path.links[rarg]))
+             for rarg in rargsort(path.links.keys())]
+    if len(links) > 1:
+        subpath = '({})'.format(' & '.join(links))
     else:
-        raise ValueError("There must be more than one subpath.")
-    return pathstring.format(basepath or '', joiner.join(subpaths))
+        subpath = ''.join(links)  # possibly just ''
+    return '{}{}'.format(path.pred.string, subpath)
 
+def find_paths(xmrs, allow_eq=False):
+    linkdict = defaultdict(dict)
+    for link in xmrs.links:
+        if link.argname or allow_eq:
+            connector = '{}/{}'.format(link.argname, link.post)
+            linkdict[link.start][connector] = link
+            # undirected eq links look directed, so add them both ways
+            if link.argname == '':
+                linkdict[link.end][connector] = link
+    explored = set()
+    for nid in xmrs.nodeids:
+        if nid in explored:
+            continue  # might have already been there because of _find_paths
+        for path in _find_paths(xmrs, nid, linkdict):
+            explored.add(path.nodeid)
+            yield path
 
-def get_arg_paths(xmrs, arg, max_depth=-1):
-    op, tgtnid = get_arg_op_and_target(xmrs, arg)
-    yield '{}{}'.format(arg.argname, op)
-    for eppath in get_ep_paths(xmrs, tgtnid, max_depth=max_depth-1):
-        yield '{}{}{}'.format(arg.argname, op, eppath)
-
-
-def get_arg_op_and_target(xmrs, arg):
-    op = tgtnid = None
-    get_label = xmrs.get_label
-    if arg.value in xmrs._cv_to_nid:
-        tgtnid = xmrs._cv_to_nid[arg.value]
-        op = '%' if get_label(arg.nodeid) == get_label(tgtnid) else '/'
-    elif arg.value in xmrs._label_to_nids:
-        tgtnid = xmrs.find_scope_head(arg.value)
-        op = '^'
-    elif arg.value in xmrs._var_to_hcons:
-        tgtnid = xmrs.find_scope_head(arg.value)
-        op = '~'
-    return op, tgtnid
+def _find_paths(xmrs, nodeid, linkdict):
+    g = xmrs._graph
+    srcnode = g.node[nodeid]
+    pred = srcnode['pred']
+    # just the pred
+    #yield XmrsPathNode(nodeid, pred)
+    # pred and all arguments unfulfilled (e.g. "_bark_v_1_rel:ARG1/NEQ>")
+    yield XmrsPathNode(
+        nodeid, pred, links=dict((c, None) for c in linkdict.get(nodeid,{}))
+    )
+    # pred and all fulfilled arguments
+    connections = linkdict[nodeid]
+    if connections:
+        links = {}
+        for connector, link in linkdict[nodeid].items():
+            links[connector] = list(_find_paths(xmrs, link.end, linkdict))
+        # beware of magic below:
+        #   links maps a connector (like ARG1/NEQ) to a list of subpaths
+        #   this gets the product of subpaths for all connectors, then remaps
+        #   the connector to the appropriate subpaths
+        lds = map(
+            lambda z: dict(zip(links.keys(), z)),
+            product(*links.values())
+        )
+        for ld in lds:
+            yield XmrsPathNode(nodeid, pred, links=ld)

@@ -615,12 +615,12 @@ class Xmrs(LnkMixin):
         Returns:
             A set of nodeids, which may be an empty set.
         """
-        lblset = set(nx.node_boundary(self._graph, [label]))
-        if len(lblset) == 0:
+        if label not in self._graph.labels:
             raise XmrsStructureError(
                 'Cannot get labelset for {}. It is not used as a label.'
                 .format(str(label))
             )
+        lblset = set(nx.node_boundary(self._graph, [label]))
         return lblset
         # alternatively:
         # return list(self._graph.adj[label].keys())
