@@ -188,9 +188,9 @@ def find(xmrs, path):
 
 
 class XmrsPathNode(object):
-    
+
     __slots__ = ('nodeid', 'pred', 'links')
-    
+
     def __init__(self, nodeid, pred, links=None):
         self.nodeid = nodeid
         self.pred = pred
@@ -237,7 +237,7 @@ def find_paths(xmrs, allow_eq=False):
     linkdict = defaultdict(dict)
     for link in xmrs.links:
         if link.argname or allow_eq:
-            connector = '{}/{}'.format(link.argname, link.post)
+            connector = '{}/{}'.format(link.argname or '', link.post)
             linkdict[link.start][connector] = link
             # undirected eq links look directed, so add them both ways
             if link.argname == '':
