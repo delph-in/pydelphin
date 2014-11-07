@@ -206,6 +206,8 @@ class XmrsPathNode(object):
 def get_nodeids(path):
     yield path.nodeid
     for link, path_node in path:
+        if path_node is None:
+            continue
         for nid in get_nodeids(path_node):
             yield nid
 
@@ -213,6 +215,8 @@ def get_nodeids(path):
 def get_preds(path):
     yield path.pred
     for link, path_node in path:
+        if path_node is None:
+            continue
         for pred in get_preds(path_node):
             yield pred
 
@@ -246,11 +250,14 @@ def find_paths(xmrs, allow_eq=False):
     for nid in xmrs.nodeids:
         if nid in explored:
             continue  # might have already been there because of _find_paths
-        for path in _find_paths(xmrs, nid, linkdict):
+        for path in _find_paths(xmrs, nid, linkdict, set()):
             explored.add(path.nodeid)
             yield path
 
-def _find_paths(xmrs, nodeid, linkdict):
+def _find_paths(xmrs, nodeid, linkdict, seen):
+    if nodeid in seen:
+        return None
+    seen.add(nodeid)
     g = xmrs._graph
     srcnode = g.node[nodeid]
     pred = srcnode['pred']
@@ -265,7 +272,9 @@ def _find_paths(xmrs, nodeid, linkdict):
     if connections:
         links = {}
         for connector, link in linkdict[nodeid].items():
-            links[connector] = list(_find_paths(xmrs, link.end, linkdict))
+            links[connector] = list(_find_paths(
+                xmrs, link.end, linkdict, seen
+            ))
         # beware of magic below:
         #   links maps a connector (like ARG1/NEQ) to a list of subpaths
         #   this gets the product of subpaths for all connectors, then remaps
