@@ -131,7 +131,7 @@ class MrsVariable(object):
         return self.vid
 
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.vid)
 
     def __repr__(self):
         return '<MrsVariable object ({}{}) at {}>'.format(
