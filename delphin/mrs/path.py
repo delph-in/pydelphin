@@ -41,11 +41,7 @@ _expression_operators = set(['=', 'is'])
 _non_pred_toks = set([':', '/', '%', '^', '~', '@', ')',
                       '[', ']', '=', '&', '|'])  # '('
 
-tokenizer = re.compile(
-    r'\s*("[^"\\]*(?:\\.[^"\\]*)*"|'  # quoted strings
-    r'[^\s*#:/%^~@()\[\]=&|]+|'       # non-breaking characters
-    r'[*#:/%^~@()\[\]=&|])\s*'        # meaningful punctuation
-)
+
 
 
 def tokenize(path):
@@ -285,3 +281,65 @@ def _find_paths(xmrs, nodeid, linkdict, seen):
         )
         for ld in lds:
             yield XmrsPathNode(nodeid, pred, links=ld)
+
+
+tokenizer = re.compile(
+    r'|(?P<dq_string>"[^"\\]*(?:\\.[^"\\]*)*")'  # quoted strings
+    r"|(?P<sq_string>'[^ \\]*(?:\\.[^ \\]*)*)"  # single-quoted 'strings
+    r'|(?P<connector>[^:/]*/(?:EQ|NEQ|HEQ|H))'  # connector
+    r'|(?P<symbol>[^\s*:/>@()\[\]=&|]+)'  # non-breaking characters
+    r'|(?P<punc>[*:/>()&|])'  # meaningful punctuation
+)
+
+def _get_next(tokens):
+    mo = next(tokens)
+    return mo.lastgroup, mo.group()
+
+def read_path(path_string):
+    toks = tokenizer.finditer(path_string)
+    path = _read_path(toks)
+    if path is None:
+        raise XmrsPathError('Error reading path: {}'.format(path_string))
+    return path
+
+def _read_path(tokens):
+    mtype, mtext = _get_next(tokens)
+    if mtype in ('dq_string', 'sq_string', 'symbol'):
+        links = _read_links(tokens)
+        return XmrsPathNode(None, Pred.stringpred(mtext), links)
+
+def _read_links(tokens):
+    try:
+        mtype, mtext = _get_next(tokens)
+    except StopIteration:
+        return None
+    if mtext == ':':
+        connector, subpath = _read_link(tokens)
+        return {connector: subpath}
+    elif mtext == '(':
+        links = {}
+        mtype, mtext = _get_next(tokens)
+        print('1', mtext)
+        if mtext == ':':
+            print('in')
+            connector, subpath = _read_link(tokens)
+            print(connector)
+            links[connector] = subpath
+            mtype, mtext = _get_next(tokens)
+            while mtext == '&':
+                mtype, mtext = _get_next(tokens)
+                assert mtext == ':'
+                connector, subpath = _read_link(tokens)
+                links[connector] = subpath
+                mtype, mtext = _get_next(tokens)
+        print(mtext)
+        assert mtext == ')'
+
+def _read_link(tokens):
+    mtype, mtext = _get_next(tokens)
+    assert mtype == 'connector'
+    connector = mtext
+    mtype, mtext = _get_next(tokens)
+    assert mtext == '>'
+    subpath = _read_path(tokens)
+    return connector, subpath
