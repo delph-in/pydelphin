@@ -2,6 +2,7 @@ import re
 from collections import deque, defaultdict
 from itertools import product
 from .components import Pred
+from .utils import powerset
 from delphin._exceptions import XmrsError
 
 class XmrsPathError(XmrsError): pass
@@ -187,10 +188,11 @@ class XmrsPathNode(object):
 
     __slots__ = ('nodeid', 'pred', 'links')
 
-    def __init__(self, nodeid, pred, links=None):
+    def __init__(self, nodeid, pred, links=None, depth=None):
         self.nodeid = nodeid
         self.pred = pred
         self.links = dict(links or [])
+        self.depth = depth
 
     def __getitem__(self, key):
         return self.links[key]
@@ -217,6 +219,15 @@ def get_preds(path):
             yield pred
 
 
+def link_is_directed(link):
+    return bool(link.argname)
+
+
+def headed(connector):
+    # quantifiers and X/EQ links are not the heads of their subgraphs
+    return not (connector == 'RSTR/H' or connector.endswith('/EQ'))
+
+
 def sort_rargs(rargs):
     # put LBL at the start, BODY at the end, otherwise alphabetically sort
     return sorted(rargs, key=lambda x: (x != 'LBL', x == 'BODY', x))
@@ -233,58 +244,75 @@ def format_path(path, rargsort=sort_rargs):
         subpath = ''.join(links)  # possibly just ''
     return '{}{}'.format(path.pred.string, subpath)
 
-def find_paths(xmrs, allow_eq=False):
-    linkdict = defaultdict(dict)
+def find_paths(xmrs, method="directed", allow_eq=False):
+    if method not in ("directed", "headed"):
+        raise XmrsPathError("Invalid path-finding method: {}".format(method))
+    fwdlinks = defaultdict(dict)
+    baklinks = defaultdict(dict)
     for link in xmrs.links:
-        if link.argname or allow_eq:
+        if link_is_directed(link) or allow_eq:
             connector = '{}/{}'.format(link.argname or '', link.post)
-            linkdict[link.start][connector] = link
-            # undirected eq links look directed, so add them both ways
-            if link.argname == '':
-                linkdict[link.end][connector] = link
-    explored = set()
+            fwdlinks[link.start][connector] = link
+            baklinks[link.end][connector] = link
+    paths = defaultdict(list)
     for nid in xmrs.nodeids:
-        if nid in explored:
-            continue  # might have already been there because of _find_paths
-        for path in _find_paths(xmrs, nid, linkdict, set()):
-            explored.add(path.nodeid)
+        if nid in paths: continue  # maybe already visited in _find_paths
+        for path in _find_paths(xmrs, nid, method,
+                                fwdlinks, baklinks, set()):
+            paths[path.nodeid].append(path)
+    for nid in xmrs.nodeids:
+        for path in sorted(paths.get(nid, []), key=lambda p: p.depth):
             yield path
 
-def _find_paths(xmrs, nodeid, linkdict, seen):
+def _find_paths(xmrs, nodeid, method, fwdlinks, baklinks, seen, depth=1):
     if nodeid in seen:
         return None
     seen.add(nodeid)
-    g = xmrs._graph
-    srcnode = g.node[nodeid]
-    pred = srcnode['pred']
-    # just the pred
-    #yield XmrsPathNode(nodeid, pred)
-    # pred and all arguments unfulfilled (e.g. "_bark_v_1_rel:ARG1/NEQ>")
-    yield XmrsPathNode(
-        nodeid, pred, links=dict((c, None) for c in linkdict.get(nodeid,{}))
+
+    curpath = XmrsPathNode(
+        nodeid,
+        xmrs._graph.node[nodeid]['pred'],
+        links=dict((c, None) for c in fwdlinks.get(nodeid, {})),
+        depth=1
     )
-    # pred and all fulfilled arguments
+    yield curpath
+
+    connections = []
+    connections = list(fwdlinks[nodeid].keys())
+    elif method == "headed":
+        connections = list(filter(headed, connections))
+        connections.extend(list(filter(lambda c: not headed(c),
+                                       baklinks[nodeid].keys())))
+    if connections:
+        for connector in connections:
+            
+
     connections = linkdict[nodeid]
     if connections:
         links = {}
         for connector, link in linkdict[nodeid].items():
             links[connector] = list(_find_paths(
-                xmrs, link.end, linkdict, seen
+                xmrs, link.end, method, linkdict, seen, maxdepth=maxdepth - 1
             ))
         # beware of magic below:
-        #   links maps a connector (like ARG1/NEQ) to a list of subpaths
-        #   this gets the product of subpaths for all connectors, then remaps
+        #   links maps a connector (like ARG1/NEQ) to a list of subpaths.
+        #   This gets the product of subpaths for all connectors, then remaps
         #   the connector to the appropriate subpaths
         lds = map(
             lambda z: dict(zip(links.keys(), z)),
             product(*links.values())
         )
         for ld in lds:
-            yield XmrsPathNode(nodeid, pred, links=ld)
+            yield XmrsPathNode(
+                nodeid,
+                xmrs._graph.node[nodeid]['pred'],
+                links=ld,
+                depth=depth
+            )
 
 
 tokenizer = re.compile(
-    r'|(?P<dq_string>"[^"\\]*(?:\\.[^"\\]*)*")'  # quoted strings
+    r'(?P<dq_string>"[^"\\]*(?:\\.[^"\\]*)*")'  # quoted strings
     r"|(?P<sq_string>'[^ \\]*(?:\\.[^ \\]*)*)"  # single-quoted 'strings
     r'|(?P<connector>[^:/]*/(?:EQ|NEQ|HEQ|H))'  # connector
     r'|(?P<symbol>[^\s*:/>@()\[\]=&|]+)'  # non-breaking characters
