@@ -341,22 +341,25 @@ tokenizer = re.compile(
     r'|(?P<punc>[*()&|])'  # meaningful punctuation
 )
 
-def _get_next(tokens):
-    mo = next(tokens)
-    return mo.lastgroup, mo.group()
-
 def read_path(path_string):
-    toks = tokenizer.finditer(path_string)
-    path = _read_path(toks, 0, 0)
+    toks = deque((mo.lastgroup, mo.group())
+                 for mo in tokenizer.finditer(path_string))
+    try:
+        path = _read_node(toks, 0, 0)
+    except IndexError:
+        raise XmrsPathError('Unexpected termination for path: {}'
+            .format(path_string))
     if path is None:
-        raise XmrsPathError('Error reading path: {}'.format(path_string))
+        raise XmrsPathError('Error reading path: {}'
+            .format(path_string))
+    elif toks:
+        raise XmrsPathError('Unconsumed tokens: {}'
+            .format(', '.join(tok[1] for tok in toks)))
     return path
 
-def _read_path(tokens, depth, distance):
-    try:
-        mtype, mtext = _get_next(tokens)
-    except StopIteration:
-        return None
+def _read_node(tokens, depth, distance):
+    if not tokens: return None
+    mtype, mtext = tokens.popleft()
     if mtype in ('dq_string', 'sq_string', 'symbol'):
         links = _read_links(tokens, depth, distance)
         return XmrsPathNode(
@@ -366,39 +369,42 @@ def _read_path(tokens, depth, distance):
             depth,
             distance
         )
+    else:
+        tokens.appendleft((mtype, mtext))  # put it back
+    return None  # current position isn't a path node
 
 def _read_links(tokens, depth, distance):
-    try:
-        mtype, mtext = _get_next(tokens)
-    except StopIteration:
-        return None
-    if mtext == '(':
-        links = {}
-        mtype, mtext = _get_next(tokens)
-        while mtext != ')':
-            if mtext in ('&', '|'):
-                mtype, mtext = _get_next(tokens)
-                continue
-            connector, subpath = _read_link(
-                mtype, mtext, tokens, depth, distance
-            )
-            links[connector] = subpath
-            mtype, mtext = _get_next(tokens)
-        return links
-    elif mtype in ('fwd_connector', 'bak_connector', 'und_connector'):
+    if not tokens: return None
+    mtype, mtext = tokens.popleft()
+    if mtype in ('fwd_connector', 'bak_connector', 'und_connector'):
         connector, subpath = _read_link(
             mtype, mtext, tokens, depth, distance
         )
         return {connector: subpath}
+    elif mtext == '(':
+        links = {}
+        mtype, mtext = tokens.popleft()
+        while mtext != ')':
+            connector, subpath = _read_link(
+                mtype, mtext, tokens, depth, distance
+            )
+            links[connector] = subpath
+            mtype, mtext = tokens.popleft()
+            if mtext in ('&', '|'):
+                mtype, mtext = tokens.popleft()
+            elif mtext != ')':
+                raise XmrsPathError('Unexpected token: {}'.format(mtext))
+        return links
     else:
-        raise XmrsPathError('Unexpected token: {}'.format(mtext))
+        tokens.appendleft((mtype, mtext))  # put it back
+    return None  # not a link
 
 def _read_link(mtype, mtext, tokens, depth, distance):
     if mtype == 'fwd_connector':
-        return mtext, _read_path(tokens, depth+1, distance+1)
+        return mtext, _read_node(tokens, depth+1, distance+1)
     elif mtype == 'bak_connector':
-        return mtext, _read_path(tokens, depth-1, distance+1)
+        return mtext, _read_node(tokens, depth-1, distance+1)
     elif mtype == 'und_connector':
-        return mtext, _read_path(tokens, depth, distance+1)
+        return mtext, _read_node(tokens, depth, distance+1)
     else:
         raise XmrsPathError('Unexpected token: {}'.format(mtext))
