@@ -24,78 +24,105 @@ The `mrs.path` module is a library of functions, not a script, so import it:
 MRS Paths are a variableless, nodeid-less representation meant primarily
 for serialization and deserialization.
 
-First let's read and write a path with no connectors.
+First let's read and write some paths.
 
 ```python
->>> p = mp.read_path('abc')
->>> p.nodeid is None
-True
->>> p.pred.string
+>>> p1 = mp.read_path('abc')
+>>> mp.format_path(p1)
 'abc'
->>> len(p.links)
-0
->>> p.depth
-0
->>> mp.format_path(p)
-'abc'
-
-```
-
-Now let's read and write a path with a single forward-connector.
-
-```python
->>> p = mp.read_path('abc:ARG1/NEQ>def')
->>> p.pred.string
-'abc'
->>> len(p.links)
-1
->>> p.depth
-0
->>> p2 = p.links[':ARG1/NEQ>']
->>> p2.depth
-1
->>> p2.pred.string
-'def'
->>> len(p2.links)
-0
->>> mp.format_path(p)
-'abc:ARG1/NEQ>def'
+>>> p2 = mp.read_path('abc:ARG1/NEQ>def')
 >>> mp.format_path(p2)
-'def'
-
-```
-
-Connectors don't always need following predicates:
-
-```python
->>> p = mp.read_path('abc:ARG1/NEQ>')
->>> p.pred.string
-'abc'
->>> len(p.links)
-1
->>> p.depth
-0
->>> p.links[':ARG1/NEQ>'] is None
-True
->>> mp.format_path(p)
+'abc:ARG1/NEQ>def'
+>>> p3 = mp.read_path('abc:ARG1/NEQ>')
+>>> mp.format_path(p3)
 'abc:ARG1/NEQ>'
->>> mp.format_path(p, trailing_connectors='never')
+>>> mp.format_path(p3, trailing_connectors='never')
 'abc'
+>>> p4 = mp.read_path('def<ARG1/NEQ:abc')
+>>> mp.format_path(p4)
+'def<ARG1/NEQ:abc'
+>>> p5 = mp.read_path('abc(:ARG1/NEQ>def & :ARG2/EQ>ghi)')
+>>> mp.format_path(p5)
+'abc(:ARG1/NEQ>def & :ARG2/EQ>ghi)'
+>>> p6 = mp.read_path('abc(:ARG1/NEQ>def & <ARG1/EQ:ghi)')
+>>> mp.format_path(p6)
+'abc(:ARG1/NEQ>def & <ARG1/EQ:ghi)'
+>>> p7 = mp.read_path('abc:ARG1/NEQ>def:ARG1/EQ>ghi')
+>>> mp.format_path(p7)
+'abc:ARG1/NEQ>def:ARG1/EQ>ghi'
+>>> p8 = mp.read_path('abc:ARG1/NEQ>def:/EQ:ghi')
+>>> mp.format_path(p8)
+'abc:ARG1/NEQ>def:/EQ:ghi'
 
 ```
 
-Connectors can go backwards in headed paths:
+The path is a linked list. You can access the first node's properties:
 
 ```python
->>> p = mp.read_path('def<ARG1/NEQ:abc')
->>> p.pred.string
-'def'
->>> len(p.links)
-1
->>> p.links['<ARG1/NEQ:'].pred.string
+>>> p1.nodeid is None
+True
+>>> p1.pred.string
 'abc'
->>> len(p.links['<ARG1/NEQ:'].links)
+>>> len(p1.links)
 0
+>>> p1.depth
+0
+>>> p1.distance
+0
+
+```
+
+And for paths with links, you can traverse through the path:
+
+```python
+>>> len(p2.links)
+1
+>>> p2.links[':ARG1/NEQ>'].pred.string
+'def'
+>>> p2[':ARG1/NEQ>'].pred.string
+'def'
+>>> len(p2[':ARG1/NEQ>'].links)
+0
+>>> p7[':ARG1/NEQ>'][':ARG1/EQ>'].pred.string
+'ghi'
+
+```
+
+Subpaths are paths, too:
+
+```python
+>>> mp.format_path(p7[':ARG1/NEQ>'])
+'def:ARG1/EQ>ghi'
+
+```
+
+Depth is sensitive to the direction of the link, while distance is not:
+
+```python
+>>> p6.depth
+0
+>>> p6.distance
+0
+>>> p6[':ARG1/NEQ>'].depth
+1
+>>> p6[':ARG1/NEQ>'].distance
+1
+>>> p6['<ARG1/EQ:'].depth
+-1
+>>> p6['<ARG1/EQ:'].distance
+1
+>>> p7[':ARG1/NEQ>'][':ARG1/EQ>'].depth
+2
+>>> p7[':ARG1/NEQ>'][':ARG1/EQ>'].distance
+2
+>>> p8[':ARG1/NEQ>'].depth
+1
+>>> p8[':ARG1/NEQ>'].distance
+1
+>>> p8[':ARG1/NEQ>'][':/EQ:'].depth
+1
+>>> p8[':ARG1/NEQ>'][':/EQ:'].distance
+2
 
 ```
 
