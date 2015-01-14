@@ -2,7 +2,7 @@ import re
 from collections import deque, defaultdict
 from itertools import product
 from .components import Pred
-from .utils import powerset
+from .util import powerset
 from delphin._exceptions import XmrsError
 
 class XmrsPathError(XmrsError): pass
@@ -186,13 +186,14 @@ def find(xmrs, path):
 
 class XmrsPathNode(object):
 
-    __slots__ = ('nodeid', 'pred', 'links')
+    __slots__ = ('nodeid', 'pred', 'links', 'depth', 'distance')
 
-    def __init__(self, nodeid, pred, links=None, depth=None):
+    def __init__(self, nodeid, pred, links=None, depth=None, distance=None):
         self.nodeid = nodeid
         self.pred = pred
         self.links = dict(links or [])
         self.depth = depth
+        self.distance = distance
 
     def __getitem__(self, key):
         return self.links[key]
@@ -228,16 +229,35 @@ def headed(connector):
     return not (connector == 'RSTR/H' or connector.endswith('/EQ'))
 
 
-def sort_rargs(rargs):
-    # put LBL at the start, BODY at the end, otherwise alphabetically sort
-    return sorted(rargs, key=lambda x: (x != 'LBL', x == 'BODY', x))
+def connector_sort(connector):
+    return (
+        not connector.endswith('>'),  # forward links first
+        not connector.startswith('<'),  # then backward, then undirected
+        not connector[1:].startswith('LBL'),  # LBL before other args
+        connector[1:].startswith('BODY'),  # BODY last
+        connector[1:]  # otherwise alphabetical
+    )
 
 
-def format_path(path, rargsort=sort_rargs):
+def format_path(path,
+                sort_connectors=connector_sort,
+                trailing_connectors='always'):
     if path is None:
         return ''
-    links = [':{}>{}'.format(rarg, format_path(path.links[rarg]))
-             for rarg in rargsort(path.links.keys())]
+    links = []
+    connectors = path.links.keys()
+    if sort_connectors:
+        connectors = sorted(connectors, key=sort_connectors)
+    for conn in connectors:
+        tgt = path.links[conn]
+        if (tgt or
+            trailing_connectors == 'always' or
+            (trailing_connectors == 'forward' and conn.endswith('>')) or
+            (trailing_connectors == 'backward' and conn.startswith('<'))):
+
+            links.append(
+                '{}{}'.format(conn, format_path(tgt))
+            )
     if len(links) > 1:
         subpath = '({})'.format(' & '.join(links))
     else:
@@ -279,13 +299,13 @@ def _find_paths(xmrs, nodeid, method, fwdlinks, baklinks, seen, depth=1):
 
     connections = []
     connections = list(fwdlinks[nodeid].keys())
-    elif method == "headed":
+    if method == "headed":
         connections = list(filter(headed, connections))
         connections.extend(list(filter(lambda c: not headed(c),
                                        baklinks[nodeid].keys())))
-    if connections:
-        for connector in connections:
-            
+    # if connections:
+    #     for connector in connections:
+
 
     connections = linkdict[nodeid]
     if connections:
@@ -314,9 +334,11 @@ def _find_paths(xmrs, nodeid, method, fwdlinks, baklinks, seen, depth=1):
 tokenizer = re.compile(
     r'(?P<dq_string>"[^"\\]*(?:\\.[^"\\]*)*")'  # quoted strings
     r"|(?P<sq_string>'[^ \\]*(?:\\.[^ \\]*)*)"  # single-quoted 'strings
-    r'|(?P<connector>[^:/]*/(?:EQ|NEQ|HEQ|H))'  # connector
-    r'|(?P<symbol>[^\s*:/>@()\[\]=&|]+)'  # non-breaking characters
-    r'|(?P<punc>[*:/>()&|])'  # meaningful punctuation
+    r'|(?P<fwd_connector>:[^/]*/(?:EQ|NEQ|HEQ|H)>)'  # :X/Y> connector
+    r'|(?P<bak_connector><[^/]*/(?:EQ|NEQ|HEQ|H):)'  # <X/Y: connector
+    r'|(?P<und_connector>:[^/]*/(?:EQ|NEQ|HEQ|H):)'  # :X/Y: connector
+    r'|(?P<symbol>[^\s*:/><@()\[\]=&|]+)'  # non-breaking characters
+    r'|(?P<punc>[*()&|])'  # meaningful punctuation
 )
 
 def _get_next(tokens):
@@ -325,49 +347,58 @@ def _get_next(tokens):
 
 def read_path(path_string):
     toks = tokenizer.finditer(path_string)
-    path = _read_path(toks)
+    path = _read_path(toks, 0, 0)
     if path is None:
         raise XmrsPathError('Error reading path: {}'.format(path_string))
     return path
 
-def _read_path(tokens):
-    mtype, mtext = _get_next(tokens)
-    if mtype in ('dq_string', 'sq_string', 'symbol'):
-        links = _read_links(tokens)
-        return XmrsPathNode(None, Pred.stringpred(mtext), links)
-
-def _read_links(tokens):
+def _read_path(tokens, depth, distance):
     try:
         mtype, mtext = _get_next(tokens)
     except StopIteration:
         return None
-    if mtext == ':':
-        connector, subpath = _read_link(tokens)
-        return {connector: subpath}
-    elif mtext == '(':
+    if mtype in ('dq_string', 'sq_string', 'symbol'):
+        links = _read_links(tokens, depth, distance)
+        return XmrsPathNode(
+            None,
+            Pred.stringpred(mtext),
+            links,
+            depth,
+            distance
+        )
+
+def _read_links(tokens, depth, distance):
+    try:
+        mtype, mtext = _get_next(tokens)
+    except StopIteration:
+        return None
+    if mtext == '(':
         links = {}
         mtype, mtext = _get_next(tokens)
-        print('1', mtext)
-        if mtext == ':':
-            print('in')
-            connector, subpath = _read_link(tokens)
-            print(connector)
+        while mtext != ')':
+            if mtext in ('&', '|'):
+                mtype, mtext = _get_next(tokens)
+                continue
+            connector, subpath = _read_link(
+                mtype, mtext, tokens, depth, distance
+            )
             links[connector] = subpath
             mtype, mtext = _get_next(tokens)
-            while mtext == '&':
-                mtype, mtext = _get_next(tokens)
-                assert mtext == ':'
-                connector, subpath = _read_link(tokens)
-                links[connector] = subpath
-                mtype, mtext = _get_next(tokens)
-        print(mtext)
-        assert mtext == ')'
+        return links
+    elif mtype in ('fwd_connector', 'bak_connector', 'und_connector'):
+        connector, subpath = _read_link(
+            mtype, mtext, tokens, depth, distance
+        )
+        return {connector: subpath}
+    else:
+        raise XmrsPathError('Unexpected token: {}'.format(mtext))
 
-def _read_link(tokens):
-    mtype, mtext = _get_next(tokens)
-    assert mtype == 'connector'
-    connector = mtext
-    mtype, mtext = _get_next(tokens)
-    assert mtext == '>'
-    subpath = _read_path(tokens)
-    return connector, subpath
+def _read_link(mtype, mtext, tokens, depth, distance):
+    if mtype == 'fwd_connector':
+        return mtext, _read_path(tokens, depth+1, distance+1)
+    elif mtype == 'bak_connector':
+        return mtext, _read_path(tokens, depth-1, distance+1)
+    elif mtype == 'und_connector':
+        return mtext, _read_path(tokens, depth, distance+1)
+    else:
+        raise XmrsPathError('Unexpected token: {}'.format(mtext))
