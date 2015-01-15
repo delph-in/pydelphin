@@ -598,6 +598,9 @@ class Pred(object):
             other = other.string
         return self.string.strip('"\'') == other.strip('"\'')
 
+    def __str__ (self):
+        return self.string
+
     def __repr__(self):
         return '<Pred object {} at {}>'.format(self.string, id(self))
 

@@ -528,6 +528,22 @@ class Xmrs(LnkMixin):
             return None
         return self._graph.node[iv].get('bv' if quantifier else 'iv')
 
+    def get_pred(self, nodeid):
+        """
+        Retrieve the |Pred| with the given nodeid, or None if no |Pred|
+        matches.
+
+        Args:
+            nodeid: The nodeid of the |Pred| to return
+        Returns:
+            A |Pred| or None.
+        """
+        try:
+            d = self._graph.node[nodeid]
+            return d['pred']
+        except KeyError:
+            return None
+
     def get_ep(self, nodeid):
         """
         Retrieve the |EP| with the given nodeid, or None if no |EPs|

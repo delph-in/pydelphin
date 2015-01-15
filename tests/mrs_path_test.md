@@ -28,101 +28,110 @@ First let's read and write some paths.
 
 ```python
 >>> p1 = mp.read_path('abc')
->>> mp.format_path(p1)
+>>> mp.format(p1)
 'abc'
 >>> p2 = mp.read_path('abc:ARG1/NEQ>def')
->>> mp.format_path(p2)
+>>> mp.format(p2)
 'abc:ARG1/NEQ>def'
 >>> p3 = mp.read_path('abc:ARG1/NEQ>')
->>> mp.format_path(p3)
+>>> mp.format(p3)
 'abc:ARG1/NEQ>'
->>> mp.format_path(p3, trailing_connectors='never')
+>>> mp.format(p3, trailing_connectors='never')
 'abc'
 >>> p4 = mp.read_path('def<ARG1/NEQ:abc')
->>> mp.format_path(p4)
+>>> mp.format(p4)
 'def<ARG1/NEQ:abc'
 >>> p5 = mp.read_path('abc(:ARG1/NEQ>def & :ARG2/EQ>ghi)')
->>> mp.format_path(p5)
+>>> mp.format(p5)
 'abc(:ARG1/NEQ>def & :ARG2/EQ>ghi)'
 >>> p6 = mp.read_path('abc(:ARG1/NEQ>def & <ARG1/EQ:ghi)')
->>> mp.format_path(p6)
+>>> mp.format(p6)
 'abc(:ARG1/NEQ>def & <ARG1/EQ:ghi)'
 >>> p7 = mp.read_path('abc:ARG1/NEQ>def:ARG1/EQ>ghi')
->>> mp.format_path(p7)
+>>> mp.format(p7)
 'abc:ARG1/NEQ>def:ARG1/EQ>ghi'
 >>> p8 = mp.read_path('abc:ARG1/NEQ>def:/EQ:ghi')
->>> mp.format_path(p8)
+>>> mp.format(p8)
 'abc:ARG1/NEQ>def:/EQ:ghi'
 
 ```
 
-The path is a linked list. You can access the first node's properties:
+Paths have a distance and depth; distance is insensitive to the
+direction of the link, while depth is positive for forward links,
+negative for backwards links, and equivalent for undirected links. The
+`distance()` and `depth()` functions of `XmrsPath` objects return the
+maximum distance and positive depth for the path. With a `direction=min`
+parameter for `depth()`, it returns the maximum negative (i.e. minimum)
+depth.
+
 
 ```python
->>> p1.nodeid is None
-True
->>> p1.pred.string
-'abc'
->>> len(p1.links)
-0
->>> p1.depth
-0
->>> p1.distance
-0
+>>> p1.distance(), p1.depth()
+(0, 0)
+>>> p2.distance(), p2.depth()
+(1, 1)
+>>> p3.distance(), p3.depth()
+(0, 0)
+>>> p4.distance(), p4.depth(), p4.depth(direction=min)
+(1, 0, -1)
+>>> p5.distance(), p5.depth()
+(1, 1)
+>>> p6.distance(), p6.depth(), p6.depth(direction=min)
+(1, 1, -1)
+>>> p7.distance(), p7.depth()
+(2, 2)
+>>> p8.distance(), p8.depth()
+(2, 1)
 
 ```
 
-And for paths with links, you can traverse through the path:
+The `start` object on the path is the first node in a linked list. The
+`links` attribute on a node is a dictionary mapping a connector to the
+next node. Key access on the node itself acts like querying the links.
+This makes it convenient for traversing through the path.
 
 ```python
->>> len(p2.links)
-1
->>> p2.links[':ARG1/NEQ>'].pred.string
-'def'
->>> p2[':ARG1/NEQ>'].pred.string
-'def'
->>> len(p2[':ARG1/NEQ>'].links)
+>>> str(p1.start.pred)
+'abc'
+>>> len(p1.start.links)
 0
->>> p7[':ARG1/NEQ>'][':ARG1/EQ>'].pred.string
+>>> len(p2.start.links)
+1
+>>> str(p2.start.links[':ARG1/NEQ>'].pred)
+'def'
+>>> str(p2.start[':ARG1/NEQ>'].pred)
+'def'
+>>> str(p6.start['<ARG1/EQ:'].pred)
+'ghi'
+>>> str(p7.start[':ARG1/NEQ>'][':ARG1/EQ>'].pred)
 'ghi'
 
 ```
 
-Subpaths are paths, too:
+Using a node object as the parameter of the path's `distance()` and
+`depth()` functions returns the distance or depth of that node.
 
 ```python
->>> mp.format_path(p7[':ARG1/NEQ>'])
-'def:ARG1/EQ>ghi'
+>>> p6.distance(p6.start), p6.depth(p6.start)
+(0, 0)
+>>> p6.distance(p6.start[':ARG1/NEQ>']), p6.depth(p6.start[':ARG1/NEQ>'])
+(1, 1)
+>>> p6.distance(p6.start['<ARG1/EQ:']), p6.depth(p6.start['<ARG1/EQ:'])
+(1, -1)
 
 ```
 
-Depth is sensitive to the direction of the link, while distance is not:
+Nodes can be made into subpaths, but the `format()` function will also
+work with a regular node:
 
 ```python
->>> p6.depth
-0
->>> p6.distance
-0
->>> p6[':ARG1/NEQ>'].depth
+>>> p7b = mp.XmrsPath(p7.start[':ARG1/NEQ>'])
+>>> p7b.distance()
 1
->>> p6[':ARG1/NEQ>'].distance
-1
->>> p6['<ARG1/EQ:'].depth
--1
->>> p6['<ARG1/EQ:'].distance
-1
->>> p7[':ARG1/NEQ>'][':ARG1/EQ>'].depth
-2
->>> p7[':ARG1/NEQ>'][':ARG1/EQ>'].distance
-2
->>> p8[':ARG1/NEQ>'].depth
-1
->>> p8[':ARG1/NEQ>'].distance
-1
->>> p8[':ARG1/NEQ>'][':/EQ:'].depth
-1
->>> p8[':ARG1/NEQ>'][':/EQ:'].distance
-2
+>>> mp.format(p7b)
+'def:ARG1/EQ>ghi'
+>>> mp.format(p7.start[':ARG1/NEQ>'])
+'def:ARG1/EQ>ghi'
 
 ```
 
@@ -187,15 +196,22 @@ Let's load some Xmrs objects to help with testing:
 
 ```
 
-### Generating Directed Paths
+### Generating Top-down Paths
 
-Directed paths can only go in the direction of the arguments, so they
+Top-down paths can only go in the direction of the arguments, so they
 cannot "backtrack" to get quantifiers, modifiers, etc. from their heads.
 On the other hand, they are simple tree structures of semantic subgraphs
 which may be a useful property for some applications.
 
 ```python
->>> mp.find_paths(it_rains, method="directed", allow_eq=False)
+>>> paths = map(
+...     mp.format,
+...     mp.find_paths(it_rains, method="top-down", allow_eq=False)
+... )
+>>> for path in sorted(paths):
+...     print(path)
+"_rain_v_1_rel"
+TOP:/H>"_rain_v_1_rel"
 
 ```
 
