@@ -234,12 +234,14 @@ class XmrsPath(object):
 
 class XmrsPathNode(object):
 
-    __slots__ = ('nodeid', 'pred', 'links')
+    __slots__ = ('nodeid', 'pred', 'links', 'depth', 'distance')
 
-    def __init__(self, nodeid, pred, links=None):
+    def __init__(self, nodeid, pred, links=None, depth=None, distance=None):
         self.nodeid = nodeid
         self.pred = pred
         self.links = dict(links or [])
+        self.depth = depth
+        self.distance = distance
 
     def __getitem__(self, key):
         return self.links[key]
