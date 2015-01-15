@@ -19,7 +19,7 @@ class MrsVariable(object):
     string sortal type (*sort*). In MRS and RMRS, variables may be the
     bearers of the properties of an |EP| (thus the name "variable
     properties"). MrsVariables are used for several purposes:
-    
+
     * **intrinsic variables** (aka IVs)
     * **handles** (labels or holes)
     * **anchors** (a nodeid with a sort)
@@ -109,7 +109,7 @@ class MrsVariable(object):
             return self.vid == vid
         except (ValueError, TypeError):
             pass  # nope.. return False
-        return False            
+        return False
 
     def __lt__(self, other):
         vid1 = self.vid
@@ -131,7 +131,7 @@ class MrsVariable(object):
         return self.vid
 
     def __hash__(self):
-        return hash(self.vid)
+        return hash(str(self))
 
     def __repr__(self):
         return '<MrsVariable object ({}{}) at {}>'.format(
@@ -205,7 +205,7 @@ class Lnk(object):
         type: the way the Lnk relates the semantics to the surface form
 
     Note:
-    
+
         Valid *types* and their associated *data* shown in the table
         below.
 
@@ -385,7 +385,7 @@ class Hook(object):
     @ltop.setter
     def ltop(self, value):
         self.top = value
-    
+
 
 # ARGUMENTS, LINKS, and CONSTRAINTS
 
@@ -529,7 +529,7 @@ class Pred(object):
         an instantiated Pred object
 
     Preds come in three flavors:
-    
+
     * **grammar preds** (gpreds): preds defined in a semantic hierarchy
       in the grammar, and are not necessarily tied to a lexical entry;
       grammar preds may not begin with a leading underscore
