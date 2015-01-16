@@ -36,10 +36,10 @@ if args.command in ('convert', 'c'):
         ms = srcfmt.load(open(args.infile, 'r'))
     else:
         ms = srcfmt.loads(sys.stdin.read())
-    outstream = sys.stdout
-    mrsformats[args.tgtfmt].dump(outstream, ms,
-                                 pretty_print=args.pretty_print,
-                                 color=args.color)
+    output = mrsformats[args.tgtfmt].dumps(ms, pretty_print=args.pretty_print,
+                                           color=args.color)
+    print(output)
+
 elif args.command in ('paths', 'p'):
     from delphin.mrs import path as mrspath
     if args.infile is not None:
