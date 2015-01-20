@@ -120,6 +120,64 @@ Lnk values can take 4 forms in SimpleMRS:
 
 ```
 
+"It rains", SimpleMRS 1.1 format without surface forms or a top LNK value.
+
+```python
+>>> m = next(simplemrs.loads('''[ TOP: h0
+... INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
+... RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
+... HCONS: < h0 qeq h1 > ]'''))
+>>> m.ltop  # doctest: +ELLIPSIS
+<MrsVariable object (h0) ...>
+>>> m.cfrom
+-1
+>>> m.cto
+-1
+>>> m.surface is None
+True
+>>> m.rels[0].surface is None
+True
+
+```
+
+"It rains", SimpleMRS 1.1 format with surface forms and a top LNK value.
+
+```python
+>>> m = next(simplemrs.loads('''[ <0:9> "It rains." TOP: h0
+... INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
+... RELS: < [ "_rain_v_1_rel"<3:9> "rains." LBL: h1 ARG0: e2 ] >
+... HCONS: < h0 qeq h1 > ]'''))
+>>> m.cfrom
+0
+>>> m.cto
+9
+>>> m.surface
+'It rains.'
+>>> m.rels[0].surface
+'rains.'
+
+```
+
+"It rains", SimpleMRS 1.1 format with everything including ICONS.
+
+```python
+>>> m = next(simplemrs.loads('''[ <0:9> "It rains." TOP: h0
+... INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
+... RELS: < [ "_rain_v_1_rel"<3:9> "rains." LBL: h1 ARG0: e2 ] >
+... HCONS: < h0 qeq h1 >
+... ICONS: < e2 focus e2 > ]'''))
+>>> len(m.icons)
+1
+>>> ic = m.icons[0]
+>>> ic.target  # doctest: +ELLIPSIS
+<MrsVariable object (e2) ...>
+>>> ic.clause  # doctest: +ELLIPSIS
+<MrsVariable object (e2) ...>
+>>> ic.relation
+'focus'
+
+```
+
 "Abrams sleeps".
 
 ```python
@@ -157,5 +215,49 @@ Lnk values can take 4 forms in SimpleMRS:
 <MrsVariable object (x3) ...>
 >>> m.hcons  # doctest: +ELLIPSIS
 [<HandleConstraint object (h0 qeq h1) ...>, <HandleConstraint object (h5 qeq h7) ...>]
+
+```
+
+
+## Serializing
+
+"It rains", SimpleMRS 1.1 format with everything including ICONS. By
+default, version 1.1 is printed. Also, separately, by default, an MRS is
+printed on one line (as it would be in an [incr tsdb()] profile).
+
+```python
+>>> m = next(simplemrs.loads('''[ <0:9> "It rains." TOP: h0
+... INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
+... RELS: < [ "_rain_v_1_rel"<3:9> "rains." LBL: h1 ARG0: e2 ] >
+... HCONS: < h0 qeq h1 >
+... ICONS: < e2 focus e2 > ]'''))
+>>> print(simplemrs.dumps([m]))
+[ <0:9> "It rains." TOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ] RELS: < [ "_rain_v_1_rel"<3:9> "rains." LBL: h1 ARG0: e2 ] > HCONS: < h0 qeq h1 > ICONS: < e2 focus e2 > ]
+
+```
+
+With the `pretty_print` parameter set to `True`, the MRS is indented
+nicely.
+
+```python
+>>> print(simplemrs.dumps([m], pretty_print=True))
+[ <0:9> "It rains."
+  TOP: h0
+  INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
+  RELS: < [ "_rain_v_1_rel"<3:9> "rains." LBL: h1 ARG0: e2 ] >
+  HCONS: < h0 qeq h1 >
+  ICONS: < e2 focus e2 > ]
+
+```
+
+And by specifying the version to be 1.0, the extra information is not
+printed.
+
+```python
+>>> print(simplemrs.dumps([m], pretty_print=True, version=1.0))
+[ LTOP: h0
+  INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
+  RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
+  HCONS: < h0 qeq h1 > ]
 
 ```
