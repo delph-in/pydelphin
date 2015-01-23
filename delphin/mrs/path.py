@@ -6,190 +6,13 @@ from .components import Pred
 from .util import powerset
 from delphin._exceptions import XmrsError
 
-class XmrsPathError(XmrsError): pass
-
 TOP = 'TOP'
 
-# Something like this:
-#
-# Start              = OrPathExpr
-# OrPathExpr         = AndPathExpr ("|" AndPathExpr)*
-# AndPathExpr        = PathExpr ("&" PathExpr)*
-# PathExpr           = Path (ExprOp Value)?
-# ExprOp             = "=" | "is"
-# Value              = Path | String | "_"
-# Path               = PathGroup | TopPath | EPPath
-# PathGroup          = "(" OrPathExpr ")"
-# TopPath            = TopVar (PathOp EPPath)?
-# TopVar             = "LTOP" | "INDEX"
-# PathOp             = "/" | "%" | "^" | "~"
-# EPPath             = EP EPCondition? EPComponents?
-# EP                 = Pred | "#" NodeIdOrAnchor | "*"
-# NodeIdOrAnchor     = NodeId | Anchor
-# EPCondition        = "[" OrEPComponentExpr "]"
-# EPComponents       = EPComponentGroup | EPComponent
-# EPComponentGroup   = "(" OrEPComponentExpr ")"
-# OrEPComponentExpr  = AndEPComponentExpr ("|" AndEPComponentExpr)*
-# AndEPComponentExpr = EPComponentExpr ("&" EPComponentExpr)*
-# EPComponentExpr    = (EPComponent | Path) (ExprOp Value)?
-# EPComponent        = ArgPath | Property
-# ArgPath            = ":" ArgName (PathOp (EPPath | PathGroup))?
-# ArgName            = "*" | String
-# Property           = "@" PropName
-# PropName           = "*" | String
-
-# also empty input; check separately
-_path_end_tokens = set([')', ']', '|', '&'])
-_top_vars = set(['LTOP', 'INDEX'])
-_expression_operators = set(['=', 'is'])
-_non_pred_toks = set([':', '/', '%', '^', '~', '@', ')',
-                      '[', ']', '=', '&', '|'])  # '('
-
-
-
-
-def tokenize(path):
-    """Split the path into tokens."""
-    return tokenizer.findall(path)
-
-
-def walk(xmrs, path):
-    # for now path is space separated
-    path_tokens = path.split()
-
-
-def traverse(xmrs, path):
-    steps = deque(tokenize(path))
-    objs = _traverse_disjunction(xmrs, xmrs, steps, _traverse_pathexpr)
-    if steps:
-        raise Exception('Unconsumed MrsPath steps: {}'.format(''.join(steps)))
-    return objs
-
-
-# _traverse_disjunction and _traverse_conjunction are general-purpose,
-# and thus need a traverser argument, which says what they are
-# disjoining and conjoining
-def _traverse_disjunction(xmrs, obj, steps, traverser, context=None):
-    objs = _traverse_conjunction(xmrs, obj, steps, traverser, context)
-    while steps and steps[0] == '|':
-        steps.popleft()  # get rid of '|'
-        objs.extend(_traverse_conjunction(xmrs, obj, steps, traverser,
-                                          context))
-    return objs
-
-
-def _traverse_conjunction(xmrs, obj, steps, traverser, context=None):
-    objs = traverser(xmrs, obj, steps, context)
-    # &-ops can fail early, since all must evaluate to True to be
-    # used, but we can't short-circuit conjunction unless we know how
-    # many steps to remove from the queue, so just parse them for now
-    while steps and steps[0] == '&':
-        steps.popleft()  # get rid of '&'
-        objs2 = traverser(xmrs, obj, steps, context)
-        if objs and objs2:
-            objs.extend(objs2)
-        else:
-            objs = []
-    return objs
-
-
-def _traverse_pathexpr(xmrs, obj, steps, context=None):
-    # PathExpr = Path (ExprOp Value)?
-    objs = _traverse_path(xmrs, obj, steps, context)
-    if steps and steps[0] in _expression_operators:
-        values = _traverse_value(xmrs, obj, steps, context)
-        if step == '=':
-            return objs == values
-        elif step == 'is':
-            raise NotImplementedError
-    return objs
-
-
-def _traverse_path(xmrs, obj, steps, context=None):
-    # Path = PathGroup | TopPath | EPPath
-    if steps[0] == '(':
-        return _traverse_pathgroup(xmrs, obj, steps, context=obj)
-    elif steps[0].upper() in _top_vars:
-        return _traverse_toppath(xmrs, obj, steps, context)
-    else:
-        return _traverse_eppath(xmrs, obj, steps, context)
-
-
-def _traverse_pathgroup(xmrs, obj, steps, context=None):
-    # PathGroup = "(" OrPathExpr ")"
-    steps.popleft()  # remove '('
-    objs = _traverse_disjunction(xmrs, obj, steps, _traverse_pathexpr,
-                                 context)
-    steps.popleft()  # remove ')'
-
-
-def _traverse_toppath(xmrs, obj, steps, context=None):
-    # TopPath = TopVar (PathOp EPPath)?
-    # TopVar = "LTOP" | "INDEX"
-    step = steps.popleft().upper()
-    if step == 'LTOP':
-        raise NotImplementedError
-    elif step == 'INDEX':
-        raise NotImplementedError
-
-
-def _traverse_eppath(xmrs, obj, steps, context=None):
-    # EPPath = EP EPCondition? EPComponents?
-    # EP = Pred | "#" NodeIdOrAnchor | "*"
-    # NodeIdOrAnchor = NodeId | Anchor
-    eps = _traverse_ep(xmrs, obj, steps, context)
-
-    if steps and step[0] == '[':
-        eps = list(filter())
-    if steps and step[0] == '(':
-        pass
-
-
-def _traverse_ep(xmrs, obj, steps, context=None):
-    step = steps.popleft()
-    if step == '*':
-        eps = xmrs.nodes
-    elif step == '#':
-        nid = steps.popleft()
-        eps = xmrs.select_nodes(nodeid=nid)
-    elif Pred.is_valid_pred_string(step, suffix_required=False):
-        eps = xmrs.select_nodes(pred=step)
-    else:
-        raise Exception("Invalid ep: {}".format(''.join([step] + steps)))
-
-
-def _traverse_arg(xmrs, obj, steps):
-    pass
-    if step in (')', ']'):
-        pass
-        #    return objs
-        #    elif step == '[':
-        #    if traverse(xmrs, curobj, steps):
-        #        objs.append(curobj)
-    elif step == ':':
-        member = steps[1]
-        obj = obj.get_member()
-    elif step == '/':
-        pass
-    elif step == '%':
-        pass
-    elif step == '^':
-        pass
-    elif step == '~':
-        pass
-    elif step == '':
-        pass
-
-
-def find(xmrs, path):
-    pass
-
-# GENERATING PATHS #########################################################
-
+class XmrsPathError(XmrsError): pass
 
 class XmrsPath(object):
 
-    __slots__ = ('start', '_depth', '_distance')
+    __slots__ = ('start', '_depth', '_distance', '_preds')
 
     def __init__(self, startnode):
         self.start = startnode
@@ -198,11 +21,18 @@ class XmrsPath(object):
     def calculate_metrics(self):
         self._distance = {}
         self._depth = {}
+        self._preds = {}
         self._calculate_metrics(self.start, 0, 0)
 
     def _calculate_metrics(self, curnode, depth, distance):
         if curnode is None:
             return
+        # add pred index
+        try:
+            self._preds[curnode.pred].append(curnode)
+        except KeyError:
+            self._preds[curnode.pred] = []
+            self._preds[curnode.pred].append(curnode)
         _id = id(curnode)
         # we may re-update if we're on a shorter path
         updated = False
@@ -222,6 +52,9 @@ class XmrsPath(object):
             else:
                 self._calculate_metrics(curnode[link], depth, distance+1)
 
+    def copy(self):
+        return XmrsPath(self.start.copy())
+
     def distance(self, node=None):
         if node is None:
             return max(self._distance.values())
@@ -232,6 +65,34 @@ class XmrsPath(object):
         if node is None:
             return direction(self._depth.values())
         return self._depth[id(node)]
+
+    def select(self, pred):
+        return self._preds.get(pred, [])
+
+    def find(self, pred):
+        if pred not in self._preds:
+            return []
+        return find(self.start, pred)
+
+    def follow(self, connectors):
+        node = self.start
+        connectors = list(reversed(connectors))
+        while connectors:
+            node = node[connectors.pop()]
+        return node
+
+    def extend(self, extents):
+        for connectors, extent in extents:
+            # the final connector may be new information
+            tgt = self.follow(connectors[:-1])
+            if connectors:
+                tgt.links.setdefault(
+                    connectors[-1], XmrsPathNode(None, None)
+                )
+                tgt = tgt.links[connectors[-1]]
+            tgt.update(extent)
+        self.calculate_metrics()
+
 
 class XmrsPathNode(object):
 
@@ -248,6 +109,23 @@ class XmrsPathNode(object):
     def __iter__(self):
         return iter(self.links.items())
 
+    def copy(self):
+        n = XmrsPathNode(self.nodeid, self.pred)
+        for connector, tgt in self.links.items():
+            n.links[connector] = tgt.copy() if tgt is not None else tgt
+        return n
+
+    def update(self, other):
+        self.nodeid = other.nodeid or self.nodeid
+        self.pred = other.pred or self.pred
+        for connector, tgt in other.links.items():
+            if not self.links.get(connector):
+                self.links[connector] = tgt
+            else:
+                self[connector].update(tgt)
+
+
+# HELPER FUNCTIONS ##########################################################
 
 def get_nodeids(path):
     yield path.nodeid
@@ -290,6 +168,9 @@ def connector_sort(connector):
         connector[1:].startswith('BODY'),  # BODY last
         connector[1:]  # otherwise alphabetical
     )
+
+
+# WRITING PATHS #############################################################
 
 def format(node, sort_key=connector_sort, trailing_connectors='usually'):
     if isinstance(node, XmrsPath):
@@ -334,6 +215,10 @@ def _format(node, sort_key=connector_sort, trailing_connectors='usually'):
     else:
         subpath = ''.join(links)  # possibly just ''
     return '{}{}'.format(symbol, subpath)
+
+
+
+# FINDING PATHS #############################################################
 
 
 def find_paths(
@@ -429,7 +314,7 @@ def _get_connectors(method, links):
         return dict((c, None) for c in links if headed(c))
 
 
-## READING PATHS
+# READING PATHS #############################################################
 
 tokenizer = re.compile(
     r'(?P<dq_string>"[^"\\]*(?:\\.[^"\\]*)*")'  # quoted strings
@@ -491,3 +376,46 @@ def _read_links(tokens):
     else:
         tokens.appendleft((mtype, mtext))  # put it back
     return None  # not a link
+
+
+# SEARCHING PATHS ###########################################################
+
+
+def find(node, pred, connectors=[]):
+    matches = []
+    if node and node.pred == pred:
+        matches.append((connectors, node))
+    for connector, tgt in node.links.items():
+        if not tgt:
+            continue
+        for match in find(tgt, pred, connectors + [connector]):
+            matches.append(match)
+    return matches
+
+
+def find_extents(node1, node2):
+    exts = []
+    for (connectors, first_node) in find(node1, node2.pred):
+        for (ext_connections, ext) in extents(first_node, node2):
+            exts.append((connectors + ext_connections, ext))
+    return exts
+
+
+def extents(node1, node2):
+    assert node1.pred == node2.pred
+    exts = []
+    # if a constraint is violated, raise XmrsPathError
+    # if a constraint exists on node1 and node2, dive
+    # if one is on node1 but not node2, ignore
+    # if one is on node2 but not node1, return
+    for connector, tgt2 in node2.links.items():
+        if connector in node1.links:
+            tgt1 = node1.links[connector]
+            if tgt1.pred == tgt2.pred:
+                for connectors, ext in extents(tgt1, tgt2):
+                    exts.append(([connector] + connectors, ext))
+            else:
+                raise XmrsPathError('Incompatible paths.')
+        else:
+            exts.append(([connector], tgt2))
+    return exts

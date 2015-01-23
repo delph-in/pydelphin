@@ -477,8 +477,8 @@ class Link(object):
         self.post = post
 
     def __repr__(self):
-        return '<Link object ({}:{}/{} -> {}) at {}>'.format(
-            self.start, self.argname, self.post, self.end, id(self)
+        return '<Link object (#{} :{}/{}> #{}) at {}>'.format(
+            self.start, self.argname or '', self.post, self.end, id(self)
         )
 
 
