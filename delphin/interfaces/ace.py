@@ -2,6 +2,7 @@
 """ACE interface"""
 
 import logging
+import os
 from subprocess import (check_call, CalledProcessError, Popen, PIPE, STDOUT)
 
 class AceProcess(object):
@@ -9,6 +10,8 @@ class AceProcess(object):
     _cmdargs = []
 
     def __init__(self, grm, cmdargs=None, executable=None, **kwargs):
+        if not os.path.isfile(grm):
+            raise ValueError("Grammar file %s does not exist." % grm)
         self.grm = grm
         self.cmdargs = cmdargs or []
         self.executable = executable or 'ace'
