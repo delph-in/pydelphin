@@ -1,0 +1,8 @@
+# Ignore the build folder
+build/
+# Ignore the compiled python files
+*.pyc
+__pycache__/
+# Ignore auto-saves
+*~
+#*#
