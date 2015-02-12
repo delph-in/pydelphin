@@ -242,3 +242,7 @@ And the following libraries are planned:
 
 - A module for working with derivation trees
 - A SEM-I processor
+
+## Contributors
+
+- [T.J. Trimble](https://github.com/dantiston/)
