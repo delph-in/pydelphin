@@ -54,7 +54,8 @@ setup(
         'delphin.interfaces',
         'delphin.mrs',
         'delphin.extra',
-        'delphin.codecs'
+        'delphin.codecs',
+        'delphin.derivations'
     ],
     install_requires=[
         'networkx',
