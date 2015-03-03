@@ -131,7 +131,7 @@ def compile(cfg_path, out_path, log=None):
     except (CalledProcessError, OSError):
         logging.error(
             'Failed to compile grammar with ACE. See {}'
-            .format(abspath(log.name) if log is not None else '<stderr>')
+            .format(log.name if log is not None else '<stderr>')
         )
         raise
     #debug('Compiled grammar written to {}'.format(abspath(out_path)), log)
