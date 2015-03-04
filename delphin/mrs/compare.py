@@ -12,7 +12,8 @@ def xmrs_node_match(ndata1, ndata2):
     if 'pred' in ndata1 and 'pred' in ndata2:
         matching = (
             ndata1['pred'] == ndata2['pred'] and
-            ndata1['iv'].properties == ndata2['iv'].properties
+            getattr(ndata1['iv'], 'properties', None) ==
+            getattr(ndata2['iv'], 'properties', None)
         )
     elif 'hcons' in ndata1 and 'hcons' in ndata2:
         matching = ndata1['hcons'].relation == ndata2['hcons'].relation
