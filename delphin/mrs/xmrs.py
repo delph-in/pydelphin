@@ -177,7 +177,7 @@ def Dmrs(nodes=None, links=None,
             if l.post == H_POST or l.post == NIL_POST:
                 hcons += [qeq(labels[LTOP_NODEID], labels[l.end])]
         else:
-            if l.argname is None:
+            if not l.argname or l.argname.upper() == 'NIL':
                 continue  # don't make an argument for bare EQ links
             if l.post == H_POST:
                 hole = vgen.new(HANDLESORT)

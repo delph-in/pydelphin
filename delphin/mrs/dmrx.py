@@ -142,8 +142,8 @@ def decode_link(elem):
     # <!ELEMENT post (#PCDATA)>
     return Link(start=elem.get('from'),
                 end=elem.get('to'),
-                argname=elem.find('rargname').text,
-                post=elem.find('post').text)
+                argname=getattr(elem.find('rargname'), 'text', None),
+                post=getattr(elem.find('post'), 'text', None))
 
 
 def decode_lnk(elem):
