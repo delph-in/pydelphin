@@ -86,10 +86,12 @@ class XmrsPath(object):
             # the final connector may be new information
             tgt = self.follow(connectors[:-1])
             if connectors:
-                tgt.links.setdefault(
-                    connectors[-1], XmrsPathNode(None, None)
-                )
-                tgt = tgt.links[connectors[-1]]
+                subtgt = tgt.links.get(connectors[-1])
+                if subtgt is None:
+                    tgt.links[connectors[-1]] = extent
+                    continue
+                else:
+                    tgt = subtgt
             tgt.update(extent)
         self.calculate_metrics()
 
@@ -220,6 +222,24 @@ def _format(node, sort_key=connector_sort, trailing_connectors='usually'):
 
 # FINDING PATHS #############################################################
 
+def walk(
+        xmrs,
+        startnode=None,
+        method='top-down',
+        allow_eq=False,
+        max_distance=-1):
+    if method not in ('top-down', 'bottom-up', 'headed'):
+        raise XmrsPathError("Invalid path-finding method: {}".format(method))
+    if startnode is None:
+        startnode = 0  # TOP
+    links = _build_linkdict(xmrs, allow_eq)
+    agenda = deque()
+    seen = {}
+
+
+
+
+def _walk(xmrs, startnode, method, allow_eq, max_distance): pass
 
 def find_paths(
         xmrs,
@@ -411,7 +431,11 @@ def extents(node1, node2):
     for connector, tgt2 in node2.links.items():
         if connector in node1.links:
             tgt1 = node1.links[connector]
-            if tgt1.pred == tgt2.pred:
+            if tgt2 is None:
+                continue
+            elif tgt1 is None:
+                exts.append(([connector], tgt2))
+            elif tgt1.pred == tgt2.pred:
                 for connectors, ext in extents(tgt1, tgt2):
                     exts.append(([connector] + connectors, ext))
             else:
