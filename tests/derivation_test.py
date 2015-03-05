@@ -1,8 +1,8 @@
-from delphin.derivations.derivationtree import Derivation
+from delphin.derivation import Derivation
 
 import unittest
 
-class derivationtree_test(unittest.TestCase):
+class derivation_test(unittest.TestCase):
 
     def setUp(self):
         # ACE output text
@@ -14,6 +14,7 @@ class derivationtree_test(unittest.TestCase):
         self.terminal_text3 = "#T[485 \"LABEL\" \"TOKEN\" 9238 RULE_NAME]"
         self.terminal_nil = "#T[1 \"LABEL\" nil 2 RULE_NAME]"
         self.terminal_grammar_pred = "#T[1 LABEL \"TOKEN\" 2 RULE_NAME]"
+        self.terminal_punctuation = "#T[1 \"LABEL\" \"Don't.\" 2 RULE_NAME]"
         # Unary text
         self.unary_text = "#T[9 \"LABEL\" nil 93 RULE_NAME #T[10 \"LABEL2\" \"TOKEN\" 39 RULE_NAME2]]"
         self.unary_text2 = "#T[39 \"LABEL\" nil 93 RULE_NAME #T[40 \"LABEL2\" \"TOKEN\" 20 RULE_NAME2] ]"
@@ -159,6 +160,15 @@ class derivationtree_test(unittest.TestCase):
         self.assertTrue(tree.chart_ID == "2")
         self.assertTrue(tree.rule_name == "RULE_NAME")
         self.assertTrue(len(tree.children) == 0)
+
+    def test_read_ACE_terminal_punctuation(self):
+        tree = Derivation(self.terminal_punctuation)
+        self.assertEqual(tree.edge_ID, "1")
+        self.assertEqual(tree.label, "LABEL")
+        self.assertEqual(tree.token, "Don't.")
+        self.assertEqual(tree.chart_ID, "2")
+        self.assertEqual(tree.rule_name, "RULE_NAME")
+        self.assertEqual(len(tree.children), 0)
 
     def test_read_ACE_unary(self):
         tree = Derivation(self.unary_text)
@@ -312,16 +322,20 @@ class derivationtree_test(unittest.TestCase):
 
     ## Test output methods
     def test_output_HTML_terminal(self):
-        expected = "<div id=2 title=\"2: RULE_NAME\"><p>LABEL</p><p>TOKEN</p></div>"
+        expected = '''<div class="derivationTree"><ul><li class="terminal" id=2 title="2: RULE_NAME"><p>LABEL</p><p>TOKEN</p></li></ul></div>'''
         self.assertEqual(Derivation(self.terminal_text).output_HTML(), expected)
 
     def test_output_HTML_unary(self):
-        expected = "<div id=93 title=\"93: RULE_NAME\"><p>LABEL</p><div id=39 title=\"39: RULE_NAME2\"><p>LABEL2</p><p>TOKEN</p></div></div>"
+        expected = '''<div class="derivationTree"><ul><li id=93 title="93: RULE_NAME"><p>LABEL</p><ul><li class="terminal" id=39 title="39: RULE_NAME2"><p>LABEL2</p><p>TOKEN</p></li></ul></li></ul></div>'''
         self.assertEqual(Derivation(self.unary_text).output_HTML(), expected)
 
     def test_output_HTML_binary(self):
-        expected = "<div id=93 title=\"93: RULE_NAME\"><p>LABEL</p><div id=39 title=\"39: RULE_NAME2\"><p>LABEL2</p><p>TOKEN</p></div><div id=240 title=\"240: RULE_NAME3\"><p>LABEL3</p><p>TOKEN2</p></div></div>"
+        expected = '''<div class="derivationTree"><ul><li id=93 title="93: RULE_NAME"><p>LABEL</p><ul><li class="terminal" id=39 title="39: RULE_NAME2"><p>LABEL2</p><p>TOKEN</p></li><li class="terminal" id=240 title="240: RULE_NAME3"><p>LABEL3</p><p>TOKEN2</p></li></ul></li></ul></div>'''
         self.assertEqual(Derivation(self.binary_text).output_HTML(), expected)
+
+    def test_output_HTML_ACE(self):
+        expected = '''<div class="derivationTree" id="1"><ul><li class="terminal" id=2 title="2: RULE_NAME"><p>LABEL</p><p>TOKEN</p></li></ul></div>'''
+        self.assertEqual(Derivation(self.ace_output_text).output_HTML(), expected)
 
     ## Test equals methods
     # Terminal

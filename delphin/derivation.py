@@ -7,8 +7,8 @@ class Derivation(object):
     @author: T.J. Trimble
     """
 
-    legal_punctuation = re.escape("-+=/:.!?$<>@#%^&*")
-    quotes = re.compile("\'|\"")
+    legal_punctuation = re.escape("'’-+=/:.!?$<>@#%^&*")
+    strip_quotes = re.compile("^[\'\"]|[\'\"]$")
     ace_pattern = " ".join(("(?P<EDGE_ID>\d+)",
                             "(?P<LABEL>{0}[\w{1}]+{0})",
                             "(?P<TOKEN>({0}[\w{1}]+{0}|nil))",
@@ -45,13 +45,14 @@ class Derivation(object):
         try:
             self.children = children
             self.edge_ID = data_package[0]
-            self.label = Derivation.quotes.sub("", data_package[1])
-            self.token = Derivation.quotes.sub("", data_package[2]) if data_package[2] not in (None, "nil") else None
+            self.label = Derivation.strip_quotes.sub("", data_package[1])
+            self.token = Derivation.strip_quotes.sub("", data_package[2]) if data_package[2] not in (None, "nil") else None
             self.chart_ID = data_package[3]
             self.rule_name = data_package[4]
             self.tree_ID = data_package[5] if len(data_package) >= 6 else None
         except Exception as e:
-            print(data_package)
+            print("{} data_package at failue is {}".format(self.__class__.__name__, data_package))
+            raise e
                 
     # Interface specific methods
     #  Maybe move these to their respective interface classes?
@@ -86,7 +87,6 @@ class Derivation(object):
         stack = [(None, [])] # list of (node, children) tuples
         tokens = list(token_re.finditer(s))
         for i, match in enumerate(tokens):
-        #for match in token_re.finditer(s):
             token = match.group()
             # Definition of a tree/subtree
             #  #T[EDGE_ID LABEL TOKEN CHART_ID RULE_NAME
@@ -210,7 +210,7 @@ class Derivation(object):
         """
         Returns HTML representation of tree in the following format:
             
-            <div>
+            <div class="derivationTree" id={TREE_ID}>
                 <ul>
                     <li>
                         <a id={CHART_ID}{TITLE}>{PARENT_LABEL}</a>
@@ -229,7 +229,7 @@ class Derivation(object):
         attribute set to the rule used and the parse chart ID. Pass
         title_text=False to disable this.
         """
-        top_formatter = "<div class=\"derivationTree\"><ul>{}</ul></div>"
+        top_formatter = "<div class=\"derivationTree\"{tree_ID}><ul>{values}</ul></div>"
         formatter = "<li{CLASS}{CHART_ID}{TITLE}><p>{LABEL}</p>{TOKEN}{CHILDREN}</li>"
         # Add token if applicable
         values = {
@@ -243,9 +243,9 @@ class Derivation(object):
         # Return result
         result = formatter.format(**values)
         if top:
-            result = top_formatter.format(result)
+            tree_ID = " id=\"{}\"".format(self.tree_ID) if self.tree_ID else ""
+            result = top_formatter.format(tree_ID=tree_ID, values=result)
         return result
-        #result = "<div id={CHART_ID}{TITLE}><p>{LABEL}</p>{TOKEN}{CHILDREN}</div>"
 
     # Pickle Methods
     def read(self):
