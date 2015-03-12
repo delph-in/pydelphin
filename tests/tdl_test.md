@@ -284,13 +284,13 @@ String values and integer values (just treated as types):
 ```python
 >>> t = parsetdl('type := super & [ ATTR "val" ].')
 >>> list(t.features())  # doctest: +ELLIPSIS
-[('ATTR', <TdlDefinition object ("val") ...>)]
+[('ATTR', <TdlDefinition object ...>)]
 >>> t = parsetdl("type := super & [ ATTR 'val ].")
 >>> list(t.features())  # doctest: +ELLIPSIS
-[('ATTR', <TdlDefinition object ('val) ...>)]
+[('ATTR', <TdlDefinition object ...>)]
 >>> t = parsetdl('type := super & [ ATTR 1 ].')
 >>> list(t.features())  # doctest: +ELLIPSIS
-[('ATTR', <TdlDefinition object (1) ...>)]
+[('ATTR', <TdlDefinition object ...>)]
 
 ```
 
@@ -340,8 +340,8 @@ Multiple features on an AVM:
 ```python
 >>> t = parsetdl('type := super & [ ATTR1 val1, ATTR2 val2 ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR1', <TdlDefinition object (val1) ...>),
- ('ATTR2', <TdlDefinition object (val2) ...>)]
+[('ATTR1', <TdlDefinition object ...>),
+ ('ATTR2', <TdlDefinition object ...>)]
 
 ```
 
@@ -350,15 +350,15 @@ Multiple features on a sub-AVM:
 ```python
 >>> t = parsetdl('type := super & [ ATTR [ SUB1 val1, SUB2 val2 ] ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.SUB1', <TdlDefinition object (val1) ...>),
- ('ATTR.SUB2', <TdlDefinition object (val2) ...>)]
+[('ATTR.SUB1', <TdlDefinition object ...>),
+ ('ATTR.SUB2', <TdlDefinition object ...>)]
 
 ```
 
 ##### Features with Supertypes
 
-The `features()` function stops when a value with a type is found, but
-the `local_constraints()` function retrieves the full paths of all
+The `features()` function stops when a value with a supertype is found,
+but the `local_constraints()` function retrieves the full paths of all
 constraints on the type:
 
 ```python
@@ -370,9 +370,9 @@ constraints on the type:
 >>> t['ATTR.SUB'].supertypes
 ['val']
 >>> list(t.features())  # doctest: +ELLIPSIS
-[('ATTR', <TdlDefinition object (t) ...>)]
+[('ATTR', <TdlDefinition object ...>)]
 >>> list(t.local_constraints())  # doctest: +ELLIPSIS
-[('ATTR.SUB', <TdlDefinition object (val) ...>)]
+[('ATTR.SUB', <TdlDefinition object ...>)]
 
 ```
 
@@ -397,7 +397,7 @@ Single, bounded (terminated) list---the last item is `None`:
 ```python
 >>> t = parsetdl('type := super & [ ATTR < a > ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.FIRST', <TdlDefinition object (a) ...>),
+[('ATTR.FIRST', <TdlDefinition object ...>),
  ('ATTR.REST', None)]
 
 ```
@@ -407,10 +407,10 @@ Single list item with features:
 ```python
 >>> t = parsetdl('type := super & [ ATTR < a & [ SUB val ] > ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.FIRST', <TdlDefinition object (a) ...>),
+[('ATTR.FIRST', <TdlDefinition object ...>),
  ('ATTR.REST', None)]
 >>> list(t['ATTR.FIRST'].features())  # doctest: +ELLIPSIS
-[('SUB', <TdlDefinition object (val) ...>)]
+[('SUB', <TdlDefinition object ...>)]
 >>> t['ATTR.FIRST.SUB'].supertypes
 ['val']
 
@@ -421,8 +421,8 @@ Bounded list with multiple items:
 ```python
 >>> t = parsetdl('type := super & [ ATTR < a, b > ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.FIRST', <TdlDefinition object (a) ...>),
- ('ATTR.REST.FIRST', <TdlDefinition object (b) ...>),
+[('ATTR.FIRST', <TdlDefinition object ...>),
+ ('ATTR.REST.FIRST', <TdlDefinition object ...>),
  ('ATTR.REST.REST', None)]
 
 ```
@@ -441,7 +441,7 @@ Unbounded list with an initial item:
 ```python
 >>> t = parsetdl('type := super & [ ATTR < a, ... > ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS
-[('ATTR.FIRST', <TdlDefinition object (a) ...>)]
+[('ATTR.FIRST', <TdlDefinition object ...>)]
 
 ```
 
@@ -451,7 +451,7 @@ A dot (`.`), instead of a comma, delimiter allows access to the final
 ```python
 >>> t = parsetdl('type := super & [ ATTR1 < a . #rest >, ATTR2 #rest ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR1.FIRST', <TdlDefinition object (a) ...>),
+[('ATTR1.FIRST', <TdlDefinition object ...>),
  ('ATTR1.REST', <TdlDefinition object ...>),
  ('ATTR2', <TdlDefinition object ...>)]
 >>> t.coreferences
@@ -480,7 +480,7 @@ item:
 >>> t = parsetdl('type := super & [ ATTR <! a !> ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
 [('ATTR.LAST', <TdlDefinition object ...>),
- ('ATTR.LIST.FIRST', <TdlDefinition object (a) ...>)]
+ ('ATTR.LIST.FIRST', <TdlDefinition object ...>)]
 >>> t.coreferences
 [(None, ['ATTR.LIST.REST', 'ATTR.LAST'])]
 
@@ -492,8 +492,8 @@ Multiple items on a diff list; same behavior as above:
 >>> t = parsetdl('type := super & [ ATTR <! a, b !> ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
 [('ATTR.LAST', <TdlDefinition object ...>),
- ('ATTR.LIST.FIRST', <TdlDefinition object (a) ...>),
- ('ATTR.LIST.REST.FIRST', <TdlDefinition object (b) ...>)]
+ ('ATTR.LIST.FIRST', <TdlDefinition object ...>),
+ ('ATTR.LIST.REST.FIRST', <TdlDefinition object ...>)]
 >>> t.coreferences
 [(None, ['ATTR.LIST.REST.REST', 'ATTR.LAST'])]
 
