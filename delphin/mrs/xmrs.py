@@ -479,7 +479,14 @@ class Xmrs(LnkMixin):
                     else:
                         post = NEQ_POST
                 elif 'hcons' in t_d:
-                    t = self.labelset_head(t_d['hcons'].lo)
+                    lbl = t_d['hcons'].lo
+                    # if s is a quantifier and the quantifiee is in the
+                    # the target set, use the quantifiee
+                    s_iv = g.node[s].get('iv')
+                    if s_iv and g.node[s_iv]['iv'] in self.labelset(lbl):
+                        t = g.node[s_iv]['iv']
+                    else:
+                        t = self.labelset_head(lbl)
                     post = H_POST
                 elif t in g.labels:
                     t = self.labelset_head(t)
