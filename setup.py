@@ -1,36 +1,6 @@
 #!/usr/bin/env python3
 
-from unittest import TextTestRunner, TestLoader
-from glob import glob
-from os.path import splitext, basename, join as pjoin
-import os
-from distutils.core import setup, Command
-
-# thanks: http://da44en.wordpress.com/2002/11/22/using-distutils/
-class TestCommand(Command):
-    description='run unit tests'
-    user_options = [ ]
-
-    def initialize_options(self):
-        self._dir = os.getcwd()
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        '''
-        Finds all the tests modules in tests/, and runs them.
-        '''
-        testfiles = [ ]
-        for t in glob(pjoin(self._dir, 'tests', '*.py')):
-            if not t.endswith('__init__.py'):
-                testfiles.append('.'.join(
-                    ['tests', splitext(basename(t))[0]])
-                )
-
-        tests = TestLoader().loadTestsFromNames(testfiles)
-        t = TextTestRunner(verbosity = 1)
-        t.run(tests)
+from setuptools import setup
 
 setup(
     name='pyDelphin',
@@ -39,9 +9,37 @@ setup(
     author='Michael Wayne Goodman',
     author_email='goodman.m.w@gmail.com',
     description='Libraries and scripts for DELPH-IN data.',
-    packages=['delphin','delphin.interfaces','delphin.mrs','delphin.extra','delphin.codecs'],
-    cmdclass={'test':TestCommand},
+    license='MIT',
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Information Technology',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Topic :: Scientific/Engineering :: Information Analysis',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Topic :: Text Processing :: Linguistic',
+        'Topic :: Utilities'
+    ],
+    keywords='nlp semantics hpsg delph-in',
+    packages=[
+        'delphin',
+        'delphin.interfaces',
+        'delphin.mrs',
+        'delphin.extra',
+        'delphin.codecs'
+    ],
     install_requires=[
         'networkx',
-    ]
+    ],
+    # entry_points={
+    #     'console_scripts': [
+    #         'fine=...'
+    #     ]
+    # }
+    test_suite='tests'
 )

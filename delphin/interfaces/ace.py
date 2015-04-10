@@ -9,12 +9,13 @@ class AceProcess(object):
 
     _cmdargs = []
 
-    def __init__(self, grm, cmdargs=None, executable=None, **kwargs):
+    def __init__(self, grm, cmdargs=None, executable=None, env=None, **kwargs):
         if not os.path.isfile(grm):
             raise ValueError("Grammar file %s does not exist." % grm)
         self.grm = grm
         self.cmdargs = cmdargs or []
         self.executable = executable or 'ace'
+        self.env = env or os.environ
         self._open()
 
     def _open(self):
@@ -23,6 +24,7 @@ class AceProcess(object):
             stdin=PIPE,
             stdout=PIPE,
             stderr=STDOUT,
+            env=self.env,
             universal_newlines=True
         )
 
