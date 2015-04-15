@@ -1,9 +1,13 @@
+
 from collections import (OrderedDict, defaultdict)
 from itertools import chain
 import warnings
 # consider using this:
 # from functools import lru_cache
+
 import networkx as nx
+from networkx import DiGraph, relabel_nodes
+
 from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .components import (
     Hook, MrsVariable, ElementaryPredication, Node, Argument, Link,
@@ -13,7 +17,7 @@ from .config import (
     HANDLESORT, IVARG_ROLE, CONSTARG_ROLE, LTOP_NODEID, FIRST_NODEID,
     RSTR_ROLE, EQ_POST, NEQ_POST, HEQ_POST, H_POST, NIL_POST
 )
-from .util import XmrsDiGraph, first, second
+from .util import first, second
 
 
 def Mrs(hook=None, rels=None, hcons=None, icons=None,
@@ -760,3 +764,60 @@ class Xmrs(LnkMixin):
                 for _, _, d in g.out_edges_iter(nid, data=True)
                 if 'qeq' in d)
         )
+
+
+class XmrsDiGraph(DiGraph):
+    def __init__(self, data=None, name='', **attr):
+        DiGraph.__init__(self, data=data, name=name, attr=attr)
+        self.nodeids = [] if data is None else data.nodeids
+        self.labels = set([] if data is None else data.labels)
+        self.refresh()
+
+    def refresh(self):
+        seen = set()
+        for nid in self.nodeids:
+            n = self.node[nid]
+            if n.get('iv') is not None:
+                iv = n['iv']
+                if iv not in self.node:
+                    raise XmrsStructureError(
+                        'Intrinsic variable ({}) of node {} is missing from '
+                        'the Xmrs graph.'
+                        .format(iv, nid)
+                    )
+                # clear the first time
+                if iv not in seen:
+                    self.node[iv]['bv'] = None
+                    self.node[iv]['iv'] = None
+                    seen.add(iv)
+                if n['pred'].is_quantifier():
+                    self.add_edge(iv, nid, {'bv': True})  # quantifier
+                    self.node[iv]['bv'] = nid
+                else:
+                    self.add_edge(iv, nid, {'iv': True})  # intrinsic arg
+                    self.node[iv]['iv'] = nid
+
+
+    def subgraph(self, nbunch):
+        nbunch = list(nbunch)
+        sg = DiGraph.subgraph(self, nbunch)
+        node = sg.node
+        sg.nodeids = [nid for nid in nbunch if 'pred' in node[nid]]
+        sg.labels = set(node[nid]['label'] for nid in nbunch
+                        if 'label' in node[nid])
+        g = XmrsDiGraph(sg)
+        g.refresh()
+        return g
+
+
+    def relabel_nodes(self, mapping):
+        g = relabel_nodes(self, mapping)
+        # also need to fix where we store it ourselves
+        for tnid in mapping.values():
+            iv = g.node[tnid]['iv']
+            if iv is not None:
+                v = 'bv' if g.node[tnid]['pred'].is_quantifier() else 'iv'
+                g.node[iv][v] = tnid
+        g.nodeids = [mapping.get(n, n) for n in self.nodeids]
+        g.labels = set(self.labels)
+        return XmrsDiGraph(data=g)

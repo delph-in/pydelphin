@@ -9,10 +9,6 @@ FIRST_NODEID   = 10000 # the nodeid assigned to the first node
 UNKNOWNSORT    = 'u' # when nothing is known about the sort
 HANDLESORT     = 'h' # for scopal relations
 QUANTIFIER_SORT= 'q' # for quantifier preds
-# HCONS
-QEQ            = 'qeq'
-LHEQ           = 'lheq'
-OUTSCOPES      = 'outscopes'
 # MRS strings
 IVARG_ROLE     = 'ARG0'
 CONSTARG_ROLE  = 'CARG'

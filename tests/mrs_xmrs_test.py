@@ -8,7 +8,7 @@ from delphin.mrs.components import (
     Pred, Node, ElementaryPredication as EP
 )
 from delphin.mrs.config import (
-    QEQ, LHEQ, OUTSCOPES, CVARSORT, IVARG_ROLE, CONSTARG_ROLE,
+    CVARSORT, IVARG_ROLE, CONSTARG_ROLE,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
     LTOP_NODEID, FIRST_NODEID, ANCHOR_SORT,
 )

@@ -13,7 +13,7 @@ from delphin.mrs.components import (
     Hook, ElementaryPredication, Argument, Pred,
     MrsVariable, Lnk, HandleConstraint, IndividualConstraint
 )
-from delphin.mrs.config import (HANDLESORT, QEQ, LHEQ, OUTSCOPES)
+from delphin.mrs.config import (HANDLESORT)
 from delphin.mrs.util import ReadOnceDict
 from delphin._exceptions import XmrsDeserializationError as XDE
 
@@ -397,11 +397,11 @@ def read_hcons(tokens, variables=None):
         # rels are case-insensitive and the convention is lower-case
         rel = tokens.popleft().lower()
         if rel == _qeq:
-            rel = QEQ
+            rel = HandleConstraint.QEQ
         elif rel == _lheq:
-            rel = LHEQ
+            rel = HandleConstraint.LHEQ
         elif rel == _outscopes:
-            rel = OUTSCOPES
+            rel = HandleConstraint.OUTSCOPES
         else:
             invalid_token_error(rel, '('+'|'.join(_valid_hcons)+')')
         lo = read_variable(tokens, sort='h', variables=variables)
@@ -550,11 +550,11 @@ def serialize_hcons(hcons, listed_vars):
     """Serialize |HandleConstraints| into the SimpleMRS encoding."""
     toks = [_hcons + _colon, _left_angle]
     for hcon in hcons:
-        if hcon.relation == QEQ:
+        if hcon.relation == HandleConstraint.QEQ:
             rel = _qeq
-        elif hcon.relation == LHEQ:
+        elif hcon.relation == HandleConstraint.LHEQ:
             rel = _lheq
-        elif hcon.relation == OUTSCOPES:
+        elif hcon.relation == HandleConstraint.OUTSCOPES:
             rel = _outscopes
         toks += [str(hcon.hi), rel, str(hcon.lo)]
     toks += [_right_angle]

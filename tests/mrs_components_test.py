@@ -7,7 +7,7 @@ from delphin.mrs.components import (
     Pred, Node, ElementaryPredication as EP
 )
 from delphin.mrs.config import (
-    QEQ, LHEQ, OUTSCOPES, CVARSORT, IVARG_ROLE, CONSTARG_ROLE,
+    CVARSORT, IVARG_ROLE, CONSTARG_ROLE,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
     LTOP_NODEID, FIRST_NODEID, ANCHOR_SORT,
 )
@@ -277,27 +277,27 @@ class TestHandleConstraint(unittest.TestCase):
         h2 = MrsVariable(2, 'handle')
         self.assertRaises(TypeError, HandleConstraint)
         self.assertRaises(TypeError, HandleConstraint, h1)
-        self.assertRaises(TypeError, HandleConstraint, h1, QEQ)
+        self.assertRaises(TypeError, HandleConstraint, h1, HandleConstraint.QEQ)
         # planned:
         # self.assertRaises(MrsHconsException, HandleConstraint, h1, QEQ, h1)
-        hc = HandleConstraint(h1, QEQ, h2)
+        hc = HandleConstraint(h1, HandleConstraint.QEQ, h2)
         self.assertEqual(hc.hi, h1)
-        self.assertEqual(hc.relation, QEQ)
+        self.assertEqual(hc.relation, HandleConstraint.QEQ)
         self.assertEqual(hc.lo, h2)
-        hc = HandleConstraint(h1, LHEQ, h2)
-        self.assertEqual(hc.relation, LHEQ)
+        hc = HandleConstraint(h1, HandleConstraint.LHEQ, h2)
+        self.assertEqual(hc.relation, HandleConstraint.LHEQ)
 
     def test_equality(self):
         h1 = MrsVariable(1, 'h')
         h2 = MrsVariable(2, 'h')
-        hc1 = HandleConstraint(h1, QEQ, h2)
-        self.assertEqual(hc1, HandleConstraint(h1, QEQ, h2))
-        self.assertNotEqual(hc1, HandleConstraint(h2, QEQ, h1))
-        self.assertNotEqual(hc1, HandleConstraint(h1, LHEQ, h2))
+        hc1 = HandleConstraint(h1, HandleConstraint.QEQ, h2)
+        self.assertEqual(hc1, HandleConstraint(h1, HandleConstraint.QEQ, h2))
+        self.assertNotEqual(hc1, HandleConstraint(h2, HandleConstraint.QEQ, h1))
+        self.assertNotEqual(hc1, HandleConstraint(h1, HandleConstraint.LHEQ, h2))
 
     def test_hashable(self):
-        hc1 = HandleConstraint(MrsVariable(1, 'h'), QEQ, MrsVariable(2, 'h'))
-        hc2 = HandleConstraint(MrsVariable(3, 'h'), QEQ, MrsVariable(4, 'h'))
+        hc1 = HandleConstraint(MrsVariable(1, 'h'), HandleConstraint.QEQ, MrsVariable(2, 'h'))
+        hc2 = HandleConstraint(MrsVariable(3, 'h'), HandleConstraint.QEQ, MrsVariable(4, 'h'))
         d = {hc1:1, hc2:2}
         self.assertEqual(d[hc1], 1)
         self.assertEqual(d[hc2], 2)

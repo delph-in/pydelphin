@@ -5,8 +5,7 @@ from functools import total_ordering
 from delphin._exceptions import XmrsStructureError
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE,
-    HANDLESORT, CVARSORT, ANCHOR_SORT, QUANTIFIER_SORT,
-    QEQ
+    HANDLESORT, CVARSORT, ANCHOR_SORT, QUANTIFIER_SORT
 )
 
 # VARIABLES, LNKS, and HOOKS
@@ -485,6 +484,10 @@ class Link(object):
 class HandleConstraint(object):
     """A relation between two handles."""
 
+    QEQ = 'qeq'  # Equality modulo Quantifiers
+    LHEQ = 'lheq'  # Label-Handle Equality
+    OUTSCOPES = 'outscopes'  # Outscopes
+
     def __init__(self, hi, relation, lo):
         self.hi = hi
         self.relation = relation
@@ -492,7 +495,7 @@ class HandleConstraint(object):
 
     @classmethod
     def qeq(cls, hi, lo):
-        return cls(hi, QEQ, lo)
+        return cls(hi, HandleConstraint.QEQ, lo)
 
     def __eq__(self, other):
         return (self.hi == other.hi and
@@ -822,7 +825,7 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
         base: base form
     """
 
-    def __init__(self, pred, label, anchor=None, args=None,
+    def __init__(self, pred, label, anchor=None, nodeid=None, args=None,
                  lnk=None, surface=None, base=None):
         self.label = label
         # first args, then can get IV
@@ -830,10 +833,12 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
         # Only fill in other attributes if pred is given, otherwise ignore.
         # This behavior is to help enable the from_node classmethod.
         self._node = None
+        if nodeid is None and anchor is not None:
+            nodeid = anchor.vid
         if pred is not None:
             iv = self.iv
             self._node = Node(
-                anchor.vid if anchor else None,
+                nodeid,
                 pred,
                 sortinfo=iv.sortinfo if iv else None,
                 lnk=lnk,
