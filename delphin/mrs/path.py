@@ -169,10 +169,12 @@ class XmrsPath(object):
             node = node[connectors.pop()]
         return node
 
-    def extend(self, extents):
+    def extend(self, extents, base_connectors=None):
+        if base_connectors is None:
+            base_connectors = []
         for connectors, extent in extents:
             # the final connector may be new information
-            tgt = self.follow(connectors[:-1])
+            tgt = self.follow(base_connectors + connectors[:-1])
             if connectors:
                 subtgt = tgt.links.get(connectors[-1])
                 if subtgt is None:
@@ -218,8 +220,13 @@ class XmrsPathNode(object):
 # HELPER FUNCTIONS ##########################################################
 
 def get_nodeids(path):
-    yield path.nodeid
-    for link, path_node in path:
+    if isinstance(path, XmrsPath):
+        path = path.start
+    return _get_nodeids(path)
+
+def _get_nodeids(node):
+    yield node.nodeid
+    for link, path_node in node:
         if path_node is None:
             continue
         for nid in get_nodeids(path_node):
@@ -293,7 +300,6 @@ def find_paths(
         allow_eq=False,
         max_distance=-1):
     if nodeids is None: nodeids = [0] + xmrs.nodeids  # 0 for TOP
-    quota = set(nodeids)
     stepmap = defaultdict(lambda: dict())
     for startnid in nodeids:
         if startnid in stepmap:
@@ -305,7 +311,7 @@ def find_paths(
     for nodeid in nodeids:
         for path in _find_paths(xmrs, stepmap, nodeid, allow_eq,
                                 max_distance, set()):
-            yield path
+            yield XmrsPath(path)
 
     # links = _build_linkdict(xmrs)
 
@@ -442,8 +448,9 @@ def find(node, pred, connectors=[]):
 def find_extents(node1, node2):
     exts = []
     for (connectors, first_node) in find(node1, node2.pred):
-        for (ext_connections, ext) in extents(first_node, node2):
-            exts.append((connectors + ext_connections, ext))
+        extset = extents(first_node, node2)
+        if extset:
+            exts.append((connectors, extset))
     return exts
 
 
