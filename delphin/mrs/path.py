@@ -1,14 +1,102 @@
-import pdb
+#import pdb
 import re
 from collections import deque, defaultdict
 from itertools import product
+
 from .components import Pred
 from .util import powerset
 from delphin._exceptions import XmrsError
 
 TOP = 'TOP'
 
+
 class XmrsPathError(XmrsError): pass
+
+
+# GRAPH WALKING ########################################################
+
+def connector_sort(connector):
+    return (
+        not connector.endswith('>'),  # forward links first
+        not connector.startswith('<'),  # then backward, then undirected
+        not connector[1:].startswith('LBL'),  # LBL before other args
+        connector[1:].startswith('BODY'),  # BODY last
+        connector[1:]  # otherwise alphabetical
+    )
+
+
+def walk(xmrs, start=0, method='headed', sort_key=connector_sort):
+    if method not in ('top-down', 'bottom-up', 'headed'):
+        raise XmrsPathError("Invalid path-finding method: {}".format(method))
+
+    if start == 0 or xmrs.get_pred(start):
+        yield (None, start, None)
+    else:
+        raise XmrsPathError('Start nodeid not in Xmrs graph.')
+
+    linkdict = _build_linkdict(xmrs)
+    for step in _walk(xmrs, start, linkdict, set(), method, sort_key):
+        yield step
+
+
+def _walk(xmrs, nodeid, linkdict, visited, method, sort_key):
+    if nodeid in visited:
+        return
+    visited.add(nodeid)
+
+    local_links = linkdict.get(nodeid, {})
+    connectors = sorted(_get_connectors(method, local_links), key=sort_key)
+    for connector in connectors:
+        tgtnid = local_links[connector]
+        # don't follow undirected links twice
+        if connector == ':/EQ:' and tgtnid in visited:
+            continue
+        yield (nodeid, tgtnid, connector)
+        for step in _walk(xmrs, tgtnid, linkdict, visited, method, sort_key):
+            yield step
+
+
+def _build_linkdict(xmrs):
+    links = defaultdict(dict)
+    for link in xmrs.links:
+        connector = '{}/{}'.format(link.argname or '', link.post)
+        if link_is_directed(link):
+            links[link.start][':{}>'.format(connector)] = link.end
+            links[link.end]['<{}:'.format(connector)] = link.start
+        else:
+            # pretend they are directed
+            #links[link.end]['<{}:'.format(connector)] = link.start
+            links[link.start][':{}:'.format(connector)] = link.end
+            links[link.end][':{}:'.format(connector)] = link.start
+    return links
+
+
+def _get_connectors(method, links):
+    # top-down: :X/Y> or :X/Y: (the latter only if added)
+    if method == 'top-down':
+        return [c for c in links if c.startswith(':')]
+    elif method == 'bottom-up':
+        return [c for c in links if c.endswith(':')]
+    elif method == 'headed':
+        return [c for c in links if headed(c)]
+
+
+def link_is_directed(link):
+    return bool(link.argname) or link.post != 'EQ'
+
+
+def headed(connector):
+    # quantifiers and X/EQ links are not the heads of their subgraphs
+    if connector == '<RSTR/H:' or connector.endswith('/EQ:'):
+        return True
+    if (connector == ':RSTR/H>' or
+            connector.endswith('/EQ>') or
+            connector.startswith('<')):
+        return False
+    return True
+
+
+# CLASSES ##############################################################
 
 class XmrsPath(object):
 
@@ -147,31 +235,6 @@ def get_preds(path):
             yield pred
 
 
-def link_is_directed(link):
-    return bool(link.argname) or link.post != 'EQ'
-
-
-def headed(connector):
-    # quantifiers and X/EQ links are not the heads of their subgraphs
-    if connector == '<RSTR/H:' or connector.endswith('/EQ:'):
-        return True
-    if (connector == ':RSTR/H>' or
-            connector.endswith('/EQ>') or
-            connector.startswith('<')):
-        return False
-    return True
-
-
-def connector_sort(connector):
-    return (
-        not connector.endswith('>'),  # forward links first
-        not connector.startswith('<'),  # then backward, then undirected
-        not connector[1:].startswith('LBL'),  # LBL before other args
-        connector[1:].startswith('BODY'),  # BODY last
-        connector[1:]  # otherwise alphabetical
-    )
-
-
 # WRITING PATHS #############################################################
 
 def format(node, sort_key=connector_sort, trailing_connectors='usually'):
@@ -222,24 +285,6 @@ def _format(node, sort_key=connector_sort, trailing_connectors='usually'):
 
 # FINDING PATHS #############################################################
 
-def walk(
-        xmrs,
-        startnode=None,
-        method='top-down',
-        allow_eq=False,
-        max_distance=-1):
-    if method not in ('top-down', 'bottom-up', 'headed'):
-        raise XmrsPathError("Invalid path-finding method: {}".format(method))
-    if startnode is None:
-        startnode = 0  # TOP
-    links = _build_linkdict(xmrs, allow_eq)
-    agenda = deque()
-    seen = {}
-
-
-
-
-def _walk(xmrs, startnode, method, allow_eq, max_distance): pass
 
 def find_paths(
         xmrs,
@@ -247,69 +292,59 @@ def find_paths(
         method='top-down',
         allow_eq=False,
         max_distance=-1):
-    if method not in ('top-down', 'bottom-up', 'headed'):
-        raise XmrsPathError("Invalid path-finding method: {}".format(method))
     if nodeids is None: nodeids = [0] + xmrs.nodeids  # 0 for TOP
-    links = _build_linkdict(xmrs, allow_eq)
-
-    paths = defaultdict(list)
-    for nid in nodeids:
-        if nid in paths: continue  # maybe already visited in _find_paths
-        for path in _find_paths(
-                xmrs, nid, links, set(), method=method,
-                max_distance=max_distance):
-            paths[path.nodeid].append(XmrsPath(path))
-
-    for nid in nodeids:
-        for path in sorted(paths.get(nid, []), key=lambda p: p.distance()):
+    quota = set(nodeids)
+    stepmap = defaultdict(lambda: dict())
+    for startnid in nodeids:
+        if startnid in stepmap:
+            continue  # start node already done
+        for start, end, connector in walk(xmrs, start=startnid, method=method):
+            if connector in stepmap.get(start, {}):
+                continue  # current node already done
+            stepmap[start][connector] = end
+    for nodeid in nodeids:
+        for path in _find_paths(xmrs, stepmap, nodeid, allow_eq,
+                                max_distance, set()):
             yield path
 
-def _build_linkdict(xmrs, allow_eq):
-    links = defaultdict(dict)
-    for link in xmrs.links:
-        connector = '{}/{}'.format(link.argname or '', link.post)
-        if link_is_directed(link):
-            links[link.start][':{}>'.format(connector)] = link.end
-            links[link.end]['<{}:'.format(connector)] = link.start
-        elif allow_eq:
-            links[link.start][':{}:'.format(connector)] = link.end
-            #links[link.end][':{}:'.format(connector)] = link.start
-    return links
+    # links = _build_linkdict(xmrs)
 
-def _find_paths(
-        xmrs,
-        nodeid,
-        links,
-        seen,
-        method='top-down',
-        max_distance=-1):
-    if method not in ('top-down', 'bottom-up', 'headed'):
-        raise XmrsPathError("Invalid path-finding method: {}".format(method))
-    #if nodeid in seen  # currently not working
-    if max_distance == 0: return None
-    seen.add(nodeid)
+    # paths = defaultdict(list)
+    # for nid in nodeids:
+    #     if nid in paths: continue  # maybe already visited in _find_paths
+    #     for path in _find_paths(
+    #             xmrs, nid, links, set(), method=method,
+    #             max_distance=max_distance):
+    #         paths[path.nodeid].append(XmrsPath(path))
 
-    symbol = TOP if nodeid == 0 else xmrs.get_pred(nodeid)
-    local_links = links.get(nodeid, {})
-    connectors = _get_connectors(method, local_links)
-    # first just use the unfilled connectors if not TOP
-    if nodeid != 0:
-        yield XmrsPathNode(nodeid, symbol, links=connectors)
+    # for nid in nodeids:
+    #     for path in sorted(paths.get(nid, []), key=lambda p: p.distance()):
+    #         yield path
 
-    if connectors:
-        #pdb.set_trace()
-        subpaths = {}
-        for connector in connectors:
-            tgtnid = local_links[connector]
-            if tgtnid == 0:
-                subpaths[connector] = [XmrsPathNode(tgtnid, TOP)]
-            else:
-                subpaths[connector] = list(
-                    _find_paths(
-                        xmrs, tgtnid, links, seen, method=method,
-                        max_distance=max_distance-1,
-                    )
-                )
+def _find_paths(xmrs, stepmap, start, allow_eq, max_distance, visited):
+    if start in visited or max_distance == 0:
+        return
+    visited = visited.union([start])
+    symbol = TOP if start == 0 else xmrs.get_pred(start)
+    steps = stepmap.get(start, {})
+
+    # exclude TOP from being its own path node
+    if start != 0:
+        yield XmrsPathNode(start, symbol, {c: None for c in steps.keys()})
+
+    subpaths = {}
+    for connector, tgtnid in steps.items():
+        if not allow_eq and connector == ':/EQ:':
+            continue
+        if tgtnid == 0:
+            subpaths[connector] = [XmrsPathNode(tgtnid, TOP)]
+        else:
+            subpaths[connector] = list(
+                _find_paths(xmrs, stepmap, tgtnid, allow_eq, 
+                            max_distance-1, visited)
+            )
+
+    if subpaths:
         # beware of magic below:
         #   links maps a connector (like ARG1/NEQ) to a list of subpaths.
         #   This gets the product of subpaths for all connectors, then remaps
@@ -322,16 +357,7 @@ def _find_paths(
             product(*subpaths.values())
         )
         for ld in lds:
-            yield XmrsPathNode(nodeid, symbol, links=ld)
-
-def _get_connectors(method, links):
-    # top-down: :X/Y> or :X/Y: (the latter only if added)
-    if method == 'top-down':
-        return dict((c, None) for c in links if c.startswith(':'))
-    elif method == 'bottom-up':
-        return dict((c, None) for c in links if c.endswith(':'))
-    elif method == 'headed':
-        return dict((c, None) for c in links if headed(c))
+            yield XmrsPathNode(start, symbol, links=ld)
 
 
 # READING PATHS #############################################################
