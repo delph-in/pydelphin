@@ -163,26 +163,13 @@ class XmrsPath(object):
         return find(self.start, pred)
 
     def follow(self, connectors):
-        node = self.start
-        connectors = list(reversed(connectors))
-        while connectors:
-            node = node[connectors.pop()]
-        return node
+        return self.start.follow(connectors)
 
     def extend(self, extents, base_connectors=None):
         if base_connectors is None:
             base_connectors = []
-        for connectors, extent in extents:
-            # the final connector may be new information
-            tgt = self.follow(base_connectors + connectors[:-1])
-            if connectors:
-                subtgt = tgt.links.get(connectors[-1])
-                if subtgt is None:
-                    tgt.links[connectors[-1]] = extent
-                    continue
-                else:
-                    tgt = subtgt
-            tgt.update(extent)
+        base = self.follow(base_connectors)
+        base.extend(extents)
         self.calculate_metrics()
 
 
@@ -215,6 +202,26 @@ class XmrsPathNode(object):
                 self.links[connector] = tgt
             else:
                 self[connector].update(tgt)
+
+    def follow(self, connectors):
+        node = self
+        connectors = list(reversed(connectors))
+        while connectors:
+            node = node[connectors.pop()]
+        return node
+
+    def extend(self, extents):
+        for connectors, extent in extents:
+            # the final connector may be new information
+            tgt = self.follow(connectors[:-1])
+            if connectors:
+                subtgt = tgt.links.get(connectors[-1])
+                if subtgt is None:
+                    tgt.links[connectors[-1]] = extent
+                    continue
+                else:
+                    tgt = subtgt
+            tgt.update(extent)
 
 
 # HELPER FUNCTIONS ##########################################################
@@ -400,9 +407,13 @@ def _read_node(tokens):
     mtype, mtext = tokens.popleft()
     if mtype in ('dq_string', 'sq_string', 'symbol'):
         links = _read_links(tokens)
+        if mtext == TOP:
+            pred = mtext
+        else:
+            pred = Pred.stringpred(mtext)
         return XmrsPathNode(
             None,
-            Pred.stringpred(mtext),
+            pred,
             links
         )
     else:
@@ -447,10 +458,13 @@ def find(node, pred, connectors=[]):
 
 def find_extents(node1, node2):
     exts = []
-    for (connectors, first_node) in find(node1, node2.pred):
-        extset = extents(first_node, node2)
-        if extset:
-            exts.append((connectors, extset))
+    for (base_connectors, first_node) in find(node1, node2.pred):
+        try:
+            extset = extents(first_node, node2)
+            if extset:
+                exts.append((base_connectors, extset))
+        except XmrsPathError:
+            pass
     return exts
 
 
