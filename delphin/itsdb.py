@@ -17,6 +17,8 @@ import logging
 from io import TextIOWrapper, BufferedReader
 from collections import defaultdict, namedtuple, OrderedDict
 from itertools import chain
+from contextlib import contextmanager
+
 from delphin._exceptions import ItsdbError
 from delphin.util import safe_int
 
@@ -199,6 +201,35 @@ def unescape(string):
         The string with escape sequences replaced
     """
     return _unescape_re.sub(_unescape_func, string, re.UNICODE)
+
+
+@contextmanager
+def _open_table(tbl_filename):
+    if tbl_filename.endswith('.gz'):
+        gz_filename = tbl_filename
+        tbl_filename = tbl_filename[:-3]
+    else:
+        gz_filename = tbl_filename + '.gz'
+
+    if os.path.exists(tbl_filename) and os.path.exists(gz_filename):
+        logging.warning(
+            'Both gzipped and plaintext files were found; attempting to '
+            'use the plaintext one.'
+        )
+    if os.path.exists(tbl_filename):
+        with open(tbl_filename) as f:
+            yield f
+    elif os.path.exists(gz_filename):
+        # text mode only from py3.3; until then use TextIOWrapper
+        with TextIOWrapper(
+                BufferedReader(gzopen(tbl_filename + '.gz', mode='r'))
+             ) as f:
+            yield f
+    else:
+        raise ItsdbError(
+            'Table does not exist at {}(.gz)'
+            .format(tbl_filename)
+        )
 
 
 def _write_table(profile_dir, table_name, rows, fields,
@@ -420,10 +451,15 @@ def make_skeleton(path, relations, item_rows, gzip=False):
 ##############################################################################
 # Profile class
 
-class ItsdbProfile:
+class ItsdbProfile(object):
     """
     A [incr tsdb()] profile, analyzed and ready for reading or writing.
     """
+
+    # _tables is a list of table names to consider (for indexing, writing,
+    # etc.). If None, all present in the relations file and on disk are
+    # considered. Otherwise, only those present in the list are considered.
+    _tables = None
 
     def __init__(self, path, filters=None, applicators=None, index=True):
         """
@@ -509,12 +545,19 @@ class ItsdbProfile:
 
     def _build_index(self):
         self._index = {key: None for key, _ in _primary_keys}
+        tables = self._tables
+        if tables is not None:
+            tables = set(tables)
         for (keyname, table) in _primary_keys:
-            ids = set()
-            for row in self.read_table(table):
-                key = row[keyname]
-                ids.add(key)
-            self._index[keyname] = ids
+            if tables is None or table in tables:
+                ids = set()
+                try:
+                    for row in self.read_table(table):
+                        key = row[keyname]
+                        ids.add(key)
+                except ItsdbError:
+                    logging.info('Failed to index {}.'.format(table))
+                self._index[keyname] = ids
 
     def table_relations(self, table):
         if table not in self.relations:
@@ -523,27 +566,6 @@ class ItsdbProfile:
                 .format(table)
             )
         return self.relations[table]
-
-    def _open_table(self, table):
-        tbl_filename = os.path.join(self.root, table)
-        gz_filename = tbl_filename + '.gz'
-        if os.path.exists(tbl_filename) and os.path.exists(gz_filename):
-            logging.warning('Both gzipped and plaintext files for table "{}" '
-                            'were found; attempting to use the plaintext one.'
-                            .format(table))
-        if os.path.exists(tbl_filename):
-            f = open(tbl_filename)
-        elif os.path.exists(gz_filename):
-            # text mode only from py3.3; until then use TextIOWrapper
-            f = TextIOWrapper(
-                BufferedReader(gzopen(tbl_filename + '.gz', mode='r'))
-            )
-        else:
-            raise ItsdbError(
-                'Table {} does not exist at {}(.gz)'
-                .format(table, tbl_filename)
-            )
-        return f
 
     def read_raw_table(self, table):
         """
@@ -554,7 +576,7 @@ class ItsdbProfile:
 
         field_names = [f.name for f in self.table_relations(table)]
         field_len = len(field_names)
-        with self._open_table(table) as tbl:
+        with _open_table(os.path.join(self.root, table)) as tbl:
             for line in tbl:
                 fields = decode_row(line)
                 if len(fields) != field_len:
@@ -672,18 +694,33 @@ class ItsdbProfile:
             relations = self.relations
         shutil.copyfile(relations_filename,
                         os.path.join(profile_directory, _relations_filename))
+        tables = self._tables
+        if tables is not None:
+            tables = set(tables)
         for table, fields in relations.items():
-            # don't create new empty files if they didn't already exist
-            # (likely was a skeleton rather than a profile)
             fn = os.path.join(self.root, table)
-            if os.path.exists(fn):
-                pass
-            elif os.path.exists(fn + '.gz'):
-                fn += '.gz'
-            else:
-                # warning or debug
-                continue
-            _gzip = gzip if gzip is not None else fn.endswith('.gz')
-            rows = self.read_table(table, key_filter=key_filter)
-            _write_table(profile_directory, table, rows, fields,
-                         append=append, gzip=_gzip)
+            if tables is None or table in tables:
+                if os.path.exists(fn):
+                    pass
+                elif os.path.exists(fn + '.gz'):
+                    fn += '.gz'
+                else:
+                    logging.warning(
+                        'Could not write "{}"; table doesn\'t exist.'
+                        .format(table)
+                    )
+                    continue
+                _gzip = gzip if gzip is not None else fn.endswith('.gz')
+                rows = self.read_table(table, key_filter=key_filter)
+                _write_table(profile_directory, table, rows, fields,
+                             append=append, gzip=_gzip)
+            elif os.path.exists(fn) or os.path.exists(fn + '.gz'):
+                logging.info('Ignoring "{}" table.'.format(table))
+
+
+class ItsdbSkeleton(ItsdbProfile):
+    """
+    A [incr tsdb()] skeleton, analyzed and ready for reading or writing.
+    """
+
+    _tables = ['item']
