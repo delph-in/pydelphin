@@ -6,6 +6,8 @@ from itertools import product
 from .components import Pred
 from .util import powerset
 from delphin._exceptions import XmrsError
+# for rebuilding Xmrs from paths
+from delphin.mrs import Node, Link, Pred, Dmrs
 
 TOP = 'TOP'
 
@@ -188,10 +190,13 @@ class XmrsPathNode(object):
     def __iter__(self):
         return iter(self.links.items())
 
-    def copy(self):
+    def copy(self, depth=-1):
         n = XmrsPathNode(self.nodeid, self.pred)
-        for connector, tgt in self.links.items():
-            n.links[connector] = tgt.copy() if tgt is not None else tgt
+        if depth != 0:
+            for connector, tgt in self.links.items():
+                if tgt is not None:
+                    tgt = tgt.copy(depth-1)                
+                n.links[connector] = tgt
         return n
 
     def update(self, other):
@@ -226,10 +231,12 @@ class XmrsPathNode(object):
 
 # HELPER FUNCTIONS ##########################################################
 
+
 def get_nodeids(path):
     if isinstance(path, XmrsPath):
         path = path.start
     return _get_nodeids(path)
+
 
 def _get_nodeids(node):
     yield node.nodeid
@@ -295,6 +302,12 @@ def _format(node, sort_key=connector_sort, trailing_connectors='usually'):
         subpath = ''.join(links)  # possibly just ''
     return '{}{}'.format(symbol, subpath)
 
+
+def format_node(node):
+    if isinstance(node, XmrsPath):
+        node = node.start
+    solo_node = XmrsPathNode(node.nodeid, node.pred)
+    return format(solo_node, trailing_connectors='never')
 
 
 # FINDING PATHS #############################################################
@@ -490,3 +503,97 @@ def extents(node1, node2):
         else:
             exts.append(([connector], tgt2))
     return exts
+
+# BUILDING XMRS#########################################################
+
+def reify_xmrs(path):
+    #from delphin.mrs import simpledmrs
+    if hasattr(path, 'start'):
+        path = path.start
+    if path.pred == TOP:
+        assert len(path.links) == 1
+        connector, path = list(path.links.items())[0]
+    else:
+        connector = ':/H>'  # just pretend there was a TOP:/H>
+    if path is None:
+        return []
+    for upath, _, _ in _unique_paths(path, defaultdict(set), 10000):
+        m = _reify_xmrs(upath, top_connector=connector)
+        if m.is_well_formed():
+            yield m
+            #print(simpledmrs.dumps_one(m, pretty_print=True))
+
+
+def _unique_paths(path, nidmap, nextnid):
+    if path is None:
+        yield (path, nidmap, nextnid)
+        return
+    # first get possibilities for the current node
+    node_repr = format_node(path)
+    # if already has nodeid, use it; otherwise create or use from nidmap
+    if path.nodeid is None:
+        nids = [nextnid]
+        # only consider existing nids if they aren't quantifiers because
+        # we expect to see many quantifiers but they are all unique
+        if not path.pred.is_quantifier():
+            nids += list(nidmap.get(node_repr, []))
+        nextnid += 1
+    else:
+        nids = [path.nodeid]
+    alts = []
+    for nid in nids:
+        alts.append((
+            _new_node(path, nid),
+            _new_nidmap(nidmap, node_repr, nid),
+            nextnid
+        ))
+    # then for each alternative, find possible descendants
+    agenda = list(path.links.items())
+    while agenda:
+        _alts = []
+        connector, tgt = agenda.pop()
+        for node, nm, nn in alts:
+            for subpath, _nm, _nn in _unique_paths(tgt, nm, nn):
+                n = node.copy()
+                n.links[connector] = subpath
+                _alts.append((n, _nm, _nn))
+        alts = _alts
+    for alt in alts:
+        yield alt
+
+
+def _new_node(node, nid=None):
+    new_node = node.copy(depth=0)
+    if nid is not None:
+        new_node.nodeid = nid
+    return new_node
+
+
+def _new_nidmap(nidmap, node_repr, nid):
+    nm = defaultdict(set, {k: v.copy() for k, v in nidmap.items()})
+    nm[node_repr].add(nid)
+    return nm
+
+
+def _reify_xmrs(path, top_connector=None):
+    nodes = {}
+    links = []
+    agenda = [(0, top_connector or ':/H>', path)]
+    while agenda:
+        srcnid, connector, tgt = agenda.pop()
+        if tgt is None:
+            continue
+        rargname, post = connector.strip(':<>').split('/')
+        if connector.startswith('<'):
+            links.append(Link(tgt.nodeid, srcnid, rargname or None, post))
+        elif connector.endswith('>'):
+            links.append(Link(srcnid, tgt.nodeid, rargname or None, post))
+        elif connector == ':/EQ:':
+            links.append(Link(srcnid, tgt.nodeid, None, 'EQ'))
+        else:
+            raise XmrsPathError('Invalid connector: {}'.format(connector))
+        if tgt.nodeid not in nodes:
+            nodes[tgt.nodeid] = Node(tgt.nodeid, tgt.pred)
+        for conn, next_tgt in tgt.links.items():
+            agenda.append((tgt.nodeid, conn, next_tgt))
+    return Dmrs(list(nodes.values()), links)
