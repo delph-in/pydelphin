@@ -138,7 +138,8 @@ class MrsVariable(object):
         )
 
     def __str__(self):
-        return '{}{}'.format(str(self.sort), str(self.vid))
+        # if sort is None, go with the default of 'u'
+        return '{}{}'.format(str(self.sort or 'u'), str(self.vid))
 
     @property
     def sortinfo(self):

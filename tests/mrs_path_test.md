@@ -36,7 +36,7 @@ First let's read and write some paths.
 >>> p3 = mp.read_path('abc:ARG1/NEQ>')
 >>> mp.format(p3)
 'abc:ARG1/NEQ>'
->>> mp.format(p3, trailing_connectors='never')
+>>> mp.format(p3, trailing_axes='never')
 'abc'
 >>> p4 = mp.read_path('def<ARG1/NEQ:abc')
 >>> mp.format(p4)
@@ -86,7 +86,7 @@ depth.
 ```
 
 The `start` object on the path is the first node in a linked list. The
-`links` attribute on a node is a dictionary mapping a connector to the
+`links` attribute on a node is a dictionary mapping a axis to the
 next node. Key access on the node itself acts like querying the links.
 This makes it convenient for traversing through the path.
 
@@ -294,7 +294,7 @@ poss_rel(:ARG1/NEQ>"_tail_n_1_rel" & :ARG2/EQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":
 
 ```python
 >>> bottomup_paths = lambda x: map(
-...     lambda y: mp.format(y, trailing_connectors='never'),
+...     lambda y: mp.format(y, trailing_axes='never'),
 ...     mp.find_paths(x, method="bottom-up", allow_eq=False)
 ... )
 >>>
@@ -325,7 +325,7 @@ structures.
 
 ```python
 >>> headed_paths = lambda x: map(
-...     lambda y: mp.format(y, trailing_connectors='forward'),
+...     lambda y: mp.format(y, trailing_axes='forward'),
 ...     mp.find_paths(x, method="headed", allow_eq=False)
 ... )
 >>>
@@ -375,7 +375,7 @@ Using `allow_eq=True` with headed paths can sometimes yield many many paths:
 
 ```python
 >>> headed_paths_with_eq = lambda x: map(
-...     lambda y: mp.format(y, trailing_connectors='forward'),
+...     lambda y: mp.format(y, trailing_axes='forward'),
 ...     mp.find_paths(x, method="headed", allow_eq=True)
 ... )
 >>>
