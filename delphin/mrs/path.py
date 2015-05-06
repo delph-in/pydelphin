@@ -10,6 +10,7 @@ from delphin._exceptions import XmrsError
 from delphin.mrs import Node, Link, Pred, Dmrs
 
 TOP = 'TOP'
+STAR = '*'
 
 # flags
 NODEID = NID = 1
@@ -113,19 +114,61 @@ def headed(axis):
 
 # CLASSES ##############################################################
 
-class XmrsPath(object):
+class XmrsPathNode(object):
 
-    __slots__ = ('start', '_depth', '_distance', '_preds')
+    __slots__ = ('nodeid', 'pred', 'context', 'links')
 
-    def __init__(self, startnode):
-        self.start = startnode
+    def __init__(self, nodeid, pred, context=None, links=None):
+        self.nodeid = nodeid
+        self.pred = pred
+        self.context = dict(context or [])
+        self.links = dict(links or [])
+
+    def __getitem__(self, key):
+        return self.links[key]
+
+    def __iter__(self):
+        return iter(self.links.items())
+
+    def update(self, other):
+        self.nodeid = other.nodeid or self.nodeid
+        self.pred = other.pred or self.pred
+        self.context.update(other.context or [])
+        for axis, tgt in other.links.items():
+            if not self.links.get(axis):
+                self.links[axis] = tgt
+            else:
+                self[axis].update(tgt)
+
+    # def extend(self, extents):
+    #     for axes, extent in extents:
+    #         # the final axis may be new information
+    #         tgt = self.follow(axes[:-1])
+    #         if axes:
+    #             subtgt = tgt.links.get(axes[-1])
+    #             if subtgt is None:
+    #                 tgt.links[axes[-1]] = extent
+    #                 continue
+    #             else:
+    #                 tgt = subtgt
+    #         tgt.update(extent)
+
+
+class XmrsPath(XmrsPathNode):
+
+    def __init__(self, nodeid, pred, context=None, links=None):
+        XmrsPathNode.__init__(self, nodeid, pred, context, links)
         self.calculate_metrics()
+
+    @classmethod
+    def from_node(cls, node):
+        return cls(node.nodeid, node.pred, node.context, node.links)
 
     def calculate_metrics(self):
         self._distance = {}
         self._depth = {}
         self._preds = {}
-        self._calculate_metrics(self.start, 0, 0)
+        self._calculate_metrics(self, 0, 0)
 
     def _calculate_metrics(self, curnode, depth, distance):
         if curnode is None:
@@ -155,9 +198,6 @@ class XmrsPath(object):
             else:
                 self._calculate_metrics(curnode[link], depth, distance+1)
 
-    def copy(self):
-        return XmrsPath(self.start.copy())
-
     def distance(self, node=None):
         if node is None:
             return max(self._distance.values())
@@ -172,100 +212,18 @@ class XmrsPath(object):
     def select(self, pred):
         return self._preds.get(pred, [])
 
-    def find(self, pred):
-        if pred not in self._preds:
-            return []
-        return find(self.start, pred)
-
-    def follow(self, axes):
-        return self.start.follow(axes)
-
-    def extend(self, extents, base_axes=None):
-        if base_axes is None:
-            base_axes = []
-        base = self.follow(base_axes)
-        base.extend(extents)
-        self.calculate_metrics()
-
-
-class XmrsPathNode(object):
-
-    __slots__ = ('nodeid', 'pred', 'context', 'links')
-
-    def __init__(self, nodeid, pred, context=None, links=None):
-        self.nodeid = nodeid
-        self.pred = pred
-        self.context = dict(context or [])
-        self.links = dict(links or [])
-
-    def __getitem__(self, key):
-        return self.links[key]
-
-    def __iter__(self):
-        return iter(self.links.items())
-
-    def copy(self, depth=-1, flags=DEFAULT):
-        nodeid = self.nodeid if (flags & NODEID) else None
-        pred = self.pred if (flags & PRED) else None
-        context = dict(
-            (k, v) for k, v in self.context.items()
-            if (k == 'varsort' and (flags & VARSORT)) or
-               (k.startswith('@') and (flags & VARPROPS)) or
-               (k[0] in (':', '<') and (flags & SUBPATHS))
-        )
-        links = {}
-        if depth != 0:
-            for axis, tgt in self.links.items():
-                #FIXME this is not done
-                if tgt is None:
-                    if 
-                elif (flags & SUBPATHS):
-                    tgt = tgt.copy(depth-1, flags=flags)
-                links[axis] = tgt
-        n = XmrsPathNode(nodeid, pred, context=context, links=links)
-        return n
-
-    def update(self, other):
-        self.nodeid = other.nodeid or self.nodeid
-        self.pred = other.pred or self.pred
-        self.context.update(other.context or [])
-        for axis, tgt in other.links.items():
-            if not self.links.get(axis):
-                self.links[axis] = tgt
-            else:
-                self[axis].update(tgt)
-
-    def follow(self, axes):
-        node = self
-        axes = list(reversed(axes))
-        while axes:
-            node = node[axes.pop()]
-        return node
-
-    def extend(self, extents):
-        for axes, extent in extents:
-            # the final axis may be new information
-            tgt = self.follow(axes[:-1])
-            if axes:
-                subtgt = tgt.links.get(axes[-1])
-                if subtgt is None:
-                    tgt.links[axes[-1]] = extent
-                    continue
-                else:
-                    tgt = subtgt
-            tgt.update(extent)
+    # def extend(self, extents, base_axes=None):
+    #     if base_axes is None:
+    #         base_axes = []
+    #     base = self.follow(base_axes)
+    #     base.extend(extents)
+    #     self.calculate_metrics()
 
 
 # HELPER FUNCTIONS ##########################################################
 
 
-def get_nodeids(path):
-    if isinstance(path, XmrsPath):
-        path = path.start
-    return _get_nodeids(path)
-
-
-def _get_nodeids(node):
+def get_nodeids(node):
     yield node.nodeid
     for link, path_node in node:
         if path_node is None:
@@ -274,26 +232,99 @@ def _get_nodeids(node):
             yield nid
 
 
-def get_preds(path):
-    yield path.pred
-    for link, path_node in path:
+def get_preds(node):
+    yield node.pred
+    for link, path_node in node:
         if path_node is None:
             continue
         for pred in get_preds(path_node):
             yield pred
 
 
-# WRITING PATHS #############################################################
+def copy(node, depth=-1, flags=ALL):
+    nodeid = node.nodeid if (flags & NODEID) else None
+    pred = node.pred if (flags & PRED) else None
+    context = dict(
+        (k, v) for k, v in node.context.items()
+        if (k == 'varsort' and (flags & VARSORT)) or
+           (k.startswith('@') and (flags & VARPROPS)) or
+           (k[0] in (':', '<') and (flags & SUBPATHS))
+    )
+    links = {}
+    if depth != 0:
+        for axis, tgt in node.links.items():
+            if (tgt is None and _valid_axis(axis, flags)):
+                links[axis] = None
+            elif (flags & SUBPATHS):
+                links[axis] = copy(tgt, depth-1, flags=flags)
+    n = XmrsPathNode(nodeid, pred, context=context, links=links)
+    return n
 
-def format(node, sort_key=axis_sort, depth=-1, flags=DEFAULT):
-    if isinstance(node, XmrsPath):
-        node = node.start
-    return _format(
-        node, sort_key, depth, flags
+
+def _valid_axis(axis, flags):
+    return (
+        (axis.endswith('>') and (flags & OUTAXES)) or
+        (axis.startswith('<') and (flags & INAXES)) or
+        (axis.endswith(':') and (flags & UNDIRECTEDAXES))
     )
 
 
-def _format(node, sort_key, depth, flags):
+def follow(obj, axes):
+    axes = list(reversed(axes))
+    while axes:
+        obj = obj[axes.pop()]
+    return obj
+
+
+def merge(base, obj, location=None):
+    """
+    merge is like XmrsPathNode.update() except it raises errors on
+    unequal non-None values.
+    """
+    # pump object to it's location with dummy nodes
+    while location:
+        axis = location.pop()
+        obj = XmrsPathNode(None, None, links={axis: obj})
+    if base is None:
+        return obj
+    _merge(base, obj)
+    # if isinstance(base, XmrsPath):
+    #     base.calculate_metrics()
+    return base
+
+def _merge(basenode, objnode):
+    if basenode is None or objnode is None:
+        return basenode or objnode
+    basenode.nodeid = _merge_atom(basenode.nodeid, objnode.nodeid)
+    basenode.pred = _merge_atom(basenode.pred, objnode.pred)
+    baseside = basenode.context
+    for k, v in objnode.context.items():
+        if k[0] in (':', '<'):  # subpath context; need to recurse
+            baseside[k] = _merge(baseside.get(k), v)
+        else:
+            baseside[k] = _merge_atom(baseside.get(k), v)
+    baseside = basenode.links
+    for axis, tgt in objnode.links.items():
+        baseside[axis] = _merge(baseside.get(axis), tgt)
+    return basenode
+
+
+def _merge_atom(obj1, obj2):
+    if obj1 is None or obj1 == STAR:
+        return obj2 or obj1  # or obj1 in case obj2 is None and obj1 == STAR
+    elif obj2 is None or obj2 == STAR:
+        return obj1 or obj2  # or obj2 in case obj1 is None and obj2 == STAR
+    elif obj1 == obj2:
+        return obj1
+    else:
+        raise XmrsPathError(
+            'Cannot merge MrsPath atoms: {} and {}'.format(obj1, obj2)
+        )
+
+
+# WRITING PATHS #############################################################
+
+def format(node, sort_key=axis_sort, depth=-1, flags=DEFAULT):
     if node is None:
         return ''
     symbol = ''
@@ -303,7 +334,7 @@ def _format(node, sort_key, depth, flags):
     if (flags & NODEID) and node.nodeid is not None:
         nodeid = '#{}'.format(node.nodeid)
     if not (symbol or nodeid):
-        symbol = '*'
+        symbol = STAR
     context = _format_context(node, sort_key, depth, flags)
     subpath = ''
     if (flags & SUBPATHS) and depth != 0:
@@ -327,7 +358,7 @@ def _format_context(node, sort_key, depth, flags):
                 if (flags & SUBPATHS):
                     contexts.append(
                         '{}{}'.format(
-                            k, _format(v, sort_key, depth-1, flags)
+                            k, format(v, sort_key, depth-1, flags)
                         )
                     )
             else:
@@ -344,14 +375,11 @@ def _format_subpath(node, sort_key, depth, flags):
         axes = sorted(axes, key=sort_key)
     for axis in axes:
         tgt = node.links[axis]
-        if (tgt or
-                (flags & OUTAXES and axis.endswith('>')) or
-                (flags & UNDIRECTEDAXES and axis != ':/EQ:') or
-                (flags & INAXES and axis.startswith('<'))):
+        if (tgt or _valid_axis(axis, flags)):
             links.append(
                 '{}{}'.format(
                     axis,
-                    _format(tgt, sort_key, depth, flags)
+                    format(tgt, sort_key, depth, flags)
                 )
             )
     if len(links) > 1:
@@ -391,9 +419,10 @@ def find_paths(
                 continue  # current node already done
             stepmap[start][axis] = end
     for nodeid in nodeids:
-        for path in _find_paths(
+        for node in _find_paths(
                 xmrs, stepmap, nodeid, flags, max_distance, set()):
-            yield XmrsPath(path)
+            #yield XmrsPath.from_node(node)
+            yield node
 
 
 def _find_paths(
@@ -459,127 +488,222 @@ def _find_paths(
 # READING PATHS #############################################################
 
 tokenizer = re.compile(
-    r'(?P<dq_string>"[^"\\]*(?:\\.[^"\\]*)*")'  # quoted strings
-    r"|(?P<sq_string>'[^ \\]*(?:\\.[^ \\]*)*)"  # single-quoted 'strings
-    r'|(?P<fwd_axis>:[^/]*/(?:EQ|NEQ|HEQ|H)>)'  # :X/Y> axis
-    r'|(?P<bak_axis><[^/]*/(?:EQ|NEQ|HEQ|H):)'  # <X/Y: axis
-    r'|(?P<und_axis>:[^/]*/(?:EQ|NEQ|HEQ|H):)'  # :X/Y: axis
-    r'|(?P<symbol>[^\s*:/><@()\[\]=&|]+)'  # non-breaking characters
-    r'|(?P<punc>[*()&|])'  # meaningful punctuation
+    # two kinds of strings: "double quoted", and 'open-single-quoted
+    r'(?P<string>"[^"\\]*(?:\\.[^"\\]*)*"|\'[^ \\]*(?:\\.[^ \\]*)*)'
+    # axes can be one of the following forms: :X/Y>, :X/Y:, <X/Y:
+    r'|(?P<axis>:[^/]*/(?:EQ|NEQ|HEQ|H)[:>]|<[^/]*/(?:EQ|NEQ|HEQ|H):)'
+    r'|(?P<symbol>[^\s#:><@=()\[\]&|]+)'  # non-breaking characters
+    r'|(?P<nodeid>#\d+)'  # nodeids (e.g. #10003)
+    r'|(?P<punc>[@=()\[\]&|])'  # meaningful punctuation
 )
 
 def read_path(path_string):
     toks = deque((mo.lastgroup, mo.group())
                  for mo in tokenizer.finditer(path_string))
     try:
-        startnode = _read_node(toks)
+        node = _read_node(toks)
     except IndexError:
         raise XmrsPathError('Unexpected termination for path: {}'
             .format(path_string))
-    if startnode is None:
+    if node is None:
         raise XmrsPathError('Error reading path: {}'
             .format(path_string))
     elif toks:
         raise XmrsPathError('Unconsumed tokens: {}'
             .format(', '.join(tok[1] for tok in toks)))
-    path = XmrsPath(startnode)
-    return path
+    #path = XmrsPath.from_node(startnode)
+    #return path
+    return node
 
 def _read_node(tokens):
-    if not tokens: return None
+    if not tokens or tokens[0][0] not in {'string', 'symbol', 'nodeid'}:
+        return None
+    # A node can be a pred, a nodeid, or both (in that order). This
+    # means two 'if's, not 'if-else'.
     mtype, mtext = tokens.popleft()
-    if mtype in ('dq_string', 'sq_string', 'symbol'):
-        links = _read_links(tokens)
-        if mtext == TOP:
+    pred = nodeid = None
+    if mtype in ('string', 'symbol'):
+        if mtext == TOP or mtext == STAR:
             pred = mtext
         else:
             pred = Pred.stringpred(mtext)
-        return XmrsPathNode(
-            None,
-            pred,
-            links=links
-        )
-    else:
-        tokens.appendleft((mtype, mtext))  # put it back
-    return None  # current position isn't a path node
+        if tokens and tokens[0][0] == 'nodeid':
+            mtype, mtext = tokens.popleft()
+    if mtype == 'nodeid':
+        nodeid = int(mtext[1:])  # get rid of the initial # character
+    context = _read_context(tokens)
+    links = _read_links(tokens)
+    return XmrsPathNode(
+        nodeid,
+        pred,
+        context=context,
+        links=links
+    )
+
+def _read_context(tokens):
+    if not tokens or tokens[0] != ('punc', '['):
+        return None
+    _, _ = tokens.popleft()  # this is the ('punc', '[')
+    # context can be a varsort, an @attribute, or an axis
+    context = {}
+    for token in _read_conjunction(tokens):
+        mtype, mtext = token
+        if mtype == 'symbol':
+            context['varsort'] = mtext
+        elif token == ('punc', '@'):
+            _, attr = tokens.popleft()
+            assert tokens.popleft() == ('punc', '=')
+            _, val = tokens.popleft()
+            context['@{}'.format(attr)] = val
+        elif mtype == 'axis':
+            tgt = _read_node(tokens)
+            context[mtext] = tgt
+        else:
+            raise XmrsPathError(
+                'Invalid conjunct in context: {}'.format(mtext)
+            )
+    assert tokens.popleft() == ('punc', ']')
+    return context
+
 
 def _read_links(tokens):
-    if not tokens: return None
+    if not tokens or (tokens[0][0] != 'axis' and tokens[0][1] != '('):
+        return None
     mtype, mtext = tokens.popleft()
-    if mtype in ('fwd_axis', 'bak_axis', 'und_axis'):
+    # it could be a single :axis
+    if mtype == 'axis':
         return {mtext: _read_node(tokens)}
-    elif mtext == '(':
-        links = {}
-        mtype, mtext = tokens.popleft()
-        while mtext != ')':
+    # or (:many :axes)
+    assert mtext == '('
+    links = {}
+    for token in _read_conjunction(tokens):
+        mtype, mtext = token
+        if mtype == 'axis':
             links[mtext] = _read_node(tokens)
-            mtype, mtext = tokens.popleft()
-            if mtext in ('&', '|'):
-                mtype, mtext = tokens.popleft()
-            elif mtext != ')':
-                raise XmrsPathError('Unexpected token: {}'.format(mtext))
-        return links
-    else:
-        tokens.appendleft((mtype, mtext))  # put it back
-    return None  # not a link
+        else:
+            raise XmrsPathError('Invalid conjunct in axes: {}'.format(mtext))
+    assert tokens.popleft() == ('punc', ')')
+    return links
 
 
-# SEARCHING PATHS ###########################################################
+def _read_conjunction(tokens):
+    yield tokens.popleft()
+    while tokens[0] == ('punc', '&'):
+        tokens.popleft()  # the & character
+        yield tokens.popleft()
 
 
-def find(node, pred, axes=[]):
+# # SEARCHING PATHS ###########################################################
+
+
+def find_node(base, node=None, nodeid=None, pred=None, context=None):
     matches = []
-    if node and node.pred == pred:
-        matches.append((axes, node))
-    for axis, tgt in node.links.items():
-        if not tgt:
-            continue
-        for match in find(tgt, pred, axes + [axis]):
-            matches.append(match)
+    if node is None:
+        node = XmrsPathNode(nodeid, pred, context=context)
+    if _nodes_unifiable(base, node):
+        matches.append(([], base))
+    # there's no cycle detection below because paths are (supposedly) trees
+    agenda = [([a], sp) for a, sp in base.links.items() if sp is not None]
+    while agenda:
+        axes, base = agenda.pop()
+        if _nodes_unifiable(base, node):
+            matches.append((axes, base))
+        agenda.extend(
+            (axes+[a], sp) for a, sp in base.links.items() if sp is not None
+        )
     return matches
 
 
-def find_extents(node1, node2):
-    exts = []
-    for (base_axes, first_node) in find(node1, node2.pred):
-        try:
-            extset = extents(first_node, node2)
-            if extset:
-                exts.append((base_axes, extset))
-        except XmrsPathError:
-            pass
-    return exts
+def _nodes_unifiable(n1, n2):
+    if n1 is None or n2 is None:
+        return True
+    # nodeids same or one/both is None
+    if not (n1.nodeid is None or
+            n2.nodeid is None or
+            n1.nodeid == n2.nodeid):
+        return False
+    # preds same or one/both is None or STAR
+    if not (n1.pred in (None, STAR) or
+            n2.pred in (None, STAR) or
+            n1.pred == n2.pred):
+        return False
+    # context can be properties or subpaths
+    for k, v2 in n2.context.items():
+        if k[0] in (':', '<'):  # subpaths must be recursively unifiable
+            if not _nodes_unifiable(n1.context.get(k), v2):
+                return False
+        else:  # properties just need to be equal
+            v1 = n1.context.get(k)
+            if not (v1 is None or v2 is None or v1 == v2):
+                return False
+    # links are just like context subpaths
+    if not all(_nodes_unifiable(n1.links.get(axis), sp2)
+                for axis, sp2 in n2.links.items()):
+        return False
+    return True
 
 
-def extents(node1, node2):
-    assert node1.pred == node2.pred
-    exts = []
-    # if a constraint is violated, raise XmrsPathError
-    # if a constraint exists on node1 and node2, dive
-    # if one is on node1 but not node2, ignore
-    # if one is on node2 but not node1, return
-    for axis, tgt2 in node2.links.items():
-        if axis in node1.links:
-            tgt1 = node1.links[axis]
-            if tgt2 is None:
-                continue
-            elif tgt1 is None:
-                exts.append(([axis], tgt2))
-            elif tgt1.pred == tgt2.pred:
-                for axes, ext in extents(tgt1, tgt2):
-                    exts.append(([axis] + axes, ext))
-            else:
-                raise XmrsPathError('Incompatible paths.')
-        else:
-            exts.append(([axis], tgt2))
-    return exts
+
+# def find_extents(node1, node2):
+#     exts = []
+#     for (base_axes, first_node) in find(node1, node2.pred):
+#         try:
+#             extset = extents(first_node, node2)
+#             if extset:
+#                 exts.append((base_axes, extset))
+#         except XmrsPathError:
+#             pass
+#     return exts
+
+
+# def extents(node1, node2):
+#     if _nodes_informative(node1, node2):
+#         return ([], node2)
+
+#     assert node1.pred == node2.pred
+#     exts = []
+#     # if a constraint is violated, raise XmrsPathError
+#     # if a constraint exists on node1 and node2, dive
+#     # if one is on node1 but not node2, ignore
+#     # if one is on node2 but not node1, return
+#     for axis, tgt2 in node2.links.items():
+#         if axis in node1.links:
+#             tgt1 = node1.links[axis]
+#             if tgt2 is None:
+#                 continue
+#             elif tgt1 is None:
+#                 exts.append(([axis], tgt2))
+#             elif _nodes_compatible(tgt1, tgt2):
+#                 for axes, ext in extents(tgt1, tgt2):
+#                     exts.append(([axis] + axes, ext))
+#             else:
+#                 raise XmrsPathError('Incompatible paths.')
+#         else:
+#             exts.append(([axis], tgt2))
+#     return exts
+
+
+# def _nodes_informative(n1, n2):
+#     if
+
+# def _nodes_compatible(n1, n2):
+#     compatible = True
+#     if n1.pred != n2.pred:
+#         compatible = False
+#     for k, v in n2.context.items():
+
+#     return (
+#         n1.pred == n2.pred and
+#         all(n1.context.get(k, v) == v for k, v in n2.context.items()) and
+
+#     )
 
 # BUILDING XMRS#########################################################
 
 def reify_xmrs(path):
     #from delphin.mrs import simpledmrs
-    if hasattr(path, 'start'):
-        path = path.start
+    # if hasattr(path, 'start'):
+    #     path = path.start
     if path.pred == TOP:
         assert len(path.links) == 1
         axis, path = list(path.links.items())[0]
@@ -625,7 +749,7 @@ def _unique_paths(path, nidmap, nextnid):
         axis, tgt = agenda.pop()
         for node, nm, nn in alts:
             for subpath, _nm, _nn in _unique_paths(tgt, nm, nn):
-                n = node.copy()
+                n = copy(node)
                 n.links[axis] = subpath
                 _alts.append((n, _nm, _nn))
         alts = _alts
@@ -634,7 +758,7 @@ def _unique_paths(path, nidmap, nextnid):
 
 
 def _new_node(node, nid=None):
-    new_node = node.copy(depth=0)
+    new_node = copy(node, depth=0)
     if nid is not None:
         new_node.nodeid = nid
     return new_node
@@ -654,6 +778,7 @@ def _reify_xmrs(path, top_axis=None):
         srcnid, axis, tgt = agenda.pop()
         if tgt is None:
             continue
+        # add link to tgt
         rargname, post = axis.strip(':<>').split('/')
         if axis.startswith('<'):
             links.append(Link(tgt.nodeid, srcnid, rargname or None, post))
@@ -663,8 +788,16 @@ def _reify_xmrs(path, top_axis=None):
             links.append(Link(srcnid, tgt.nodeid, None, 'EQ'))
         else:
             raise XmrsPathError('Invalid axis: {}'.format(axis))
+        # add node if necessary (note, currently does not update pred
+        # or sortinfo if encountered twice)
         if tgt.nodeid not in nodes:
-            nodes[tgt.nodeid] = Node(tgt.nodeid, tgt.pred)
+            sortinfo = dict(
+                [('cvarsort', tgt.context.get('varsort', 'u'))] +
+                [(k.lstrip('@', 1), v)
+                 for k, v in tgt.context.items() if k.startswith('@')]
+            )
+            nodes[tgt.nodeid] = Node(tgt.nodeid, tgt.pred, sortinfo=sortinfo)
+        # add new agenda for tgt
         for axis, next_tgt in tgt.links.items():
             agenda.append((tgt.nodeid, axis, next_tgt))
     return Dmrs(list(nodes.values()), links)

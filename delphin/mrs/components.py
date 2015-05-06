@@ -597,7 +597,8 @@ class Pred(object):
         self.string = None  # set by class methods
 
     def __eq__(self, other):
-
+        if other is None:
+            return False
         if isinstance(other, Pred):
             other = other.string
         return self.string.strip('"\'') == other.strip('"\'')
