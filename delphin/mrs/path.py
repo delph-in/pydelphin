@@ -17,14 +17,15 @@ NODEID = NID = 1
 PRED = P = 2
 VARSORT = VS = 4
 VARPROPS = VP = 8
-SUBPATHS = SP = 16
-OUTAXES = OUT = 32
-INAXES = IN = 64
-UNDIRECTEDAXES = UND = 128
+OUTAXES = OUT = 16
+INAXES = IN = 32
+UNDIRECTEDAXES = UND = 64
+SUBPATHS = SP = 128
+
 CONTEXT = VS | VP | SP
 ALLAXES = OUT | IN | UND
-DEFAULT = P | VS | VP | SP | OUT | IN
-ALL = NID | P | VS | VP | SP | OUT | IN | UND
+DEFAULT = P | VS | VP | OUT | IN | SP
+ALL = NID | P | VS | VP | OUT | IN | UND | SP
 
 class XmrsPathError(XmrsError): pass
 
@@ -116,19 +117,25 @@ def headed(axis):
 
 class XmrsPathNode(object):
 
-    __slots__ = ('nodeid', 'pred', 'context', 'links')
+    __slots__ = ('nodeid', 'pred', 'context', 'links', '_height', '_order')
 
     def __init__(self, nodeid, pred, context=None, links=None):
         self.nodeid = nodeid
         self.pred = pred
         self.context = dict(context or [])
         self.links = dict(links or [])
+        self._height = \
+            max([-1] + [x._len for x in self.links.values() if x]) + 1
+        self._order = sum(x._order for x in self.links.values() if x) + 1
 
     def __getitem__(self, key):
         return self.links[key]
 
     def __iter__(self):
         return iter(self.links.items())
+
+    def __len__(self):
+        return self._height
 
     def update(self, other):
         self.nodeid = other.nodeid or self.nodeid
@@ -139,6 +146,15 @@ class XmrsPathNode(object):
                 self.links[axis] = tgt
             else:
                 self[axis].update(tgt)
+
+    @property
+    def height(self):
+        return self._height
+    
+    @property
+    def order(self):
+        return self._order
+    
 
     # def extend(self, extents):
     #     for axes, extent in extents:
@@ -395,20 +411,24 @@ def _context_sort(k):
 
 # FINDING PATHS #############################################################
 
-# 'named_rel:CARG'  == 'Kim'
-# 'named_rel[:CARG="Kim"]'  == EP
-# '_chase_v_1_rel:ARG2'  == 'x4'
-# '_chase_v_1_rel:ARG2>'  == EP
-# '_chase_v_1_rel:ARG2/NEQ>'  == EP
-# '_chase_v_1_rel[:ARG1/NEQ>"_dog_n_1_rel" :ARG2]:ARG2/NEQ'
-# 'dog_n_rel#10000[e & :CARG="Dog" & @NUM=sg]:ARG1/NEQ>blah'
+def explore(
+        xmrs,
+        nodeids=None,
+        method='top-down',
+        flags=DEFAULT,
+        max_distance=-1,
+        subpath_select=list):
+    return find_paths(xmrs, nodeids, method, flags, max_distance, subpath_select)
 
+
+# deprecate find_paths in favor of "explore"
 def find_paths(
         xmrs,
         nodeids=None,
         method='top-down',
         flags=DEFAULT,
-        max_distance=-1):
+        max_distance=-1,
+        subpath_select=list):
     if nodeids is None: nodeids = [0] + xmrs.nodeids  # 0 for TOP
     stepmap = defaultdict(lambda: dict())
     for startnid in nodeids:
@@ -420,7 +440,8 @@ def find_paths(
             stepmap[start][axis] = end
     for nodeid in nodeids:
         for node in _find_paths(
-                xmrs, stepmap, nodeid, flags, max_distance, set()):
+                xmrs, stepmap, nodeid, flags,
+                max_distance, subpath_select, set()):
             #yield XmrsPath.from_node(node)
             yield node
 
@@ -431,6 +452,7 @@ def _find_paths(
         start,
         flags,
         max_distance,
+        subpath_select,
         visited):
     if start in visited or max_distance == 0:
         return
@@ -442,8 +464,10 @@ def _find_paths(
         node = xmrs.get_node(start)
         symbol = node.pred
         if (flags & CONTEXT):
-            ctext = dict(
-                [('varsort', node.cvarsort)] +
+            ctext = {}
+            if node.cvarsort:
+                ctext['varsort'] = node.cvarsort
+            ctext.update(
                 [('@{}'.format(k), v) for k, v in node.properties.items()]
             )
     steps = stepmap.get(start, {})
@@ -463,11 +487,11 @@ def _find_paths(
             continue
         if tgtnid == 0:
             subpaths[axis] = [XmrsPathNode(tgtnid, TOP)]
-        else:
-            subpaths[axis] = list(
+        elif (flags & SUBPATHS):
+            subpaths[axis] = subpath_select(list(
                 _find_paths(xmrs, stepmap, tgtnid, flags,
-                            max_distance-1, visited)
-            )
+                            max_distance-1, subpath_select, visited)
+            ))
 
     if subpaths:
         # beware of magic below:
@@ -477,10 +501,10 @@ def _find_paths(
         #   {':ARG1/NEQ>': [def], ':ARG2/NEQ>': [ghi, jkl]} then lds is like
         #   [{':ARG1/NEQ>': def, 'ARG2/NEQ>': ghi},
         #    {':ARG1/NEQ>': def, 'ARG2/NEQ>': jkl}]
-        lds = map(
+        lds = list(map(
             lambda z: dict(zip(subpaths.keys(), z)),
             product(*subpaths.values())
-        )
+        ))
         for ld in lds:
             yield XmrsPathNode(start, symbol, context=ctext, links=ld)
 
@@ -710,7 +734,7 @@ def reify_xmrs(path):
     else:
         axis = ':/H>'  # just pretend there was a TOP:/H>
     if path is None:
-        return []
+        return
     for upath, _, _ in _unique_paths(path, defaultdict(set), 10000):
         m = _reify_xmrs(upath, top_axis=axis)
         if m.is_well_formed():
@@ -792,8 +816,8 @@ def _reify_xmrs(path, top_axis=None):
         # or sortinfo if encountered twice)
         if tgt.nodeid not in nodes:
             sortinfo = dict(
-                [('cvarsort', tgt.context.get('varsort', 'u'))] +
-                [(k.lstrip('@', 1), v)
+                [('cvarsort', tgt.context.get('varsort') or 'u')] +
+                [(k.lstrip('@'), v)
                  for k, v in tgt.context.items() if k.startswith('@')]
             )
             nodes[tgt.nodeid] = Node(tgt.nodeid, tgt.pred, sortinfo=sortinfo)
