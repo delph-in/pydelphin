@@ -1,5 +1,6 @@
 #import pdb
 import re
+import warnings
 from collections import deque, defaultdict
 from itertools import product
 
@@ -124,9 +125,15 @@ class XmrsPathNode(object):
         self.pred = pred
         self.context = dict(context or [])
         self.links = dict(links or [])
-        self._height = \
-            max([-1] + [x._len for x in self.links.values() if x]) + 1
-        self._order = sum(x._order for x in self.links.values() if x) + 1
+        self._height = (
+            max([-1] +
+                [x._height for x in self.links.values() if x is not None]) +
+            1
+        )
+        self._order = (
+            sum(x._order for x in self.links.values() if x is not None) +
+            1
+        )
 
     def __getitem__(self, key):
         return self.links[key]
@@ -386,11 +393,8 @@ def _format_context(node, sort_key, depth, flags):
 
 def _format_subpath(node, sort_key, depth, flags):
     links = []
-    axes = node.links.keys()
-    if sort_key:
-        axes = sorted(axes, key=sort_key)
-    for axis in axes:
-        tgt = node.links[axis]
+    axislist = _prepare_axes(node.links, sort_key)
+    for axis, tgt in axislist:
         if (tgt or _valid_axis(axis, flags)):
             links.append(
                 '{}{}'.format(
@@ -405,11 +409,53 @@ def _format_subpath(node, sort_key, depth, flags):
     return subpath
 
 
+def _prepare_axes(links, sort_key):
+    """
+    Sort axes and combine those that point to the same target and go
+    in the same direction.
+    """
+    sorted_axes = sorted(links.keys(), key=sort_key)
+    index = {}  # signature to first axis
+    axes_map = defaultdict(list)
+    for axis in sorted_axes:
+        tgt = links[axis]
+        # signature is the subpath's object id and axis direction
+        signature = (id(tgt), axis[0], axis[-1])
+        axes_map[index.setdefault(signature, axis)].append(axis)
+        # if signature in index:
+        #     first_axis = index[signature]
+        #     axes_map[first_axis].append(axis)
+        # else:
+        #     index[signature] = axis
+        #     axes_map[axis].append(axis)
+    axes = []
+    for axis in sorted_axes:
+        axis_list = axes_map.get(axis)
+        if not axis_list:
+            continue
+        s, e = axis[0], axis[-1]  # start and end chars
+        ax = '%s%s%s' % (s, '&'.join(a.strip('<:>') for a in axis_list), e)
+        axes.append((ax, links[axis]))
+    return axes
+
+
 def _context_sort(k):
     return (k != 'varsort', k.startswith(':'), k.startswith('<'), k)
 
 
 # FINDING PATHS #############################################################
+
+def find_paths(
+        xmrs,
+        nodeids=None,
+        method='top-down',
+        flags=DEFAULT,
+        max_distance=-1,
+        subpath_select=list):
+    warnings.warn('find_paths() is deprecated; use explore()',
+                  DeprecationWarning)
+    return explore(xmrs, nodeids, method, flags, max_distance, subpath_select)
+
 
 def explore(
         xmrs,
@@ -418,35 +464,25 @@ def explore(
         flags=DEFAULT,
         max_distance=-1,
         subpath_select=list):
-    return find_paths(xmrs, nodeids, method, flags, max_distance, subpath_select)
-
-
-# deprecate find_paths in favor of "explore"
-def find_paths(
-        xmrs,
-        nodeids=None,
-        method='top-down',
-        flags=DEFAULT,
-        max_distance=-1,
-        subpath_select=list):
     if nodeids is None: nodeids = [0] + xmrs.nodeids  # 0 for TOP
-    stepmap = defaultdict(lambda: dict())
+    stepmap = defaultdict(lambda: defaultdict(set))
     for startnid in nodeids:
         if startnid in stepmap:
             continue  # start node already done
         for start, end, axis in walk(xmrs, start=startnid, method=method):
-            if axis in stepmap.get(start, {}):
-                continue  # current node already done
-            stepmap[start][axis] = end
+            stepmap[start][end].add(axis)
+            # if axis in stepmap.get(start, {}):
+            #     continue  # current node already done
+            # stepmap[start][axis] = end
     for nodeid in nodeids:
-        for node in _find_paths(
+        for node in _explore(
                 xmrs, stepmap, nodeid, flags,
                 max_distance, subpath_select, set()):
             #yield XmrsPath.from_node(node)
             yield node
 
 
-def _find_paths(
+def _explore(
         xmrs,
         stepmap,
         start,
@@ -470,7 +506,7 @@ def _find_paths(
             ctext.update(
                 [('@{}'.format(k), v) for k, v in node.properties.items()]
             )
-    steps = stepmap.get(start, {})
+    steps = stepmap.get(start, {})  # this is {end_nodeid: set(axes), ...}
 
     # exclude TOP from being its own path node
     if start != 0:
@@ -478,34 +514,45 @@ def _find_paths(
             start,
             symbol,
             context=ctext,
-            links={c: None for c in steps.keys()}
+            links={axis: None for axes in steps.values() for axis in axes}
         )
 
+    # keep tuples of axes instead of mapping each unique axis. This is
+    # for things like coordination where more than one axis point to the
+    # same thing, and we don't want to enumerate all possibilities.
     subpaths = {}
-    for axis, tgtnid in steps.items():
-        if not (flags & UNDIRECTEDAXES) and axis == ':/EQ:':
-            continue
+    for tgtnid, axes in steps.items():
         if tgtnid == 0:
-            subpaths[axis] = [XmrsPathNode(tgtnid, TOP)]
+            # assume only one axis going to TOP (can there be more than 1?)
+            subpaths[tuple(axes)] = [XmrsPathNode(tgtnid, TOP)]
         elif (flags & SUBPATHS):
-            subpaths[axis] = subpath_select(list(
-                _find_paths(xmrs, stepmap, tgtnid, flags,
+            if not (flags & UNDIRECTEDAXES):
+                axes = axes.difference([':/EQ:'])
+            if not axes:
+                continue
+            subpaths[tuple(axes)] = subpath_select(list(
+                _explore(xmrs, stepmap, tgtnid, flags,
                             max_distance-1, subpath_select, visited)
             ))
 
     if subpaths:
         # beware of magic below:
-        #   links maps a axis (like ARG1/NEQ) to a list of subpaths.
+        #   links maps a tuple of axes (usually just one axis, like
+        #   (ARG1/NEQ,)) to a list of subpaths.
         #   This gets the product of subpaths for all axes, then remaps
-        #   the axis to the appropriate subpaths. E.g. if links is like
-        #   {':ARG1/NEQ>': [def], ':ARG2/NEQ>': [ghi, jkl]} then lds is like
-        #   [{':ARG1/NEQ>': def, 'ARG2/NEQ>': ghi},
-        #    {':ARG1/NEQ>': def, 'ARG2/NEQ>': jkl}]
-        lds = list(map(
+        #   axis tuples to the appropriate subpaths. E.g. if subpaths is
+        #     {(':ARG1/NEQ>',): [def],
+        #      (':ARG2/NEQ>',':ARG3/EQ>'): [ghi, jkl]}
+        #   then alts is
+        #     [{(':ARG1/NEQ>',): def, ('ARG2/NEQ>', ':ARG3/EQ>'): ghi},
+        #      {(':ARG1/NEQ>',): def, ('ARG2/NEQ>', ':ARG3/EQ>'): jkl}]
+        alts = list(map(
             lambda z: dict(zip(subpaths.keys(), z)),
             product(*subpaths.values())
         ))
-        for ld in lds:
+        # now enumerate the tupled axes
+        for alt in alts:
+            ld = dict((a, tgt) for axes, tgt in alt.items() for a in axes)
             yield XmrsPathNode(start, symbol, context=ctext, links=ld)
 
 
@@ -514,8 +561,8 @@ def _find_paths(
 tokenizer = re.compile(
     # two kinds of strings: "double quoted", and 'open-single-quoted
     r'(?P<string>"[^"\\]*(?:\\.[^"\\]*)*"|\'[^ \\]*(?:\\.[^ \\]*)*)'
-    # axes can be one of the following forms: :X/Y>, :X/Y:, <X/Y:
-    r'|(?P<axis>:[^/]*/(?:EQ|NEQ|HEQ|H)[:>]|<[^/]*/(?:EQ|NEQ|HEQ|H):)'
+    # axes should be like :X/Y>, <X/Y:, :X/Y:, :X/Y&A/B>, etc.
+    r'|(?P<axis>[<:][^/]*/(?:[HN]?EQ|H)(?:&[^/]*/(?:[HN]?EQ|H))*[:>])'
     r'|(?P<symbol>[^\s#:><@=()\[\]&|]+)'  # non-breaking characters
     r'|(?P<nodeid>#\d+)'  # nodeids (e.g. #10003)
     r'|(?P<punc>[@=()\[\]&|])'  # meaningful punctuation
@@ -581,7 +628,8 @@ def _read_context(tokens):
             context['@{}'.format(attr)] = val
         elif mtype == 'axis':
             tgt = _read_node(tokens)
-            context[mtext] = tgt
+            for ax in map(str.strip, mtext.split('&')):
+                context[ax] = tgt
         else:
             raise XmrsPathError(
                 'Invalid conjunct in context: {}'.format(mtext)
@@ -603,7 +651,9 @@ def _read_links(tokens):
     for token in _read_conjunction(tokens):
         mtype, mtext = token
         if mtype == 'axis':
-            links[mtext] = _read_node(tokens)
+            tgt = _read_node(tokens)
+            for ax in map(str.strip, mtext.split('&')):
+                links[ax] = tgt
         else:
             raise XmrsPathError('Invalid conjunct in axes: {}'.format(mtext))
     assert tokens.popleft() == ('punc', ')')
