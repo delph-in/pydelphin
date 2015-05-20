@@ -22,6 +22,7 @@ OUTAXES = OUT = 16
 INAXES = IN = 32
 UNDIRECTEDAXES = UND = 64
 SUBPATHS = SP = 128
+BALANCED = B = 256
 
 CONTEXT = VS | VP | SP
 ALLAXES = OUT | IN | UND
@@ -35,10 +36,10 @@ class XmrsPathError(XmrsError): pass
 
 def axis_sort(axis):
     return (
-        not axis.endswith('>'),  # forward links first
-        not axis.startswith('<'),  # then backward, then undirected
-        not axis[1:].startswith('LBL'),  # LBL before other args
-        axis[1:].startswith('BODY'),  # BODY last
+        not axis[-1] == '>',  # forward links first
+        not axis[0] == '<',  # then backward, then undirected
+        not (len(axis) >= 5 and axis[1:4] == 'LBL'),  # LBL before other args
+        (len(axis) >= 6 and axis[1:5] == 'BODY'),  # BODY last
         axis[1:]  # otherwise alphabtical
     )
 
@@ -276,8 +277,9 @@ def copy(node, depth=-1, flags=ALL):
     links = {}
     if depth != 0:
         for axis, tgt in node.links.items():
-            if (tgt is None and _valid_axis(axis, flags)):
-                links[axis] = None
+            if tgt is None:
+                if _valid_axis(axis, flags):
+                    links[axis] = None
             elif (flags & SUBPATHS):
                 links[axis] = copy(tgt, depth-1, flags=flags)
     n = XmrsPathNode(nodeid, pred, context=context, links=links)
@@ -374,7 +376,7 @@ def _format_context(node, sort_key, depth, flags):
             if k == 'varsort':
                 if (flags & VARSORT):
                     contexts.append(v)
-            elif k.startswith('@'):
+            elif k[0] == '@':
                 if (flags & VARPROPS):
                     contexts.append('{}={}'.format(k, v))
             elif k[0] in (':', '<'):
@@ -414,33 +416,36 @@ def _prepare_axes(links, sort_key):
     Sort axes and combine those that point to the same target and go
     in the same direction.
     """
-    sorted_axes = sorted(links.keys(), key=sort_key)
-    index = {}  # signature to first axis
-    axes_map = defaultdict(list)
-    for axis in sorted_axes:
+    index = {}
+    out_order = []
+    axes_map = {}
+    for axis in sorted(links.keys(), key=sort_key):
         tgt = links[axis]
         # signature is the subpath's object id and axis direction
         signature = (id(tgt), axis[0], axis[-1])
-        axes_map[index.setdefault(signature, axis)].append(axis)
-        # if signature in index:
-        #     first_axis = index[signature]
-        #     axes_map[first_axis].append(axis)
-        # else:
-        #     index[signature] = axis
-        #     axes_map[axis].append(axis)
+        if signature in index:
+            first_axis = index[signature]
+            axes_map[first_axis].append(axis)
+        else:
+            index[signature] = axis
+            axes_map[axis] = [axis]
+            out_order.append(axis)
     axes = []
-    for axis in sorted_axes:
-        axis_list = axes_map.get(axis)
-        if not axis_list:
+    for axis in out_order:
+        if axis not in axes_map:
             continue
-        s, e = axis[0], axis[-1]  # start and end chars
-        ax = '%s%s%s' % (s, '&'.join(a.strip('<:>') for a in axis_list), e)
+        axis_list = axes_map[axis]
+        if len(axis_list) > 1:
+            s, e = axis[0], axis[-1]  # start and end chars
+            ax = '%s%s%s' % (s, '&'.join(a[1:-1] for a in axis_list), e)
+        else:
+            ax = axis_list[0]
         axes.append((ax, links[axis]))
     return axes
 
 
 def _context_sort(k):
-    return (k != 'varsort', k.startswith(':'), k.startswith('<'), k)
+    return (k != 'varsort', k[0] in (':', '<'), k)
 
 
 # FINDING PATHS #############################################################
@@ -530,10 +535,13 @@ def _explore(
                 axes = axes.difference([':/EQ:'])
             if not axes:
                 continue
-            subpaths[tuple(axes)] = subpath_select(list(
+            sps = subpath_select(list(
                 _explore(xmrs, stepmap, tgtnid, flags,
                             max_distance-1, subpath_select, visited)
             ))
+            if not flags & BALANCED:
+                sps.append(None)
+            subpaths[tuple(axes)] = sps
 
     if subpaths:
         # beware of magic below:
