@@ -119,13 +119,15 @@ def headed(axis):
 
 class XmrsPathNode(object):
 
-    __slots__ = ('nodeid', 'pred', 'context', 'links', '_height', '_order')
+    __slots__ = ('nodeid', 'pred', 'context', 'links', '_overlapping_links',
+                 '_height', '_order')
 
     def __init__(self, nodeid, pred, context=None, links=None):
         self.nodeid = nodeid
         self.pred = pred
         self.context = dict(context or [])
         self.links = dict(links or [])
+        self._overlapping_links = {}  # {overlapping_axis: orig_axis, ...}
         self._height = (
             max([-1] +
                 [x._height for x in self.links.values() if x is not None]) +
@@ -395,7 +397,7 @@ def _format_context(node, sort_key, depth, flags):
 
 def _format_subpath(node, sort_key, depth, flags):
     links = []
-    axislist = _prepare_axes(node.links, sort_key)
+    axislist = _prepare_axes(node, sort_key)
     for axis, tgt in axislist:
         if (tgt or _valid_axis(axis, flags)):
             links.append(
@@ -411,36 +413,24 @@ def _format_subpath(node, sort_key, depth, flags):
     return subpath
 
 
-def _prepare_axes(links, sort_key):
+def _prepare_axes(node, sort_key):
     """
     Sort axes and combine those that point to the same target and go
     in the same direction.
     """
-    index = {}
-    out_order = []
-    axes_map = {}
-    for axis in sorted(links.keys(), key=sort_key):
-        tgt = links[axis]
-        # signature is the subpath's object id and axis direction
-        signature = (id(tgt), axis[0], axis[-1])
-        if signature in index:
-            first_axis = index[signature]
-            axes_map[first_axis].append(axis)
-        else:
-            index[signature] = axis
-            axes_map[axis] = [axis]
-            out_order.append(axis)
+    links = node.links
+    o_links = node._overlapping_links
+    overlap = {ax2 for ax in links for ax2 in o_links.get(ax, [])}
     axes = []
-    for axis in out_order:
-        if axis not in axes_map:
-            continue
-        axis_list = axes_map[axis]
-        if len(axis_list) > 1:
-            s, e = axis[0], axis[-1]  # start and end chars
-            ax = '%s%s%s' % (s, '&'.join(a[1:-1] for a in axis_list), e)
-        else:
-            ax = axis_list[0]
-        axes.append((ax, links[axis]))
+    for axis in sorted(links.keys(), key=sort_key):
+        if axis in overlap: continue
+        tgt = links[axis]
+        if axis in o_links:
+            s, e = axis[0], axis[-1]
+            axis = '%s%s%s' % (
+                s, '&'.join(a[1:-1] for a in [axis] + o_links[axis]), e
+            )
+        axes.append((axis, tgt))
     return axes
 
 
@@ -512,15 +502,30 @@ def _explore(
                 [('@{}'.format(k), v) for k, v in node.properties.items()]
             )
     steps = stepmap.get(start, {})  # this is {end_nodeid: set(axes), ...}
+    # remove :/EQ: if necessary and generate mapping for overlapping axes
+    overlap = {}
+    for end, axes in steps.items():
+        if not (flags & UNDIRECTEDAXES):
+            axes.difference_update([':/EQ:'])
+        if len(axes) > 1:
+            # don't sort if this significantly hurts performance
+            axes = sorted(axes, key=axis_sort)
+            s, e = axes[0][0], axes[0][-1]  # axis direction characters
+            overlap[axes[0]] = [
+                ax for ax in axes[1:] if ax[0] == s and ax[-1] == e
+            ]
 
     # exclude TOP from being its own path node
+    # note: this might be redundant if BALANCED is unset (see below)
     if start != 0:
-        yield XmrsPathNode(
+        n = XmrsPathNode(
             start,
             symbol,
             context=ctext,
             links={axis: None for axes in steps.values() for axis in axes}
         )
+        n._overlapping_links = overlap
+        yield n
 
     # keep tuples of axes instead of mapping each unique axis. This is
     # for things like coordination where more than one axis point to the
@@ -529,11 +534,9 @@ def _explore(
     for tgtnid, axes in steps.items():
         if tgtnid == 0:
             # assume only one axis going to TOP (can there be more than 1?)
-            subpaths[tuple(axes)] = [XmrsPathNode(tgtnid, TOP)]
+            subpaths[next(iter(axis))] = [XmrsPathNode(tgtnid, TOP)]
         elif (flags & SUBPATHS):
-            if not (flags & UNDIRECTEDAXES):
-                axes = axes.difference([':/EQ:'])
-            if not axes:
+            if not axes:  # maybe an :/EQ: was pruned and nothing remained
                 continue
             sps = subpath_select(list(
                 _explore(xmrs, stepmap, tgtnid, flags,
@@ -561,7 +564,9 @@ def _explore(
         # now enumerate the tupled axes
         for alt in alts:
             ld = dict((a, tgt) for axes, tgt in alt.items() for a in axes)
-            yield XmrsPathNode(start, symbol, context=ctext, links=ld)
+            n = XmrsPathNode(start, symbol, context=ctext, links=ld)
+            n._overlapping_links = overlap
+            yield n
 
 
 # READING PATHS #############################################################
@@ -724,6 +729,33 @@ def _nodes_unifiable(n1, n2):
         return False
     return True
 
+
+def match(n1, n2, flags=DEFAULT):
+    if (flags & NODEID) and (n1.nodeid != n2.nodeid):
+        return False
+    if (flags & PRED):
+        if not (n1.pred == STAR or n2.pred == STAR or n1.pred == n2.pred):
+            return False
+    if (flags & CONTEXT):
+        c1 = n1.context
+        c2 = n2.context
+        check_sp = flags & SUBPATHS
+        check_vs = flags & VARSORT
+        check_vp = flags & VARPROPS
+        for k, a in c1.items():
+            if k[0] in (':', '<') and check_sp:
+                b = c2.get(k)
+                if not (a is None or b is None or match(a, b)):
+                    return False
+            elif (k == 'varsort' and check_vs) or check_vp:
+                if c2.get(k, a) != a:
+                    return False
+    if (flags & SUBPATHS):
+        for axis, n1_ in n1.links.items():
+            n2_ = n2.links.get(axis)
+            if not (n1_ is None or n2_ is None or match(n1_, n2_)):
+                return False
+    return True
 
 
 # def find_extents(node1, node2):
