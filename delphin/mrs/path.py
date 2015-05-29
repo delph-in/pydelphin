@@ -22,7 +22,8 @@ OUTAXES = OUT = 16
 INAXES = IN = 32
 UNDIRECTEDAXES = UND = 64
 SUBPATHS = SP = 128
-BALANCED = B = 256
+CARG = C = 256
+BALANCED = B = 512
 
 CONTEXT = VS | VP | SP
 ALLAXES = OUT | IN | UND
@@ -120,7 +121,7 @@ def headed(axis):
 class XmrsPathNode(object):
 
     __slots__ = ('nodeid', 'pred', 'context', 'links', '_overlapping_links',
-                 '_height', '_order')
+                 '_depth', '_order')
 
     def __init__(self, nodeid, pred, context=None, links=None):
         self.nodeid = nodeid
@@ -128,9 +129,9 @@ class XmrsPathNode(object):
         self.context = dict(context or [])
         self.links = dict(links or [])
         self._overlapping_links = {}  # {overlapping_axis: orig_axis, ...}
-        self._height = (
+        self._depth = (
             max([-1] +
-                [x._height for x in self.links.values() if x is not None]) +
+                [x._depth for x in self.links.values() if x is not None]) +
             1
         )
         self._order = (
@@ -145,7 +146,7 @@ class XmrsPathNode(object):
         return iter(self.links.items())
 
     def __len__(self):
-        return self._height
+        return self._depth
 
     def update(self, other):
         self.nodeid = other.nodeid or self.nodeid
@@ -158,8 +159,8 @@ class XmrsPathNode(object):
                 self[axis].update(tgt)
 
     @property
-    def height(self):
-        return self._height
+    def depth(self):
+        return self._depth
     
     @property
     def order(self):
@@ -399,7 +400,7 @@ def _format_subpath(node, sort_key, depth, flags):
     links = []
     axislist = _prepare_axes(node, sort_key)
     for axis, tgt in axislist:
-        if (tgt or _valid_axis(axis, flags)):
+        if (tgt is not None or _valid_axis(axis, flags)):
             links.append(
                 '{}{}'.format(
                     axis,
@@ -485,7 +486,7 @@ def _explore(
         max_distance,
         subpath_select,
         visited):
-    if start in visited or max_distance == 0:
+    if start in visited:
         return
     visited = visited.union([start])
     ctext = None
@@ -535,7 +536,7 @@ def _explore(
         if tgtnid == 0:
             # assume only one axis going to TOP (can there be more than 1?)
             subpaths[next(iter(axis))] = [XmrsPathNode(tgtnid, TOP)]
-        elif (flags & SUBPATHS):
+        elif (flags & SUBPATHS) and max_distance != 0:
             if not axes:  # maybe an :/EQ: was pruned and nothing remained
                 continue
             sps = subpath_select(list(
@@ -730,15 +731,17 @@ def _nodes_unifiable(n1, n2):
     return True
 
 
-def match(n1, n2, flags=DEFAULT):
-    if (flags & NODEID) and (n1.nodeid != n2.nodeid):
+def match(pattern, p, flags=DEFAULT):
+    if (flags & NODEID) and (pattern.nodeid != p.nodeid):
         return False
     if (flags & PRED):
-        if not (n1.pred == STAR or n2.pred == STAR or n1.pred == n2.pred):
+        p1 = pattern.pred
+        p2 = p.pred
+        if not (p1 == STAR or p2 == STAR or p1 == p2):
             return False
     if (flags & CONTEXT):
-        c1 = n1.context
-        c2 = n2.context
+        c1 = pattern.context
+        c2 = p.context
         check_sp = flags & SUBPATHS
         check_vs = flags & VARSORT
         check_vp = flags & VARPROPS
@@ -751,66 +754,21 @@ def match(n1, n2, flags=DEFAULT):
                 if c2.get(k, a) != a:
                     return False
     if (flags & SUBPATHS):
-        for axis, n1_ in n1.links.items():
-            n2_ = n2.links.get(axis)
-            if not (n1_ is None or n2_ is None or match(n1_, n2_)):
+        for axis, pattern_ in pattern.links.items():
+            p_ = p.links.get(axis)
+            if not (pattern_ is None or p_ is None or match(pattern_, p_)):
                 return False
     return True
 
 
-# def find_extents(node1, node2):
-#     exts = []
-#     for (base_axes, first_node) in find(node1, node2.pred):
-#         try:
-#             extset = extents(first_node, node2)
-#             if extset:
-#                 exts.append((base_axes, extset))
-#         except XmrsPathError:
-#             pass
-#     return exts
+def subpaths(p):
+    sps = _subpaths(p)
+    sps = sps[1:]  # the first subpath is the same as the original
+    return sps
 
+def _subpaths(p):
+    sps = {axis: _subpaths(tgt) for axis, tgt in p.links.items()}
 
-# def extents(node1, node2):
-#     if _nodes_informative(node1, node2):
-#         return ([], node2)
-
-#     assert node1.pred == node2.pred
-#     exts = []
-#     # if a constraint is violated, raise XmrsPathError
-#     # if a constraint exists on node1 and node2, dive
-#     # if one is on node1 but not node2, ignore
-#     # if one is on node2 but not node1, return
-#     for axis, tgt2 in node2.links.items():
-#         if axis in node1.links:
-#             tgt1 = node1.links[axis]
-#             if tgt2 is None:
-#                 continue
-#             elif tgt1 is None:
-#                 exts.append(([axis], tgt2))
-#             elif _nodes_compatible(tgt1, tgt2):
-#                 for axes, ext in extents(tgt1, tgt2):
-#                     exts.append(([axis] + axes, ext))
-#             else:
-#                 raise XmrsPathError('Incompatible paths.')
-#         else:
-#             exts.append(([axis], tgt2))
-#     return exts
-
-
-# def _nodes_informative(n1, n2):
-#     if
-
-# def _nodes_compatible(n1, n2):
-#     compatible = True
-#     if n1.pred != n2.pred:
-#         compatible = False
-#     for k, v in n2.context.items():
-
-#     return (
-#         n1.pred == n2.pred and
-#         all(n1.context.get(k, v) == v for k, v in n2.context.items()) and
-
-#     )
 
 # BUILDING XMRS#########################################################
 
