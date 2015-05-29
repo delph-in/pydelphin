@@ -14,15 +14,15 @@ TOP = 'TOP'
 STAR = '*'
 
 # flags
-NODEID = NID = 1
-PRED = P = 2
-VARSORT = VS = 4
-VARPROPS = VP = 8
-OUTAXES = OUT = 16
-INAXES = IN = 32
-UNDIRECTEDAXES = UND = 64
-SUBPATHS = SP = 128
-CARG = C = 256
+NODEID = NID = 1            # pred#NID... or #NID...
+PRED = P = 2                # pred or "pred" or 'pred
+VARSORT = VS = 4            # pred[e], pred[x], etc.
+VARPROPS = VP = 8           # pred[@PROP=val]
+OUTAXES = OUT = 16          # pred:ARG1/NEQ>
+INAXES = IN = 32            # pred<ARG1/EQ:
+UNDIRECTEDAXES = UND = 64   # pred:/EQ:
+SUBPATHS = SP = 128         # pred:ARG1/NEQ>pred2
+CARG = C = 256              # pred:CARG>"value"
 BALANCED = B = 512
 
 CONTEXT = VS | VP | SP
@@ -762,12 +762,26 @@ def match(pattern, p, flags=DEFAULT):
 
 
 def subpaths(p):
-    sps = _subpaths(p)
+    all_sps = []
+    sps = list(_subpaths(p))
     sps = sps[1:]  # the first subpath is the same as the original
     return sps
 
+
 def _subpaths(p):
-    sps = {axis: _subpaths(tgt) for axis, tgt in p.links.items()}
+    if p is None:
+        return
+    sps = {ax: list(_subpaths(tgt)) + [None] for ax, tgt in p.links.items()}
+    # this fancy bit is the same as in _explore()
+    alts = list(map(
+        lambda z: dict(zip(sps.keys(), z)),
+        product(*sps.values())
+    ))
+    for alt in alts:
+        ld = dict((axis, tgt) for axis, tgt in alt.items())
+        n = XmrsPathNode(p.nodeid, p.pred, context=p.context, links=ld)
+        n._overlapping_links = p._overlapping_links
+        yield n
 
 
 # BUILDING XMRS#########################################################
