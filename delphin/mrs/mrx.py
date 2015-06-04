@@ -170,12 +170,12 @@ def decode_args(elem):
     # other args (including IVs) have var values.
     args = []
     for e in elem.findall('fvpair'):
-        argname = e.find('rargname').text.upper()
+        rargname = e.find('rargname').text.upper()
         if e.find('constant') is not None:
             argval = e.find('constant').text
         elif e.find('var') is not None:
             argval = decode_var(e.find('var'))
-        args.append(Argument.mrs_argument(argname, argval))
+        args.append(Argument.mrs_argument(rargname, argval))
     return args
 
 
@@ -276,10 +276,10 @@ def encode_ep(ep, listed_vars):
         e.append(encode_arg(IVARG_ROLE, encode_variable(ep.iv, listed_vars)))
     for arg in ep.args:
         if isinstance(arg.value, MrsVariable):
-            e.append(encode_arg(arg.argname,
+            e.append(encode_arg(arg.rargname,
                                 encode_variable(arg.value, listed_vars)))
         else:
-            e.append(encode_arg(arg.argname, encode_constant(arg.value)))
+            e.append(encode_arg(arg.rargname, encode_constant(arg.value)))
     return e
 
 

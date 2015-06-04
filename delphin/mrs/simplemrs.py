@@ -8,12 +8,14 @@
 
 from collections import OrderedDict, deque
 import re
-from delphin.mrs import Mrs
+from delphin.mrs import Xmrs, Mrs
 from delphin.mrs.components import (
-    Hook, ElementaryPredication, Argument, Pred,
-    MrsVariable, Lnk, HandleConstraint, IndividualConstraint
+    Hook, ElementaryPredication, Pred,
+    MrsVariable, Lnk, HandleConstraint, IndividualConstraint,
+    sort_vid_split, var_re,
+    hcons, icons
 )
-from delphin.mrs.config import (HANDLESORT)
+from delphin.mrs.config import (HANDLESORT, CONSTARG_ROLE)
 from delphin.mrs.util import ReadOnceDict
 from delphin._exceptions import XmrsDeserializationError as XDE
 
@@ -64,7 +66,7 @@ _default_mrs_delim = '\n'
 # Pickle-API methods
 
 
-def load(fh, single=False):
+def load(fh, single=False, strict=False):
     """
     Deserialize SimpleMRSs from a file (handle or filename)
 
@@ -75,11 +77,11 @@ def load(fh, single=False):
       a generator of Xmrs objects (unless the *single* option is True)
     """
     if isinstance(fh, str):
-        return loads(open(fh, 'r').read(), single=single)
-    return loads(fh.read(), single=single)
+        return loads(open(fh, 'r').read(), single=single, strict=strict)
+    return loads(fh.read(), single=single, strict=strict)
 
 
-def loads(s, single=False):
+def loads(s, single=False, strict=False):
     """
     Deserialize SimpleMRS string representations
 
@@ -89,7 +91,7 @@ def loads(s, single=False):
     Returns:
       a generator of Xmrs objects (unless the *single* option is True)
     """
-    ms = deserialize(s)
+    ms = deserialize(s, strict=strict)
     if single:
         return next(ms)
     else:
@@ -147,8 +149,8 @@ def dumps(ms, single=False, version=_default_version,
 
 # for convenience
 
-load_one = lambda fh: load(fh, single=True)
-loads_one = lambda s: loads(s, single=True)
+load_one = lambda fh, **kwargs: load(fh, single=True, **kwargs)
+loads_one = lambda s, **kwargs: loads(s, single=True, **kwargs)
 dump_one = lambda fh, m, **kwargs: dump(fh, m, single=True, **kwargs)
 dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 
@@ -184,23 +186,132 @@ def validate_tokens(tokens, expected):
         validate_token(tokens.popleft(), exp_tok)
 
 
-def is_variable(token):
-    try:
-        MrsVariable.sort_vid_split(token)
-        return True
-    except ValueError:
-        return False
-
-
 def invalid_token_error(token, expected):
     raise XDE('Invalid token: "{}"\tExpected: "{}"'.format(token, expected))
 
 
-def deserialize(string):
+def deserialize(string, strict=False):
+    if strict:
+        read = read_mrs
+    else:
+        read = _read_mrs
     # FIXME: consider buffering this so we don't read the whole string at once
     tokens = tokenize(string)
     while tokens:
-        yield read_mrs(tokens)
+        yield read(tokens)
+
+
+def _read_mrs(tokens, version=_default_version):
+    #return read_mrs(tokens)
+    try:
+        if tokens[0] != _left_bracket:
+            return None
+        top = idx = surface = lnk = None
+        vars_ = {}
+        tokens.popleft()  # [
+        if tokens[0] == _left_angle:
+            lnk = read_lnk(tokens)
+        if tokens[0].startswith('"'):  # and tokens[0].endswith('"'):
+            surface = tokens.popleft()[1:-1]  # get rid of first quotes
+        if tokens[0] in (_ltop, _top):
+            tokens.popleft()  # LTOP / TOP
+            tokens.popleft()  # :
+            top = tokens.popleft()
+            vars_[top] = {}
+        if tokens[0] == _index:
+            tokens.popleft()  # INDEX
+            tokens.popleft()  # :
+            idx = tokens.popleft()
+            vars_[idx] = _read_props(tokens)
+        rels = _read_rels(tokens, vars_)
+        hcons = _read_cons(tokens, _hcons, vars_)
+        icons = _read_cons(tokens, _icons, vars_)
+        tokens.popleft()  # ]
+        m = Xmrs(top=top, index=idx, eps=rels,
+                 hcons=hcons, icons=icons, vars=vars_,
+                 lnk=lnk, surface=surface)
+    except IndexError:
+        unexpected_termination_error()
+    return m
+
+
+def _read_props(tokens):
+    props = {}
+    if tokens[0] == _left_bracket:
+        tokens.popleft()  # [
+        vartype = tokens.popleft()  # this gets discarded though
+        while tokens[0] != _right_bracket:
+            key = tokens.popleft()
+            tokens.popleft()  # :
+            val = tokens.popleft()
+            props[key] = val
+        tokens.popleft()  # ]
+    return props
+
+
+def _read_rels(tokens, vars_):
+    rels = None
+    nid = 10000
+    if tokens[0] == _rels:
+        rels = []
+        tokens.popleft()  # RELS
+        tokens.popleft()  # :
+        tokens.popleft()  # <
+        while tokens[0] != _right_angle:
+            rels.append(_read_ep(tokens, nid, vars_))
+            nid += 1
+        tokens.popleft()  # >
+    return rels
+
+
+def _read_ep(tokens, nid, vars_):
+    # reassign these locally to avoid global lookup
+    CARG = CONSTARG_ROLE
+    _var_re = var_re
+    # begin parsing
+    tokens.popleft()  # [
+    pred = Pred.string_or_grammar_pred(tokens.popleft())
+    lnk = read_lnk(tokens)
+    surface = label = None
+    if tokens[0].startswith('"'):
+        surface = tokens.popleft()[1:-1]  # get rid of first quotes
+    if tokens[0] == _lbl:
+        tokens.popleft()  # LBL
+        tokens.popleft()  # :
+        label = tokens.popleft()
+        vars_[label] = {}
+    args = {}
+    while tokens[0] != _right_bracket:
+        role = tokens.popleft()
+        tokens.popleft()  # :
+        val = tokens.popleft()
+        if _var_re.match(val) is not None and role.upper() != CARG:
+            props = _read_props(tokens)
+            if val not in vars_:
+                vars_[val] = {}
+            vars_[val].update(props)
+        args[role] = val
+    tokens.popleft()  # ]
+    return (nid, pred, label, args, lnk, surface)
+
+
+def _read_cons(tokens, constype, vars_):
+    cons = None
+    if tokens[0] == constype:
+        cons = []
+        tokens.popleft()  # (H|I)CONS
+        tokens.popleft()  # :
+        tokens.popleft()  # <
+        while tokens[0] != _right_angle:
+            left = tokens.popleft()
+            reln = tokens.popleft()
+            rght = tokens.popleft()
+            cons.append((left, reln, rght))
+            # now just make sure they are in the vars_ dict
+            vars_.setdefault(left, {})
+            vars_.setdefault(rght, {})
+        tokens.popleft()  # >
+    return cons
 
 
 def read_mrs(tokens, version=_default_version):
@@ -225,7 +336,8 @@ def read_mrs(tokens, version=_default_version):
         hcons = read_hcons(tokens, variables=variables)
         icons = read_icons(tokens, variables=variables)
         validate_token(tokens.popleft(), _right_bracket)
-        m = Mrs(hook=Hook(ltop=ltop, index=index),
+        m = Mrs(top=ltop,
+                index=index,
                 rels=rels,
                 hcons=hcons,
                 icons=icons,
@@ -245,7 +357,7 @@ def read_featval(tokens, feat=None, sort=None, variables=None):
         validate_token(name, feat)
     validate_token(tokens.popleft(), _colon)
     # if it's not a variable, assume it's a constant
-    if is_variable(tokens[0]):
+    if var_re.match(tokens[0]) is not None:
         value = read_variable(tokens, sort=sort, variables=variables)
     else:
         value = tokens.popleft()
@@ -259,7 +371,7 @@ def read_variable(tokens, sort=None, variables=None):
     if variables is None:
         variables = {}
     var = tokens.popleft()
-    srt, vid = MrsVariable.sort_vid_split(var)
+    srt, vid = sort_vid_split(var)
     # consider something like not(srt <= sort) in the case of subsumptive sorts
     if sort is not None and srt != sort:
         raise XDE('Variable {} has sort "{}", expected "{}"'
@@ -272,12 +384,14 @@ def read_variable(tokens, sort=None, variables=None):
         raise XDE('Handle variable "{}" has a non-empty property set {}.'
                   .format(var, props))
     if vid in variables:
-        if srt != variables[vid].sort:
+        var_ = variables[vid].varstring
+        srt_, _ = sort_vid_split(var_)
+        if srt != srt_:
             raise XDE('Variable {} has a conflicting sort with {}'
-                      .format(var, str(variables[vid])))
+                      .format(var, var_))
         variables[vid].properties.update(props)
     else:
-        variables[vid] = MrsVariable(vid=vid, sort=srt, properties=props)
+        variables[vid] = MrsVariable(var, properties=props)
     return variables[vid]
 
 
@@ -336,7 +450,7 @@ def read_ep(tokens, variables=None):
     while tokens[0] != _right_bracket:
         args.append(read_argument(tokens, variables=variables))
     tokens.popleft()  # we know this is a right bracket
-    return ElementaryPredication(pred, label, args=args,
+    return ElementaryPredication(pred=pred, label=label, args=args,
                                  lnk=lnk, surface=surface)
 
 
@@ -346,7 +460,7 @@ def read_argument(tokens, variables=None):
     if variables is None:
         variables = {}
     argname, value = read_featval(tokens, variables=variables)
-    return Argument.mrs_argument(argname, value)
+    return (argname, value) #Argument.mrs_argument(argname, value)
 
 
 def read_lnk(tokens):
@@ -393,7 +507,8 @@ def read_hcons(tokens, variables=None):
     hcons = []
     validate_tokens(tokens, [_colon, _left_angle])
     while tokens[0] != _right_angle:
-        hi = read_variable(tokens, sort='h', variables=variables)
+        # only keep varstring of MrsVariables
+        hi = read_variable(tokens, sort='h', variables=variables)[0]
         # rels are case-insensitive and the convention is lower-case
         rel = tokens.popleft().lower()
         if rel == _qeq:
@@ -404,7 +519,7 @@ def read_hcons(tokens, variables=None):
             rel = HandleConstraint.OUTSCOPES
         else:
             invalid_token_error(rel, '('+'|'.join(_valid_hcons)+')')
-        lo = read_variable(tokens, sort='h', variables=variables)
+        lo = read_variable(tokens, sort='h', variables=variables)[0]
         hcons.append(HandleConstraint(hi, rel, lo))
     tokens.popleft()  # we know this is a right angle
     return hcons
@@ -419,10 +534,11 @@ def read_icons(tokens, variables=None):
     icons = []
     validate_tokens(tokens, [_colon, _left_angle])
     while tokens[0] != _right_angle:
-        target = read_variable(tokens, variables=variables)
+        # only keep varstring of MrsVariables
+        left = read_variable(tokens, variables=variables)[0]
         relation = tokens.popleft().lower()
-        clause = read_variable(tokens, variables=variables)
-        icons.append(IndividualConstraint(target, relation, clause))
+        right = read_variable(tokens, variables=variables)[0]
+        icons.append(IndividualConstraint(left, relation, right))
     tokens.popleft()  # we know this is a right angle
     return icons
 
@@ -450,9 +566,8 @@ def serialize(ms, version=_default_version, pretty_print=False, color=False):
 def serialize_mrs(m, version=_default_version, pretty_print=False):
     # note that listed_vars is modified as a side-effect of the lower
     # functions
-    g = m._graph
-    varprops = ReadOnceDict((v.vid, v.properties) for v in g.nodes()
-                            if isinstance(v, MrsVariable))
+    #g = m._graph
+    varprops = ReadOnceDict(m._vars.items())
     listed_vars = set()
     toks = []
     if version >= 1.1:
@@ -463,26 +578,27 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
             header_toks.append('"{}"'.format(m.surface))
         if header_toks:
             toks.append(' '.join(header_toks))
-    if m.ltop is not None:
+    if m.top is not None:
         toks.append(serialize_argument(
-            _top if version >= 1.1 else _ltop, m.ltop, varprops
+            _top if version >= 1.1 else _ltop, m.top, varprops
         ))
     if m.index is not None:
         toks.append(serialize_argument(
             _index, m.index, varprops
         ))
     delim = ' ' if not pretty_print else '\n          '
+    _eps = m._eps
     toks.append('RELS: < {eps} >'.format(
-        eps=delim.join(serialize_ep(g, nid, varprops, version=version)
-                       for nid in g.nodeids)
+        eps=delim.join(serialize_ep(_eps[nid], varprops, version=version)
+                       for nid in m.nodeids)
     ))
     #if len(g.nodeids) is not None:
     #    toks += [serialize_rels(g, listed_vars, version=version,
     #                            pretty_print=pretty_print)]
-    if m.hcons is not None:
-        toks += [' '.join([serialize_hcons(m.hcons, listed_vars)])]
-    if version >= 1.1 and m.icons:  # `is not None` if you want "ICONS: < >""
-        toks += [' '.join([serialize_icons(m.icons, listed_vars)])]
+    toks += [serialize_hcons(hcons(m), listed_vars)]
+    icons_ = icons(m)
+    if version >= 1.1 and icons_:  # remove `and icons_` for "ICONS: < >"
+        toks += [serialize_icons(icons_, listed_vars)]
     delim = ' ' if not pretty_print else '\n  '
     return '{} {} {}'.format(_left_bracket, delim.join(toks), _right_bracket)
 
@@ -508,19 +624,23 @@ def serialize_argument(rargname, value, varprops):
         )
 
 
-def serialize_ep(g, nid, varprops, version=_default_version):
+def serialize_ep(ep, varprops, version=_default_version):
     """Serialize an Elementary Predication into the SimpleMRS encoding."""
-    node = g.node[nid]
+    # ('nodeid', 'pred', 'label', 'args', 'lnk', 'surface', 'base')
     arglist = ' '.join([serialize_argument(rarg, val, varprops)
-                        for rarg, val in node['rargs'].items()])
-    surface = None if version < 1.1 else node['surface']
-    pred = node['pred']
+                        for rarg, val in ep[3].items()])
+    if version < 1.1 or len(ep) < 6 or ep[5] is None:
+        surface = ''
+    else:
+        surface = ' "%s"' % ep[5]
+    lnk = None if len(ep) < 5 else ep[4]
+    pred = ep[1]
     predstr = pred.string
     return '[ {pred}{lnk}{surface} LBL: {label}{s}{args} ]'.format(
         pred=predstr,
-        lnk=serialize_lnk(node['lnk']),
-        surface=' "{}"'.format(surface) if surface is not None else '',
-        label=str(node['label']),
+        lnk=serialize_lnk(lnk),
+        surface=surface,
+        label=str(ep[2]),
         s=' ' if arglist else '',
         args=arglist
     )
@@ -549,23 +669,20 @@ def serialize_lnk(lnk):
 def serialize_hcons(hcons, listed_vars):
     """Serialize |HandleConstraints| into the SimpleMRS encoding."""
     toks = [_hcons + _colon, _left_angle]
-    for hcon in hcons:
-        if hcon.relation == HandleConstraint.QEQ:
-            rel = _qeq
-        elif hcon.relation == HandleConstraint.LHEQ:
-            rel = _lheq
-        elif hcon.relation == HandleConstraint.OUTSCOPES:
-            rel = _outscopes
-        toks += [str(hcon.hi), rel, str(hcon.lo)]
+    for hc in hcons:
+        toks.extend(hc)
+        # reln = hcon[1]
+        # toks += [hcon[0], rel, str(hcon.lo)]
     toks += [_right_angle]
     return ' '.join(toks)
 
 def serialize_icons(icons, listed_vars):
     """Serialize |IndividualConstraints| into the SimpleMRS encoding."""
     toks = [_icons + _colon, _left_angle]
-    for icon in icons:
-        toks += [str(icon.target),
-                 icon.relation,
-                 str(icon.clause)]
+    for ic in icons:
+        toks.extend(ic)
+        # toks += [str(icon.left),
+        #          icon.relation,
+        #          str(icon.right)]
     toks += [_right_angle]
     return ' '.join(toks)

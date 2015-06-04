@@ -1,5 +1,5 @@
 
-from collections import (OrderedDict, defaultdict)
+from collections import (OrderedDict, defaultdict, namedtuple)
 from itertools import chain
 import warnings
 # consider using this:
@@ -9,8 +9,9 @@ import networkx as nx
 from networkx import DiGraph, relabel_nodes
 
 from delphin._exceptions import (XmrsError, XmrsStructureError)
+from . import components
 from .components import (
-    Hook, MrsVariable, ElementaryPredication, Node, Argument, Link,
+    Hook, MrsVariable, ElementaryPredication, Node,
     HandleConstraint, Lnk, LnkMixin
 )
 from .config import (
@@ -20,7 +21,7 @@ from .config import (
 from .util import first, second
 
 
-def Mrs(hook=None, rels=None, hcons=None, icons=None,
+def Mrs(top=None, index=None, xarg=None, rels=None, hcons=None, icons=None,
         lnk=None, surface=None, identifier=None):
     """
     Construct an |Xmrs| using MRS components.
@@ -80,8 +81,8 @@ def Rmrs(hook=None, eps=None, args=None, hcons=None, icons=None,
     Construct an |Xmrs| from RMRS components.
 
     Robust Minimal Recursion Semantics (RMRS) are like MRS, but all
-    |EPs| have an anchor (or nodeid), and |Arguments| are not contained
-    by the source |EPs|, but instead reference the anchor of their |EP|.
+    |EPs| have a nodeid ("anchor"), and |Arguments| are not contained
+    by the source |EPs|, but instead reference the nodeid of their |EP|.
 
     Args:
         hook: A |Hook| object
@@ -99,17 +100,16 @@ def Rmrs(hook=None, eps=None, args=None, hcons=None, icons=None,
 
     >>> ltop = MrsVariable(vid=0, sort='h')
     >>> rain_label = MrsVariable(vid=1, sort='h')
-    >>> rain_anchor = MrsVariable(vid=10000, sort='h')
     >>> index = MrsVariable(vid=2, sort='e')
     >>> m = Rmrs(
     >>>     hook=Hook(ltop=ltop, index=index),
     >>>     eps=[ElementaryPredication(
     >>>         Pred.stringpred('_rain_v_1_rel'),
     >>>         label=rain_label,
-    >>>         anchor=rain_anchor
+    >>>         nodeid=10000
     >>>         )
     >>>     ],
-    >>>     args=[Argument.rmrs_argument(rain_anchor, 'ARG0', index)],
+    >>>     args=[Argument.rmrs_argument(10000, 'ARG0', index)],
     >>>     hcons=[HandleConstraint(ltop, 'qeq', rain_label)]
     >>> )
     """
@@ -119,12 +119,12 @@ def Rmrs(hook=None, eps=None, args=None, hcons=None, icons=None,
     args = list(args or [])
     for arg in args:
         if arg.nodeid is None:
-            raise XmrsStructureError("RMRS args must have an anchor/nodeid.")
+            raise XmrsStructureError("RMRS args must have a nodeid.")
     # make the EPs more MRS-like (with arguments)
     for ep in eps:
         if ep.nodeid is None:
-            raise XmrsStructureError("RMRS EPs must have an anchor/nodeid.")
-        argdict = OrderedDict((a.argname, a) for a in args
+            raise XmrsStructureError("RMRS EPs must have a nodeid.")
+        argdict = OrderedDict((a.rargname, a) for a in args
                               if a.nodeid == ep.nodeid)
         ep.argdict = argdict
     hcons = list(hcons or [])
@@ -168,7 +168,7 @@ def Dmrs(nodes=None, links=None,
     ivs = _make_ivs(nodes, vgen)
     hook = Hook(ltop=labels[LTOP_NODEID])  # no index for now
     # initialize args with ARG0 for intrinsic variables
-    args = {nid: [Argument(nid, IVARG_ROLE, iv)] for nid, iv in ivs.items()}
+    args = {nid: [(nid, IVARG_ROLE, iv)] for nid, iv in ivs.items()}
     hcons = []
     for l in links:
         if l.start not in args:
@@ -181,32 +181,32 @@ def Dmrs(nodes=None, links=None,
             if l.post == H_POST or l.post == NIL_POST:
                 hcons += [qeq(labels[LTOP_NODEID], labels[l.end])]
         else:
-            if not l.argname or l.argname.upper() == 'NIL':
+            if not l.rargname or l.rargname.upper() == 'NIL':
                 continue  # don't make an argument for bare EQ links
             if l.post == H_POST:
                 hole = vgen.new(HANDLESORT)
                 hcons += [qeq(hole, labels[l.end])]
-                args[l.start].append(Argument(l.start, l.argname, hole))
+                args[l.start].append((l.start, l.rargname, hole))
                 # if the arg is RSTR, it's a quantifier, so we can
                 # find its intrinsic variable now
-                if l.argname.upper() == RSTR_ROLE:
+                if l.rargname.upper() == RSTR_ROLE:
                     ivs[l.start] = ivs[l.end]
                     args[l.start].append(
-                        Argument(l.start, IVARG_ROLE, ivs[l.start])
+                        (l.start, IVARG_ROLE, ivs[l.start])
                     )
             elif l.post == HEQ_POST:
                 args[l.start].append(
-                    Argument(l.start, l.argname, labels[l.end])
+                    (l.start, l.rargname, labels[l.end])
                 )
             else:  # NEQ_POST or EQ_POST
                 args[l.start].append(
-                    Argument(l.start, l.argname, ivs[l.end])
+                    (l.start, l.rargname, ivs[l.end])
                 )
     eps = []
     for node in nodes:
         nid = node.nodeid
         if node.carg is not None:
-            args[nid].append(Argument(nid, CONSTARG_ROLE, node.carg))
+            args[nid].append((nid, CONSTARG_ROLE, node.carg))
         ep = ElementaryPredication.from_node(
             labels[nid], node, (args.get(nid) or None)
         )
@@ -245,32 +245,67 @@ def _make_ivs(nodes, vgen):
     return ivs
 
 
-def build_graph(hook, eps, hcons, icons):
-    g = XmrsDiGraph()
-    if hook.ltop is not None:
-        g.add_edge(LTOP_NODEID, hook.ltop)
-    for ep in eps:
-        nid = ep.nodeid
-        lbl = ep.label
-        iv = ep.iv
-        g.nodeids.append(nid)
-        g.labels.add(lbl)
-        g.add_node(nid, {
-            'pred': ep.pred, 'iv': iv, 'label': lbl, 'lnk': ep.lnk,
-            'surface': ep.surface, 'base': ep.base, 'rargs': OrderedDict()
-        })
-        g.add_edge(lbl, nid)
-        for arg in ep.args:
-            g.add_edge(nid, arg.value, {'rargname': arg.argname })
-            g.node[nid]['rargs'][arg.argname] = arg.value
-    for hc in hcons:
-        g.add_edge(hc.hi, hc.lo, {'relation': hc.relation})
-        g.node[hc.hi]['hcons'] = hc
-    for ic in icons:
-        g.add_edge(ic.target, ic.clause, {'relation': ic.relation})
-        g.node[ic.target]['icons'] = ic
-    g.refresh()  # sets up back-links from IVs to nodes and quantifiers
-    return g
+# def build_graph(hook, eps, hcons, icons):
+#     edges = []
+#     if hook.ltop is not None:
+#         edges.append((LTOP_NODEID, hook.ltop))
+#     for ep in eps:
+#         nid = ep.nodeid
+#         lbl = ep.label
+#         iv = ep.iv
+#         g.nodeids.append(nid)
+#         g.labels.add(lbl)
+#         g.add_node(nid, {
+#             'pred': ep.pred, 'iv': iv, 'label': lbl, 'lnk': ep.lnk,
+#             'surface': ep.surface, 'base': ep.base, 'rargs': OrderedDict()
+#         })
+#         g.add_edge(lbl, nid)
+#         for arg in ep.args.values():
+#             g.add_edge(nid, arg.value, {'rargname': arg.rargname })
+#             g.node[nid]['rargs'][arg.rargname] = arg.value
+#     for hc in hcons:
+#         g.add_edge(hc.hi, hc.lo, {'relation': hc.relation})
+#         g.node[hc.hi]['hcons'] = hc
+#     for ic in icons:
+#         g.add_edge(ic.left, ic.right, {'relation': ic.relation})
+#         g.node[ic.left]['icons'] = ic
+#     g.refresh()  # sets up back-links from IVs to nodes and quantifiers
+#     return g
+
+
+# def build_graph(top, , hcons, icons):
+
+#     g = XmrsDiGraph()
+#     if hook.ltop is not None:
+#         g.add_edge(LTOP_NODEID, hook.ltop)
+#     for ep in eps:
+#         nid = ep.nodeid
+#         lbl = ep.label
+#         iv = ep.iv
+#         g.nodeids.append(nid)
+#         g.labels.add(lbl)
+#         g.add_node(nid, {
+#             'pred': ep.pred, 'iv': iv, 'label': lbl, 'lnk': ep.lnk,
+#             'surface': ep.surface, 'base': ep.base, 'rargs': OrderedDict()
+#         })
+#         g.add_edge(lbl, nid)
+#         for arg in ep.args:
+#             g.add_edge(nid, arg.value, {'rargname': arg.rargname })
+#             g.node[nid]['rargs'][arg.rargname] = arg.value
+#     for hc in hcons:
+#         g.add_edge(hc.hi, hc.lo, {'relation': hc.relation})
+#         g.node[hc.hi]['hcons'] = hc
+#     for ic in icons:
+#         g.add_edge(ic.left, ic.right, {'relation': ic.relation})
+#         g.node[ic.left]['icons'] = ic
+#     g.refresh()  # sets up back-links from IVs to nodes and quantifiers
+#     return g
+
+
+# XmrsNode = namedtuple(
+#     'XmrsNode',
+#     ('pred', 'label', 'args', 'lnk', 'surface', 'base')
+# )
 
 
 class Xmrs(LnkMixin):
@@ -278,7 +313,14 @@ class Xmrs(LnkMixin):
     Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
     """
 
-    def __init__(self, graph=None, hook=None,
+    __slots__ = ('top', 'index', 'xarg', '_nodeids', '_eps', '_vars')
+    # nodeids, preds, lnks, label, args, variables, surface, base,
+    # hcons, icons, constants
+# nodeid: (pred, label, args, lnk, surface, base)
+    # vid: variable
+
+    def __init__(self, top=None, index=None, xarg=None,
+                 eps=None, hcons=None, icons=None, vars=None,
                  lnk=None, surface=None, identifier=None):
         """
         Xmrs can be instantiated directly, but it is meant to be created
@@ -292,23 +334,81 @@ class Xmrs(LnkMixin):
             surface: the surface string
             identifier: a discourse-utterance id
         """
-        self._graph = graph or XmrsDiGraph()
+        self.top = top
+        self.index = index
+        self.xarg = xarg
+
+        self._nodeids = []
+        self._eps = {}
+        self._vars = {var: {'props': props, 'refs': defaultdict(list)}
+                      for var, props in vars.items()}
+        if eps is not None:
+            self.add_eps(eps)
+        if hcons is not None:
+            self.add_hcons(hcons)
+        if icons is not None:
+            self.add_icons(icons)
+
+        # self._graph = graph or XmrsDiGraph()
 
         # Some members relate to the whole MRS
         #: The |Hook| object contains the LTOP, INDEX, and XARG
-        self.hook = hook or Hook()
+        #self.hook = hook or Hook()
         #: A |Lnk| object to associate the Xmrs to the surface form
         self.lnk = lnk  # Lnk object (MRS-level lnk spans the whole input)
         #: The surface string
-        self.surface = surface   # The surface string
+        self.surface = surface  # The surface string
         #: A discourse-utterance id
         self.identifier = identifier  # Associates an utterance with the RMRS
 
-        # set the proper argument types (at least distinguish label
-        # equality from HCONS)
-        # for ep in eps:
-        #     for arg in ep.args:
-        #         arg.type = arg.infer_argument_type(xmrs=self)
+    def add_eps(self, eps):
+        # (nid, pred, label, args, lnk, surface, base)
+        #CONST = Argument.CONSTANT_ARG  # assign locally to avoid global lookup
+        _nodeids = self._nodeids
+        _eps = self._eps
+        _vars = self._vars
+        tosort = []  # after adding, resort label sets by headedness
+        for ep in eps:
+            nodeid = ep[0]
+            if nodeid in _eps:
+                raise XmrsError(
+                    'EP already exists in Xmrs: {} ({})'.format(nodeid, ep[1])
+                )
+            _nodeids.append(nodeid)
+            _eps[nodeid] = ep
+            lbl = ep[2]
+            if lbl is not None:
+                _vars[lbl]['refs']['LBL'].append(nodeid)
+                tosort.append(lbl)
+            for role, val in ep[3].items():
+                if val in _vars:
+                    vardict = _vars[val]
+                    vardict['refs'][role].append(nodeid)
+                    if role == IVARG_ROLE:
+                        if ep[1].is_quantifier():
+                            vardict['bv'] = nodeid
+                        else:
+                            vardict['iv'] = nodeid
+        headsort = _labelset_headedness_sort
+        for lbl in tosort:
+            _vars[lbl]['refs']['LBL'] = headsort(self, lbl)
+
+    def add_hcons(self, hcons):
+        # (hi, relation, lo)
+        _vars = self._vars
+        for hc in hcons:
+            hi = hc[0]
+            lo = hc[2]
+            _vars[hi]['hcons'] = hc
+            _vars[lo]['refs']['hcons'].append(hc)
+
+    def add_icons(self, icons):
+        _vars = self._vars
+        for ic in icons:
+            left = ic[0]
+            right = ic[2]
+            _vars[left]['icons'] = ic
+            _vars[right]['refs']['icons'].append(ic)
 
     def __repr__(self):
         if self.surface is not None:
@@ -349,183 +449,69 @@ class Xmrs(LnkMixin):
 
     @property
     def nodeids(self):
-        """The list of `nodeids`."""
-        # does not return LTOP nodeid
-        return list(self._graph.nodeids)
+        return list(self._nodeids)
 
-    @property
-    def anchors(self):
-        """The list of `anchors`."""
-        # does not return LTOP anchor
-        return list(map(MrsVariable.anchor, self.nodeids))
-
-    @property
     def variables(self):
-        """The list of all |MrsVariable| objects specified in the Xmrs."""
-        all_vars = set(self.introduced_variables).union(
-            [a.value for a in self.args if isinstance(a.value, MrsVariable)] +
-            [hc.lo for hc in self.hcons]
-        )
-        if self.hook.ltop is not None:
-            all_vars.update([self.hook.ltop])
-        if self.hook.index is not None:
-            all_vars.update([self.hook.index])
-        return sorted(all_vars)
+        return [MrsVariable(var, vdict['props'])
+                for var, vdict in self._vars.items()]
 
-    @property
     def introduced_variables(self):
-        """
-        The list of the |MrsVariables| that are _introduced_ in the
-        Xmrs. Introduced |MrsVariables| exist as intrinsic
-        variables, labels, or holes (the HI variable of a QEQ).
-        """
-        return sorted(set(
-            list(chain.from_iterable([(ep.iv, ep.label) for ep in self.eps]))
-            + [hc.hi for hc in self.hcons]
-        ))
+        return [MrsVariable(var, vdict['props'])
+                for var, vd in self._vars.items()
+                if 'iv' in vd or 'LBL' in vd['refs'] or 'hcons' in vd]
 
-    @property
     def intrinsic_variables(self):
-        """The list of intrinsic variables."""
-        return list(ep.iv for ep in self.eps if not ep.is_quantifier())
+        return [MrsVariable(var, vdict['props'])
+                for var, vdict in self._vars.items()
+                if 'iv' in vdict]
 
     #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.intrinsic_variables`
     ivs = intrinsic_variables
 
-    @property
     def bound_variables(self):
-        """
-        The list of bound variables (i.e. the value of the intrinsic
-        argument of quantifiers).
-        """
-        return list(ep.iv for ep in self.eps if ep.is_quantifier())
+        return [MrsVariable(var, vdict['props'])
+                for var, vdict in self._vars.items()
+                if 'bv' in vdict]
 
     #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.bound_variables`
     bvs = bound_variables
 
-    @property
     def labels(self):
-        """The list of labels of the |EPs| in the Xmrs."""
-        g = self._graph
-        return list(set(g.node[nid]['label'] for nid in g.nodeids))
-        # set(ep.label for ep in self._nid_to_ep.values()))
+        return [MrsVariable(var, vdict['props'])
+                for var, vdict in self._vars.items()
+                if 'LBL' in vdict['refs']]
 
     @property
     def ltop(self):
-        """The LTOP |MrsVariable|, if it exists, otherwise None."""
-        return self.hook.top
+        return self.top
 
-    #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.ltop`
-    top = ltop
+    # @property
+    # def nodes(self):
+    #     """The list of |Nodes|."""
+    #     return list(map(self.get_node, self.nodeids))
 
-    @property
-    def index(self):
-        """The INDEX |MrsVariable|, if it exists, otherwise None."""
-        return self.hook.index
+    # @property
+    # def eps(self):
+    #     return components.eps(self)
 
-    @property
-    def nodes(self):
-        """The list of |Nodes|."""
-        return list(map(self.get_node, self.nodeids))
+    # #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.eps`
+    # rels = eps
 
-    @property
-    def eps(self):
-        """The list of |ElementaryPredications|."""
-        return list(map(self.get_ep, self.nodeids))
+    # @property
+    # def args(self):
+    #     return components.args(self)
 
-    #: A synonym for :py:attr:`~delphin.mrs.xmrs.Xmrs.eps`
-    rels = eps
+    # def hcons(self): return components.hcons(self)
+    # def icons(self): return components.icons(self)
 
-    @property
-    def args(self):
-        """The list of all |Arguments|."""
-        return list(chain.from_iterable(ep.args for ep in self.eps))
-
-    @property
-    def hcons(self):
-        """The list of all |HandleConstraints|."""
-        nodes = self._graph.nodes(data=True)
-        return sorted((data['hcons'] for _, data in nodes if 'hcons' in data),
-                      key=lambda hc: hc.hi.vid)
-
-    @property
-    def icons(self):
-        """The list of all |IndividualConstraints|."""
-        nodes = self._graph.nodes(data=True)
-        return sorted((data['icons'] for _, data in nodes if 'icons' in data),
-                      key=lambda ic: ic.target.vid)
-
-    @property
-    def links(self):
-        """The list of |Links|."""
-        # Return the set of links for the XMRS structure. Links exist
-        # for every non-intrinsic argument that has a variable
-        # that is the intrinsic variable of some other predicate,
-        # as well as for label equalities when no argument link exists
-        # (even considering transitivity).
-        links = []
-        g = self._graph
-        nids = set(g.nodeids)
-        labels = g.labels
-        attested_eqs = defaultdict(set)
-        for s, t, d in g.out_edges_iter([LTOP_NODEID] + g.nodeids, data=True):
-            try:
-                t_d = g.node[t]
-                if t_d.get('iv') == s or t_d.get('bv') == s:
-                    continue  # ignore ARG0s
-                if 'iv' in t_d and t_d['iv'] is not None:
-                    t = t_d['iv']
-                    s_lbl = g.node[s].get('label')  # LTOP_NODEID has no label
-                    t_lbl = g.node[t]['label']
-                    if s_lbl == t_lbl:
-                        post = EQ_POST
-                        attested_eqs[s_lbl].update([s, t])
-                    else:
-                        post = NEQ_POST
-                elif 'hcons' in t_d:
-                    lbl = t_d['hcons'].lo
-                    # if s is a quantifier and the quantifiee is in the
-                    # the target set, use the quantifiee
-                    s_iv = g.node[s].get('iv')
-                    if s_iv and g.node[s_iv]['iv'] in self.labelset(lbl):
-                        t = g.node[s_iv]['iv']
-                    else:
-                        t = self.labelset_head(lbl)
-                    post = H_POST
-                elif t in g.labels:
-                    t = self.labelset_head(t)
-                    post = HEQ_POST
-                else:
-                    continue  # maybe log this
-                links.append(Link(s, t, d.get('rargname'), post))
-            except XmrsError as ex:
-                warnings.warn(
-                    'Error creating a link for {}:{}:\n  {}'
-                    .format(s, d.get('rargname', ''), repr(ex))
-                )
-
-        # now EQ links unattested by arg links
-        for lbl in g.labels:
-            # I'm pretty sure this does what we want
-            heads = self.labelset_head(lbl, single=False)
-            if len(heads) > 1:
-                first = heads[0]
-                for other in heads[1:]:
-                    links.append(Link(first, other, post=EQ_POST))
-            # If not, this is more explicit
-            # lblset = self.labelset(lbl)
-            # sg = g.subgraph(lblset)
-            # ns = [nid for nid, deg in sg.degree(lblset).items() if deg == 0]
-            # head = self.labelset_head(lbl)
-            # for n in ns:
-            #     links.append(Link(head, n, post=EQ_POST))
-        return sorted(links, key=lambda link: (link.start, link.end))
+    # @property
+    # def links(self):
+    #     return components.links(self)
 
     # accessor functions
     def get_nodeid(self, iv, quantifier=False):
         """
-        Retrieve the nodeid of an |EP| given an intrinsic variable, or
-        return None if no matching |EP| is found.
+        Retrieve the nodeid of an |EP| given an intrinsic variable.
 
         Args:
             iv: The intrinsic variable of the |EP|.
@@ -535,9 +521,9 @@ class Xmrs(LnkMixin):
         Returns:
             An integer nodeid.
         """
-        if iv not in self._graph:
-            return None
-        return self._graph.node[iv].get('bv' if quantifier else 'iv')
+
+        v = 'bv' if quantifier else 'iv'
+        return self._vars[iv][v]
 
     def get_pred(self, nodeid):
         """
@@ -555,82 +541,82 @@ class Xmrs(LnkMixin):
         except KeyError:
             return None
 
-    def get_ep(self, nodeid):
-        """
-        Retrieve the |EP| with the given nodeid, or None if no |EPs|
-        match.
+    # def get_ep(self, nodeid):
+    #     """
+    #     Retrieve the |EP| with the given nodeid, or None if no |EPs|
+    #     match.
 
-        Args:
-            nodeid: The nodeid of the |EP| to return.
-        Returns:
-            An |ElementaryPredication| or None.
-        """
-        try:
-            d = self._graph.node[nodeid]
-            args = [Argument(nodeid, rargname, value)
-                    for rargname, value in d['rargs'].items()]
-            ep = ElementaryPredication(
-                d['pred'],
-                d['label'],
-                anchor=MrsVariable.anchor(nodeid),
-                args=args,
-                lnk=d.get('lnk'),
-                surface=d.get('surface'),
-                base=d.get('base')
-            )
-            return ep
-        except KeyError:
-            return None
+    #     Args:
+    #         nodeid: The nodeid of the |EP| to return.
+    #     Returns:
+    #         An |ElementaryPredication| or None.
+    #     """
+    #     try:
+    #         d = self._graph.node[nodeid]
+    #         args = [(nodeid, rargname, value)
+    #                 for rargname, value in d['rargs'].items()]
+    #         ep = ElementaryPredication(
+    #             nodeid=nodeid,
+    #             pred=d['pred'],
+    #             label=d['label'],
+    #             args=args,
+    #             lnk=d.get('lnk'),
+    #             surface=d.get('surface'),
+    #             base=d.get('base')
+    #         )
+    #         return ep
+    #     except KeyError:
+    #         return None
 
-    def get_node(self, nodeid):
-        """
-        Return the |Node| with the given nodeid, or None if no |Nodes|
-        match.
+    # def get_node(self, nodeid):
+    #     """
+    #     Return the |Node| with the given nodeid, or None if no |Nodes|
+    #     match.
 
-        Args:
-            nodeid: The nodeid of the |Node| to return.
-        Returns:
-            A |Node| or None.
-        """
-        try:
-            d = self._graph.node[nodeid]
-        except AttributeError:
-            return None
-        iv = d.get('iv')
-        node = Node(
-            nodeid,
-            d['pred'],
-            sortinfo=None if iv is None else iv.sortinfo,
-            lnk=d.get('lnk'),
-            surface=d.get('surface'),
-            base=d.get('base'),
-            carg=d['rargs'].get(CONSTARG_ROLE)
-        )
-        return node
+    #     Args:
+    #         nodeid: The nodeid of the |Node| to return.
+    #     Returns:
+    #         A |Node| or None.
+    #     """
+    #     try:
+    #         d = self._graph.node[nodeid]
+    #     except AttributeError:
+    #         return None
+    #     iv = d.get('iv')
+    #     node = Node(
+    #         nodeid,
+    #         d['pred'],
+    #         sortinfo=None if iv is None else iv.sortinfo,
+    #         lnk=d.get('lnk'),
+    #         surface=d.get('surface'),
+    #         base=d.get('base'),
+    #         carg=d['rargs'].get(CONSTARG_ROLE)
+    #     )
+    #     return node
 
-    def get_arg(self, nodeid, rargname):
-        """
-        Return the |Argument| from the given nodeid and the argument's
-        role name.
+    # def get_arg(self, nodeid, rargname):
+    #     """
+    #     Return the |Argument| from the given nodeid and the argument's
+    #     role name.
 
-        Args:
-            nodeid: The nodeid of the |EP| specifying the |Argument|.
-            rargname: The role name of the argument (e.g. ARG1)
-        Returns:
-            An |Argument| or None.
-        """
-        try:
-            return self.get_ep(nodeid).get_arg(rargname)
-        except AttributeError:
-            return None
+    #     Args:
+    #         nodeid: The nodeid of the |EP| specifying the |Argument|.
+    #         rargname: The role name of the argument (e.g. ARG1)
+    #     Returns:
+    #         An |Argument| or None.
+    #     """
+    #     try:
+    #         return self.get_ep(nodeid).get_arg(rargname)
+    #     except AttributeError:
+    #         return None
 
-    #def get_link(self, nodeid, rargname):
-    #    ...
+    # #def get_link(self, nodeid, rargname):
+    # #    ...
 
     # def get_hcons(self, hi_var):
     #     return self._var_to_hcons.get(hi_var)
 
-    #def get_icons(self, target):
+    #def get_icons(self, left):
     #    ...
 
     def labelset(self, label):
@@ -766,58 +752,93 @@ class Xmrs(LnkMixin):
         )
 
 
-class XmrsDiGraph(DiGraph):
-    def __init__(self, data=None, name='', **attr):
-        DiGraph.__init__(self, data=data, name=name, attr=attr)
-        self.nodeids = [] if data is None else data.nodeids
-        self.labels = set([] if data is None else data.labels)
-        self.refresh()
+# class XmrsDiGraph(DiGraph):
+#     def __init__(self, data=None, name='', **attr):
+#         DiGraph.__init__(self, data=data, name=name, attr=attr)
+#         self.nodeids = [] if data is None else data.nodeids
+#         self.labels = set([] if data is None else data.labels)
+#         self.refresh()
 
-    def refresh(self):
-        seen = set()
-        for nid in self.nodeids:
-            n = self.node[nid]
-            if n.get('iv') is not None:
-                iv = n['iv']
-                if iv not in self.node:
-                    raise XmrsStructureError(
-                        'Intrinsic variable ({}) of node {} is missing from '
-                        'the Xmrs graph.'
-                        .format(iv, nid)
-                    )
-                # clear the first time
-                if iv not in seen:
-                    self.node[iv]['bv'] = None
-                    self.node[iv]['iv'] = None
-                    seen.add(iv)
-                if n['pred'].is_quantifier():
-                    self.add_edge(iv, nid, {'bv': True})  # quantifier
-                    self.node[iv]['bv'] = nid
-                else:
-                    self.add_edge(iv, nid, {'iv': True})  # intrinsic arg
-                    self.node[iv]['iv'] = nid
-
-
-    def subgraph(self, nbunch):
-        nbunch = list(nbunch)
-        sg = DiGraph.subgraph(self, nbunch)
-        node = sg.node
-        sg.nodeids = [nid for nid in nbunch if 'pred' in node[nid]]
-        sg.labels = set(node[nid]['label'] for nid in nbunch
-                        if 'label' in node[nid])
-        g = XmrsDiGraph(sg)
-        g.refresh()
-        return g
+#     def refresh(self):
+#         seen = set()
+#         for nid in self.nodeids:
+#             n = self.node[nid]
+#             if n.get('iv') is not None:
+#                 iv = n['iv']
+#                 if iv not in self.node:
+#                     raise XmrsStructureError(
+#                         'Intrinsic variable ({}) of node {} is missing from '
+#                         'the Xmrs graph.'
+#                         .format(iv, nid)
+#                     )
+#                 # clear the first time
+#                 if iv not in seen:
+#                     self.node[iv]['bv'] = None
+#                     self.node[iv]['iv'] = None
+#                     seen.add(iv)
+#                 if n['pred'].is_quantifier():
+#                     self.add_edge(iv, nid, {'bv': True})  # quantifier
+#                     self.node[iv]['bv'] = nid
+#                 else:
+#                     self.add_edge(iv, nid, {'iv': True})  # intrinsic arg
+#                     self.node[iv]['iv'] = nid
 
 
-    def relabel_nodes(self, mapping):
-        g = relabel_nodes(self, mapping)
-        # also need to fix where we store it ourselves
-        for tnid in mapping.values():
-            iv = g.node[tnid]['iv']
-            if iv is not None:
-                v = 'bv' if g.node[tnid]['pred'].is_quantifier() else 'iv'
-                g.node[iv][v] = tnid
-        g.nodeids = [mapping.get(n, n) for n in self.nodeids]
-        g.labels = set(self.labels)
-        return XmrsDiGraph(data=g)
+#     def subgraph(self, nbunch):
+#         nbunch = list(nbunch)
+#         sg = DiGraph.subgraph(self, nbunch)
+#         node = sg.node
+#         sg.nodeids = [nid for nid in nbunch if 'pred' in node[nid]]
+#         sg.labels = set(node[nid]['label'] for nid in nbunch
+#                         if 'label' in node[nid])
+#         g = XmrsDiGraph(sg)
+#         g.refresh()
+#         return g
+
+
+#     def relabel_nodes(self, mapping):
+#         g = relabel_nodes(self, mapping)
+#         # also need to fix where we store it ourselves
+#         for tnid in mapping.values():
+#             iv = g.node[tnid]['iv']
+#             if iv is not None:
+#                 v = 'bv' if g.node[tnid]['pred'].is_quantifier() else 'iv'
+#                 g.node[iv][v] = tnid
+#         g.nodeids = [mapping.get(n, n) for n in self.nodeids]
+#         g.labels = set(self.labels)
+#         return XmrsDiGraph(data=g)
+
+def _labelset_headedness_sort(xmrs, label):
+    _eps = xmrs._eps
+    _vars = xmrs._vars
+    nids = {nid: _eps[nid][3].get(IVARG_ROLE, None)
+            for nid in _vars[label]['refs']['LBL']}
+    ivs = {iv: nid for nid, iv in nids.items() if iv is not None}
+
+    out = {}
+    in_ = {}
+    q = {}
+    for n in nids:
+        out[n] = sum(1 for v in _eps[n][3].values() if v in ivs)
+        iv = nids[n]
+        if iv in _vars:
+            in_[n] = sum(1 for slist in _vars[iv]['refs'].values()
+                         for s in slist if s in nids)
+        else:
+            in_[n] = 0
+        q[n] = 1 if _eps[n][1].is_quantifier() else 0
+
+    return sorted(
+        nids.keys(),
+        key=lambda n: (
+            # prefer fewer outgoing args to eps in the labelset
+            out[n],
+            # prefer more incoming args from eps in the labelset
+            -in_[n],
+            # prefer quantifiers (if it has a labelset > 1, it's a
+            # compound quantifier, like "nearly all")
+            -q[n],
+            # finally sort by the nodeid itself
+            n
+        )
+    )

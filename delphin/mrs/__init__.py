@@ -49,13 +49,13 @@ You can install `networkx` in several ways:
 
 # these may be order-sensitive
 from .components import (
-    Hook, Lnk, Node, ElementaryPredication, MrsVariable, Argument,
+    Hook, Lnk, Node, ElementaryPredication, MrsVariable,
     HandleConstraint, Pred, Link
 )
 from .xmrs import Xmrs, Mrs, Dmrs, Rmrs
 
 __all__ = [Hook, Lnk, Node, ElementaryPredication, MrsVariable,
-           Argument, HandleConstraint, Pred, Link, Xmrs, Mrs, Dmrs]
+           HandleConstraint, Pred, Link, Xmrs, Mrs, Dmrs]
 
 
 def convert(txt, src_fmt, tgt_fmt, single=True, **kwargs):
