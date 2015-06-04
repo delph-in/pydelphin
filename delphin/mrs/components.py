@@ -509,84 +509,51 @@ def links(xmrs):
     # transitivity).
     links = []
     prelinks = []
+
     _eps = xmrs._eps
     _vars = xmrs._vars
+
+    lsh = xmrs.labelset_heads
+    lblheads = {v: lsh(v) for v, vd in _vars.items() if 'LBL' in vd['refs']}
+
     top = xmrs.top
     if top is not None:
-        prelinks.append((0, top, None, _vars[xmrs.top]))
+        prelinks.append((0, top, None, top, _vars[top]))
+
     for nid, ep in _eps.items():
         for role, val in ep[3].items():
             if role == IVARG_ROLE or val not in _vars:
                 continue
-            prelinks.append((nid, ep[2], role, _vars[val]))
-    for src, srclbl, role, vd in prelinks:
+            prelinks.append((nid, ep[2], role, val, _vars[val]))
+
+    for src, srclbl, role, val, vd in prelinks:
         if 'iv' in vd:
             tgt = vd['iv']
             tgtlbl = _eps[tgt][2]
             post = EQ_POST if srclbl == tgtlbl else NEQ_POST
         elif 'hcons' in vd:
             lbl = vd['hcons'][2]
-            if lbl not in _vars:
-                continue
-            # the LBL ref list should already be sorted by headedness
-            tgt = _vars[lbl]['refs']['LBL'][0]
+            if lbl not in lblheads or len(lblheads[lbl]) == 0:
+                continue  # broken MRS; log this?
+            tgt = lblheads[lbl][0]  # sorted list; first item is most "heady"
             post = H_POST
         elif 'LBL' in vd['refs']:
-            tgt = vd['refs']['LBL'][0]  # again, should be sorted already
+            if val not in lblheads or len(lblheads[val]) == 0:
+                continue  # broken MRS; log this?
+            tgt = lblheads[val][0]  # again, should be sorted already
             post = HEQ_POST
         else:
             continue  # CARGs, maybe?
         links.append(Link(src, tgt, role, post))
 
-    # # g = xmrs._graph
-    # nids = set(g.nodeids)
-    # labels = g.labels
-    # attested_eqs = defaultdict(set)
-    # for s, t, d in g.out_edges_iter([LTOP_NODEID] + g.nodeids, data=True):
-    #     try:
-    #         t_d = g.node[t]
-    #         if t_d.get('iv') == s or t_d.get('bv') == s:
-    #             continue  # ignore ARG0s
-    #         if 'iv' in t_d and t_d['iv'] is not None:
-    #             t = t_d['iv']
-    #             s_lbl = g.node[s].get('label')  # LTOP_NODEID has no label
-    #             t_lbl = g.node[t]['label']
-    #             if s_lbl == t_lbl:
-    #                 post = EQ_POST
-    #                 attested_eqs[s_lbl].update([s, t])
-    #             else:
-    #                 post = NEQ_POST
-    #         elif 'hcons' in t_d:
-    #             lbl = t_d['hcons'].lo
-    #             # if s is a quantifier and the quantifiee is in the
-    #             # the target set, use the quantifiee
-    #             s_iv = g.node[s].get('iv')
-    #             if s_iv and g.node[s_iv]['iv'] in xmrs.labelset(lbl):
-    #                 t = g.node[s_iv]['iv']
-    #             else:
-    #                 t = xmrs.labelset_head(lbl)
-    #             post = H_POST
-    #         elif t in g.labels:
-    #             t = xmrs.labelset_head(t)
-    #             post = HEQ_POST
-    #         else:
-    #             continue  # maybe log this
-    #         links.append(Link(s, t, d.get('rargname'), post))
-    #     except XmrsError as ex:
-    #         warnings.warn(
-    #             'Error creating a link for {}:{}:\n  {}'
-    #             .format(s, d.get('rargname', ''), repr(ex))
-    #         )
-
     # now EQ links unattested by arg links
-    # for lbl in g.labels:
-    #     # I'm pretty sure this does what we want
-    #     heads = self.labelset_head(lbl, single=False)
-    #     if len(heads) > 1:
-    #         first = heads[0]
-    #         for other in heads[1:]:
-    #             links.append(Link(first, other, None, post=EQ_POST))
-        # If not, this is more explicit
+    for lbl, heads in lblheads.items():
+        # I'm pretty sure this does what we want
+        if len(heads) > 1:
+            first = heads[0]
+            for other in heads[1:]:
+                links.append(Link(first, other, None, post=EQ_POST))
+        # If not, something like this is more explicit
         # lblset = self.labelset(lbl)
         # sg = g.subgraph(lblset)
         # ns = [nid for nid, deg in sg.degree(lblset).items() if deg == 0]

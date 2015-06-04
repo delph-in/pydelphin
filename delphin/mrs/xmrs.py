@@ -367,7 +367,6 @@ class Xmrs(LnkMixin):
         _nodeids = self._nodeids
         _eps = self._eps
         _vars = self._vars
-        tosort = []  # after adding, resort label sets by headedness
         for ep in eps:
             nodeid = ep[0]
             if nodeid in _eps:
@@ -379,7 +378,6 @@ class Xmrs(LnkMixin):
             lbl = ep[2]
             if lbl is not None:
                 _vars[lbl]['refs']['LBL'].append(nodeid)
-                tosort.append(lbl)
             for role, val in ep[3].items():
                 if val in _vars:
                     vardict = _vars[val]
@@ -389,9 +387,6 @@ class Xmrs(LnkMixin):
                             vardict['bv'] = nodeid
                         else:
                             vardict['iv'] = nodeid
-        headsort = _labelset_headedness_sort
-        for lbl in tosort:
-            _vars[lbl]['refs']['LBL'] = headsort(self, lbl)
 
     def add_hcons(self, hcons):
         # (hi, relation, lo)
@@ -653,9 +648,9 @@ class Xmrs(LnkMixin):
         lblset = self.labelset(label)
         return lblset.issuperset(nodeids)
 
-    def labelset_head(self, label, single=True):
+    def labelset_heads(self, label):
         """
-        Return the head(s) of the labelset selected by `label`.
+        Return the heads of the labelset selected by `label`.
 
         Args:
             label: The label from which to find head nodes/EPs.
@@ -665,23 +660,44 @@ class Xmrs(LnkMixin):
             A nodeid, if single is True, otherwise an iterable of
             nodeids.
         """
-        lblset = self.labelset(label)
-        if len(lblset) == 1:
-            return list(lblset) if not single else lblset.pop()
-        sg = self.subgraph(lblset)
-        g = sg._graph
-        # out degree is 1 for ARG0; <= 1 in case a deviant grammar does not
-        # use ARG0 for some nodes
-        heads = list(h for h, od in g.out_degree(lblset).items() if od <= 1)
-        head_count = len(heads)
-        if head_count == 0:
-            raise XmrsStructureError('No head found for label {}.'
-                                     .format(label))
-        if not single:
-            return list(map(first, sorted(g.in_degree(heads).items(),
-                                          key=second, reverse=True)))
-        else:
-            return max(g.in_degree(heads).items(), key=second)[0]
+        _eps = self._eps
+        _vars = self._vars
+        nids = {nid: _eps[nid][3].get(IVARG_ROLE, None)
+                for nid in _vars[label]['refs']['LBL']}
+        if len(nids) <= 1:
+            return list(nids.keys())
+
+        ivs = {iv: nid for nid, iv in nids.items() if iv is not None}
+
+        out = {n: len(list(filter(ivs.__contains__, _eps[n][3].values())))
+               for n in nids}
+        # out_deg is 1 for ARG0, but <= 1 because sometimes ARG0 is missing
+        candidates = [n for n, out_deg in out.items() if out_deg <= 1]
+        in_ = {}
+        q = {}
+        for n in candidates:
+            iv = nids[n]
+            if iv in _vars:
+                in_[n] = sum(1 for slist in _vars[iv]['refs'].values()
+                             for s in slist if s in nids)
+            else:
+                in_[n] = 0
+            q[n] = 1 if _eps[n][1].is_quantifier() else 0
+
+        return sorted(
+            candidates,
+            key=lambda n: (
+                # prefer fewer outgoing args to eps in the labelset
+                out[n],
+                # prefer more incoming args from eps in the labelset
+                -in_[n],
+                # prefer quantifiers (if it has a labelset > 1, it's a
+                # compound quantifier, like "nearly all")
+                -q[n],
+                # finally sort by the nodeid itself
+                n
+            )
+        )
 
     def subgraph(self, nodeids):
         """
@@ -807,38 +823,3 @@ class Xmrs(LnkMixin):
 #         g.nodeids = [mapping.get(n, n) for n in self.nodeids]
 #         g.labels = set(self.labels)
 #         return XmrsDiGraph(data=g)
-
-def _labelset_headedness_sort(xmrs, label):
-    _eps = xmrs._eps
-    _vars = xmrs._vars
-    nids = {nid: _eps[nid][3].get(IVARG_ROLE, None)
-            for nid in _vars[label]['refs']['LBL']}
-    ivs = {iv: nid for nid, iv in nids.items() if iv is not None}
-
-    out = {}
-    in_ = {}
-    q = {}
-    for n in nids:
-        out[n] = sum(1 for v in _eps[n][3].values() if v in ivs)
-        iv = nids[n]
-        if iv in _vars:
-            in_[n] = sum(1 for slist in _vars[iv]['refs'].values()
-                         for s in slist if s in nids)
-        else:
-            in_[n] = 0
-        q[n] = 1 if _eps[n][1].is_quantifier() else 0
-
-    return sorted(
-        nids.keys(),
-        key=lambda n: (
-            # prefer fewer outgoing args to eps in the labelset
-            out[n],
-            # prefer more incoming args from eps in the labelset
-            -in_[n],
-            # prefer quantifiers (if it has a labelset > 1, it's a
-            # compound quantifier, like "nearly all")
-            -q[n],
-            # finally sort by the nodeid itself
-            n
-        )
-    )
