@@ -8,7 +8,8 @@ FIRST_NODEID   = 10000 # the nodeid assigned to the first node
 # sortal values
 UNKNOWNSORT    = 'u' # when nothing is known about the sort
 HANDLESORT     = 'h' # for scopal relations
-QUANTIFIER_SORT= 'q' # for quantifier preds
+# useful pos values
+QUANTIFIER_POS = 'q' # for quantifier preds
 # MRS strings
 IVARG_ROLE     = 'ARG0'
 CONSTARG_ROLE  = 'CARG'

@@ -29,28 +29,28 @@ def select_nodes(xmrs, nodeid=None, pred=None):
     return list(filter(nodematch, xmrs.nodes))
 
 
-def select_eps(xmrs, anchor=None, iv=None, label=None, pred=None):
+def select_eps(xmrs, nodeid=None, iv=None, label=None, pred=None):
     """
-    Return the list of all |EPs| that have the matching *anchor*,
+    Return the list of all |EPs| that have the matching *nodeid*,
     *iv*, *label*, and or *pred* values. If none match, return an
     empty list.
     """
-    epmatch = lambda n: ((anchor is None or n.anchor == anchor) and
+    epmatch = lambda n: ((nodeid is None or n.nodeid == nodeid) and
                          (iv is None or n.iv == iv) and
                          (label is None or n.label == label) and
                          (pred is None or n.pred == pred))
     return list(filter(epmatch, xmrs.eps))
 
 
-def select_args(xmrs, anchor=None, rargname=None, value=None):
+def select_args(xmrs, nodeid=None, rargname=None, value=None):
     """
     Return the list of all |Arguments| that have the matching
-    *anchor*, *rargname*, and/or *value* values. If none match,
+    *nodeid*, *rargname*, and/or *value* values. If none match,
     return an empty list.
     """
-    argmatch = lambda a: ((anchor is None or a.anchor == anchor) and
+    argmatch = lambda a: ((nodeid is None or a.nodeid == nodeid) and
                           (rargname is None or
-                           a.argname.upper() == rargname.upper()) and
+                           a.rargname.upper() == rargname.upper()) and
                           (value is None or a.value == value))
     return list(filter(argmatch, xmrs.args))
 
@@ -64,7 +64,7 @@ def select_links(xmrs, source=None, target=None, rargname=None, post=None):
     linkmatch = lambda l: (
         (source is None or l.source == source) and
         (target is None or l.target == target) and
-        (rargname is None or l.argname == rargname) and
+        (rargname is None or l.rargname == rargname) and
         (post is None or l.post == post))
     return list(filter(linkmatch, xmrs.links))
 
@@ -82,16 +82,16 @@ def select_hcons(xmrs, hi=None, relation=None, lo=None):
     return list(filter(hcmatch, xmrs.hcons))
 
 
-def select_icons(xmrs, target=None, relation=None, clause=None):
+def select_icons(xmrs, left=None, relation=None, right=None):
     """
     Return the list of all |IndividualConstraints| that have the
-    matching *target*, *relation*, and/or *clause* values. If none
+    matching *left*, *relation*, and/or *right* values. If none
     match, return an empty list.
     """
     icmatch = lambda ic: (
-        (target is None or ic.target == target) and
+        (left is None or ic.left == left) and
         (relation is None or ic.relation == relation) and
-        (clause is None or ic.clause == clause))
+        (right is None or ic.right == right))
     return list(filter(icmatch, xmrs.icons))
 
 
@@ -101,7 +101,7 @@ def find_argument_target(xmrs, nodeid, rargname):
 
     Args:
         xmrs: The |Xmrs| object to use.
-        nodeid: The nodeid (or anchor) of the argument.
+        nodeid: The nodeid of the argument.
         rargname: The role-argument name of the argument.
     Returns:
         The object that is the target of the argument. Possible values
@@ -187,7 +187,7 @@ def get_outbound_args(xmrs, nodeid, allow_unbound=True):
     """
     g = xmrs._graph
     ep = xmrs.get_ep(nodeid)
-    for arg in ep.args:
+    for arg in ep.args.values():
         nid = arg.nodeid
         tgt = arg.value
         data = g.node.get(tgt, {})

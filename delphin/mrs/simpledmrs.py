@@ -13,7 +13,8 @@ from collections import OrderedDict
 from io import BytesIO
 import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
-from delphin.mrs.config import (QUANTIFIER_SORT, EQ_POST)
+from delphin.mrs.components import (nodes, links)
+from delphin.mrs.config import EQ_POST, CVARSORT
 
 
 ##############################################################################
@@ -98,7 +99,7 @@ def decode_sortinfo(elem):
 def decode_link(elem):
     return Link(start=elem.get('from'),
                 end=elem.get('to'),
-                argname=elem.find('rargname').text,
+                rargname=elem.find('rargname').text,
                 post=elem.find('post').text)
 
 
@@ -128,7 +129,7 @@ def encode_dmrs(m, indent=2):
         delim = ''
         space = ' '
 
-    nodes = [
+    nodes_ = [
         _node.format(
             indent=space,
             nodeid=n.nodeid,
@@ -139,23 +140,24 @@ def encode_dmrs(m, indent=2):
                 _sortinfo.format(
                     cvarsort=n.cvarsort,
                     properties=' '.join('{}={}'.format(k, v)
-                                        for k, v in n.properties.items()),
+                                        for k, v in n.sortinfo.items()
+                                        if k != CVARSORT),
                 )
             )
         )
-        for n in m.nodes
+        for n in nodes(m)
     ]
 
-    links = [
+    links_ = [
         _link.format(
             indent=space,
             start=l.start,
-            pre=l.argname or '',
+            pre=l.rargname or '',
             post=l.post,
-            arrow='->' if l.argname or l.post != EQ_POST else '--',
+            arrow='->' if l.rargname or l.post != EQ_POST else '--',
             end=l.end
         )
-        for l in m.links
+        for l in links(m)
     ]
 
-    return delim.join(['dmrs {'] + nodes + links + ['}'])
+    return delim.join(['dmrs {'] + nodes_ + links_ + ['}'])

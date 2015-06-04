@@ -13,7 +13,8 @@ from collections import OrderedDict
 from io import BytesIO
 import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
-from delphin.mrs.config import QUANTIFIER_SORT
+from delphin.mrs.components import (nodes, links)
+from delphin.mrs.config import QUANTIFIER_POS
 
 import xml.etree.ElementTree as etree
 
@@ -142,7 +143,7 @@ def decode_link(elem):
     # <!ELEMENT post (#PCDATA)>
     return Link(start=elem.get('from'),
                 end=elem.get('to'),
-                argname=getattr(elem.find('rargname'), 'text', None),
+                rargname=getattr(elem.find('rargname'), 'text', None),
                 post=getattr(elem.find('post'), 'text', None))
 
 
@@ -184,9 +185,9 @@ def encode_dmrs(m, strict=False):
         if index_nodeid is not None:
             attributes['index'] = str(index_nodeid)
     e = etree.Element('dmrs', attrib=attributes)
-    for node in m.nodes:
+    for node in nodes(m):
         e.append(encode_node(node))
-    for link in m.links:
+    for link in links(m):
         e.append(encode_link(link))
     return e
 
@@ -226,7 +227,7 @@ def encode_pred(pred):
 def encode_sortinfo(node):
     attributes = OrderedDict()
     # return empty <sortinfo/> for quantifiers
-    if node.pred.pos == QUANTIFIER_SORT:
+    if node.pred.pos == QUANTIFIER_POS:
         return etree.Element('sortinfo')  # return empty <sortinfo/>
     if node.sortinfo:
         if not _strict:
@@ -241,10 +242,10 @@ def encode_sortinfo(node):
 def encode_link(link):
     e = etree.Element('link', attrib={'from': str(link.start),
                                       'to': str(link.end)})
-    argname = etree.Element('rargname')
-    argname.text = link.argname
+    rargname = etree.Element('rargname')
+    rargname.text = link.rargname
     post = etree.Element('post')
     post.text = link.post
-    e.append(argname)
+    e.append(rargname)
     e.append(post)
     return e

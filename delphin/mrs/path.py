@@ -79,7 +79,7 @@ def _walk(xmrs, nodeid, linkdict, visited, method, sort_key):
 def _build_linkdict(xmrs):
     links = defaultdict(dict)
     for link in xmrs.links:
-        axis = '{}/{}'.format(link.argname or '', link.post)
+        axis = '{}/{}'.format(link.rargname or '', link.post)
         if link_is_directed(link):
             links[link.start][':{}>'.format(axis)] = link.end
             links[link.end]['<{}:'.format(axis)] = link.start
@@ -102,7 +102,7 @@ def _get_axes(method, links):
 
 
 def link_is_directed(link):
-    return bool(link.argname) or link.post != 'EQ'
+    return bool(link.rargname) or link.post != 'EQ'
 
 
 def headed(axis):
@@ -161,11 +161,11 @@ class XmrsPathNode(object):
     @property
     def depth(self):
         return self._depth
-    
+
     @property
     def order(self):
         return self._order
-    
+
 
     # def extend(self, extents):
     #     for axes, extent in extents:

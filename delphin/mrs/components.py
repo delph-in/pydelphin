@@ -1,17 +1,20 @@
 import re
 import logging
 from collections import OrderedDict, namedtuple
+from itertools import starmap
 from functools import total_ordering
+
 from delphin._exceptions import XmrsStructureError
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE,
-    HANDLESORT, CVARSORT, ANCHOR_SORT, QUANTIFIER_SORT
+    HANDLESORT, CVARSORT, ANCHOR_SORT, QUANTIFIER_POS,
+    EQ_POST, HEQ_POST, NEQ_POST, H_POST
 )
 
 # VARIABLES, LNKS, and HOOKS
 
 @total_ordering
-class MrsVariable(object):
+class MrsVariable(namedtuple('MrsVariable', ('varstring', 'properties'))):
     """An MrsVariable has an id (vid), sort, and sometimes properties.
 
     MrsVariables combine an integer variable ID (or *vid*)) with a
@@ -21,7 +24,6 @@ class MrsVariable(object):
 
     * **intrinsic variables** (aka IVs)
     * **handles** (labels or holes)
-    * **anchors** (a nodeid with a sort)
     * **variable argument values** (IVs, labels, holes, or
       underspecified variables for unexpressed arguments)
 
@@ -59,126 +61,134 @@ class MrsVariable(object):
     Raises:
         ValueError: when *vid* is not castable to an int
     """
-    def __init__(self, vid, sort, properties=None):
-        # vid is the number of the name (e.g. 1, 10003)
-        self.vid = int(vid)
-        # sort is the letter(s) of the name (e.g. h, x)
-        self.sort = sort
-        if sort == HANDLESORT and properties:
-            pass  # handles cannot have properties. Log this?
-        self.properties = properties or OrderedDict()
+    def __new__(cls, varstring, properties=None):
+        return super(MrsVariable, cls).__new__(
+            cls, varstring, properties
+        )
+        # # vid is the number of the name (e.g. 1, 10003)
+        # self.vid = int(vid)
+        # # sort is the letter(s) of the name (e.g. h, x)
+        # self.sort = sort
+        # if sort == HANDLESORT and properties:
+        #     pass  # handles cannot have properties. Log this?
+        # self.properties = properties or OrderedDict()
 
-    @classmethod
-    def from_string(cls, varstring):
-        """
-        Construct an |MrsVariable| by its string representation.
+    # @classmethod
+    # def from_vidsort(cls, vid, sort, properties=None):
+    #     """
+    #     """
+    #     if sort is None:
+    #         sort = 'u'
+    #     varstring = '{}{}'.format(sort, vid)
+    #     vid = int(vid)
+    #     var = cls(varstring, properties=properties)
+    #     # might as well set these now
+    #     var[2] = vid
+    #     var[3] = sort
+    #     return var
 
-        Args:
-            varstring: a string containing the sort and vid of an
-                MrsVariable, such as "x1" or "event3"
-        Returns:
-            an instantiated MrsVariable object if the string represents
-            an MrsVariable, or None otherwise
-        """
-        try:
-            sort, vid = MrsVariable.sort_vid_split(varstring)
-            return cls(vid, sort)
-        except (ValueError, TypeError):
-            return None
-
-    @classmethod
-    def anchor(cls, vid):
-        return cls(vid, ANCHOR_SORT)
+    # @classmethod
+    # def anchor(cls, vid):
+    #     return cls(vid, ANCHOR_SORT)
 
     def __eq__(self, other):
+        vareq = str(self).lower() == str(other).lower()
+        return vareq and (getattr(self, 'properties', None) ==
+                          getattr(other, 'properties', None))
         # try both as MrsVariables
-        try:
-            return self.vid == other.vid and self.sort == other.sort
-        except AttributeError:
-            pass  # other is not an MrsVariable
-        # attempt as string
-        try:
-            sort, vid = MrsVariable.sort_vid_split(other)
-            return self.sort == sort and self.vid == int(vid)
-        except (ValueError, TypeError):
-            pass  # doesn't match a variable
-        # try again as vid only
-        try:
-            vid = int(other)
-            return self.vid == vid
-        except (ValueError, TypeError):
-            pass  # nope.. return False
-        return False
+        # try:
+        #     return self.vid == other.vid and self.sort == other.sort
+        # except AttributeError:
+        #     pass  # other is not an MrsVariable
+        # # attempt as string
+        # try:
+        #     sort, vid = MrsVariable.sort_vid_split(other)
+        #     return self.sort == sort and self.vid == int(vid)
+        # except (ValueError, TypeError):
+        #     pass  # doesn't match a variable
+        # # try again as vid only
+        # try:
+        #     vid = int(other)
+        #     return self.vid == vid
+        # except (ValueError, TypeError):
+        #     pass  # nope.. return False
+        # return False
 
     def __lt__(self, other):
-        vid1 = self.vid
-        # only compare vids for lt
-        try:
-            return vid1 < int(other)
-        except (ValueError, TypeError):
-            pass  # not an int or MrsVariable
-        # try as a string
-        try:
-            sort, vid2 = MrsVariable.sort_vid_split(other)
-            return vid1 < int(vid2)
-        except (ValueError, TypeError):
-            pass  # not a string... no good output
-        raise ValueError('Cannot compare MrsVariable to {} of type {}'
-                         .format(str(other), type(other)))
+        split = sort_vid_split
+        vid1 = int(split(self[0])[1])
+        vid2 = int(split(str(other))[1])
+        return vid1 < vid2
+        # # only compare vids for lt
+        # try:
+        #     return vid1 < int(other)
+        # except (ValueError, TypeError):
+        #     pass  # not an int or MrsVariable
+        # # try as a string
+        # try:
+        #     sort, vid2 = MrsVariable.sort_vid_split(other)
+        #     return vid1 < int(vid2)
+        # except (ValueError, TypeError):
+        #     pass  # not a string... no good output
+        # raise ValueError('Cannot compare MrsVariable to {} of type {}'
+        #                  .format(str(other), type(other)))
 
-    def __int__(self):
-        return self.vid
+    # def __int__(self):
+    #     return self.vid
 
     def __hash__(self):
-        return hash(str(self))
+        return hash(self[0])
 
     def __repr__(self):
-        return '<MrsVariable object ({}{}) at {}>'.format(
-            self.sort, self.vid, id(self)
+        return '<MrsVariable object ({}) at {}>'.format(
+            self[0], id(self)
         )
 
     def __str__(self):
         # if sort is None, go with the default of 'u'
-        return '{}{}'.format(str(self.sort or 'u'), str(self.vid))
+        return self[0] #'{}{}'.format(str(self.sort or 'u'), str(self.vid))
 
-    @property
-    def sortinfo(self):
-        """
-        Return the properties including a mapping of "cvarsort" to
-        the sort of the MrsVariable. Sortinfo is used in DMRS objects,
-        which don't have variables, in order to capture the sortal type
-        of a |Node|.
-        """
-        # FIXME: currently gets CVARSORT even if the var is not a IV
-        sortinfo = OrderedDict([(CVARSORT, self.sort)])
-        sortinfo.update(self.properties)
-        return sortinfo
+    # @property
+    # def sortinfo(self):
+    #     """
+    #     Return the properties including a mapping of "cvarsort" to
+    #     the sort of the MrsVariable. Sortinfo is used in DMRS objects,
+    #     which don't have variables, in order to capture the sortal type
+    #     of a |Node|.
+    #     """
+    #     # FIXME: currently gets CVARSORT even if the var is not a IV
+    #     sortinfo = OrderedDict([(CVARSORT, self.sort)])
+    #     sortinfo.update(self.properties)
+    #     return sortinfo
 
-    @staticmethod
-    def sort_vid_split(vs):
-        try:
-            sort, vid = re.match(r'^(\w*\D)(\d+)$', vs).groups()
-            return sort, vid
-        except AttributeError:
-            raise ValueError('Invalid variable string: {}'.format(str(vs)))
+
+var_re = re.compile(r'^(\w*\D)(\d+)$')
+
+
+def sort_vid_split(vs):
+    try:
+        sort, vid = var_re.match(vs).groups()
+        return sort, vid
+    except AttributeError:
+        raise ValueError('Invalid variable string: {}'.format(str(vs)))
 
 
 # I'm not sure this belongs here, but anchors are MrsVariables...
-class AnchorMixin(object):
-    @property
-    def anchor(self):
-        """
-        The anchor of the |EP|, |Node|, or |Argument| is just the
-        nodeid wrapped in an MrsVariable. In |Xmrs| functions, integer
-        nodeids are used instead of anchors.
-        """
-        if self.nodeid is not None:
-            return MrsVariable(vid=self.nodeid, sort=ANCHOR_SORT)
-        return None
+# class AnchorMixin(object):
+#     @property
+#     def anchor(self):
+#         """
+#         The anchor of the |EP|, |Node|, or |Argument| is just the
+#         nodeid wrapped in an MrsVariable. In |Xmrs| functions, integer
+#         nodeids are used instead of anchors.
+#         """
+#         if self.nodeid is not None:
+#             return MrsVariable(vid=self.nodeid, sort=ANCHOR_SORT)
+#         return None
 
-    @anchor.setter
-    def anchor(self, anchor):
-        self.nodeid = anchor.vid
+#     @anchor.setter
+#     def anchor(self, anchor):
+#         self.nodeid = anchor.vid
 
 
 class VarGenerator(object):
@@ -194,7 +204,7 @@ class VarGenerator(object):
         return v
 
 
-class Lnk(object):
+class Lnk(namedtuple('Lnk', ('type', 'data'))):
     """
     Lnk objects link predicates to the surface form in one of several
     ways, the most common of which being the character span of the
@@ -242,12 +252,6 @@ class Lnk(object):
     TOKENS = 2  # Token numbers: a list of indices
     EDGE = 3  # An edge identifier: a number
 
-    def __init__(self, data, type):
-        if type not in (Lnk.CHARSPAN, Lnk.CHARTSPAN, Lnk.TOKENS, Lnk.EDGE):
-            raise ValueError('Invalid lnk type: {}'.format(type))
-        self.type = type
-        self.data = data
-
     @classmethod
     def charspan(cls, start, end):
         """
@@ -257,7 +261,7 @@ class Lnk(object):
             start: the initial character position (cfrom)
             end: the final character position (cto)
         """
-        return cls((int(start), int(end)), Lnk.CHARSPAN)
+        return cls(Lnk.CHARSPAN, (int(start), int(end)))
 
     @classmethod
     def chartspan(cls, start, end):
@@ -268,7 +272,7 @@ class Lnk(object):
             start: the initial chart vertex
             end: the final chart vertex
         """
-        return cls((int(start), int(end)), Lnk.CHARTSPAN)
+        return cls(Lnk.CHARTSPAN, (int(start), int(end)))
 
     @classmethod
     def tokens(cls, tokens):
@@ -278,7 +282,7 @@ class Lnk(object):
         Args:
             tokens: a list of token identifiers
         """
-        return cls(tuple(map(int, tokens)), Lnk.TOKENS)
+        return cls(Lnk.TOKENS, tuple(map(int, tokens)))
 
     @classmethod
     def edge(cls, edge):
@@ -288,7 +292,7 @@ class Lnk(object):
         Args:
             edge: an edge identifier
         """
-        return cls(int(edge), Lnk.EDGE)
+        return cls(Lnk.EDGE, int(edge))
 
     def __str__(self):
         if self.type == Lnk.CHARSPAN:
@@ -345,7 +349,8 @@ class LnkMixin(object):
         return cto
 
 
-class Hook(object):
+# namedtuple with defaults. thanks: http://stackoverflow.com/a/16721002/1441112
+class Hook(namedtuple('Hook', ['top', 'index', 'xarg'])):
     """
     A container class for TOP, INDEX, and XARG.
 
@@ -358,24 +363,22 @@ class Hook(object):
         xarg: the external argument (not likely used for a full |Xmrs|)
         ltop: an alternate spelling of top (top is preferred)
     """
-    def __init__(self, top=None, index=None, xarg=None, ltop=None):
-        self.top = top or ltop
-        self.index = index
-        self.xarg = xarg
+    def __new__(cls, top=None, index=None, xarg=None):
+        return super(Hook, cls).__new__(cls, top, index, xarg)
 
     def __repr__(self):
         return '<Hook object (top={} index={} xarg={}) at {}>'.format(
             self.top, self.index, self.xarg, id(self)
         )
 
-    def __eq__(self, other):
-        if not isinstance(other, Hook):
-            return False
-        return (
-            self.top == other.top and
-            self.index == other.index and
-            self.xarg == other.xarg
-        )
+    # def __eq__(self, other):
+    #     if not isinstance(other, Hook):
+    #         return False
+    #     return (
+    #         self.top == other.top and
+    #         self.index == other.index and
+    #         self.xarg == other.xarg
+    #     )
 
     # for compatibility
     @property
@@ -389,135 +392,241 @@ class Hook(object):
 
 # ARGUMENTS, LINKS, and CONSTRAINTS
 
-class Argument(AnchorMixin):
-    """
-    An argument of an \*MRS predicate.
+# class Argument(namedtuple('Argument',
+#                           ('nodeid', 'rargname', 'value', 'type'))):
+#     """
+#     An argument of an \*MRS predicate.
 
-    Args:
-        nodeid: the nodeid of the node with the argument
-        argname: the name of the argument (sometimes called "rargname")
-        value: the MrsVariable or constant value of the argument
-    """
+#     Args:
+#         nodeid: the nodeid of the node with the argument
+#         rargname: the role argument name
+#         value: the MrsVariable or constant value of the argument
+#     """
 
-    INTRINSIC_ARG = 0  # ARG0, conventionally
-    VARIABLE_ARG = 1  # The value is the ARG0 of some other EP
-    HANDLE_ARG = 2  # The value is a handle (supertype of next two)
-    LABEL_ARG = 3  # The value is the label of some other EP(s)
-    HCONS_ARG = 4  # The value is the hi variable of an HCONS
-    CONSTANT_ARG = 5  # The value is a constant (e.g. a string)
+#     CONSTANT_ARG = 0  # value is a constant (e.g. a string)
+#     VARIABLE_ARG = 1  # value is a variable: MrsVariable or (var, props) tuple
 
-    def __init__(self, nodeid, argname, value):
-        self.nodeid = nodeid
-        self.argname = argname
-        self.value = value
-        self._type = None
+#     def __new__(cls, nodeid, rargname, value, type=None):
+#         if type is None:
+#             # if value is a string (from a CARG) then value[0] still
+#             # fails the var_re match, which is ok
+#             var = value[0] if value else ''
+#             if rargname.upper() == CONSTARG_ROLE or not var_re.match(var):
+#                 type = Argument.CONSTANT_ARG
+#             else:
+#                 type = Argument.VARIABLE_ARG
+#         return super(Argument, cls).__new__(
+#             cls, nodeid, rargname, value, type
+#         )
 
-    def __repr__(self):
-        return '<Argument object ({}:{}:{}) at {}>'.format(
-            self.nodeid, self.argname, self.value, id(self)
-        )
+#     # def __init__(self, nodeid, rargname, value):
+#     #     self.nodeid = nodeid
+#     #     self.rargname = rargname
+#     #     self.value = value
+#         # self._type = None
 
-    def __eq__(self, other):
-        # ignore missing nodeid?
-        # argname is case insensitive
-        snid = self.nodeid
-        onid = other.nodeid
-        return (
-            (None in (snid, onid) or snid == onid) and
-            self.argname.lower() == other.argname.lower() and
-            self.value == other.value
-        )
+#     def __repr__(self):
+#         return '<Argument object ({}:{}:{}) at {}>'.format(
+#             self.nodeid, self.rargname, self.value, id(self)
+#         )
 
-    @classmethod
-    def mrs_argument(cls, argname, value):
-        return cls(None, argname, value)
+#     # def __eq__(self, other):
+#     #     # ignore missing nodeid?
+#     #     # rargname is case insensitive
+#     #     snid = self.nodeid
+#     #     onid = other.nodeid
+#     #     return (
+#     #         (None in (snid, onid) or snid == onid) and
+#     #         self.rargname.lower() == other.rargname.lower() and
+#     #         self.value == other.value
+#     #     )
 
-    @classmethod
-    def rmrs_argument(cls, anchor, argname, value):
-        return cls(anchor.vid, argname, value)
+#     @classmethod
+#     def mrs_argument(cls, rargname, value, type=None):
+#         return cls(None, rargname, value, type=type)
 
-    def infer_argument_type(self, xmrs=None):
-        if self.argname == IVARG_ROLE:
-            return Argument.INTRINSIC_ARG
-        elif isinstance(self.value, MrsVariable):
-            if self.value.sort == HANDLESORT:
-                # if there's no xmrs given, then use HANDLE_ARG as it
-                # is the supertype of LABEL_ARG and HCONS_ARG
-                if xmrs is not None:
-                    if xmrs.get_hcons(self.value) is not None:
-                        return Argument.HCONS_ARG
-                    else:
-                        return Argument.LABEL_ARG
-                else:
-                    return Argument.HANDLE_ARG
-            else:
-                return Argument.VARIABLE_ARG
-        else:
-            return Argument.CONSTANT_ARG
+#     # @classmethod
+#     # def rmrs_argument(cls, anchor, rargname, value):
+#     #     return cls(anchor.vid, rargname, value)
 
-    @property
-    def type(self):
-        if self._type is None:
-            self._type = self.infer_argument_type()
-        return self._type
+#     # def infer_argument_type(self, xmrs=None):
+#     #     if self.rargname == IVARG_ROLE:
+#     #         return Argument.INTRINSIC_ARG
+#     #     elif isinstance(self.value, MrsVariable):
+#     #         if self.value.sort == HANDLESORT:
+#     #             # if there's no xmrs given, then use HANDLE_ARG as it
+#     #             # is the supertype of LABEL_ARG and HCONS_ARG
+#     #             if xmrs is not None:
+#     #                 if xmrs.get_hcons(self.value) is not None:
+#     #                     return Argument.HCONS_ARG
+#     #                 else:
+#     #                     return Argument.LABEL_ARG
+#     #             else:
+#     #                 return Argument.HANDLE_ARG
+#     #         else:
+#     #             return Argument.VARIABLE_ARG
+#     #     else:
+#     #         return Argument.CONSTANT_ARG
 
-    @type.setter
-    def type(self, value):
-        self._type = value
+#     # @property
+#     # def type(self):
+#     #     if self._type is None:
+#     #         self._type = self.infer_argument_type()
+#     #     return self._type
+
+#     # @type.setter
+#     # def type(self, value):
+#     #     self._type = value
 
 
-class Link(object):
+# def args(xmrs):
+#     """The list of all |Arguments|."""
+#     return list(chain.from_iterable(ep.args for ep in xmrs.eps))
+
+
+class Link(namedtuple('Link', ('start', 'end', 'rargname', 'post'))):
     """DMRS-style Links are a way of representing arguments without
        variables. A Link encodes a start and end node, the argument
        name, and label information (e.g. label equality, qeq, etc)."""
-    def __init__(self, start, end, argname=None, post=None):
-        self.start = int(start)
-        self.end = int(end)
-        self.argname = argname
-        self.post = post
+    # def __init__(self, start, end, rargname=None, post=None):
+    #     self.start = int(start)
+    #     self.end = int(end)
+    #     self.rargname = rargname
+    #     self.post = post
 
     def __repr__(self):
         return '<Link object (#{} :{}/{}> #{}) at {}>'.format(
-            self.start, self.argname or '', self.post, self.end, id(self)
+            self.start, self.rargname or '', self.post, self.end, id(self)
         )
 
 
-class HandleConstraint(object):
+def links(xmrs):
+    """The list of |Links|."""
+    # Return the set of links for the XMRS structure. Links exist for
+    # every non-intrinsic argument that has a variable that is the
+    # intrinsic variable of some other predicate, as well as for label
+    # equalities when no argument link exists (even considering
+    # transitivity).
+    links = []
+    prelinks = []
+
+    _eps = xmrs._eps
+    _vars = xmrs._vars
+
+    lsh = xmrs.labelset_heads
+    lblheads = {v: lsh(v) for v, vd in _vars.items() if 'LBL' in vd['refs']}
+
+    top = xmrs.top
+    if top is not None:
+        prelinks.append((0, top, None, top, _vars[top]))
+
+    for nid, ep in _eps.items():
+        for role, val in ep[3].items():
+            if role == IVARG_ROLE or val not in _vars:
+                continue
+            prelinks.append((nid, ep[2], role, val, _vars[val]))
+
+    for src, srclbl, role, val, vd in prelinks:
+        if 'iv' in vd:
+            tgt = vd['iv']
+            tgtlbl = _eps[tgt][2]
+            post = EQ_POST if srclbl == tgtlbl else NEQ_POST
+        elif 'hcons' in vd:
+            lbl = vd['hcons'][2]
+            if lbl not in lblheads or len(lblheads[lbl]) == 0:
+                continue  # broken MRS; log this?
+            tgt = lblheads[lbl][0]  # sorted list; first item is most "heady"
+            post = H_POST
+        elif 'LBL' in vd['refs']:
+            if val not in lblheads or len(lblheads[val]) == 0:
+                continue  # broken MRS; log this?
+            tgt = lblheads[val][0]  # again, should be sorted already
+            post = HEQ_POST
+        else:
+            continue  # CARGs, maybe?
+        links.append(Link(src, tgt, role, post))
+
+    # now EQ links unattested by arg links
+    for lbl, heads in lblheads.items():
+        # I'm pretty sure this does what we want
+        if len(heads) > 1:
+            first = heads[0]
+            for other in heads[1:]:
+                links.append(Link(first, other, None, post=EQ_POST))
+        # If not, something like this is more explicit
+        # lblset = self.labelset(lbl)
+        # sg = g.subgraph(lblset)
+        # ns = [nid for nid, deg in sg.degree(lblset).items() if deg == 0]
+        # head = self.labelset_head(lbl)
+        # for n in ns:
+        #     links.append(Link(head, n, post=EQ_POST))
+    return sorted(links)#, key=lambda link: (link.start, link.end))
+
+
+class HandleConstraint(
+        namedtuple('HandleConstraint', ('hi', 'relation', 'lo'))):
     """A relation between two handles."""
 
     QEQ = 'qeq'  # Equality modulo Quantifiers
     LHEQ = 'lheq'  # Label-Handle Equality
     OUTSCOPES = 'outscopes'  # Outscopes
 
-    def __init__(self, hi, relation, lo):
-        self.hi = hi
-        self.relation = relation
-        self.lo = lo
+    # def __init__(self, hi, relation, lo):
+    #     self.hi = hi
+    #     self.relation = relation
+    #     self.lo = lo
 
     @classmethod
     def qeq(cls, hi, lo):
         return cls(hi, HandleConstraint.QEQ, lo)
 
-    def __eq__(self, other):
-        return (self.hi == other.hi and
-                self.relation == other.relation and
-                self.lo == other.lo)
+    # def __eq__(self, other):
+    #     return (self.hi == other.hi and
+    #             self.relation == other.relation and
+    #             self.lo == other.lo)
 
-    def __hash__(self):
-        return hash(repr(self))
+    # def __hash__(self):
+    #     return hash(repr(self))
 
     def __repr__(self):
         return '<HandleConstraint object ({} {} {}) at {}>'.format(
                str(self.hi), self.relation, str(self.lo), id(self)
         )
 
+
+def hcons(xmrs):
+    """The list of all |HandleConstraints|."""
+    return sorted(
+        (HandleConstraint(*vd['hcons'])
+         for vd in xmrs._vars.values() if 'hcons' in vd),
+        key=lambda hc: int(sort_vid_split(hc[0])[1])
+    )
+    # nodes = xmrs._graph.nodes(data=True)
+    # return sorted((data['hcons'] for _, data in nodes if 'hcons' in data),
+    #               key=lambda hc: hc.hi.vid)
+
+
 IndividualConstraint = namedtuple('IndividualConstraint',
-                                  ['target', 'relation', 'clause'])
+                                  ['left', 'relation', 'right'])
+
+
+def icons(xmrs):
+    """The list of all |IndividualConstraints|."""
+    return sorted(
+        (IndividualConstraint(*vd['icons'])
+         for vd in xmrs._vars.values() if 'icons' in vd),
+        key=lambda ic: int(sort_vid_split(ic[0])[1])
+    )
+
+    # nodes = xmrs._graph.nodes(data=True)
+    # return sorted((data['icons'] for _, data in nodes if 'icons' in data),
+    #               key=lambda ic: ic.left.vid)
+
 
 # PREDICATES AND PREDICATIONS
 
 
-class Pred(object):
+class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
     """
     A semantic predicate.
 
@@ -580,21 +689,25 @@ class Pred(object):
     REALPRED = 1  # may explicitly define lemma, pos, sense
     STRINGPRED = 2  # quoted string form of realpred
 
-    def __init__(self, predtype, lemma=None, pos=None, sense=None):
-        """Extract the lemma, pos, and sense (if applicable) from a pred
-           string, if given, or construct a pred string from those
-           components, if they are given. Treat malformed pred strings
-           as simple preds without extracting the components."""
-        # GRAMMARPREDs and STRINGPREDs are given by strings (with or without
-        # quotes). STRINGPREDs have an internal structure (defined here:
-        # http://moin.delph-in.net/RmrsPos), but basically:
-        #   _lemma_pos(_sense)?_rel
-        # Note that sense is optional. The initial underscore is meaningful.
-        self.type = predtype
-        self.lemma = lemma
-        self.pos = pos
-        self.sense = str(sense) if sense is not None else sense
-        self.string = None  # set by class methods
+    # def __new__(cls, predtype, lemma=None, pos=None, sense=None, string=None):
+    #     """Extract the lemma, pos, and sense (if applicable) from a pred
+    #        string, if given, or construct a pred string from those
+    #        components, if they are given. Treat malformed pred strings
+    #        as simple preds without extracting the components."""
+    #     # GRAMMARPREDs and STRINGPREDs are given by strings (with or without
+    #     # quotes). STRINGPREDs have an internal structure (defined here:
+    #     # http://moin.delph-in.net/RmrsPos), but basically:
+    #     #   _lemma_pos(_sense)?_rel
+    #     # Note that sense is optional. The initial underscore is meaningful.
+    #     return super(Pred, cls).__new__(
+    #         cls, predtype, lemma, pos, sense, string
+    #     )
+
+        # self.type = predtype
+        # self.lemma = lemma
+        # self.pos = pos
+        # self.sense = str(sense) if sense is not None else sense
+        # self.string = None  # set by class methods
 
     def __eq__(self, other):
         if other is None:
@@ -614,17 +727,13 @@ class Pred(object):
 
     @classmethod
     def stringpred(cls, predstr):
-        lemma, pos, sense, end = Pred.split_pred_string(predstr.strip('"\''))
-        pred = cls(Pred.STRINGPRED, lemma=lemma, pos=pos, sense=sense)
-        pred.string = predstr
-        return pred
+        lemma, pos, sense, end = split_pred_string(predstr.strip('"\''))
+        return cls(Pred.STRINGPRED, lemma, pos, sense, predstr)
 
     @classmethod
     def grammarpred(cls, predstr):
-        lemma, pos, sense, end = Pred.split_pred_string(predstr.strip('"\''))
-        pred = cls(Pred.GRAMMARPRED, lemma=lemma, pos=pos, sense=sense)
-        pred.string = predstr
-        return pred
+        lemma, pos, sense, end = split_pred_string(predstr.strip('"\''))
+        return cls(Pred.GRAMMARPRED, lemma, pos, sense, predstr)
 
     @staticmethod
     def string_or_grammar_pred(predstr):
@@ -635,71 +744,9 @@ class Pred(object):
 
     @classmethod
     def realpred(cls, lemma, pos, sense=None):
-        pred = cls(Pred.REALPRED, lemma=lemma, pos=pos, sense=sense)
         string_tokens = list(filter(bool, [lemma, pos, str(sense or '')]))
-        pred.string = '_'.join([''] + string_tokens + ['rel'])
-        return pred
-
-    @staticmethod
-    def split_pred_string(predstr):
-        """
-        Extract the components from a pred string and log errors for any
-        malformedness.
-
-        Args:
-            predstr: a predicate string
-
-        Examples:
-
-            >>> Pred.split_pred_string('_dog_n_1_rel')
-            ('dog', 'n', '1', 'rel')
-            >>> Pred.split_pred_string('quant_rel')
-            ('quant', None, None, 'rel')
-        """
-        if not predstr.lower().endswith('_rel'):
-            logging.debug('Predicate does not end in "_rel": {}'
-                          .format(predstr))
-        match = Pred.pred_re.search(predstr)
-        if match is None:
-            logging.debug('Unexpected predicate string: {}'.format(predstr))
-            return (predstr, None, None, None)
-        # _lemma_pos(_sense)?_end
-        return (match.group('lemma'), match.group('pos'),
-                match.group('sense'), match.group('end'))
-
-    @staticmethod
-    def is_valid_pred_string(predstr, suffix_required=True):
-        """
-        Return True if the given predicate string represents a valid
-        Pred, False otherwise. If suffix_required is False,
-        abbreviated Pred strings will be accepted (e.g. _dog_n_1
-        instead of _dog_n_1_rel)
-        """
-        predstr = predstr.strip('"').lstrip("'")
-        if (not suffix_required and
-            predstr.rsplit('_', 1)[-1] not in ('rel', 'relation')):
-            predstr += '_rel'
-        return Pred.pred_re.match(predstr) is not None
-
-    @staticmethod
-    def normalize_pred_string(predstr):
-        """
-        Make pred strings more consistent by removing quotes and using
-        the _rel suffix.
-        """
-        predstr = predstr.strip('"').lstrip("'")
-        match = (Pred.pred_re.match(predstr) or
-                 Pred.pred_re.match(predstr + '_rel'))
-        if match:
-            d = match.groupdict()
-            tokens = [d['lemma']]
-            if d['pos']:
-                tokens.append(d['pos'])
-            if d['sense']:
-                tokens.append(d['sense'])
-            tokens.append('rel')
-            return '_'.join(tokens)
-        return None
+        predstr = '_'.join([''] + string_tokens + ['rel'])
+        return cls(Pred.REALPRED, lemma, pos, sense, predstr)
 
     def short_form(self):
         """
@@ -714,11 +761,75 @@ class Pred(object):
         return self.string.strip('"').lstrip("'").rsplit('_', 1)[0]
 
     def is_quantifier(self):
-        return self.pos == QUANTIFIER_SORT
+        return self.pos == QUANTIFIER_POS
+
+
+def split_pred_string(predstr):
+    """
+    Extract the components from a pred string and log errors for any
+    malformedness.
+
+    Args:
+        predstr: a predicate string
+
+    Examples:
+
+        >>> Pred.split_pred_string('_dog_n_1_rel')
+        ('dog', 'n', '1', 'rel')
+        >>> Pred.split_pred_string('quant_rel')
+        ('quant', None, None, 'rel')
+    """
+    if not predstr.lower().endswith('_rel'):
+        logging.debug('Predicate does not end in "_rel": {}'
+                      .format(predstr))
+    match = Pred.pred_re.search(predstr)
+    if match is None:
+        logging.debug('Unexpected predicate string: {}'.format(predstr))
+        return (predstr, None, None, None)
+    # _lemma_pos(_sense)?_end
+    return (match.group('lemma'), match.group('pos'),
+            match.group('sense'), match.group('end'))
+
+
+def is_valid_pred_string(predstr, suffix_required=True):
+    """
+    Return True if the given predicate string represents a valid
+    Pred, False otherwise. If suffix_required is False,
+    abbreviated Pred strings will be accepted (e.g. _dog_n_1
+    instead of _dog_n_1_rel)
+    """
+    predstr = predstr.strip('"').lstrip("'")
+    if (not suffix_required and
+        predstr.rsplit('_', 1)[-1] not in ('rel', 'relation')):
+        predstr += '_rel'
+    return Pred.pred_re.match(predstr) is not None
+
+
+def normalize_pred_string(predstr):
+    """
+    Make pred strings more consistent by removing quotes and using
+    the _rel suffix.
+    """
+    predstr = predstr.strip('"').lstrip("'")
+    match = (Pred.pred_re.match(predstr) or
+             Pred.pred_re.match(predstr + '_rel'))
+    if match:
+        d = match.groupdict()
+        tokens = [d['lemma']]
+        if d['pos']:
+            tokens.append(d['pos'])
+        if d['sense']:
+            tokens.append(d['sense'])
+        tokens.append('rel')
+        return '_'.join(tokens)
+    return None
 
 
 @total_ordering
-class Node(LnkMixin):
+class Node(
+    namedtuple('Node', ('nodeid', 'pred', 'sortinfo',
+                        'lnk', 'surface', 'base', 'carg')),
+    LnkMixin):
     """
     A very simple predication for DMRSs. Nodes don't have |Arguments|
     or labels like |EPs|, but they do have a
@@ -736,37 +847,48 @@ class Node(LnkMixin):
         carg: constant argument string
     """
 
-    def __init__(self, nodeid, pred, sortinfo=None,
+    def __new__(cls, nodeid, pred, sortinfo=None,
                  lnk=None, surface=None, base=None, carg=None):
-        self.nodeid = int(nodeid) if nodeid is not None else None
-        self.pred = pred
-        # sortinfo is the properties plus cvarsort
-        self.sortinfo = OrderedDict(sortinfo or [])
-        self.lnk = lnk
-        self.surface = surface
-        self.base = base
-        self.carg = carg
-        # accessor method
-        self.get_property = self.sortinfo.get
+        if sortinfo is None:
+            sortinfo = {}
+        return super(Node, cls).__new__(
+            cls, nodeid, pred, sortinfo, lnk, surface, base, carg
+        )
+        # self.nodeid = int(nodeid) if nodeid is not None else None
+        # self.pred = pred
+        # # sortinfo is the properties plus cvarsort
+        # self.sortinfo = OrderedDict(sortinfo or [])
+        # self.lnk = lnk
+        # self.surface = surface
+        # self.base = base
+        # self.carg = carg
+        # # accessor method
+        # self.get_property = self.sortinfo.get
 
     def __repr__(self):
+        lnk = ''
+        if self.lnk is not None:
+            lnk = str(self.lnk)
         return '<Node object ({} [{}{}]) at {}>'.format(
-            self.nodeid, self.pred.string, str(self.lnk), id(self)
+            self.nodeid, self.pred.string, lnk, id(self)
         )
 
-    def __eq__(self, other):
-        # not doing self.__dict__ == other.__dict__ right now, because
-        # functions like self.get_property show up there
-        snid = self.nodeid
-        onid = other.nodeid
-        return ((None in (snid, onid) or snid == onid) and
-                self.pred == other.pred and
-                # make one side a regular dict for unordered comparison
-                dict(self.sortinfo.items()) == other.sortinfo and
-                self.lnk == other.lnk and
-                self.surface == other.surface and
-                self.base == other.base and
-                self.carg == other.carg)
+    # note: without overriding __eq__, comparisons of sortinfo will be
+    #       be different if they are OrderedDicts and not in the same
+    #       order. Maybe this isn't a big deal?
+    # def __eq__(self, other):
+    #     # not doing self.__dict__ == other.__dict__ right now, because
+    #     # functions like self.get_property show up there
+    #     snid = self.nodeid
+    #     onid = other.nodeid
+    #     return ((None in (snid, onid) or snid == onid) and
+    #             self.pred == other.pred and
+    #             # make one side a regular dict for unordered comparison
+    #             dict(self.sortinfo.items()) == other.sortinfo and
+    #             self.lnk == other.lnk and
+    #             self.surface == other.surface and
+    #             self.base == other.base and
+    #             self.carg == other.carg)
 
     def __lt__(self, other):
         x1 = (self.cfrom, self.cto, -self.is_quantifier(), self.pred.lemma)
@@ -788,14 +910,14 @@ class Node(LnkMixin):
     def cvarsort(self, value):
         self.sortinfo[CVARSORT] = value
 
-    @property
-    def properties(self):
-        """
-        The properties of the Node (without `cvarsort`, so it's the set
-        of properties a corresponding |EP| would have).
-        """
-        return OrderedDict((k, v) for (k, v) in self.sortinfo.items()
-                           if k != CVARSORT)
+    # @property
+    # def properties(self):
+    #     """
+    #     The properties of the Node (without `cvarsort`, so it's the set
+    #     of properties a corresponding |EP| would have).
+    #     """
+    #     return OrderedDict((k, v) for (k, v) in self.sortinfo.items()
+    #                        if k != CVARSORT)
 
     def is_quantifier(self):
         """
@@ -803,9 +925,38 @@ class Node(LnkMixin):
         """
         return self.pred.is_quantifier()
 
+def nodes(xmrs):
+    """The list of Nodes."""
+    nodes = []
+    _vars = xmrs._vars
+    varsplit = sort_vid_split
+    for ep in xmrs._eps.values():
+        eplen = len(ep)
+        nid = ep[0]
+        pred = ep[1]
+        args = ep[3]
+        sortinfo = lnk = surface = base = None
+        iv = args.get(IVARG_ROLE, None)
+        if iv is not None:
+            sort, _ = varsplit(iv)
+            sortinfo = _vars[iv].get('props', {})
+            sortinfo[CVARSORT] = sort
+        if eplen >= 5:
+            lnk = ep[4]
+        if eplen >= 6:
+            surface = ep[5]
+        if eplen >= 7:
+            base = ep[6]
+        carg = args.get(CONSTARG_ROLE, None)
+        nodes.append(Node(nid, pred, sortinfo, lnk, surface, base, carg))
+    return sorted(nodes)
+
 
 @total_ordering
-class ElementaryPredication(LnkMixin, AnchorMixin):
+class ElementaryPredication(
+    namedtuple('ElementaryPredication',
+               ('nodeid', 'pred', 'label', 'args', 'lnk', 'surface', 'base')),
+    LnkMixin):
     """
     An elementary predication (EP) combines a predicate with various
     structural semantic properties.
@@ -820,142 +971,89 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
     Args:
         pred: The |Pred| of the EP
         label: label handle
-        anchor: an |MrsVariable| anchor or int nodeid
+        nodeid: an int nodeid
         args: a list of the EP's |Arguments|
         lnk: |Lnk| object associated with the pred
         surface: surface string
         base: base form
     """
 
-    def __init__(self, pred, label, anchor=None, nodeid=None, args=None,
+    def __new__(cls, nodeid, pred, label, args=None,
                  lnk=None, surface=None, base=None):
-        self.label = label
-        # first args, then can get IV
-        self.argdict = OrderedDict((a.argname, a) for a in (args or []))
-        # Only fill in other attributes if pred is given, otherwise ignore.
-        # This behavior is to help enable the from_node classmethod.
-        self._node = None
-        if nodeid is None and anchor is not None:
-            nodeid = anchor.vid
-        if pred is not None:
-            iv = self.iv
-            self._node = Node(
-                nodeid,
-                pred,
-                sortinfo=iv.sortinfo if iv else None,
-                lnk=lnk,
-                surface=surface,
-                base=base,
-                carg=self.carg
-            )
+        if args is None:
+            args = {}
+        # else:
+        #     args = dict((a.rargname, a) for a in args)
+        return super(ElementaryPredication, cls).__new__(
+            cls, nodeid, pred, label, args, lnk, surface, base
+        )
 
-    @classmethod
-    def from_node(cls, label, node, args=None):
-        ep = cls(None, label, args=args)
-        ep._node = node
-        return ep
+        # self.label = label
+        # # first args, then can get IV
+        # self.argdict = OrderedDict((a.rargname, a) for a in (args or []))
+        # # Only fill in other attributes if pred is given, otherwise ignore.
+        # # This behavior is to help enable the from_node classmethod.
+        # self._node = None
+        # # if nodeid is None and anchor is not None:
+        # #     nodeid = anchor.vid
+        # if pred is not None:
+        #     iv = self.iv
+        #     self._node = Node(
+        #         nodeid,
+        #         pred,
+        #         sortinfo=iv.sortinfo if iv else None,
+        #         lnk=lnk,
+        #         surface=surface,
+        #         base=base,
+        #         carg=self.carg
+        #     )
+
+    # @classmethod
+    # def from_node(cls, label, node, args=None):
+    #     ep = cls(None, label, args=args)
+    #     ep._node = node
+    #     return ep
 
     def __repr__(self):
         return '<ElementaryPredication object ({} ({})) at {}>'.format(
             self.pred.string, str(self.iv or '?'), id(self)
         )
 
-    def __eq__(self, other):
-        return (self.label == other.label and
-                self.argdict == other.argdict and
-                self._node == other._node)
+    # def __eq__(self, other):
+    #     return (self.label == other.label and
+    #             self.argdict == other.argdict and
+    #             self._node == other._node)
 
     def __lt__(self, other):
+        x1 = (self.cfrom, self.cto, -self.is_quantifier(), self.pred.lemma)
         try:
-            return self._node < other._node
+            x2 = (other.cfrom, other.cto, -other.is_quantifier(),
+                  other.pred.lemma)
+            return x1 < x2
         except AttributeError:
             return False  # comparing EP to non-EP means EP is greater?
-
-    # these properties provide an interface to the node attributes
-
-    @property
-    def nodeid(self):
-        return self._node.nodeid
-
-    @nodeid.setter
-    def nodeid(self, value):
-        self._node.nodeid = value
-        # also update the args' nodeids
-        for arg in self.argdict.values():
-            arg.nodeid = value
-
-    @property
-    def pred(self):
-        return self._node.pred
-
-    @pred.setter
-    def pred(self, value):
-        self._node.pred = value
-
-    @property
-    def sortinfo(self):
-        return self.iv.sortinfo
-
-    @property
-    def lnk(self):
-        return self._node.lnk
-
-    @lnk.setter
-    def lnk(self, value):
-        self._node.lnk = value
-
-    @property
-    def surface(self):
-        return self._node.surface
-
-    @surface.setter
-    def surface(self, value):
-        self._node.surface = value
-
-    @property
-    def base(self):
-        return self._node.base
-
-    @base.setter
-    def base(self, value):
-        self._node.base = value
-
-    # carg property intentionally left out. It should be accessed from
-    # the arg list (see the property below)
 
     # these properties are specific to the EP's qualities
 
     @property
     def intrinsic_variable(self):
-        return self.arg_value(IVARG_ROLE)
+        if IVARG_ROLE in self.args:
+            return self.args[IVARG_ROLE]
+        return None
 
     #: A synonym for :py:meth:`intrinsic_variable`
     iv = intrinsic_variable
 
     @property
     def properties(self):
-        try:
-            return self.iv.properties
-        except AttributeError:  # in case iv is None
-            return OrderedDict()
+        iv = self.iv
+        if iv is not None:
+            return iv.properties
+        return {}
 
     @property
     def carg(self):
-        return self.arg_value(CONSTARG_ROLE)
-
-    @property
-    def args(self):
-        return list(self.argdict.values())
-
-    def get_arg(self, rargname):
-        return self.argdict.get(rargname)
-
-    def arg_value(self, rargname):
-        try:
-            arg = self.argdict[rargname]
-            return arg.value
-        except KeyError:
-            return None
+        return self.args.get(CONSTARG_ROLE, None)
 
     def add_argument(self, arg):
         if arg.nodeid is None:
@@ -964,12 +1062,46 @@ class ElementaryPredication(LnkMixin, AnchorMixin):
             raise XmrsStructureError(
                 "Argument's nodeid must match the EP's (or be None)."
             )
-        if arg.argname in self.argdict:
+        if arg.rargname in self.args:
             raise XmrsStructureError(
                 "Argument with role {} already exists in the EP."
-                .format(arg.argname)
+                .format(arg.rargname)
             )
-        self.argdict[arg.argname] = arg
+        self.args[arg.rargname] = arg
 
     def is_quantifier(self):
         return self.pred.is_quantifier()
+
+
+def eps(xmrs):
+    """The list of |ElementaryPredications|."""
+    return list(starmap(ElementaryPredication, xmrs._eps.values()))
+
+def get_ep(xmrs, nodeid):
+    """
+    Retrieve the EP with the given nodeid, or raises KeyError if no
+    EP matches.
+
+    Args:
+        nodeid: The nodeid of the EP to return.
+    Returns:
+        An ElementaryPredication.
+    """
+    return ElementaryPredication(*xmrs._eps[nodeid])
+    # try:
+    #     d = xmrs._graph.node[nodeid]
+    #     args = [(nodeid, rargname, value)
+    #             for rargname, value in d['rargs'].items()]
+    #     ep = ElementaryPredication(
+    #         nodeid=nodeid,
+    #         pred=d['pred'],
+    #         label=d['label'],
+    #         args=args,
+    #         lnk=d.get('lnk'),
+    #         surface=d.get('surface'),
+    #         base=d.get('base')
+    #     )
+    #     return ep
+    # except KeyError:
+    #     return None
+
