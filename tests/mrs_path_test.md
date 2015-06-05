@@ -84,25 +84,27 @@ Beyond predicates and axes, paths can have other kinds of information:
 In order to customize what values are stored or printed, flags may be used.
 Here is a table of flags:
 
-| Flag           | Alt. | Description/Example                         |
-| -------------- | ---- | ------------------------------------------- |
-| NODEID         | NID  | `pred#123`                                  |
-| PRED           | P    | `pred`                                      |
-| VARSORT        | VS   | `pred[x]`                                   |
-| VARPROPS       | VP   | `pred[PROP=val]`                            |
-| OUTAXES        | OUT  | `pred:ARG1/NEQ>`                            |
-| INAXES         | IN   | `pred<ARG1/EQ:`                             |
-| UNDIRECTEDAXES | UND  | `pred:/EQ:`                                 |
-| SUBPATHS       | SP   | `pred:ARG1/NEQ>pred2`                       |
-| CARG           | C    | `pred:CARG>"constant"                       |
-| BALANCED       | B    | all AXES on a pred have subpaths or none do |
+| Flag             | Short form | Description/Example                         |
+| ---------------- | ---------- | ------------------------------------------- |
+| `NODEID`         | `NID`      | `pred#123`                                  |
+| `PRED`           | `P`        | `pred`                                      |
+| `VARSORT`        | `VS`       | `pred[x]`                                   |
+| `VARPROPS`       | `VP`       | `pred[PROP=val]`                            |
+| `OUTAXES`        | `OUT`      | `pred:ARG1/NEQ>`                            |
+| `INAXES`         | `IN`       | `pred<ARG1/EQ:`                             |
+| `UNDIRECTEDAXES` | `UND`      | `pred:/EQ:`                                 |
+| `SUBPATHS`       | `SP`       | `pred:ARG1/NEQ>pred2`                       |
+| `CARG`           | `C`        | `pred:CARG>"constant"                       |
+| `BALANCED`       | `B`        | all AXES on a pred have subpaths or none do |
 
 There are also some convenient composed flags:
 
-| CONTEXT | VS \| VP \| SP                                 |
-| ALLAXES | OUT \| IN \| UND                               |
-| DEFAULT | P \| VS \| VP \| OUT \| IN \| SP               |
-| ALL     | NID \| P \| VS \| VP \| OUT \| IN \| UND \| SP |
+| Flag      | Unification                 |
+| --------- | --------------------------- |
+| `CONTEXT` | `VS|VP|SP`                  |
+| `ALLAXES` | `OUT|IN|UND`                |
+| `DEFAULT` | `P|VS|VP|OUT|IN|SP`         |
+| `ALL`     | `NID|P|VS|VP|OUT|IN|UND|SP` |
 
 Note that `SUBPATHS` is used both for context and regular subpaths.
 
@@ -181,8 +183,8 @@ path, while depth is the largest number of steps from the top to a leaf.
 ```
 
 Each path is like a linked list (linked tree, rather), so the objects returned
-from `read()` are nodes, and the `links` attribute on each node connect it to
-other nodes. Key access on the node itself acts like querying the links.
+from `read_path()` are nodes, and the `links` attribute on each node connect
+it to other nodes. Key access on the node itself acts like querying the links.
 This makes it convenient for traversing through the path.
 
 ```python
