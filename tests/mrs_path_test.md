@@ -19,12 +19,16 @@ The `mrs.path` module is a library of functions, not a script, so import it:
 ```
 
 
-## Reading and Writing Paths
+## Reading and Writing Basic Paths
 
 MRS Paths are a variableless, nodeid-less representation meant primarily
 for serialization and deserialization.
 
-First let's read and write some paths.
+First let's read and write some paths. Basic paths have predicates with axes
+that point to other predicates (or to nothing).
+
+The `read_path()` function parses a string into an `XmrsPathNode` object,
+while `format()` serializes an `XmrsPathNode` object to a string.
 
 ```python
 >>> p1 = mp.read_path('abc')
@@ -36,8 +40,13 @@ First let's read and write some paths.
 >>> p3 = mp.read_path('abc:ARG1/NEQ>')
 >>> mp.format(p3)
 'abc:ARG1/NEQ>'
->>> mp.format(p3, trailing_axes='never')
-'abc'
+
+```
+
+Some more complicated paths have reversed axes, multiple axes, undirected
+axes, or compound axes (when two or more axes point to the same target pred).
+
+```
 >>> p4 = mp.read_path('def<ARG1/NEQ:abc')
 >>> mp.format(p4)
 'def<ARG1/NEQ:abc'
@@ -53,92 +62,158 @@ First let's read and write some paths.
 >>> p8 = mp.read_path('abc:ARG1/NEQ>def:/EQ:ghi')
 >>> mp.format(p8)
 'abc:ARG1/NEQ>def:/EQ:ghi'
+>>> p9 = mp.read_path('abc:ARG1/NEQ&ARG2/NEQ>def')
+>>> mp.format(p9)
+'abc:ARG1/NEQ&ARG2/NEQ>def'
 
 ```
 
-Paths have a distance and depth; distance is insensitive to the
-direction of the link, while depth is positive for forward links,
-negative for backwards links, and equivalent for undirected links. The
-`distance()` and `depth()` functions of `XmrsPath` objects return the
-maximum distance and positive depth for the path. With a `direction=min`
-parameter for `depth()`, it returns the maximum negative (i.e. minimum)
-depth.
 
+## Rich Paths and Flags
+
+Beyond predicates and axes, paths can have other kinds of information:
+
+* nodeids
+* context
+  - variable sorts
+  - variable properties
+  - contextual subpaths
+* constant arguments
+* underspecified (star \*) predicates
+
+In order to customize what values are stored or printed, flags may be used.
+Here is a table of flags:
+
+| Flag           | Alt. | Description/Example                         |
+| -------------- | ---- | ------------------------------------------- |
+| NODEID         | NID  | `pred#123`                                  |
+| PRED           | P    | `pred`                                      |
+| VARSORT        | VS   | `pred[x]`                                   |
+| VARPROPS       | VP   | `pred[PROP=val]`                            |
+| OUTAXES        | OUT  | `pred:ARG1/NEQ>`                            |
+| INAXES         | IN   | `pred<ARG1/EQ:`                             |
+| UNDIRECTEDAXES | UND  | `pred:/EQ:`                                 |
+| SUBPATHS       | SP   | `pred:ARG1/NEQ>pred2`                       |
+| CARG           | C    | `pred:CARG>"constant"                       |
+| BALANCED       | B    | all AXES on a pred have subpaths or none do |
+
+There are also some convenient composed flags:
+
+| CONTEXT | VS \| VP \| SP                                 |
+| ALLAXES | OUT \| IN \| UND                               |
+| DEFAULT | P \| VS \| VP \| OUT \| IN \| SP               |
+| ALL     | NID \| P \| VS \| VP \| OUT \| IN \| UND \| SP |
+
+Note that `SUBPATHS` is used both for context and regular subpaths.
+
+Nodeids occur after, or instead of, a predicate. Note that nodeids are not
+output by default.
 
 ```python
->>> p1.distance(), p1.depth()
-(0, 0)
->>> p2.distance(), p2.depth()
-(1, 1)
->>> p3.distance(), p3.depth()
-(0, 0)
->>> p4.distance(), p4.depth(), p4.depth(direction=min)
-(1, 0, -1)
->>> p5.distance(), p5.depth()
-(1, 1)
->>> p6.distance(), p6.depth(), p6.depth(direction=min)
-(1, 1, -1)
->>> p7.distance(), p7.depth()
-(2, 2)
->>> p8.distance(), p8.depth()
+>>> p10 = mp.read_path('abc#1')
+>>> mp.format(p10)
+'abc'
+>>> mp.format(p10, flags=mp.ALL)
+'abc#1'
+>>> p11 = mp.read_path('#1')
+>>> mp.format(p11)
+'*'
+>>> mp.format(p11, flags=mp.ALL)
+'#1'
+
+```
+
+Variable sorts and properties appear in square brackets after the pred and/or
+nodeid, but before the axes. Property names must be prefixed with `@`.
+Conjunctions of variable sort and/or properties is done with `&` as with
+subpaths.
+
+```python
+>>> p12 = mp.read_path('abc[x]')
+>>> mp.format(p12)
+'abc[x]'
+>>> p13 = mp.read_path('abc#1[x & @ATTR=val & @PROP=val]')
+>>> mp.format(p13, flags=mp.ALL)
+'abc#1[x & @ATTR=val & @PROP=val]'
+>>> mp.format(p13, flags=mp.DEFAULT - mp.VS)
+'abc[@ATTR=val & @PROP=val]'
+>>> mp.format(p13, flags=mp.DEFAULT - mp.VP)
+'abc[x]'
+>>> mp.format(p13, flags=mp.DEFAULT - mp.CONTEXT)
+'abc'
+>>> p14 = mp.read_path('abc[@ATTR=val]:ARG1/NEQ>def')
+>>> mp.format(p14)
+'abc[@ATTR=val]:ARG1/NEQ>def'
+>>> mp.format(p14, flags=mp.DEFAULT - mp.SP)
+'abc[@ATTR=val]:ARG1/NEQ>'
+>>> mp.format(p14, flags=mp.DEFAULT - mp.OUT)
+'abc[@ATTR=val]:ARG1/NEQ>def'
+>>> mp.format(p14, flags=mp.DEFAULT - mp.SP - mp.OUT)
+'abc[@ATTR=val]'
+
+```
+
+## Properties of XmrsPathNodes
+
+Paths have an order and depth; order is the number of predicates in a
+path, while depth is the largest number of steps from the top to a leaf.
+
+```python
+>>> p1.order(), p1.depth()
+(1, 0)
+>>> p2.order(), p2.depth()
+(2, 1)
+>>> p3.order(), p3.depth()
+(1, 0)
+>>> p4.order(), p4.depth()
+(2, 1)
+>>> p5.order(), p5.depth()
+(3, 1)
+>>> p6.order(), p6.depth()
+(3, 1)
+>>> p7.order(), p7.depth()
+(3, 2)
+>>> p8.order(), p8.depth()
+(3, 2)
+>>> p9.order(), p9.depth()
 (2, 1)
 
 ```
 
-The `start` object on the path is the first node in a linked list. The
-`links` attribute on a node is a dictionary mapping a axis to the
-next node. Key access on the node itself acts like querying the links.
+Each path is like a linked list (linked tree, rather), so the objects returned
+from `read()` are nodes, and the `links` attribute on each node connect it to
+other nodes. Key access on the node itself acts like querying the links.
 This makes it convenient for traversing through the path.
 
 ```python
->>> str(p1.start.pred)
+>>> str(p1.pred)
 'abc'
->>> len(p1.start.links)
+>>> len(p1.links)
 0
->>> len(p2.start.links)
+>>> len(p2.links)
 1
->>> str(p2.start.links[':ARG1/NEQ>'].pred)
+>>> str(p2.links[':ARG1/NEQ>'].pred)
 'def'
->>> str(p2.start[':ARG1/NEQ>'].pred)
+>>> str(p2[':ARG1/NEQ>'].pred)
 'def'
->>> str(p6.start['<ARG1/EQ:'].pred)
+>>> str(p6['<ARG1/EQ:'].pred)
 'ghi'
->>> str(p7.start[':ARG1/NEQ>'][':ARG1/EQ>'].pred)
+>>> str(p7[':ARG1/NEQ>'][':ARG1/EQ>'].pred)
 'ghi'
-
-```
-
-Using a node object as the parameter of the path's `distance()` and
-`depth()` functions returns the distance or depth of that node.
-
-```python
->>> p6.distance(p6.start), p6.depth(p6.start)
-(0, 0)
->>> p6.distance(p6.start[':ARG1/NEQ>']), p6.depth(p6.start[':ARG1/NEQ>'])
-(1, 1)
->>> p6.distance(p6.start['<ARG1/EQ:']), p6.depth(p6.start['<ARG1/EQ:'])
-(1, -1)
-
-```
-
-Nodes can be made into subpaths, but the `format()` function will also
-work with a regular node:
-
-```python
->>> p7b = mp.XmrsPath(p7.start[':ARG1/NEQ>'])
->>> p7b.distance()
-1
->>> mp.format(p7b)
-'def:ARG1/EQ>ghi'
->>> mp.format(p7.start[':ARG1/NEQ>'])
-'def:ARG1/EQ>ghi'
 
 ```
 
 
 ## Generating Paths
 
-Let's load some Xmrs objects to help with testing:
+For simplicity, only the preds, axes, and subpaths are printed below:
+
+```python
+>>> SIMPLEFLAGS = mp.PRED | mp.SUBPATHS | mp.OUTAXES
+
+```
+
+First let's load some Xmrs objects to help with testing:
 
 ```python
 >>> from delphin.mrs.simplemrs import loads_one
@@ -204,11 +279,10 @@ On the other hand, they are simple tree structures of semantic subgraphs
 which may be a useful property for some applications.
 
 ```python
->>> topdown_paths = lambda x: map(
-...     mp.format,
-...     mp.find_paths(x, method="top-down", allow_eq=False)
-... )
->>>
+>>> def topdown_paths(x):
+...     for p in mp.explore(x, method='top-down'):
+...         yield mp.format(p, flags=SIMPLEFLAGS)
+... 
 >>> for path in sorted(topdown_paths(it_rains)):
 ...     print(path)
 "_rain_v_1_rel"
@@ -239,15 +313,12 @@ _all_q_rel:RSTR/H>"_dog_n_1_rel"
 
 ```
 
-The `allow_eq` parameter, if set to `True`, allows for undirected `/EQ`
-links, which are sometimes necessary:
 
 ```python
->>> topdown_paths_with_eq = lambda x: map(
-...     mp.format,
-...     mp.find_paths(x, method="top-down", allow_eq=True)
-... )
->>>
+>>> def topdown_paths_with_eq(x):
+...     for p in mp.explore(x, method='top-down', flags=mp.DEFAULT|mp.UND):
+...         yield mp.format(p, flags=SIMPLEFLAGS)
+... 
 >>> for path in sorted(topdown_paths_with_eq(nearly_all_dogs_bark)):
 ...     print(path)
 "_bark_v_1_rel":ARG1/NEQ>
@@ -283,21 +354,24 @@ _the_q_rel:RSTR/H>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
 _the_q_rel:RSTR/H>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
 def_explicit_q_rel:RSTR/H>
 def_explicit_q_rel:RSTR/H>"_tail_n_1_rel"
+poss_rel(:ARG1/NEQ> & :ARG2/EQ>"_dog_n_1_rel")
+poss_rel(:ARG1/NEQ> & :ARG2/EQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+poss_rel(:ARG1/NEQ> & :ARG2/EQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 poss_rel(:ARG1/NEQ> & :ARG2/EQ>)
 poss_rel(:ARG1/NEQ>"_tail_n_1_rel" & :ARG2/EQ>"_dog_n_1_rel")
 poss_rel(:ARG1/NEQ>"_tail_n_1_rel" & :ARG2/EQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
 poss_rel(:ARG1/NEQ>"_tail_n_1_rel" & :ARG2/EQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+poss_rel(:ARG1/NEQ>"_tail_n_1_rel" & :ARG2/EQ>)
 
 ```
 
 ### Generating Bottom-up Paths
 
 ```python
->>> bottomup_paths = lambda x: map(
-...     lambda y: mp.format(y, trailing_axes='never'),
-...     mp.find_paths(x, method="bottom-up", allow_eq=False)
-... )
->>>
+>>> def bottomup_paths(x):
+...     for p in mp.explore(x, method='bottom-up'):
+...         yield mp.format(p, flags=SIMPLEFLAGS)
+... 
 >>> for path in sorted(bottomup_paths(it_rains)):
 ...     print(path)
 "_rain_v_1_rel"
@@ -309,7 +383,16 @@ poss_rel(:ARG1/NEQ>"_tail_n_1_rel" & :ARG2/EQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":
 "_bark_v_1_rel"</H:TOP
 "_dog_n_1_rel"
 "_dog_n_1_rel"(<ARG1/EQ:"_large_a_1_rel" & <ARG1/NEQ:"_bark_v_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG1/EQ:"_large_a_1_rel" & <ARG1/NEQ:"_bark_v_1_rel")
 "_dog_n_1_rel"(<ARG1/EQ:"_large_a_1_rel" & <ARG1/NEQ:"_bark_v_1_rel"</H:TOP & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG1/EQ:"_large_a_1_rel" & <ARG1/NEQ:"_bark_v_1_rel"</H:TOP)
+"_dog_n_1_rel"(<ARG1/EQ:"_large_a_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG1/NEQ:"_bark_v_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG1/NEQ:"_bark_v_1_rel"</H:TOP & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"<ARG1/EQ:"_large_a_1_rel"
+"_dog_n_1_rel"<ARG1/NEQ:"_bark_v_1_rel"
+"_dog_n_1_rel"<ARG1/NEQ:"_bark_v_1_rel"</H:TOP
+"_dog_n_1_rel"<RSTR/H:_the_q_rel
 "_large_a_1_rel"
 _the_q_rel
 
@@ -324,22 +407,27 @@ backwards, while all others go forwards, in order to capture these
 structures.
 
 ```python
->>> headed_paths = lambda x: map(
-...     lambda y: mp.format(y, trailing_axes='forward'),
-...     mp.find_paths(x, method="headed", allow_eq=False)
-... )
->>>
+>>> def headed_paths(x):
+...     for p in mp.explore(x, method='headed'):
+...         yield mp.format(p, flags=SIMPLEFLAGS)
+... 
 >>> for path in sorted(headed_paths(the_large_dog_barks)):
 ...     print(path)
 "_bark_v_1_rel":ARG1/NEQ>
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG1/EQ:"_large_a_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG1/EQ:"_large_a_1_rel"
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<RSTR/H:_the_q_rel
 "_dog_n_1_rel"
 "_dog_n_1_rel"(<ARG1/EQ:"_large_a_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"<ARG1/EQ:"_large_a_1_rel"
+"_dog_n_1_rel"<RSTR/H:_the_q_rel
 "_large_a_1_rel"
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG1/EQ:"_large_a_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG1/EQ:"_large_a_1_rel"
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<RSTR/H:_the_q_rel
 _the_q_rel
 >>>
 >>> for path in sorted(headed_paths(the_dog_whose_tail_wagged_barks)):
@@ -349,10 +437,18 @@ _the_q_rel
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<RSTR/H:_the_q_rel
 "_dog_n_1_rel"
 "_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
 "_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
 "_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
+"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
+"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_dog_n_1_rel"<RSTR/H:_the_q_rel
 "_tail_n_1_rel"
 "_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 "_wag_v_1_rel":ARG1/NEQ>
@@ -363,6 +459,10 @@ TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<RSTR/H:_the_q_rel
 _the_q_rel
 def_explicit_q_rel
 poss_rel:ARG1/NEQ>
@@ -371,15 +471,135 @@ poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 
 ```
 
-Using `allow_eq=True` with headed paths can sometimes yield many many paths:
+Using `UNDIRECTEDAXES` on `explore()` with headed paths can sometimes yield
+many many paths:
 
 ```python
->>> headed_paths_with_eq = lambda x: map(
-...     lambda y: mp.format(y, trailing_axes='forward'),
-...     mp.find_paths(x, method="headed", allow_eq=True)
-... )
->>>
+>>> def headed_paths_with_eq(x):
+...     for p in mp.explore(x, method='headed', flags=mp.DEFAULT|mp.UND):
+...         yield mp.format(p, flags=SIMPLEFLAGS)
+... 
 >>> for path in sorted(headed_paths_with_eq(the_dog_whose_tail_wagged_barks)):
+...     print(path)
+"_bark_v_1_rel":ARG1/NEQ>
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<RSTR/H:_the_q_rel
+"_dog_n_1_rel"
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
+"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
+"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
+"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_dog_n_1_rel"<RSTR/H:_the_q_rel
+"_tail_n_1_rel"
+"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_wag_v_1_rel":ARG1/NEQ>
+"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<RSTR/H:_the_q_rel
+_the_q_rel
+def_explicit_q_rel
+poss_rel:ARG1/NEQ>
+poss_rel:ARG1/NEQ>"_tail_n_1_rel"
+poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+
+```
+
+Using the `BALANCED` flag can cut down some of the variants:
+
+```python
+>>> def balanced_headed_paths_with_eq(x):
+...     for p in mp.explore(x, method='headed', flags=mp.DEFAULT|mp.UND|mp.B):
+...         yield mp.format(p, flags=SIMPLEFLAGS)
+... 
+>>> for path in sorted(balanced_headed_paths_with_eq(the_dog_whose_tail_wagged_barks)):
 ...     print(path)
 "_bark_v_1_rel":ARG1/NEQ>
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"

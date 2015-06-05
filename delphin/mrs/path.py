@@ -4,7 +4,7 @@ import warnings
 from collections import deque, defaultdict
 from itertools import product
 
-from .components import Pred
+from .components import (Pred, links, var_sort)
 from .util import powerset
 from delphin._exceptions import XmrsError
 # for rebuilding Xmrs from paths
@@ -77,18 +77,18 @@ def _walk(xmrs, nodeid, linkdict, visited, method, sort_key):
 
 
 def _build_linkdict(xmrs):
-    links = defaultdict(dict)
-    for link in xmrs.links:
+    ld = defaultdict(dict)
+    for link in links(xmrs):
         axis = '{}/{}'.format(link.rargname or '', link.post)
         if link_is_directed(link):
-            links[link.start][':{}>'.format(axis)] = link.end
-            links[link.end]['<{}:'.format(axis)] = link.start
+            ld[link.start][':{}>'.format(axis)] = link.end
+            ld[link.end]['<{}:'.format(axis)] = link.start
         else:
             # pretend they are directed
-            #links[link.end]['<{}:'.format(axis)] = link.start
-            links[link.start][':{}:'.format(axis)] = link.end
-            links[link.end][':{}:'.format(axis)] = link.start
-    return links
+            #ld[link.end]['<{}:'.format(axis)] = link.start
+            ld[link.start][':{}:'.format(axis)] = link.end
+            ld[link.end][':{}:'.format(axis)] = link.start
+    return ld
 
 
 def _get_axes(method, links):
@@ -158,11 +158,9 @@ class XmrsPathNode(object):
             else:
                 self[axis].update(tgt)
 
-    @property
     def depth(self):
         return self._depth
 
-    @property
     def order(self):
         return self._order
 
@@ -181,70 +179,70 @@ class XmrsPathNode(object):
     #         tgt.update(extent)
 
 
-class XmrsPath(XmrsPathNode):
+# class XmrsPath(XmrsPathNode):
 
-    def __init__(self, nodeid, pred, context=None, links=None):
-        XmrsPathNode.__init__(self, nodeid, pred, context, links)
-        self.calculate_metrics()
+#     def __init__(self, nodeid, pred, context=None, links=None):
+#         XmrsPathNode.__init__(self, nodeid, pred, context, links)
+#         self.calculate_metrics()
 
-    @classmethod
-    def from_node(cls, node):
-        return cls(node.nodeid, node.pred, node.context, node.links)
+#     @classmethod
+#     def from_node(cls, node):
+#         return cls(node.nodeid, node.pred, node.context, node.links)
 
-    def calculate_metrics(self):
-        self._distance = {}
-        self._depth = {}
-        self._preds = {}
-        self._calculate_metrics(self, 0, 0)
+#     def calculate_metrics(self):
+#         self._distance = {}
+#         self._depth = {}
+#         self._preds = {}
+#         self._calculate_metrics(self, 0, 0)
 
-    def _calculate_metrics(self, curnode, depth, distance):
-        if curnode is None:
-            return
-        # add pred index
-        try:
-            self._preds[curnode.pred].append(curnode)
-        except KeyError:
-            self._preds[curnode.pred] = []
-            self._preds[curnode.pred].append(curnode)
-        _id = id(curnode)
-        # we may re-update if we're on a shorter path
-        updated = False
-        if _id not in self._distance or distance < self._distance[_id]:
-            self._distance[_id] = distance
-            updated = True
-        if _id not in self._depth or abs(depth) < abs(self._depth[_id]):
-            self._depth[_id] = depth
-            updated = True
-        if not updated:
-            return
-        for link in curnode.links:
-            if link.endswith('>'):
-                self._calculate_metrics(curnode[link], depth+1, distance+1)
-            elif link.startswith('<'):
-                self._calculate_metrics(curnode[link], depth-1, distance+1)
-            else:
-                self._calculate_metrics(curnode[link], depth, distance+1)
+#     def _calculate_metrics(self, curnode, depth, distance):
+#         if curnode is None:
+#             return
+#         # add pred index
+#         try:
+#             self._preds[curnode.pred].append(curnode)
+#         except KeyError:
+#             self._preds[curnode.pred] = []
+#             self._preds[curnode.pred].append(curnode)
+#         _id = id(curnode)
+#         # we may re-update if we're on a shorter path
+#         updated = False
+#         if _id not in self._distance or distance < self._distance[_id]:
+#             self._distance[_id] = distance
+#             updated = True
+#         if _id not in self._depth or abs(depth) < abs(self._depth[_id]):
+#             self._depth[_id] = depth
+#             updated = True
+#         if not updated:
+#             return
+#         for link in curnode.links:
+#             if link.endswith('>'):
+#                 self._calculate_metrics(curnode[link], depth+1, distance+1)
+#             elif link.startswith('<'):
+#                 self._calculate_metrics(curnode[link], depth-1, distance+1)
+#             else:
+#                 self._calculate_metrics(curnode[link], depth, distance+1)
 
-    def distance(self, node=None):
-        if node is None:
-            return max(self._distance.values())
-        else:
-            return self._distance[id(node)]
+#     def distance(self, node=None):
+#         if node is None:
+#             return max(self._distance.values())
+#         else:
+#             return self._distance[id(node)]
 
-    def depth(self, node=None, direction=max):
-        if node is None:
-            return direction(self._depth.values())
-        return self._depth[id(node)]
+#     def depth(self, node=None, direction=max):
+#         if node is None:
+#             return direction(self._depth.values())
+#         return self._depth[id(node)]
 
-    def select(self, pred):
-        return self._preds.get(pred, [])
+#     def select(self, pred):
+#         return self._preds.get(pred, [])
 
-    # def extend(self, extents, base_axes=None):
-    #     if base_axes is None:
-    #         base_axes = []
-    #     base = self.follow(base_axes)
-    #     base.extend(extents)
-    #     self.calculate_metrics()
+#     # def extend(self, extents, base_axes=None):
+#     #     if base_axes is None:
+#     #         base_axes = []
+#     #     base = self.follow(base_axes)
+#     #     base.extend(extents)
+#     #     self.calculate_metrics()
 
 
 # HELPER FUNCTIONS ##########################################################
@@ -365,7 +363,7 @@ def format(node, sort_key=axis_sort, depth=-1, flags=DEFAULT):
         symbol = STAR
     context = _format_context(node, sort_key, depth, flags)
     subpath = ''
-    if (flags & SUBPATHS) and depth != 0:
+    if depth != 0:
         subpath = _format_subpath(node, sort_key, depth-1, flags)
     return '{}{}{}{}'.format(symbol, nodeid, context, subpath)
 
@@ -383,12 +381,13 @@ def _format_context(node, sort_key, depth, flags):
                 if (flags & VARPROPS):
                     contexts.append('{}={}'.format(k, v))
             elif k[0] in (':', '<'):
-                if (flags & SUBPATHS):
-                    contexts.append(
-                        '{}{}'.format(
-                            k, format(v, sort_key, depth-1, flags)
-                        )
-                    )
+                if v is not None and (flags & SUBPATHS):
+                    v = format(v, sort_key, depth-1, flags)
+                elif _valid_axis(k, flags):
+                    v = ''
+                else:
+                    continue
+                contexts.append('{}{}'.format(k, v))
             else:
                 raise XmrsPathError('Invalid context key: {}'.format(k))
         if contexts:
@@ -400,13 +399,13 @@ def _format_subpath(node, sort_key, depth, flags):
     links = []
     axislist = _prepare_axes(node, sort_key)
     for axis, tgt in axislist:
-        if (tgt is not None or _valid_axis(axis, flags)):
-            links.append(
-                '{}{}'.format(
-                    axis,
-                    format(tgt, sort_key, depth, flags)
-                )
-            )
+        if tgt is not None and (flags & SUBPATHS):
+            tgt = format(tgt, sort_key, depth, flags)
+        elif _valid_axis(axis, flags):
+            tgt = ''
+        else:
+            continue
+        links.append('{}{}'.format(axis, tgt))
     if len(links) > 1:
         subpath = '({})'.format(' & '.join(links))
     else:
@@ -493,15 +492,23 @@ def _explore(
     if start == 0:
         symbol = TOP
     else:
-        node = xmrs.get_node(start)
-        symbol = node.pred
+        symbol = xmrs.get_pred(start)
         if (flags & CONTEXT):
             ctext = {}
-            if node.cvarsort:
-                ctext['varsort'] = node.cvarsort
-            ctext.update(
-                [('@{}'.format(k), v) for k, v in node.properties.items()]
-            )
+            # it's not guaranteed that an EP has an intrinsic variable
+            try:
+                iv = xmrs.get_iv(start)
+            except KeyError:
+                pass
+            else:
+                if iv is not None:
+                    varsort = var_sort(iv)
+                    ctext['varsort'] = varsort
+                    props = xmrs.get_varprops(iv)
+                    ctext.update([
+                        ('@{}'.format(k), v)
+                        for k, v in props.items()
+                    ])
     steps = stepmap.get(start, {})  # this is {end_nodeid: set(axes), ...}
     # remove :/EQ: if necessary and generate mapping for overlapping axes
     overlap = {}
@@ -517,7 +524,6 @@ def _explore(
             ]
 
     # exclude TOP from being its own path node
-    # note: this might be redundant if BALANCED is unset (see below)
     if start != 0:
         n = XmrsPathNode(
             start,
@@ -535,7 +541,8 @@ def _explore(
     for tgtnid, axes in steps.items():
         if tgtnid == 0:
             # assume only one axis going to TOP (can there be more than 1?)
-            subpaths[next(iter(axis))] = [XmrsPathNode(tgtnid, TOP)]
+            axis = next(iter(axes))
+            subpaths[(axis,)] = [XmrsPathNode(tgtnid, TOP)]
         elif (flags & SUBPATHS) and max_distance != 0:
             if not axes:  # maybe an :/EQ: was pruned and nothing remained
                 continue
@@ -543,7 +550,7 @@ def _explore(
                 _explore(xmrs, stepmap, tgtnid, flags,
                             max_distance-1, subpath_select, visited)
             ))
-            if not flags & BALANCED:
+            if not (flags & BALANCED):
                 sps.append(None)
             subpaths[tuple(axes)] = sps
 
@@ -565,9 +572,11 @@ def _explore(
         # now enumerate the tupled axes
         for alt in alts:
             ld = dict((a, tgt) for axes, tgt in alt.items() for a in axes)
-            n = XmrsPathNode(start, symbol, context=ctext, links=ld)
-            n._overlapping_links = overlap
-            yield n
+            # don't output all null axes (already done above)
+            if set(ld.values()) != {None}:
+                n = XmrsPathNode(start, symbol, context=ctext, links=ld)
+                n._overlapping_links = overlap
+                yield n
 
 
 # READING PATHS #############################################################

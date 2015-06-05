@@ -172,6 +172,8 @@ def sort_vid_split(vs):
     except AttributeError:
         raise ValueError('Invalid variable string: {}'.format(str(vs)))
 
+def var_sort(v): return sort_vid_split(v)[0]
+def var_id(v): return sort_vid_split(v)[1]
 
 # I'm not sure this belongs here, but anchors are MrsVariables...
 # class AnchorMixin(object):
