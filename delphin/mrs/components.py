@@ -73,19 +73,15 @@ class MrsVariable(namedtuple('MrsVariable', ('varstring', 'properties'))):
         #     pass  # handles cannot have properties. Log this?
         # self.properties = properties or OrderedDict()
 
-    # @classmethod
-    # def from_vidsort(cls, vid, sort, properties=None):
-    #     """
-    #     """
-    #     if sort is None:
-    #         sort = 'u'
-    #     varstring = '{}{}'.format(sort, vid)
-    #     vid = int(vid)
-    #     var = cls(varstring, properties=properties)
-    #     # might as well set these now
-    #     var[2] = vid
-    #     var[3] = sort
-    #     return var
+    @classmethod
+    def from_vidsort(cls, vid, sort, properties=None):
+        """
+        """
+        if sort is None:
+            sort = 'u'
+        varstring = '{}{}'.format(sort, vid)
+        var = cls(varstring, properties=properties)
+        return var
 
     # @classmethod
     # def anchor(cls, vid):
@@ -199,11 +195,15 @@ class VarGenerator(object):
 
     def __init__(self, starting_vid=1):
         self.vid = starting_vid
+        self.store = {}  # to recall properties from varstrings
 
     def new(self, sort, properties=None):
-        v = MrsVariable(self.vid, sort, properties=properties)
+        varstring = '{}{}'.format(sort, self.vid)
+        if properties is None:
+            properties = {}
+        self.store[varstring] = properties
         self.vid += 1
-        return v
+        return (varstring, properties)
 
 
 class Lnk(namedtuple('Lnk', ('type', 'data'))):

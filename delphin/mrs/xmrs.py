@@ -16,7 +16,7 @@ from .components import (
 )
 from .config import (
     HANDLESORT, IVARG_ROLE, CONSTARG_ROLE, LTOP_NODEID, FIRST_NODEID,
-    RSTR_ROLE, EQ_POST, NEQ_POST, HEQ_POST, H_POST, NIL_POST
+    RSTR_ROLE, EQ_POST, NEQ_POST, HEQ_POST, H_POST, NIL_POST, CVARSORT
 )
 from .util import first, second
 
@@ -166,13 +166,14 @@ def Dmrs(nodes=None, links=None,
     vgen = VarGenerator(starting_vid=0)
     labels = _make_labels(nodes, links, vgen)
     ivs = _make_ivs(nodes, vgen)
-    hook = Hook(ltop=labels[LTOP_NODEID])  # no index for now
+    top=labels[LTOP_NODEID]
+    index = xarg = None  # for now; maybe get them from kwargs?
     # initialize args with ARG0 for intrinsic variables
-    args = {nid: [(nid, IVARG_ROLE, iv)] for nid, iv in ivs.items()}
+    args = {nid: {IVARG_ROLE: iv} for nid, iv in ivs.items()}
     hcons = []
     for l in links:
         if l.start not in args:
-            args[l.start] = []
+            args[l.start] = {}
         # FIXME: I don't have a clear answer about how LTOP links are
         # constructed, so I will assume that H_POST or NIL_POST
         # assumes a QEQ. Label equality would have been captured by
@@ -184,53 +185,48 @@ def Dmrs(nodes=None, links=None,
             if not l.rargname or l.rargname.upper() == 'NIL':
                 continue  # don't make an argument for bare EQ links
             if l.post == H_POST:
-                hole = vgen.new(HANDLESORT)
+                hole = vgen.new(HANDLESORT)[0]
                 hcons += [qeq(hole, labels[l.end])]
-                args[l.start].append((l.start, l.rargname, hole))
+                args[l.start][l.rargname] = hole
                 # if the arg is RSTR, it's a quantifier, so we can
                 # find its intrinsic variable now
                 if l.rargname.upper() == RSTR_ROLE:
                     ivs[l.start] = ivs[l.end]
-                    args[l.start].append(
-                        (l.start, IVARG_ROLE, ivs[l.start])
-                    )
+                    args[l.start][IVARG_ROLE] = ivs[l.start]
             elif l.post == HEQ_POST:
-                args[l.start].append(
-                    (l.start, l.rargname, labels[l.end])
-                )
+                args[l.start][l.rargname] = labels[l.end]
             else:  # NEQ_POST or EQ_POST
-                args[l.start].append(
-                    (l.start, l.rargname, ivs[l.end])
-                )
+                args[l.start][l.rargname] = ivs[l.end]
     eps = []
     for node in nodes:
         nid = node.nodeid
         if node.carg is not None:
-            args[nid].append((nid, CONSTARG_ROLE, node.carg))
-        ep = ElementaryPredication.from_node(
-            labels[nid], node, (args.get(nid) or None)
-        )
+            args[nid][CONSTARG_ROLE] = node.carg
+        ep = (nid, node.pred, labels[nid], args[nid],
+              node.lnk, node.surface, node.base)
         eps.append(ep)
 
     icons = None  # future feature
-    return Mrs(hook=hook, rels=eps,
-               hcons=hcons, icons=icons,
-               lnk=lnk, surface=surface, identifier=identifier)
 
+    return Xmrs(
+        top=top, index=index, xarg=xarg,
+        eps=eps, hcons=hcons, icons=icons, vars=vgen.store,
+        lnk=lnk, surface=surface, identifier=identifier
+    )
 
 def _make_labels(nodes, links, vgen):
     labels = {}
-    labels[LTOP_NODEID] = vgen.new(HANDLESORT)  # reserve h0 for ltop
+    labels[LTOP_NODEID] = vgen.new(HANDLESORT)[0]  # reserve h0 for ltop
     for l in links:
         if l.post == EQ_POST:
             lbl = (labels.get(l.start) or
                    labels.get(l.end) or
-                   vgen.new(HANDLESORT))
+                   vgen.new(HANDLESORT)[0])
             labels[l.start] = labels[l.end] = lbl
     # create any remaining uninstantiated labels
     for n in nodes:
         if n.nodeid not in labels:
-            labels[n.nodeid] = vgen.new(HANDLESORT)
+            labels[n.nodeid] = vgen.new(HANDLESORT)[0]
     return labels
 
 
@@ -240,8 +236,9 @@ def _make_ivs(nodes, vgen):
         # quantifiers share their IV with the quantifiee. It will be
         # selected later during argument construction
         if not node.is_quantifier():
-            ivs[node.nodeid] = vgen.new(node.cvarsort,
-                                        node.properties or None)
+            props = dict((key, val) for key, val in node.sortinfo.items()
+                         if key != CVARSORT)
+            ivs[node.nodeid] = vgen.new(node.cvarsort, props)[0]
     return ivs
 
 
@@ -580,12 +577,11 @@ class Xmrs(LnkMixin):
         Subgraphs can be connected through things like arguments,
         QEQs, and label equalities.
         """
-        domain = set(self._nodeids)  # the nids to consider when traversing
-        if not domain:
-            raise XmrsError('Cannot compute connectedness of an empty Xmrs.')
         _eps = self._eps
         _vars = self._vars
         nids = set(self._nodeids)  # the nids left to find
+        if not nids:
+            raise XmrsError('Cannot compute connectedness of an empty Xmrs.')
         unseen = set(_vars.keys())  # untraversed vars
         agenda = [next(iter(nids))]
         nids.remove(agenda[0])  # skip some work by removing this early
