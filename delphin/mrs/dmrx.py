@@ -179,11 +179,11 @@ def encode_dmrs(m, strict=False):
         attributes['surface'] = m.surface
     if m.identifier is not None:
         attributes['ident'] = m.identifier
-    if not _strict and m.index is not None:
-        # index corresponds to a variable, so link it to a nodeid
-        index_nodeid = m.get_nodeid(m.index)
-        if index_nodeid is not None:
-            attributes['index'] = str(index_nodeid)
+    # if not _strict and m.index is not None:
+    #     # index corresponds to a variable, so link it to a nodeid
+    #     index_nodeid = m.get_nodeid(m.index)
+    #     if index_nodeid is not None:
+    #         attributes['index'] = str(index_nodeid)
     e = etree.Element('dmrs', attrib=attributes)
     for node in nodes(m):
         e.append(encode_node(node))

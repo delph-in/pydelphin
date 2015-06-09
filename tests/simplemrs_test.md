@@ -17,6 +17,18 @@ The `simplemrs` module is a library of functions, not a script, so import it:
 
 ```
 
+The Xmrs objects sacrifice some user-friendliness for performance, so
+using the `components` module will help with inspecting objects.
+
+```python
+>>> from delphin.mrs.components import (
+...     ElementaryPredication as EP,
+...     HandleConstraint as Hcons,
+...     IndividualConstraint as Icons
+... )
+
+```
+
 ## Tokenization
 
 The `simplemrs.tokenize()` method breaks up streams of SimpleMRS text
@@ -103,20 +115,25 @@ Lnk values can take 4 forms in SimpleMRS:
 ... INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
 ... RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
 ... HCONS: < h0 qeq h1 > ]'''))
->>> m.ltop  # doctest: +ELLIPSIS
-<MrsVariable object (h0) ...>
->>> m.index  # doctest: +ELLIPSIS
-<MrsVariable object (e2) ...>
->>> len(m.rels)
+>>> m.ltop
+'h0'
+>>> m.index
+'e2'
+>>> len(m.eps())
 1
->>> m.rels[0].pred  # doctest: +ELLIPSIS
+>>> m.eps()[0][1]  # doctest: +ELLIPSIS
 <Pred object "_rain_v_1_rel" ...>
->>> m.rels[0].intrinsic_variable  # doctest: +ELLIPSIS
-<MrsVariable object (e2) ...>
->>> sorted(m.rels[0].intrinsic_variable.properties.items())
+>>> EP(*m.eps()[0]).pred.string
+'"_rain_v_1_rel"'
+>>> EP(*m.eps()[0]).args['ARG0']
+'e2'
+>>> sorted(m.properties('e2').items())
 [('MOOD', 'indicative'), ('PERF', '-'), ('PROG', '-'), ('SF', 'prop'), ('TENSE', 'pres')]
->>> m.hcons  # doctest: +ELLIPSIS
-[<HandleConstraint object (h0 qeq h1) ...>]
+>>> len(m.hcons())
+1
+>>> hc = Hcons(*m.hcons()[0])
+>>> hc.hi, hc.relation, hc.lo
+('h0', 'qeq', 'h1')
 
 ```
 
@@ -127,15 +144,15 @@ Lnk values can take 4 forms in SimpleMRS:
 ... INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
 ... RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
 ... HCONS: < h0 qeq h1 > ]'''))
->>> m.ltop  # doctest: +ELLIPSIS
-<MrsVariable object (h0) ...>
+>>> m.ltop
+'h0'
 >>> m.cfrom
 -1
 >>> m.cto
 -1
 >>> m.surface is None
 True
->>> m.rels[0].surface is None
+>>> EP(*m.eps()[0]).surface is None
 True
 
 ```
@@ -153,7 +170,7 @@ True
 9
 >>> m.surface
 'It rains.'
->>> m.rels[0].surface
+>>> EP(*m.eps()[0]).surface
 'rains.'
 
 ```
@@ -166,13 +183,13 @@ True
 ... RELS: < [ "_rain_v_1_rel"<3:9> "rains." LBL: h1 ARG0: e2 ] >
 ... HCONS: < h0 qeq h1 >
 ... ICONS: < e2 focus e2 > ]'''))
->>> len(m.icons)
+>>> len(m.icons())
 1
->>> ic = m.icons[0]
->>> ic.target  # doctest: +ELLIPSIS
-<MrsVariable object (e2) ...>
->>> ic.clause  # doctest: +ELLIPSIS
-<MrsVariable object (e2) ...>
+>>> ic = Icons(*m.icons()[0])
+>>> ic.left
+'e2'
+>>> ic.right
+'e2'
 >>> ic.relation
 'focus'
 
@@ -187,33 +204,36 @@ True
 ...         [ named_rel<0:6> LBL: h7 CARG: "Abrams" ARG0: x3 ]
 ...         [ "_sleep_v_1_rel"<7:14> LBL: h1 ARG0: e2 ARG1: x3 ] >
 ... HCONS: < h0 qeq h1 h5 qeq h7 > ]'''))
->>> m.ltop  # doctest: +ELLIPSIS
-<MrsVariable object (h0) ...>
->>> m.index  # doctest: +ELLIPSIS
-<MrsVariable object (e2) ...>
->>> len(m.rels)
+>>> m.ltop
+'h0'
+>>> m.index
+'e2'
+>>> len(m.eps())
 3
->>> m.rels[0].pred  # doctest: +ELLIPSIS
+>>> ep = EP(*m.eps()[0])
+>>> ep.pred  # doctest: +ELLIPSIS
 <Pred object proper_q_rel ...>
->>> m.rels[0].intrinsic_variable  # doctest: +ELLIPSIS
-<MrsVariable object (x3) ...>
->>> sorted(m.rels[0].intrinsic_variable.properties.items())
+>>> ep.intrinsic_variable
+'x3'
+>>> sorted(m.properties('x3').items())
 [('IND', '+'), ('NUM', 'sg'), ('PERS', '3')]
->>> m.rels[1].pred  # doctest: +ELLIPSIS
+>>> ep = EP(*m.eps()[1])
+>>> ep.pred  # doctest: +ELLIPSIS
 <Pred object named_rel ...>
->>> m.rels[1].intrinsic_variable  # doctest: +ELLIPSIS
-<MrsVariable object (x3) ...>
->>> m.rels[1].arg_value('CARG')
+>>> ep.intrinsic_variable
+'x3'
+>>> ep.args['CARG']
 '"Abrams"'
->>> m.rels[2].pred  # doctest: +ELLIPSIS
+>>> ep = EP(*m.eps()[2])
+>>> ep.pred  # doctest: +ELLIPSIS
 <Pred object "_sleep_v_1_rel" ...>
->>> m.rels[2].intrinsic_variable  # doctest: +ELLIPSIS
-<MrsVariable object (e2) ...>
->>> sorted(m.rels[2].intrinsic_variable.properties.items())
+>>> ep.intrinsic_variable
+'e2'
+>>> sorted(m.properties('e2').items())
 [('MOOD', 'indicative'), ('PERF', '-'), ('PROG', '-'), ('SF', 'prop'), ('TENSE', 'pres')]
->>> m.rels[2].arg_value('ARG1')  # doctest: +ELLIPSIS
-<MrsVariable object (x3) ...>
->>> m.hcons  # doctest: +ELLIPSIS
+>>> ep.args['ARG1']
+'x3'
+>>> [Hcons(*hc) for hc in sorted(m.hcons())]  # doctest: +ELLIPSIS
 [<HandleConstraint object (h0 qeq h1) ...>, <HandleConstraint object (h5 qeq h7) ...>]
 
 ```

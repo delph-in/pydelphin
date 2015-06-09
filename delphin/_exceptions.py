@@ -22,8 +22,10 @@ class XmrsDeserializationError(XmrsError):
 class XmrsStructureError(XmrsError):
     pass
 
+
 class TdlError(PyDelphinException):
     pass
+
 
 class TdlParsingError(TdlError):
     def __init__(self, *args, filename=None, line_number=None, identifier=None,

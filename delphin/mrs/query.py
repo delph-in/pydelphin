@@ -224,3 +224,58 @@ def find_subgraphs_by_preds(xmrs, preds, connected=None):
         if connected is not None and sg.is_connected() != connected:
             continue
         yield sg
+
+
+
+# def introduced_variables(xmrs):
+#     return [var for var, vd in xmrs._vars.items()
+#             if 'iv' in vd or 'LBL' in vd['refs'] or 'hcons' in vd]
+
+def intrinsic_variable(xmrs, nid):
+    return xmrs.args(nid).get(IVARG_ROLE, None)
+
+def intrinsic_variables(xmrs):
+    return [ep[3][IVARG_ROLE] for ep in xmrs.eps()
+            if not ep[1].is_quantifier() and IVARG_ROLE in ep[3]]
+
+def bound_variables(xmrs):
+    return [ep[3][IVARG_ROLE] for ep in xmrs.eps()
+            if ep[1].is_quantifier() and IVARG_ROLE in ep[3]]
+
+
+def nodeid(xmrs, iv, quantifier=False):
+    """
+    Retrieve the nodeid of an |EP| given an intrinsic variable.
+
+    Args:
+        iv: The intrinsic variable of the |EP|.
+        quantifier: If True and `iv` is the bound variable of a
+            quantifier, return the nodeid of the quantifier. False
+            by default.
+    Returns:
+        An integer nodeid.
+    """
+    nids = xmrs._vars[iv]['refs'].get(IVARG_ROLE, [])
+    # return the nid only
+    for nid in nids:
+        if xmrs.ep(nid)[1].is_quantifier() == quantifier:
+            return nid
+    return None  # raise error?
+
+def in_labelset(xmrs, nodeids, label=None):
+    """
+    Test if all nodeids share a label.
+
+    Args:
+        nodeids: An iterable of nodeids.
+        label: If given, all nodeids must share this label.
+    Returns:
+        True if all nodeids share a label, otherwise False.
+    """
+    nodeids = set(nodeids)
+    if label is None:
+        label = xmrs._eps[next(iter(nodeids))][2]
+    return nodeids.issubset(xmrs._vars[label]['refs']['LBL'])
+
+
+#def audit(xmrs): inspect well-formedness and report individual errors

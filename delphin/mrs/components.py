@@ -1,6 +1,7 @@
 import re
 import logging
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
+from collections.abc import MutableMapping
 from itertools import starmap
 from functools import total_ordering
 
@@ -62,6 +63,12 @@ class MrsVariable(namedtuple('MrsVariable', ('varstring', 'properties'))):
         ValueError: when *vid* is not castable to an int
     """
     def __new__(cls, varstring, properties=None):
+        if not var_re.match(str(varstring)):
+            raise ValueError('%s is not a valid MRS variable.' % varstring)
+        if properties is None:
+            properties = {}
+        elif not isinstance(properties, MutableMapping):
+            properties = dict(properties)
         return super(MrsVariable, cls).__new__(
             cls, varstring, properties
         )
@@ -89,8 +96,8 @@ class MrsVariable(namedtuple('MrsVariable', ('varstring', 'properties'))):
 
     def __eq__(self, other):
         vareq = str(self).lower() == str(other).lower()
-        return vareq and (getattr(self, 'properties', None) ==
-                          getattr(other, 'properties', None))
+        return vareq and (getattr(self, 'properties', {}) ==
+                          getattr(other, 'properties', {}))
         # try both as MrsVariables
         # try:
         #     return self.vid == other.vid and self.sort == other.sort
@@ -144,6 +151,14 @@ class MrsVariable(namedtuple('MrsVariable', ('varstring', 'properties'))):
         # if sort is None, go with the default of 'u'
         return self[0] #'{}{}'.format(str(self.sort or 'u'), str(self.vid))
 
+    @property
+    def sort(self):
+        return var_sort(self.varstring)
+
+    @property
+    def vid(self):
+        return var_id(self.varstring)
+
     # @property
     # def sortinfo(self):
     #     """
@@ -162,14 +177,14 @@ var_re = re.compile(r'^(\w*\D)(\d+)$')
 
 
 def sort_vid_split(vs):
-    try:
-        sort, vid = var_re.match(vs).groups()
-        return sort, vid
-    except AttributeError:
+    match = var_re.match(vs)
+    if match is None:
         raise ValueError('Invalid variable string: {}'.format(str(vs)))
+    else:
+        return match.groups()
 
 def var_sort(v): return sort_vid_split(v)[0]
-def var_id(v): return sort_vid_split(v)[1]
+def var_id(v): return int(sort_vid_split(v)[1])
 
 # I'm not sure this belongs here, but anchors are MrsVariables...
 # class AnchorMixin(object):
@@ -490,11 +505,10 @@ class Link(namedtuple('Link', ('start', 'end', 'rargname', 'post'))):
     """DMRS-style Links are a way of representing arguments without
        variables. A Link encodes a start and end node, the argument
        name, and label information (e.g. label equality, qeq, etc)."""
-    # def __init__(self, start, end, rargname=None, post=None):
-    #     self.start = int(start)
-    #     self.end = int(end)
-    #     self.rargname = rargname
-    #     self.post = post
+    def __new__(cls, start, end, rargname, post):
+        return super(Link, cls).__new__(
+            cls, int(start), int(end), rargname, post
+        )
 
     def __repr__(self):
         return '<Link object (#{} :{}/{}> #{}) at {}>'.format(
@@ -513,7 +527,9 @@ def links(xmrs):
     prelinks = []
 
     _eps = xmrs._eps
+    _hcons = xmrs._hcons
     _vars = xmrs._vars
+    _pred = xmrs.pred
 
     lsh = xmrs.labelset_heads
     lblheads = {v: lsh(v) for v, vd in _vars.items() if 'LBL' in vd['refs']}
@@ -529,12 +545,16 @@ def links(xmrs):
             prelinks.append((nid, ep[2], role, val, _vars[val]))
 
     for src, srclbl, role, val, vd in prelinks:
-        if 'iv' in vd:
-            tgt = vd['iv']
+        if IVARG_ROLE in vd['refs']:
+            tgtnids = [n for n in vd['refs'][IVARG_ROLE]
+                       if not _pred(n).is_quantifier()]
+            if len(tgtnids) == 0:
+                continue  # maybe some bad MRS with a lonely quantifier
+            tgt = tgtnids[0]  # what do we do if len > 1?
             tgtlbl = _eps[tgt][2]
             post = EQ_POST if srclbl == tgtlbl else NEQ_POST
-        elif 'hcons' in vd:
-            lbl = vd['hcons'][2]
+        elif val in _hcons:
+            lbl = _hcons[val][2]
             if lbl not in lblheads or len(lblheads[lbl]) == 0:
                 continue  # broken MRS; log this?
             tgt = lblheads[lbl][0]  # sorted list; first item is most "heady"
@@ -598,14 +618,12 @@ class HandleConstraint(
 
 def hcons(xmrs):
     """The list of all |HandleConstraints|."""
-    return sorted(
-        (HandleConstraint(*vd['hcons'])
-         for vd in xmrs._vars.values() if 'hcons' in vd),
-        key=lambda hc: int(sort_vid_split(hc[0])[1])
-    )
-    # nodes = xmrs._graph.nodes(data=True)
-    # return sorted((data['hcons'] for _, data in nodes if 'hcons' in data),
-    #               key=lambda hc: hc.hi.vid)
+    return [
+        HandleConstraint(hi, reln, lo)
+        for hi, reln, lo in sorted(xmrs.hcons(),
+                                   key=lambda hc: var_id(hc[0]),
+                                   reverse=True)
+    ]
 
 
 IndividualConstraint = namedtuple('IndividualConstraint',
@@ -614,15 +632,12 @@ IndividualConstraint = namedtuple('IndividualConstraint',
 
 def icons(xmrs):
     """The list of all |IndividualConstraints|."""
-    return sorted(
-        (IndividualConstraint(*vd['icons'])
-         for vd in xmrs._vars.values() if 'icons' in vd),
-        key=lambda ic: int(sort_vid_split(ic[0])[1])
-    )
-
-    # nodes = xmrs._graph.nodes(data=True)
-    # return sorted((data['icons'] for _, data in nodes if 'icons' in data),
-    #               key=lambda ic: ic.left.vid)
+    return [
+        IndividualConstraint(left, reln, right)
+        for left, reln, right in sorted(xmrs.icons(),
+                                        key=lambda ic: var_id(ic[0]),
+                                        reverse=True)
+    ]
 
 
 # PREDICATES AND PREDICATIONS
@@ -746,7 +761,10 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
     @classmethod
     def realpred(cls, lemma, pos, sense=None):
-        string_tokens = list(filter(bool, [lemma, pos, str(sense or '')]))
+        string_tokens = [lemma, pos]
+        if sense is not None:
+            sense = str(sense)
+            string_tokens.append(sense)
         predstr = '_'.join([''] + string_tokens + ['rel'])
         return cls(Pred.REALPRED, lemma, pos, sense, predstr)
 
@@ -853,8 +871,10 @@ class Node(
                  lnk=None, surface=None, base=None, carg=None):
         if sortinfo is None:
             sortinfo = {}
+        elif not isinstance(sortinfo, MutableMapping):
+            sortinfo = dict(sortinfo)
         return super(Node, cls).__new__(
-            cls, nodeid, pred, sortinfo, lnk, surface, base, carg
+            cls, int(nodeid), pred, sortinfo, lnk, surface, base, carg
         )
         # self.nodeid = int(nodeid) if nodeid is not None else None
         # self.pred = pred
@@ -931,27 +951,28 @@ def nodes(xmrs):
     """The list of Nodes."""
     nodes = []
     _vars = xmrs._vars
+    _props = xmrs.properties
     varsplit = sort_vid_split
-    for ep in xmrs._eps.values():
-        eplen = len(ep)
-        nid = ep[0]
-        pred = ep[1]
-        args = ep[3]
+    for p in xmrs.eps():
+        eplen = len(p)
+        nid = p[0]
+        pred = p[1]
+        args = p[3]
         sortinfo = lnk = surface = base = None
         iv = args.get(IVARG_ROLE, None)
         if iv is not None:
             sort, _ = varsplit(iv)
-            sortinfo = _vars[iv].get('props', {})
+            sortinfo = _props(iv)
             sortinfo[CVARSORT] = sort
         if eplen >= 5:
-            lnk = ep[4]
+            lnk = p[4]
         if eplen >= 6:
-            surface = ep[5]
+            surface = p[5]
         if eplen >= 7:
-            base = ep[6]
+            base = p[6]
         carg = args.get(CONSTARG_ROLE, None)
         nodes.append(Node(nid, pred, sortinfo, lnk, surface, base, carg))
-    return sorted(nodes)
+    return nodes
 
 
 @total_ordering
@@ -987,7 +1008,7 @@ class ElementaryPredication(
         # else:
         #     args = dict((a.rargname, a) for a in args)
         return super(ElementaryPredication, cls).__new__(
-            cls, nodeid, pred, label, args, lnk, surface, base
+            cls, int(nodeid), pred, label, args, lnk, surface, base
         )
 
         # self.label = label
@@ -1057,19 +1078,13 @@ class ElementaryPredication(
     def carg(self):
         return self.args.get(CONSTARG_ROLE, None)
 
-    def add_argument(self, arg):
-        if arg.nodeid is None:
-            arg.nodeid = self.nodeid
-        elif arg.nodeid != self.nodeid:
-            raise XmrsStructureError(
-                "Argument's nodeid must match the EP's (or be None)."
-            )
-        if arg.rargname in self.args:
+    def add_argument(self, rargname, value):
+        if rargname in self.args:
             raise XmrsStructureError(
                 "Argument with role {} already exists in the EP."
-                .format(arg.rargname)
+                .format(rargname)
             )
-        self.args[arg.rargname] = arg
+        self.args[rargname] = value
 
     def is_quantifier(self):
         return self.pred.is_quantifier()
@@ -1077,19 +1092,19 @@ class ElementaryPredication(
 
 def eps(xmrs):
     """The list of |ElementaryPredications|."""
-    return list(starmap(ElementaryPredication, xmrs._eps.values()))
+    return list(starmap(ElementaryPredication, xmrs.eps()))
 
-def get_ep(xmrs, nodeid):
+def get_ep(xmrs, pid):
     """
-    Retrieve the EP with the given nodeid, or raises KeyError if no
+    Retrieve the EP with the given pid, or raises KeyError if no
     EP matches.
 
     Args:
-        nodeid: The nodeid of the EP to return.
+        pid: The pid of the EP to return.
     Returns:
         An ElementaryPredication.
     """
-    return ElementaryPredication(*xmrs._eps[nodeid])
+    return ElementaryPredication(*xmrs.ep(pid))
     # try:
     #     d = xmrs._graph.node[nodeid]
     #     args = [(nodeid, rargname, value)

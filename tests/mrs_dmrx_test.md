@@ -17,6 +17,12 @@ The `dmrx` module is a library of functions, not a script, so import it:
 
 ```
 
+Some things from `delphin.mrs.components` make inspecting things more
+convenient:
+
+```python
+>>> from delphin.mrs.components import (nodes, links)
+
 ## Parsing
 
 "It rains"
@@ -32,17 +38,17 @@ The `dmrx` module is a library of functions, not a script, so import it:
 ... </dmrs>
 ... </dmrs-list>'''))
 >>> # variables are constructed
->>> m1.ltop  # doctest: +ELLIPSIS
-<MrsVariable object (h...>
->>> len(m1.nodes)
+>>> m1.top
+'h0'
+>>> len(m1.eps())
 1
->>> m1.nodes[0].pred  # doctest: +ELLIPSIS
+>>> nodes(m1)[0].pred  # doctest: +ELLIPSIS
 <Pred object _rain_v_1_rel ...>
->>> sorted(m1.nodes[0].sortinfo.items())
+>>> sorted(nodes(m1)[0].sortinfo.items())
 [('cvarsort', 'e'), ('mood', 'indicative'), ('perf', '-'), ('prog', '-'), ('sf', 'prop'), ('tense', 'pres')]
->>> len(m1.links)
+>>> len(links(m1))
 1
->>> m1.links[0]  # doctest: +ELLIPSIS
+>>> links(m1)[0]  # doctest: +ELLIPSIS
 <Link object (#0 :/H> #10000) at ...>
 
 ```
@@ -60,25 +66,25 @@ The `dmrx` module is a library of functions, not a script, so import it:
 ... <link from="10002" to="10001"><rargname>ARG1</rargname><post>NEQ</post></link>
 ... </dmrs>
 ... </dmrs-list>'''))
->>> len(m2.nodes)
+>>> len(nodes(m2))
 3
->>> m2.nodes[0].pred  # doctest: +ELLIPSIS
+>>> nodes(m2)[0].pred  # doctest: +ELLIPSIS
 <Pred object proper_q_rel ...>
->>> m2.nodes[1].pred  # doctest: +ELLIPSIS
+>>> nodes(m2)[1].pred  # doctest: +ELLIPSIS
 <Pred object named_rel ...>
->>> sorted(m2.nodes[1].sortinfo.items())
+>>> sorted(nodes(m2)[1].sortinfo.items())
 [('cvarsort', 'x'), ('ind', '+'), ('num', 'sg'), ('pers', '3')]
->>> m2.nodes[2].pred  # doctest: +ELLIPSIS
+>>> nodes(m2)[2].pred  # doctest: +ELLIPSIS
 <Pred object _sleep_v_1_rel ...>
->>> sorted(m2.nodes[2].sortinfo.items())
+>>> sorted(nodes(m2)[2].sortinfo.items())
 [('cvarsort', 'e'), ('mood', 'indicative'), ('perf', '-'), ('prog', '-'), ('sf', 'prop'), ('tense', 'pres')]
->>> len(m2.links)
+>>> len(links(m2))
 3
->>> m2.links[0]  # doctest: +ELLIPSIS
+>>> links(m2)[0]  # doctest: +ELLIPSIS
 <Link object (#0 :/H> #10002) at ...>
->>> m2.links[1]  # doctest: +ELLIPSIS
+>>> links(m2)[1]  # doctest: +ELLIPSIS
 <Link object (#10000 :RSTR/H> #10001) at ...>
->>> m2.links[2]  # doctest: +ELLIPSIS
+>>> links(m2)[2]  # doctest: +ELLIPSIS
 <Link object (#10002 :ARG1/NEQ> #10001) at ...>
 
 ```

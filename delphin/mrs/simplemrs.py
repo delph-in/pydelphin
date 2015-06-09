@@ -12,11 +12,11 @@ from delphin.mrs import Xmrs, Mrs
 from delphin.mrs.components import (
     Hook, ElementaryPredication, Pred,
     MrsVariable, Lnk, HandleConstraint, IndividualConstraint,
-    sort_vid_split, var_re,
+    sort_vid_split, var_sort, var_re,
     hcons, icons
 )
 from delphin.mrs.config import (HANDLESORT, CONSTARG_ROLE)
-from delphin.mrs.util import ReadOnceDict
+from delphin.mrs.util import rargname_sortkey
 from delphin._exceptions import XmrsDeserializationError as XDE
 
 try:
@@ -217,7 +217,7 @@ def _read_mrs(tokens, version=_default_version):
             tokens.popleft()  # LTOP / TOP
             tokens.popleft()  # :
             top = tokens.popleft()
-            vars_[top] = {}
+            vars_[top] = []
         if tokens[0] == _index:
             tokens.popleft()  # INDEX
             tokens.popleft()  # :
@@ -227,6 +227,9 @@ def _read_mrs(tokens, version=_default_version):
         hcons = _read_cons(tokens, _hcons, vars_)
         icons = _read_cons(tokens, _icons, vars_)
         tokens.popleft()  # ]
+        # at this point, we could uniquify proplists in vars_, but most
+        # likely it isn't necessary, and might night harm things if we
+        # leave potential dupes in there. let's see how it plays out.
         m = Xmrs(top=top, index=idx, eps=rels,
                  hcons=hcons, icons=icons, vars=vars_,
                  lnk=lnk, surface=surface)
@@ -236,7 +239,7 @@ def _read_mrs(tokens, version=_default_version):
 
 
 def _read_props(tokens):
-    props = {}
+    props = []
     if tokens[0] == _left_bracket:
         tokens.popleft()  # [
         vartype = tokens.popleft()  # this gets discarded though
@@ -244,7 +247,7 @@ def _read_props(tokens):
             key = tokens.popleft()
             tokens.popleft()  # :
             val = tokens.popleft()
-            props[key] = val
+            props.append((key, val))
         tokens.popleft()  # ]
     return props
 
@@ -279,7 +282,7 @@ def _read_ep(tokens, nid, vars_):
         tokens.popleft()  # LBL
         tokens.popleft()  # :
         label = tokens.popleft()
-        vars_[label] = {}
+        vars_[label] = []
     args = {}
     while tokens[0] != _right_bracket:
         role = tokens.popleft()
@@ -288,8 +291,8 @@ def _read_ep(tokens, nid, vars_):
         if _var_re.match(val) is not None and role.upper() != CARG:
             props = _read_props(tokens)
             if val not in vars_:
-                vars_[val] = {}
-            vars_[val].update(props)
+                vars_[val] = []
+            vars_[val].extend(props)
         args[role] = val
     tokens.popleft()  # ]
     return (nid, pred, label, args, lnk, surface)
@@ -308,8 +311,8 @@ def _read_cons(tokens, constype, vars_):
             rght = tokens.popleft()
             cons.append((left, reln, rght))
             # now just make sure they are in the vars_ dict
-            vars_.setdefault(left, {})
-            vars_.setdefault(rght, {})
+            vars_.setdefault(left, [])
+            vars_.setdefault(rght, [])
         tokens.popleft()  # >
     return cons
 
@@ -564,11 +567,9 @@ def serialize(ms, version=_default_version, pretty_print=False, color=False):
 
 
 def serialize_mrs(m, version=_default_version, pretty_print=False):
-    # note that listed_vars is modified as a side-effect of the lower
+    # note that varprops is modified as a side-effect of the lower
     # functions
-    #g = m._graph
-    varprops = ReadOnceDict(m._vars.items())
-    listed_vars = set()
+    varprops = {v: vd['props'] for v, vd in m._vars.items() if vd['props']}
     toks = []
     if version >= 1.1:
         header_toks = []
@@ -589,16 +590,13 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
     delim = ' ' if not pretty_print else '\n          '
     _eps = m._eps
     toks.append('RELS: < {eps} >'.format(
-        eps=delim.join(serialize_ep(_eps[nid], varprops, version=version)
-                       for nid in m.nodeids)
+        eps=delim.join(serialize_ep(ep, varprops, version=version)
+                       for ep in m.eps())
     ))
-    #if len(g.nodeids) is not None:
-    #    toks += [serialize_rels(g, listed_vars, version=version,
-    #                            pretty_print=pretty_print)]
-    toks += [serialize_hcons(hcons(m), listed_vars)]
+    toks += [serialize_hcons(hcons(m))]
     icons_ = icons(m)
     if version >= 1.1 and icons_:  # remove `and icons_` for "ICONS: < >"
-        toks += [serialize_icons(icons_, listed_vars)]
+        toks += [serialize_icons(icons_)]
     delim = ' ' if not pretty_print else '\n  '
     return '{} {} {}'.format(_left_bracket, delim.join(toks), _right_bracket)
 
@@ -606,29 +604,28 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
 def serialize_argument(rargname, value, varprops):
     """Serialize an MRS argument into the SimpleMRS format."""
     _argument = '{rargname}: {value}{props}'
-    if isinstance(value, MrsVariable):
-        props = varprops.get(value.vid, {})
-        var = str(value)
-        return _argument.format(
-            rargname=rargname,
-            value=var,
-            props='' if not props else ' [ {} {} ]'.format(
-                value.sort,
-                ' '.join(map('{0[0]}: {0[1]}'.format, props.items())))
+    props = ''
+    if value in varprops:
+        props = ' [ {} ]'.format(
+            ' '.join(
+                [var_sort(value)] +
+                list(map('{0[0]}: {0[1]}'.format, varprops[value]))
+            )
         )
-    else:
-        return _argument.format(
-            rargname=rargname,
-            value=str(value),
-            props=''
-        )
+        del varprops[value]  # only print props once
+    return _argument.format(
+        rargname=rargname,
+        value=str(value),
+        props=props
+    )
 
 
 def serialize_ep(ep, varprops, version=_default_version):
     """Serialize an Elementary Predication into the SimpleMRS encoding."""
     # ('nodeid', 'pred', 'label', 'args', 'lnk', 'surface', 'base')
-    arglist = ' '.join([serialize_argument(rarg, val, varprops)
-                        for rarg, val in ep[3].items()])
+    args = ep[3]
+    arglist = ' '.join([serialize_argument(rarg, args[rarg], varprops)
+                        for rarg in sorted(args, key=rargname_sortkey)])
     if version < 1.1 or len(ep) < 6 or ep[5] is None:
         surface = ''
     else:
@@ -666,7 +663,7 @@ def serialize_lnk(lnk):
     return s
 
 
-def serialize_hcons(hcons, listed_vars):
+def serialize_hcons(hcons):
     """Serialize |HandleConstraints| into the SimpleMRS encoding."""
     toks = [_hcons + _colon, _left_angle]
     for hc in hcons:
@@ -676,7 +673,7 @@ def serialize_hcons(hcons, listed_vars):
     toks += [_right_angle]
     return ' '.join(toks)
 
-def serialize_icons(icons, listed_vars):
+def serialize_icons(icons):
     """Serialize |IndividualConstraints| into the SimpleMRS encoding."""
     toks = [_icons + _colon, _left_angle]
     for ic in icons:

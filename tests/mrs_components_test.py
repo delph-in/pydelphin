@@ -1,502 +1,410 @@
 # -*- coding: UTF-8 -*-
-from collections import OrderedDict
-import unittest
+
+import pytest
+
 from delphin.mrs.components import (
-    MrsVariable, AnchorMixin, Lnk, LnkMixin, Hook,
-    Argument, Link, HandleConstraint,
+    MrsVariable, sort_vid_split, var_sort, var_id,
+    Lnk, LnkMixin, Hook,
+    Link, HandleConstraint,
     Pred, Node, ElementaryPredication as EP
 )
 from delphin.mrs.config import (
     CVARSORT, IVARG_ROLE, CONSTARG_ROLE,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
-    LTOP_NODEID, FIRST_NODEID, ANCHOR_SORT,
+    LTOP_NODEID, FIRST_NODEID
 )
 
-class TestMrsVariable(unittest.TestCase):
+class TestMrsVariable():
     def test_construct(self):
-        self.assertRaises(TypeError, MrsVariable)
-        self.assertRaises(TypeError, MrsVariable, 1)
-        self.assertRaises(TypeError, MrsVariable, sort='h')
-        self.assertRaises(TypeError, MrsVariable, 1, properties={'a':1})
-        v = MrsVariable(1, 'h')
-        self.assertNotEqual(v, None)
+        with pytest.raises(TypeError): MrsVariable()
+        with pytest.raises(ValueError): MrsVariable(1)
+        with pytest.raises(ValueError): MrsVariable('h')
+        with pytest.raises(TypeError): MrsVariable(properties={'a':'1'})
+        assert MrsVariable('h1') is not None
 
-    def test_from_string(self):
-        self.assertRaises(ValueError, MrsVariable.from_string('1x'))
-        self.assertRaises(ValueError, MrsVariable.from_string('var'))
-        v = MrsVariable.from_string('x1')
-        self.assertNotEqual(v, None)
+    def test_varstring(self):
+        with pytest.raises(ValueError): MrsVariable('1x')
+        with pytest.raises(ValueError): MrsVariable('var')
+        v = MrsVariable('x1')
+        assert v.sort == 'x'
+        assert v.vid == 1
+        assert v.varstring == 'x1'
+        assert v.properties == {}
+        v = MrsVariable('x1', properties={'a': '1'})
+        assert v.varstring == 'x1'
+        assert v.properties == {'a': '1'}
+        v = MrsVariable('individual10')
+        assert v.sort == 'individual'
+        assert v.vid == 10
+        assert v.varstring == 'individual10'
 
-    def test_values(self):
-        v = MrsVariable(1, 'x')
-        self.assertEqual(v.vid, 1)
-        self.assertEqual(v.sort, 'x')
-        self.assertEqual(len(v.properties), 0)
-        v = MrsVariable(10, 'event', properties={'a':1})
-        self.assertEqual(v.vid, 10)
-        self.assertEqual(v.sort, 'event')
-        self.assertEqual(v.properties, {'a':1})
-        v = MrsVariable.from_string('event10')
-        self.assertEqual(v.vid, 10)
-        self.assertEqual(v.sort, 'event')
-        self.assertEqual(len(v.properties), 0)
+    def test_from_vidsort(self):
+        with pytest.raises(TypeError): MrsVariable.from_vidsort()
+        with pytest.raises(TypeError): MrsVariable.from_vidsort(1)
+        with pytest.raises(TypeError): MrsVariable.from_vidsort(sort='h')
+        v = MrsVariable.from_vidsort(1, 'h')
+        assert v.sort == 'h'
+        assert v.vid == 1
+        assert v.varstring == 'h1'
+        assert v.properties == {}
+        v = MrsVariable.from_vidsort(1, 'x', properties={'a': '1'})
+        assert v.varstring == 'x1'
+        assert v.properties == {'a': '1'}
+        v = MrsVariable.from_vidsort(10, 'event')
+        assert v.varstring == 'event10'
 
     def test_str(self):
-        v = MrsVariable(1, 'x')
-        self.assertEqual(str(v), 'x1')
-        v = MrsVariable(10, 'individual')
-        self.assertEqual(str(v), 'individual10')
+        v = MrsVariable('x1')
+        assert str(v) == 'x1'
+        v = MrsVariable.from_vidsort(1, 'x')
+        assert str(v) == 'x1'
 
     def test_equality(self):
-        v = MrsVariable(1, 'x')
-        self.assertEqual(v, MrsVariable(1, 'x'))
-        self.assertEqual(v, 'x1')
-        self.assertNotEqual(v, 'x2')
-        self.assertNotEqual(v, 'e1')
-        self.assertNotEqual(v, 'x')
-        self.assertEqual(v, 1)
+        v = MrsVariable('x1')
+        assert v == MrsVariable('x1')
+        assert v != MrsVariable('x2')
+        assert v != MrsVariable('e1')
+        assert v == MrsVariable.from_vidsort(1, 'x')
+        assert v == 'x1'
+        v = MrsVariable('e2', properties={'a': 1})
+        assert v != MrsVariable('e2')
+        assert v == MrsVariable('e2', properties={'a': 1})
+        assert v != 'e2'
 
     def test_hashable(self):
-        v1 = MrsVariable(1, 'x')
-        v2 = MrsVariable(2, 'e')
+        v1 = MrsVariable('x1')
+        v2 = MrsVariable('e2')
         d = {v1:'one', v2:'two'}
-        self.assertEqual(d[v1], 'one')
-        self.assertEqual(d['x1'], 'one')
-        self.assertEqual(d[v2], 'two')
-        self.assertRaises(KeyError, d.__getitem__, v1.vid)
-        self.assertRaises(KeyError, d.__getitem__, v1.sort)
+        assert d[v1] == 'one'
+        assert d['x1'] == 'one'
+        assert d[v2] == 'two'
         # note: it's invalid to have two variables with different VIDs
-        v3 = MrsVariable(2, 'x')
-        d[v3] = 'three'
-        self.assertEqual(len(d), 3)
-        self.assertEqual(d[v3], 'three')
-
-    def test_sort_vid_split(self):
-        svs = MrsVariable.sort_vid_split
-        self.assertEqual(svs('x1'), ('x', '1'))
-        self.assertEqual(svs('event10'), ('event', '10'))
-        self.assertRaises(ValueError, svs, 'x')
-        self.assertRaises(ValueError, svs, '1')
-        self.assertRaises(ValueError, svs, '1x')
+        with pytest.raises(KeyError): d[v1.vid]
+        with pytest.raises(KeyError): d[v1.sort]
 
 
-class TestAnchorMixin(unittest.TestCase):
-    def test_inherit(self):
-        class NoNodeId(AnchorMixin):
-            pass
-        n = NoNodeId()
-        self.assertRaises(AttributeError, getattr, n, 'anchor')
-        class WithNodeId(AnchorMixin):
-            def __init__(self):
-                self.nodeid = 0
-        n = WithNodeId()
-        self.assertEqual(n.anchor, MrsVariable(0, ANCHOR_SORT))
-        n.anchor = MrsVariable(1, ANCHOR_SORT)
-        self.assertEqual(n.anchor, MrsVariable(1, ANCHOR_SORT))
+def test_sort_vid_split():
+    assert sort_vid_split('x1') == ('x', '1')
+    assert sort_vid_split('event10') == ('event', '10')
+    with pytest.raises(ValueError): sort_vid_split('x')
+    with pytest.raises(ValueError): sort_vid_split('1')
+    with pytest.raises(ValueError): sort_vid_split('1x')
 
 
-class TestLnk(unittest.TestCase):
-    def testLnkTypes(self):
-        # invalid Lnk type
-        self.assertRaises(ValueError, Lnk, data=(0,1), type='invalid')
-        self.assertRaises(ValueError, Lnk, data=(0,1), type=None)
+def test_var_sort():
+    assert var_sort('x1') == 'x'
+    assert var_sort('event10') == 'event'
+    with pytest.raises(ValueError): var_sort('x')
+
+
+def test_var_id():
+    assert var_id('x1') == 1
+    assert var_id('event10') == 10
+    with pytest.raises(ValueError): var_id('1')
+
+
+class TestLnk():
+    def test_raw_init(self):
+        lnk = Lnk('lnktype', (0, 1))
+        assert lnk.type == 'lnktype'
+        assert lnk.data == (0, 1)
 
     def testCharSpanLnk(self):
         lnk = Lnk.charspan(0, 1)
-        self.assertEqual(lnk.type, Lnk.CHARSPAN)
-        self.assertEqual(lnk.data, (0,1))
+        assert lnk.type == Lnk.CHARSPAN
+        assert lnk.data == (0, 1)
         lnk = Lnk.charspan('0', '1')
-        self.assertEqual(lnk.data, (0,1))
-        self.assertRaises(TypeError, Lnk.charspan, 1)
-        self.assertRaises(TypeError, Lnk.charspan, [1])
-        self.assertRaises(TypeError, Lnk.charspan, 1, 2, 3)
-        self.assertRaises(ValueError, Lnk.charspan, 'a', 'b')
+        assert lnk.data == (0, 1)
+        with pytest.raises(TypeError): Lnk.charspan(1)
+        with pytest.raises(TypeError): Lnk.charspan([1, 2])
+        with pytest.raises(TypeError): Lnk.charspan(1, 2, 3)
+        with pytest.raises(ValueError): Lnk.charspan('a', 'b')
 
     def testChartSpanLnk(self):
         lnk = Lnk.chartspan(0, 1)
-        self.assertEqual(lnk.type, Lnk.CHARTSPAN)
-        self.assertEqual(lnk.data, (0,1))
+        assert lnk.type == Lnk.CHARTSPAN
+        assert lnk.data == (0, 1)
         lnk = Lnk.chartspan('0', '1')
-        self.assertEqual(lnk.data, (0,1))
-        self.assertRaises(TypeError, Lnk.chartspan, 1)
-        self.assertRaises(TypeError, Lnk.chartspan, [1])
-        self.assertRaises(TypeError, Lnk.chartspan, 1, 2, 3)
-        self.assertRaises(ValueError, Lnk.chartspan, 'a', 'b')
+        assert lnk.data == (0, 1)
+        with pytest.raises(TypeError): Lnk.chartspan(1)
+        with pytest.raises(TypeError): Lnk.chartspan([1, 2])
+        with pytest.raises(TypeError): Lnk.chartspan(1, 2, 3)
+        with pytest.raises(ValueError): Lnk.chartspan('a', 'b')
 
     def testTokensLnk(self):
         lnk = Lnk.tokens([1, 2, 3])
-        self.assertEqual(lnk.type, Lnk.TOKENS)
-        self.assertEqual(lnk.data, (1,2,3))
+        assert lnk.type == Lnk.TOKENS
+        assert lnk.data == (1, 2, 3)
         lnk = Lnk.tokens(['1'])
-        self.assertEqual(lnk.data, (1,))
+        assert lnk.data == (1,)
         # empty tokens list might be invalid, but accept for now
         lnk = Lnk.tokens([])
-        self.assertEqual(lnk.data, tuple())
-        self.assertRaises(TypeError, Lnk.tokens, 1)
-        self.assertRaises(ValueError, Lnk.tokens, ['a','b'])
+        assert lnk.data == tuple()
+        with pytest.raises(TypeError): Lnk.tokens(1)
+        with pytest.raises(ValueError): Lnk.tokens(['a','b'])
 
     def testEdgeLnk(self):
         lnk = Lnk.edge(1)
-        self.assertEqual(lnk.type, Lnk.EDGE)
-        self.assertEqual(lnk.data, 1)
+        assert lnk.type == Lnk.EDGE
+        assert lnk.data == 1
         lnk = Lnk.edge('1')
-        self.assertEqual(lnk.data, 1)
-        self.assertRaises(TypeError, Lnk.edge, None)
-        self.assertRaises(TypeError, Lnk.edge, (1,))
-        self.assertRaises(ValueError, Lnk.edge, 'a')
+        assert lnk.data == 1
+        with pytest.raises(TypeError): Lnk.edge(None)
+        with pytest.raises(TypeError): Lnk.edge((1,))
+        with pytest.raises(ValueError): Lnk.edge('a')
 
 
-class TestLnkMixin(unittest.TestCase):
+class TestLnkMixin():
     def test_inherit(self):
         class NoLnk(LnkMixin):
             pass
         n = NoLnk()
-        self.assertEqual(n.cfrom, -1)
-        self.assertEqual(n.cto, -1)
+        assert n.cfrom == -1
+        assert n.cto == -1
+
         class WithNoneLnk(LnkMixin):
             def __init__(self):
                 self.lnk = None
         n = WithNoneLnk()
-        self.assertEqual(n.cfrom, -1)
-        self.assertEqual(n.cto, -1)
+        assert n.cfrom == -1
+        assert n.cto == -1
+
         class WithNonCharspanLnk(LnkMixin):
             def __init__(self):
                 self.lnk = Lnk.chartspan(0,1)
         n = WithNonCharspanLnk()
-        self.assertEqual(n.cfrom, -1)
-        self.assertEqual(n.cto, -1)
+        assert n.cfrom == -1
+        assert n.cto == -1
+
         class WithCharspanLnk(LnkMixin):
             def __init__(self):
                 self.lnk = Lnk.charspan(0,1)
         n = WithCharspanLnk()
-        self.assertEqual(n.cfrom, 0)
+        assert n.cfrom == 0
 
 
-class TestHook(unittest.TestCase):
+class TestHook():
     def test_construct(self):
         h = Hook()
-        self.assertEqual(h.ltop, None)
-        self.assertEqual(h.index, None)
-        self.assertEqual(h.xarg, None)
-        h = Hook(ltop=MrsVariable(1, 'h'), index=MrsVariable(2, 'e'),
-                 xarg=MrsVariable(3, 'x'))
-        self.assertEqual(h.ltop, 'h1')
-        self.assertEqual(h.index, 'e2')
-        self.assertEqual(h.xarg, 'x3')
+        assert h.ltop == None
+        assert h.index == None
+        assert h.xarg == None
+        h = Hook(top=MrsVariable('h1'), index=MrsVariable('e2'),
+                 xarg=MrsVariable('x3'))
+        assert h.ltop == 'h1'
+        assert h.index == 'e2'
+        assert h.xarg == 'x3'
 
 
-class TestArgument(unittest.TestCase):
+class TestLink():
     def test_construct(self):
-        a = Argument(1, 'ARG', 'val')
-        self.assertEqual(a.nodeid, 1)
-        self.assertEqual(a.argname, 'ARG')
-        self.assertEqual(a.value, 'val')
-
-    def test_MrsArgument(self):
-        a = Argument.mrs_argument('ARG', 'val')
-        self.assertEqual(a.nodeid, None)
-        self.assertEqual(a.argname, 'ARG')
-        self.assertEqual(a.value, 'val')
-
-    def test_RmrsArgument(self):
-        a = Argument.rmrs_argument(MrsVariable(1, ANCHOR_SORT), 'ARG', 'val')
-        self.assertEqual(a.nodeid, 1)
-        self.assertEqual(a.argname, 'ARG')
-        self.assertEqual(a.value, 'val')
-
-    def test_equality(self):
-        a1 = Argument(None, 'ARG', 'val')
-        a2 = Argument(1, 'ARG', 'val')
-        a3 = Argument(2, 'ARG', 'val')
-        a4 = Argument(None, 'FOO', 'val')
-        a5 = Argument(None, 'FOO', 'bar')
-        self.assertEqual(a1, a1)
-        self.assertEqual(a1, a2)
-        self.assertNotEqual(a2, a3)
-        self.assertNotEqual(a1, a4)
-        self.assertNotEqual(a4, a5)
-
-    def test_infer_type(self):
-        a = Argument(None, IVARG_ROLE, MrsVariable(1, 'x'))
-        self.assertEqual(a.infer_argument_type(), Argument.INTRINSIC_ARG)
-        a = Argument(None, 'ARG', MrsVariable(1, 'x'))
-        self.assertEqual(a.infer_argument_type(), Argument.VARIABLE_ARG)
-        a = Argument(None, 'ARG', MrsVariable(1, 'h'))
-        self.assertEqual(a.infer_argument_type(), Argument.HANDLE_ARG)
-        # fake an Xmrs where h0 is QEQ'd and others are not
-        class FakeXmrs(object):
-            def get_hcons(self, var):
-                if var == 'h0':
-                    return 1  # any value is ok for now
-                return None
-        x = FakeXmrs()
-        a = Argument(None, 'ARG', MrsVariable(0, 'h'))
-        self.assertEqual(a.infer_argument_type(xmrs=x), Argument.HCONS_ARG)
-        a = Argument(None, 'ARG', MrsVariable(1, 'h'))
-        self.assertEqual(a.infer_argument_type(xmrs=x), Argument.LABEL_ARG)
-        a = Argument(None, CONSTARG_ROLE, 'constant')
-        self.assertEqual(a.infer_argument_type(), Argument.CONSTANT_ARG)
-        a = Argument(None, 'OTHER', 'constant')
-        self.assertEqual(a.infer_argument_type(), Argument.CONSTANT_ARG)
+        with pytest.raises(TypeError): Link()
+        with pytest.raises(TypeError): Link(0)
+        with pytest.raises(TypeError): Link(0, 1)
+        with pytest.raises(TypeError): Link(0, 1, 'rargname')
+        l = Link(0, 1, 'ARG', 'NEQ')
+        assert l.start == 0
+        assert l.end == 1
+        assert l.rargname == 'ARG'
+        assert l.post == 'NEQ'
 
 
-class TestLink(unittest.TestCase):
+class TestHandleConstraint():
     def test_construct(self):
-        self.assertRaises(TypeError, Link)
-        self.assertRaises(TypeError, Link, 0)
-        l = Link(0, 1)
-        self.assertEqual(l.start, 0)
-        self.assertEqual(l.end, 1)
-        self.assertEqual(l.argname, None)
-        self.assertEqual(l.post, None)
-        l = Link('0', '1')
-        self.assertEqual(l.start, 0)
-        self.assertEqual(l.end, 1)
-        self.assertEqual(l.argname, None)
-        self.assertEqual(l.post, None)
-        l = Link(0, 1, argname='ARG')
-        self.assertEqual(l.start, 0)
-        self.assertEqual(l.end, 1)
-        self.assertEqual(l.argname, 'ARG')
-        self.assertEqual(l.post, None)
-        l = Link(0, 1, post='NEQ')
-        self.assertEqual(l.start, 0)
-        self.assertEqual(l.end, 1)
-        self.assertEqual(l.argname, None)
-        self.assertEqual(l.post, 'NEQ')
-        l = Link(0, 1, argname='ARG', post='NEQ')
-        self.assertEqual(l.start, 0)
-        self.assertEqual(l.end, 1)
-        self.assertEqual(l.argname, 'ARG')
-        self.assertEqual(l.post, 'NEQ')
-
-
-class TestHandleConstraint(unittest.TestCase):
-    def test_construct(self):
-        h1 = MrsVariable(1, 'handle')
-        h2 = MrsVariable(2, 'handle')
-        self.assertRaises(TypeError, HandleConstraint)
-        self.assertRaises(TypeError, HandleConstraint, h1)
-        self.assertRaises(TypeError, HandleConstraint, h1, HandleConstraint.QEQ)
-        # planned:
-        # self.assertRaises(MrsHconsException, HandleConstraint, h1, QEQ, h1)
+        h1 = MrsVariable('handle1')
+        h2 = MrsVariable('handle2')
+        with pytest.raises(TypeError): HandleConstraint()
+        with pytest.raises(TypeError): HandleConstraint(h1)
+        with pytest.raises(TypeError): HandleConstraint(h1, HandleConstraint.QEQ)
         hc = HandleConstraint(h1, HandleConstraint.QEQ, h2)
-        self.assertEqual(hc.hi, h1)
-        self.assertEqual(hc.relation, HandleConstraint.QEQ)
-        self.assertEqual(hc.lo, h2)
+        assert hc.hi == h1
+        assert hc.relation == HandleConstraint.QEQ
+        assert hc.lo == h2
         hc = HandleConstraint(h1, HandleConstraint.LHEQ, h2)
-        self.assertEqual(hc.relation, HandleConstraint.LHEQ)
+        assert hc.relation == HandleConstraint.LHEQ
+        hc = HandleConstraint('h1', HandleConstraint.QEQ, 'h2')
+        assert hc.hi == 'h1'
+        assert hc.lo == 'h2'
 
     def test_equality(self):
-        h1 = MrsVariable(1, 'h')
-        h2 = MrsVariable(2, 'h')
+        h1 = MrsVariable('h1')
+        h2 = MrsVariable('h2')
         hc1 = HandleConstraint(h1, HandleConstraint.QEQ, h2)
-        self.assertEqual(hc1, HandleConstraint(h1, HandleConstraint.QEQ, h2))
-        self.assertNotEqual(hc1, HandleConstraint(h2, HandleConstraint.QEQ, h1))
-        self.assertNotEqual(hc1, HandleConstraint(h1, HandleConstraint.LHEQ, h2))
+        assert hc1 == HandleConstraint(h1, HandleConstraint.QEQ, h2)
+        assert hc1 != HandleConstraint(h2, HandleConstraint.QEQ, h1)
+        assert hc1 != HandleConstraint(h1, HandleConstraint.LHEQ, h2)
 
     def test_hashable(self):
-        hc1 = HandleConstraint(MrsVariable(1, 'h'), HandleConstraint.QEQ, MrsVariable(2, 'h'))
-        hc2 = HandleConstraint(MrsVariable(3, 'h'), HandleConstraint.QEQ, MrsVariable(4, 'h'))
+        hc1 = HandleConstraint(MrsVariable('h1'), HandleConstraint.QEQ, MrsVariable('h2'))
+        hc2 = HandleConstraint(MrsVariable('h3'), HandleConstraint.QEQ, MrsVariable('h4'))
         d = {hc1:1, hc2:2}
-        self.assertEqual(d[hc1], 1)
-        self.assertEqual(d[hc2], 2)
+        assert d[hc1] == 1
+        assert d[hc2] == 2
 
 
-class TestPred(unittest.TestCase):
+class TestPred():
     def testGpred(self):
         p = Pred.grammarpred('pron_rel')
-        self.assertEqual(p.type, Pred.GRAMMARPRED)
-        self.assertEqual(p.string, 'pron_rel')
-        self.assertEqual(p.lemma, 'pron')
-        self.assertEqual(p.pos, None)
-        self.assertEqual(p.sense, None)
+        assert p.type == Pred.GRAMMARPRED
+        assert p.string == 'pron_rel'
+        assert p.lemma == 'pron'
+        assert p.pos == None
+        assert p.sense == None
         p = Pred.grammarpred('udef_q_rel')
-        self.assertEqual(p.string, 'udef_q_rel')
-        self.assertEqual(p.lemma, 'udef')
-        self.assertEqual(p.pos, 'q')
-        self.assertEqual(p.sense, None)
+        assert p.string == 'udef_q_rel'
+        assert p.lemma == 'udef'
+        assert p.pos == 'q'
+        assert p.sense == None
         p = Pred.grammarpred('abc_def_ghi_rel')
-        self.assertEqual(p.type, Pred.GRAMMARPRED)
-        self.assertEqual(p.string, 'abc_def_ghi_rel')
+        assert p.type == Pred.GRAMMARPRED
+        assert p.string == 'abc_def_ghi_rel'
         # pos must be a single character, so we get abc_def, ghi, rel
-        self.assertEqual(p.lemma, 'abc_def')
-        self.assertEqual(p.pos, None)
-        self.assertEqual(p.sense, 'ghi')
+        assert p.lemma == 'abc_def'
+        assert p.pos == None
+        assert p.sense == 'ghi'
 
     def testSpred(self):
         p = Pred.stringpred('_dog_n_rel')
-        self.assertEqual(p.type, Pred.STRINGPRED)
-        self.assertEqual(p.string, '_dog_n_rel')
-        self.assertEqual(p.lemma, 'dog')
-        self.assertEqual(p.pos, 'n')
-        self.assertEqual(p.sense, None)
+        assert p.type == Pred.STRINGPRED
+        assert p.string == '_dog_n_rel'
+        assert p.lemma == 'dog'
+        assert p.pos == 'n'
+        assert p.sense == None
         p = Pred.stringpred('_犬_n_rel')
-        self.assertEqual(p.type, Pred.STRINGPRED)
-        self.assertEqual(p.string, '_犬_n_rel')
-        self.assertEqual(p.lemma, '犬')
-        self.assertEqual(p.pos, 'n')
-        self.assertEqual(p.sense, None)
+        assert p.type == Pred.STRINGPRED
+        assert p.string == '_犬_n_rel'
+        assert p.lemma == '犬'
+        assert p.pos == 'n'
+        assert p.sense == None
         p = Pred.stringpred('"_dog_n_1_rel"')
-        self.assertEqual(p.type, Pred.STRINGPRED)
-        self.assertEqual(p.string, '"_dog_n_1_rel"')
-        self.assertEqual(p.lemma, 'dog')
-        self.assertEqual(p.pos, 'n')
-        self.assertEqual(p.sense, '1')
+        assert p.type == Pred.STRINGPRED
+        assert p.string == '"_dog_n_1_rel"'
+        assert p.lemma == 'dog'
+        assert p.pos == 'n'
+        assert p.sense == '1'
         #TODO: the following shouldn't throw warnings.. the code should
         # be more robust, but there should be some Warning or logging
-        #self.assertRaises(ValueError, Pred.stringpred, '_dog_rel')
-        #self.assertRaises(ValueError, Pred.stringpred, '_dog_n_1_2_rel')
+        #with pytest.raises(ValueError): Pred.stringpred('_dog_rel')
+        #with pytest.raises(ValueError): Pred.stringpred('_dog_n_1_2_rel')
 
     def testStringOrGrammarPred(self):
         p = Pred.string_or_grammar_pred('_dog_n_rel')
-        self.assertEqual(p.type, Pred.STRINGPRED)
+        assert p.type == Pred.STRINGPRED
         p = Pred.string_or_grammar_pred('pron_rel')
-        self.assertEqual(p.type, Pred.GRAMMARPRED)
+        assert p.type == Pred.GRAMMARPRED
 
     def testRealPred(self):
         # basic, no sense arg
         p = Pred.realpred('dog', 'n')
-        self.assertEqual(p.type, Pred.REALPRED)
-        self.assertEqual(p.string, '_dog_n_rel')
-        self.assertEqual(p.lemma, 'dog')
-        self.assertEqual(p.pos, 'n')
-        self.assertEqual(p.sense, None)
+        assert p.type == Pred.REALPRED
+        assert p.string == '_dog_n_rel'
+        assert p.lemma == 'dog'
+        assert p.pos == 'n'
+        assert p.sense == None
         # try with arg names, unicode, and sense
         p = Pred.realpred(lemma='犬', pos='n', sense='1')
-        self.assertEqual(p.type, Pred.REALPRED)
-        self.assertEqual(p.string, '_犬_n_1_rel')
-        self.assertEqual(p.lemma, '犬')
-        self.assertEqual(p.pos, 'n')
-        self.assertEqual(p.sense, '1')
+        assert p.type == Pred.REALPRED
+        assert p.string == '_犬_n_1_rel'
+        assert p.lemma == '犬'
+        assert p.pos == 'n'
+        assert p.sense == '1'
         # in case sense is int, not str
         p = Pred.realpred('dog', 'n', 1)
-        self.assertEqual(p.type, Pred.REALPRED)
-        self.assertEqual(p.string, '_dog_n_1_rel')
-        self.assertEqual(p.lemma, 'dog')
-        self.assertEqual(p.pos, 'n')
-        self.assertEqual(p.sense, '1')
-        self.assertRaises(TypeError, Pred.realpred, lemma='dog')
-        self.assertRaises(TypeError, Pred.realpred, pos='n')
+        assert p.type == Pred.REALPRED
+        assert p.string == '_dog_n_1_rel'
+        assert p.lemma == 'dog'
+        assert p.pos == 'n'
+        assert p.sense == '1'
+        with pytest.raises(TypeError): Pred.realpred(lemma='dog')
+        with pytest.raises(TypeError): Pred.realpred(pos='n')
 
     def testEq(self):
-        self.assertEqual(Pred.stringpred('_dog_n_rel'),
-                         Pred.realpred(lemma='dog', pos='n'))
-        self.assertEqual(Pred.stringpred('_dog_n_rel'), '_dog_n_rel')
-        self.assertEqual('_dog_n_rel', Pred.realpred(lemma='dog', pos='n'))
-        self.assertEqual(Pred.stringpred('"_dog_n_rel"'),
-                         Pred.stringpred("'_dog_n_rel'"))
-        self.assertEqual(Pred.grammarpred('pron_rel'), 'pron_rel')
-        self.assertNotEqual(Pred.string_or_grammar_pred('_dog_n_rel'),
-                            Pred.string_or_grammar_pred('dog_n_rel'))
+        assert Pred.stringpred('_dog_n_rel') == Pred.realpred(lemma='dog', pos='n')
+        assert Pred.stringpred('_dog_n_rel') == '_dog_n_rel'
+        assert '_dog_n_rel' == Pred.realpred(lemma='dog', pos='n')
+        assert Pred.stringpred('"_dog_n_rel"') == Pred.stringpred("'_dog_n_rel")
+        assert Pred.grammarpred('pron_rel') == 'pron_rel'
+        assert Pred.string_or_grammar_pred('_dog_n_rel') != Pred.string_or_grammar_pred('dog_n_rel')
 
 
-class TestNode(unittest.TestCase):
+class TestNode():
     def test_construct(self):
         # minimum is a nodeid and a pred
-        self.assertRaises(TypeError, Node)
-        self.assertRaises(TypeError, Node, 10000)
+        with pytest.raises(TypeError): Node()
+        with pytest.raises(TypeError): Node(10000)
         n = Node(10000, Pred.stringpred('_dog_n_rel'))
-        self.assertEqual(n.nodeid, 10000)
-        self.assertEqual(n.pred, '_dog_n_rel')
+        assert n.nodeid == 10000
+        assert n.pred == '_dog_n_rel'
 
     def test_sortinfo(self):
         n = Node(10000, Pred.stringpred('_dog_n_rel'))
-        self.assertEqual(len(n.sortinfo), 0)
+        assert len(n.sortinfo) == 0
         n = Node(10000, Pred.stringpred('_dog_n_rel'),
                  sortinfo=[(CVARSORT, 'x')])
-        self.assertEqual(len(n.sortinfo), 1)
+        assert len(n.sortinfo) == 1
         n = Node(10000, Pred.stringpred('_dog_n_rel'),
                  sortinfo=[(CVARSORT, 'x'), ('PER', '3')])
-        self.assertEqual(len(n.sortinfo), 2)
+        assert len(n.sortinfo) == 2
         n2 = Node(10001, Pred.stringpred('_cat_n_rel'),
-                  sortinfo=OrderedDict([(CVARSORT,'x'), ('PER','3')]))
-        self.assertEqual(n.sortinfo, n2.sortinfo)
-
-    def test_properties(self):
-        n = Node(10000, Pred.stringpred('_dog_n_rel'))
-        self.assertEqual(len(n.properties), 0)
-        n = Node(10000, Pred.stringpred('_dog_n_rel'),
-                 sortinfo=[(CVARSORT, 'x')])
-        self.assertEqual(len(n.properties), 0)
-        n = Node(10000, Pred.stringpred('_dog_n_rel'),
-                 sortinfo=[(CVARSORT, 'x'), ('PER', '3')])
-        self.assertEqual(len(n.properties), 1)
-        n2 = Node(10001, Pred.stringpred('_unknowncat_n_rel'),
-                  sortinfo=OrderedDict([(CVARSORT,'u'), ('PER','3')]))
-        self.assertEqual(n.properties, n2.properties)
+                  sortinfo=dict([(CVARSORT,'x'), ('PER','3')]))
+        assert n.sortinfo == n2.sortinfo
 
     def test_lnk(self):
         n = Node(10000, Pred.stringpred('_dog_n_rel'))
-        self.assertEqual(n.lnk, None)
-        self.assertEqual(n.cfrom, -1)
-        self.assertEqual(n.cto, -1)
+        assert n.lnk == None
+        assert n.cfrom == -1
+        assert n.cto == -1
         n = Node(10000, Pred.stringpred('_dog_n_rel'),
                  lnk=Lnk.charspan(0,1))
-        self.assertEqual(n.lnk, Lnk.charspan(0,1))
-        self.assertEqual(n.cfrom, 0)
-        self.assertEqual(n.cto, 1)
+        assert n.lnk == Lnk.charspan(0,1)
+        assert n.cfrom == 0
+        assert n.cto == 1
 
     def test_cvarsort(self):
         n = Node(10000, Pred.stringpred('_dog_n_rel'))
-        self.assertEqual(n.cvarsort, None)
+        assert n.cvarsort == None
         n.cvarsort = 'x'
-        self.assertEqual(n.cvarsort, 'x')
-        self.assertEqual(n.sortinfo, OrderedDict([(CVARSORT, 'x')]))
+        assert n.cvarsort == 'x'
+        assert n.sortinfo == dict([(CVARSORT, 'x')])
         n = Node(10000, Pred.stringpred('_run_v_rel'),
-                 sortinfo=OrderedDict([(CVARSORT, 'e')]))
-        self.assertEqual(n.cvarsort, 'e')
-
-    def test_get_property(self):
-        n = Node(10000, Pred.stringpred('_dog_n_rel'))
-        self.assertEqual(n.get_property('PER'), None)
-        n = Node(10000, Pred.stringpred('_dog_n_rel'),
-                 sortinfo=OrderedDict([(CVARSORT, 'x'), ('PER', '3')]))
-        self.assertEqual(n.get_property('PER'), '3')
+                 sortinfo=dict([(CVARSORT, 'e')]))
+        assert n.cvarsort == 'e'
 
 
-class TestElementaryPredication(unittest.TestCase):
+class TestElementaryPredication():
     def test_construct(self):
-        self.assertRaises(TypeError, EP)
-        self.assertRaises(TypeError, EP, Pred.stringpred('_dog_n_rel'))
-        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1,sort='h'))
-        self.assertEqual(e.pred, '_dog_n_rel')
-        self.assertEqual(e.label, MrsVariable(vid=1, sort='h'))
-
-    def test_anchor(self):
-        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'))
-        self.assertEqual(e.anchor, None)
-        self.assertEqual(e.nodeid, None)
-        e = EP(Pred.stringpred('_dog_n_rel'), MrsVariable(vid=1, sort='h'),
-               anchor=MrsVariable(vid=10000, sort=ANCHOR_SORT))
-        self.assertEqual(e.anchor, MrsVariable(vid=10000, sort=ANCHOR_SORT))
-        self.assertEqual(e.nodeid, 10000)
+        with pytest.raises(TypeError): EP()
+        with pytest.raises(TypeError): EP(10)
+        with pytest.raises(TypeError): EP(10, Pred.stringpred('_dog_n_rel'))
+        e = EP(10, Pred.stringpred('_dog_n_rel'), MrsVariable('h1'))
+        assert e.nodeid == 10
+        assert e.pred == '_dog_n_rel'
+        assert e.label == MrsVariable('h1')
 
     def test_properties(self):
         p = Pred.stringpred('_dog_n_rel')
-        lbl = MrsVariable(vid=1, sort='h')
-        e = EP(p, lbl)
-        self.assertEqual(len(e.properties), 0)
-        v = MrsVariable(vid=2, sort='x', properties={'num': 'sg'})
+        lbl = MrsVariable('h1')
+        e = EP(11, p, lbl)
+        assert len(e.properties) == 0
+        v = MrsVariable('x2', properties={'num': 'sg'})
         # properties only come from intrinsic arg
-        e = EP(p, lbl, args=[Argument.mrs_argument('ARG1', v)])
-        self.assertEqual(len(e.properties), 0)
-        e = EP(p, lbl, args=[Argument.mrs_argument(IVARG_ROLE, v)])
-        self.assertEqual(len(e.properties), 1)
-        self.assertEqual(e.properties['num'], 'sg')
+        e = EP(11, p, lbl, args={'ARG1': v})
+        assert len(e.properties) == 0
+        e = EP(11, p, lbl, args={IVARG_ROLE: v})
+        assert len(e.properties) == 1
+        assert e.properties['num'] == 'sg'
 
     def test_args(self):
         p = Pred.stringpred('_chase_v_rel')
-        lbl = MrsVariable(vid=1, sort='h')
-        e = EP(p, lbl)
-        self.assertEqual(len(e.args), 0)
-        v1 = MrsVariable(vid=2, sort='e', properties={'tense': 'pres'})
-        e = EP(p, lbl, args=[Argument.mrs_argument(IVARG_ROLE, v1)])
-        self.assertEqual(len(e.args), 1)
-        self.assertEqual(e.arg_value(IVARG_ROLE), v1)
-        v2 = MrsVariable(vid=3, sort='x', properties={'num': 'sg'})
-        e = EP(p, lbl, args=[Argument.mrs_argument(IVARG_ROLE, v1),
-                             Argument.mrs_argument('ARG1', v2)])
-        self.assertEqual(len(e.args), 2)
-        self.assertEqual(e.arg_value(IVARG_ROLE), v1)
-        self.assertEqual(e.arg_value('ARG1'), v2)
+        lbl = MrsVariable('h1')
+        e = EP(11, p, lbl)
+        assert len(e.args) == 0
+        v1 = MrsVariable('e2', properties={'tense': 'pres'})
+        e = EP(11, p, lbl, args={IVARG_ROLE: v1})
+        assert len(e.args) == 1
+        assert e.args[IVARG_ROLE] == v1
+        v2 = MrsVariable('x3', properties={'num': 'sg'})
+        e = EP(11, p, lbl, args={IVARG_ROLE: v1, 'ARG1': v2})
+        assert len(e.args) == 2
+        assert e.args[IVARG_ROLE] == v1
+        assert e.args['ARG1'] == v2

@@ -6,6 +6,7 @@ from itertools import product
 
 from .components import (Pred, links, var_sort)
 from .util import powerset
+from .config import IVARG_ROLE
 from delphin._exceptions import XmrsError
 # for rebuilding Xmrs from paths
 from delphin.mrs import Node, Link, Pred, Dmrs
@@ -49,17 +50,17 @@ def walk(xmrs, start=0, method='headed', sort_key=axis_sort):
     if method not in ('top-down', 'bottom-up', 'headed'):
         raise XmrsPathError("Invalid path-finding method: {}".format(method))
 
-    if start == 0 or xmrs.get_pred(start):
+    if start == 0 or xmrs.pred(start):
         yield (None, start, None)
     else:
         raise XmrsPathError('Start nodeid not in Xmrs graph.')
 
     linkdict = _build_linkdict(xmrs)
-    for step in _walk(xmrs, start, linkdict, set(), method, sort_key):
+    for step in _walk(start, linkdict, set(), method, sort_key):
         yield step
 
 
-def _walk(xmrs, nodeid, linkdict, visited, method, sort_key):
+def _walk(nodeid, linkdict, visited, method, sort_key):
     if nodeid in visited:
         return
     visited.add(nodeid)
@@ -72,7 +73,7 @@ def _walk(xmrs, nodeid, linkdict, visited, method, sort_key):
         if axis == ':/EQ:' and tgtnid in visited:
             continue
         yield (nodeid, tgtnid, axis)
-        for step in _walk(xmrs, tgtnid, linkdict, visited, method, sort_key):
+        for step in _walk(tgtnid, linkdict, visited, method, sort_key):
             yield step
 
 
@@ -459,7 +460,7 @@ def explore(
         flags=DEFAULT,
         max_distance=-1,
         subpath_select=list):
-    if nodeids is None: nodeids = [0] + xmrs.nodeids  # 0 for TOP
+    if nodeids is None: nodeids = [0] + xmrs._nodeids  # 0 for TOP
     stepmap = defaultdict(lambda: defaultdict(set))
     for startnid in nodeids:
         if startnid in stepmap:
@@ -492,23 +493,19 @@ def _explore(
     if start == 0:
         symbol = TOP
     else:
-        symbol = xmrs.get_pred(start)
+        symbol = xmrs.pred(start)
         if (flags & CONTEXT):
             ctext = {}
             # it's not guaranteed that an EP has an intrinsic variable
-            try:
-                iv = xmrs.get_iv(start)
-            except KeyError:
-                pass
-            else:
-                if iv is not None:
-                    varsort = var_sort(iv)
-                    ctext['varsort'] = varsort
-                    props = xmrs.get_varprops(iv)
-                    ctext.update([
-                        ('@{}'.format(k), v)
-                        for k, v in props.items()
-                    ])
+            if IVARG_ROLE in xmrs.args(start):
+                iv = xmrs.args(start)[IVARG_ROLE]
+                varsort = var_sort(iv)
+                ctext['varsort'] = varsort
+                props = xmrs.properties(iv)
+                ctext.update([
+                    ('@{}'.format(k), v)
+                    for k, v in props.items()
+                ])
     steps = stepmap.get(start, {})  # this is {end_nodeid: set(axes), ...}
     # remove :/EQ: if necessary and generate mapping for overlapping axes
     overlap = {}
