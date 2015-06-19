@@ -15,166 +15,12 @@ from .config import (
     EQ_POST, HEQ_POST, NEQ_POST, H_POST
 )
 
-# VARIABLES, LNKS, and HOOKS
+# The classes below are generally just namedtuples with extra methods.
+# The namedtuples sometimes have default values. thanks:
+#   http://stackoverflow.com/a/16721002/1441112
 
-@total_ordering
-class MrsVariable(namedtuple('MrsVariable', ('varstring', 'properties'))):
-    """An MrsVariable has an id (vid), sort, and sometimes properties.
 
-    MrsVariables combine an integer variable ID (or *vid*)) with a
-    string sortal type (*sort*). In MRS and RMRS, variables may be the
-    bearers of the properties of an |EP| (thus the name "variable
-    properties"). MrsVariables are used for several purposes:
-
-    * **intrinsic variables** (aka IVs)
-    * **handles** (labels or holes)
-    * **variable argument values** (IVs, labels, holes, or
-      underspecified variables for unexpressed arguments)
-
-    Example:
-
-    Within an Xmrs structure, a *vid* must be unique. MrsVariables
-    can then be compared using either the sort and the vid or the vid
-    by itself. For example, ``v1`` and ``v2`` below are not equal
-    despite having the same vid (so they should not appear in the same
-    Xmrs structure), but they are both equal to their shared vid of
-    ``1``. Also note that an MrsVariable can be compared to its string
-    representation.
-
-    >>> v1 = MrsVariable(vid=1, sort='x')
-    >>> v2 = MrsVariable(vid=1, sort='e')
-    >>> v1 == v2
-    False
-    >>> v1 == 1
-    True
-    >>> v2 == 1
-    True
-    >>> v1 == 'x1'
-    True
-    >>> v1 == 'x2'
-    False
-    >>> v1 == 'e1'
-    False
-
-    Args:
-        vid: an number for the variable ID
-        sort: a string for the sortal type
-        properties: a dictionary of variable properties
-    Returns:
-        an instantiated MrsVariable object
-    Raises:
-        ValueError: when *vid* is not castable to an int
-    """
-    def __new__(cls, varstring, properties=None):
-        if not var_re.match(str(varstring)):
-            raise ValueError('%s is not a valid MRS variable.' % varstring)
-        if properties is None:
-            properties = {}
-        elif not isinstance(properties, MutableMapping):
-            properties = dict(properties)
-        return super(MrsVariable, cls).__new__(
-            cls, varstring, properties
-        )
-        # # vid is the number of the name (e.g. 1, 10003)
-        # self.vid = int(vid)
-        # # sort is the letter(s) of the name (e.g. h, x)
-        # self.sort = sort
-        # if sort == HANDLESORT and properties:
-        #     pass  # handles cannot have properties. Log this?
-        # self.properties = properties or OrderedDict()
-
-    @classmethod
-    def from_vidsort(cls, vid, sort, properties=None):
-        """
-        """
-        if sort is None:
-            sort = 'u'
-        varstring = '{}{}'.format(sort, vid)
-        var = cls(varstring, properties=properties)
-        return var
-
-    # @classmethod
-    # def anchor(cls, vid):
-    #     return cls(vid, ANCHOR_SORT)
-
-    def __eq__(self, other):
-        vareq = str(self).lower() == str(other).lower()
-        return vareq and (getattr(self, 'properties', {}) ==
-                          getattr(other, 'properties', {}))
-        # try both as MrsVariables
-        # try:
-        #     return self.vid == other.vid and self.sort == other.sort
-        # except AttributeError:
-        #     pass  # other is not an MrsVariable
-        # # attempt as string
-        # try:
-        #     sort, vid = MrsVariable.sort_vid_split(other)
-        #     return self.sort == sort and self.vid == int(vid)
-        # except (ValueError, TypeError):
-        #     pass  # doesn't match a variable
-        # # try again as vid only
-        # try:
-        #     vid = int(other)
-        #     return self.vid == vid
-        # except (ValueError, TypeError):
-        #     pass  # nope.. return False
-        # return False
-
-    def __lt__(self, other):
-        split = sort_vid_split
-        vid1 = int(split(self[0])[1])
-        vid2 = int(split(str(other))[1])
-        return vid1 < vid2
-        # # only compare vids for lt
-        # try:
-        #     return vid1 < int(other)
-        # except (ValueError, TypeError):
-        #     pass  # not an int or MrsVariable
-        # # try as a string
-        # try:
-        #     sort, vid2 = MrsVariable.sort_vid_split(other)
-        #     return vid1 < int(vid2)
-        # except (ValueError, TypeError):
-        #     pass  # not a string... no good output
-        # raise ValueError('Cannot compare MrsVariable to {} of type {}'
-        #                  .format(str(other), type(other)))
-
-    # def __int__(self):
-    #     return self.vid
-
-    def __hash__(self):
-        return hash(self[0])
-
-    def __repr__(self):
-        return '<MrsVariable object ({}) at {}>'.format(
-            self[0], id(self)
-        )
-
-    def __str__(self):
-        # if sort is None, go with the default of 'u'
-        return self[0] #'{}{}'.format(str(self.sort or 'u'), str(self.vid))
-
-    @property
-    def sort(self):
-        return var_sort(self.varstring)
-
-    @property
-    def vid(self):
-        return var_id(self.varstring)
-
-    # @property
-    # def sortinfo(self):
-    #     """
-    #     Return the properties including a mapping of "cvarsort" to
-    #     the sort of the MrsVariable. Sortinfo is used in DMRS objects,
-    #     which don't have variables, in order to capture the sortal type
-    #     of a |Node|.
-    #     """
-    #     # FIXME: currently gets CVARSORT even if the var is not a IV
-    #     sortinfo = OrderedDict([(CVARSORT, self.sort)])
-    #     sortinfo.update(self.properties)
-    #     return sortinfo
-
+# VARIABLES and LNKS
 
 var_re = re.compile(r'^(\w*\D)(\d+)$')
 
@@ -186,29 +32,15 @@ def sort_vid_split(vs):
     else:
         return match.groups()
 
+
 def var_sort(v): return sort_vid_split(v)[0]
+
+
 def var_id(v): return int(sort_vid_split(v)[1])
-
-# I'm not sure this belongs here, but anchors are MrsVariables...
-# class AnchorMixin(object):
-#     @property
-#     def anchor(self):
-#         """
-#         The anchor of the |EP|, |Node|, or |Argument| is just the
-#         nodeid wrapped in an MrsVariable. In |Xmrs| functions, integer
-#         nodeids are used instead of anchors.
-#         """
-#         if self.nodeid is not None:
-#             return MrsVariable(vid=self.nodeid, sort=ANCHOR_SORT)
-#         return None
-
-#     @anchor.setter
-#     def anchor(self, anchor):
-#         self.nodeid = anchor.vid
 
 
 class VarGenerator(object):
-    """Simple class to produce MrsVariables, incrementing the vid for
+    """Simple class to produce variables, incrementing the vid for
        each one."""
 
     def __init__(self, starting_vid=1):
@@ -369,140 +201,7 @@ class LnkMixin(object):
         return cto
 
 
-# namedtuple with defaults. thanks: http://stackoverflow.com/a/16721002/1441112
-class Hook(namedtuple('Hook', ['top', 'index', 'xarg'])):
-    """
-    A container class for TOP, INDEX, and XARG.
-
-    This class simply encapsulates three variables associated with an
-    |Xmrs| object, and none of the arguments are required.
-
-    Args:
-        top: the global top handle
-        index: the semantic index
-        xarg: the external argument (not likely used for a full |Xmrs|)
-        ltop: an alternate spelling of top (top is preferred)
-    """
-    def __new__(cls, top=None, index=None, xarg=None):
-        return super(Hook, cls).__new__(cls, top, index, xarg)
-
-    def __repr__(self):
-        return '<Hook object (top={} index={} xarg={}) at {}>'.format(
-            self.top, self.index, self.xarg, id(self)
-        )
-
-    # def __eq__(self, other):
-    #     if not isinstance(other, Hook):
-    #         return False
-    #     return (
-    #         self.top == other.top and
-    #         self.index == other.index and
-    #         self.xarg == other.xarg
-    #     )
-
-    # for compatibility
-    @property
-    def ltop(self):
-        return self.top
-
-    @ltop.setter
-    def ltop(self, value):
-        self.top = value
-
-
-# ARGUMENTS, LINKS, and CONSTRAINTS
-
-# class Argument(namedtuple('Argument',
-#                           ('nodeid', 'rargname', 'value', 'type'))):
-#     """
-#     An argument of an \*MRS predicate.
-
-#     Args:
-#         nodeid: the nodeid of the node with the argument
-#         rargname: the role argument name
-#         value: the MrsVariable or constant value of the argument
-#     """
-
-#     CONSTANT_ARG = 0  # value is a constant (e.g. a string)
-#     VARIABLE_ARG = 1  # value is a variable: MrsVariable or (var, props) tuple
-
-#     def __new__(cls, nodeid, rargname, value, type=None):
-#         if type is None:
-#             # if value is a string (from a CARG) then value[0] still
-#             # fails the var_re match, which is ok
-#             var = value[0] if value else ''
-#             if rargname.upper() == CONSTARG_ROLE or not var_re.match(var):
-#                 type = Argument.CONSTANT_ARG
-#             else:
-#                 type = Argument.VARIABLE_ARG
-#         return super(Argument, cls).__new__(
-#             cls, nodeid, rargname, value, type
-#         )
-
-#     # def __init__(self, nodeid, rargname, value):
-#     #     self.nodeid = nodeid
-#     #     self.rargname = rargname
-#     #     self.value = value
-#         # self._type = None
-
-#     def __repr__(self):
-#         return '<Argument object ({}:{}:{}) at {}>'.format(
-#             self.nodeid, self.rargname, self.value, id(self)
-#         )
-
-#     # def __eq__(self, other):
-#     #     # ignore missing nodeid?
-#     #     # rargname is case insensitive
-#     #     snid = self.nodeid
-#     #     onid = other.nodeid
-#     #     return (
-#     #         (None in (snid, onid) or snid == onid) and
-#     #         self.rargname.lower() == other.rargname.lower() and
-#     #         self.value == other.value
-#     #     )
-
-#     @classmethod
-#     def mrs_argument(cls, rargname, value, type=None):
-#         return cls(None, rargname, value, type=type)
-
-#     # @classmethod
-#     # def rmrs_argument(cls, anchor, rargname, value):
-#     #     return cls(anchor.vid, rargname, value)
-
-#     # def infer_argument_type(self, xmrs=None):
-#     #     if self.rargname == IVARG_ROLE:
-#     #         return Argument.INTRINSIC_ARG
-#     #     elif isinstance(self.value, MrsVariable):
-#     #         if self.value.sort == HANDLESORT:
-#     #             # if there's no xmrs given, then use HANDLE_ARG as it
-#     #             # is the supertype of LABEL_ARG and HCONS_ARG
-#     #             if xmrs is not None:
-#     #                 if xmrs.get_hcons(self.value) is not None:
-#     #                     return Argument.HCONS_ARG
-#     #                 else:
-#     #                     return Argument.LABEL_ARG
-#     #             else:
-#     #                 return Argument.HANDLE_ARG
-#     #         else:
-#     #             return Argument.VARIABLE_ARG
-#     #     else:
-#     #         return Argument.CONSTANT_ARG
-
-#     # @property
-#     # def type(self):
-#     #     if self._type is None:
-#     #         self._type = self.infer_argument_type()
-#     #     return self._type
-
-#     # @type.setter
-#     # def type(self, value):
-#     #     self._type = value
-
-
-# def args(xmrs):
-#     """The list of all |Arguments|."""
-#     return list(chain.from_iterable(ep.args for ep in xmrs.eps))
-
+# LINKS and CONSTRAINTS
 
 class Link(namedtuple('Link', ('start', 'end', 'rargname', 'post'))):
     """DMRS-style Links are a way of representing arguments without
@@ -596,22 +295,9 @@ class HandleConstraint(
     LHEQ = 'lheq'  # Label-Handle Equality
     OUTSCOPES = 'outscopes'  # Outscopes
 
-    # def __init__(self, hi, relation, lo):
-    #     self.hi = hi
-    #     self.relation = relation
-    #     self.lo = lo
-
     @classmethod
     def qeq(cls, hi, lo):
         return cls(hi, HandleConstraint.QEQ, lo)
-
-    # def __eq__(self, other):
-    #     return (self.hi == other.hi and
-    #             self.relation == other.relation and
-    #             self.lo == other.lo)
-
-    # def __hash__(self):
-    #     return hash(repr(self))
 
     def __repr__(self):
         return '<HandleConstraint object ({} {} {}) at {}>'.format(
@@ -708,26 +394,6 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
     GRAMMARPRED = 0  # only a string allowed (quoted or not)
     REALPRED = 1  # may explicitly define lemma, pos, sense
     STRINGPRED = 2  # quoted string form of realpred
-
-    # def __new__(cls, predtype, lemma=None, pos=None, sense=None, string=None):
-    #     """Extract the lemma, pos, and sense (if applicable) from a pred
-    #        string, if given, or construct a pred string from those
-    #        components, if they are given. Treat malformed pred strings
-    #        as simple preds without extracting the components."""
-    #     # GRAMMARPREDs and STRINGPREDs are given by strings (with or without
-    #     # quotes). STRINGPREDs have an internal structure (defined here:
-    #     # http://moin.delph-in.net/RmrsPos), but basically:
-    #     #   _lemma_pos(_sense)?_rel
-    #     # Note that sense is optional. The initial underscore is meaningful.
-    #     return super(Pred, cls).__new__(
-    #         cls, predtype, lemma, pos, sense, string
-    #     )
-
-        # self.type = predtype
-        # self.lemma = lemma
-        # self.pos = pos
-        # self.sense = str(sense) if sense is not None else sense
-        # self.string = None  # set by class methods
 
     def __eq__(self, other):
         if other is None:
@@ -862,9 +528,9 @@ class Node(
 
     Args:
         nodeid: node identifier
-        pred: node's |Pred|
+        pred: node's Pred
         sortinfo: node properties (with cvarsort)
-        lnk: links pred to surface form or parse edges
+        lnk: Lnk object associated with the pred
         surface: surface string
         base: base form
         carg: constant argument string
@@ -879,16 +545,6 @@ class Node(
         return super(Node, cls).__new__(
             cls, int(nodeid), pred, sortinfo, lnk, surface, base, carg
         )
-        # self.nodeid = int(nodeid) if nodeid is not None else None
-        # self.pred = pred
-        # # sortinfo is the properties plus cvarsort
-        # self.sortinfo = OrderedDict(sortinfo or [])
-        # self.lnk = lnk
-        # self.surface = surface
-        # self.base = base
-        # self.carg = carg
-        # # accessor method
-        # self.get_property = self.sortinfo.get
 
     def __repr__(self):
         lnk = ''
@@ -935,15 +591,6 @@ class Node(
     def cvarsort(self, value):
         self.sortinfo[CVARSORT] = value
 
-    # @property
-    # def properties(self):
-    #     """
-    #     The properties of the Node (without `cvarsort`, so it's the set
-    #     of properties a corresponding |EP| would have).
-    #     """
-    #     return OrderedDict((k, v) for (k, v) in self.sortinfo.items()
-    #                        if k != CVARSORT)
-
     def is_quantifier(self):
         """
         Return True if the Node is a quantifier, or False otherwise.
@@ -987,19 +634,29 @@ class ElementaryPredication(
     An elementary predication (EP) combines a predicate with various
     structural semantic properties.
 
-    EPs must have a |Pred| and a |MrsVariable| *label*. Well-formed EPs
-    will have an intrinsic argument (e.g. ARG0) on their *args* list,
-    which specifies the intrinsic variable (IV), though it is not
-    required by pyDelphin. However, some methods use an index of IVs to
-    calculate semantic structure, so the absence of an intrinsic
-    argument could cause unexpected behavior.
+    EPs must have the `nodeid`, `pred`, and `label`, arguments,
+    while the others are optional. MRS does not use nodeids, so it's
+    fine to use `None`. Whenever an EP is used in an Xmrs, it gets
+    assigned a nodeid. Generally EPs will have an ARG0 on their `args`
+    dictionary to indicate their intrinisic variable, but it is not
+    required.
+
+    NOTE: the concept of "EP" on Xmrs is not the same as the
+    ElementaryPredication class, but just the tuple of the same shape
+    and containing the same kind of data. This is done for
+    performance reasons. To get a more user-friendly
+    ElementaryPredication object, it can easily be instantiated:
+
+        ep = ElementaryPredication(*xmrs.ep(10000))
+
+    Note the use of argument unpacking (with the star `*` operator).
 
     Args:
-        pred: The |Pred| of the EP
-        label: label handle
         nodeid: an int nodeid
-        args: a list of the EP's |Arguments|
-        lnk: |Lnk| object associated with the pred
+        pred: The Pred of the EP
+        label: label handle
+        args: a mapping of role-argument names to values
+        lnk: Lnk object associated with the pred
         surface: surface string
         base: base form
     """
@@ -1008,47 +665,18 @@ class ElementaryPredication(
                  lnk=None, surface=None, base=None):
         if args is None:
             args = {}
+        if nodeid is not None:
+            nodeid = int(nodeid)
         # else:
         #     args = dict((a.rargname, a) for a in args)
         return super(ElementaryPredication, cls).__new__(
-            cls, int(nodeid), pred, label, args, lnk, surface, base
+            cls, nodeid, pred, label, args, lnk, surface, base
         )
-
-        # self.label = label
-        # # first args, then can get IV
-        # self.argdict = OrderedDict((a.rargname, a) for a in (args or []))
-        # # Only fill in other attributes if pred is given, otherwise ignore.
-        # # This behavior is to help enable the from_node classmethod.
-        # self._node = None
-        # # if nodeid is None and anchor is not None:
-        # #     nodeid = anchor.vid
-        # if pred is not None:
-        #     iv = self.iv
-        #     self._node = Node(
-        #         nodeid,
-        #         pred,
-        #         sortinfo=iv.sortinfo if iv else None,
-        #         lnk=lnk,
-        #         surface=surface,
-        #         base=base,
-        #         carg=self.carg
-        #     )
-
-    # @classmethod
-    # def from_node(cls, label, node, args=None):
-    #     ep = cls(None, label, args=args)
-    #     ep._node = node
-    #     return ep
 
     def __repr__(self):
         return '<ElementaryPredication object ({} ({})) at {}>'.format(
             self.pred.string, str(self.iv or '?'), id(self)
         )
-
-    # def __eq__(self, other):
-    #     return (self.label == other.label and
-    #             self.argdict == other.argdict and
-    #             self._node == other._node)
 
     def __lt__(self, other):
         x1 = (self.cfrom, self.cto, -self.is_quantifier(), self.pred.lemma)
@@ -1071,56 +699,26 @@ class ElementaryPredication(
     iv = intrinsic_variable
 
     @property
-    def properties(self):
-        iv = self.iv
-        if iv is not None:
-            return iv.properties
-        return {}
-
-    @property
     def carg(self):
         return self.args.get(CONSTARG_ROLE, None)
-
-    def add_argument(self, rargname, value):
-        if rargname in self.args:
-            raise XmrsStructureError(
-                "Argument with role {} already exists in the EP."
-                .format(rargname)
-            )
-        self.args[rargname] = value
 
     def is_quantifier(self):
         return self.pred.is_quantifier()
 
 
-def eps(xmrs):
+def elementarypredications(xmrs):
     """The list of |ElementaryPredications|."""
     return list(starmap(ElementaryPredication, xmrs.eps()))
 
-def get_ep(xmrs, pid):
+
+def elementarypredication(xmrs, nodeid):
     """
-    Retrieve the EP with the given pid, or raises KeyError if no
+    Retrieve the EP with the given nodeid, or raises KeyError if no
     EP matches.
 
     Args:
-        pid: The pid of the EP to return.
+        nodeid: The nodeid of the EP to return.
     Returns:
         An ElementaryPredication.
     """
-    return ElementaryPredication(*xmrs.ep(pid))
-    # try:
-    #     d = xmrs._graph.node[nodeid]
-    #     args = [(nodeid, rargname, value)
-    #             for rargname, value in d['rargs'].items()]
-    #     ep = ElementaryPredication(
-    #         nodeid=nodeid,
-    #         pred=d['pred'],
-    #         label=d['label'],
-    #         args=args,
-    #         lnk=d.get('lnk'),
-    #         surface=d.get('surface'),
-    #         base=d.get('base')
-    #     )
-    #     return ep
-    # except KeyError:
-    #     return None
+    return ElementaryPredication(*xmrs.ep(nodeid))

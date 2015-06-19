@@ -10,12 +10,13 @@
 
 from __future__ import print_function
 
-from collections import OrderedDict
+from collections import defaultdict
 import xml.etree.ElementTree as etree
 
 from delphin.mrs import Mrs
 from delphin.mrs.components import (
-    ElementaryPredication, Argument, Pred, MrsVariable, Lnk, HandleConstraint
+    ElementaryPredication, Pred, Lnk, HandleConstraint,
+    elementarypredications, hcons, icons, sort_vid_split, var_re
 )
 from delphin._exceptions import XmrsDeserializationError as XDE
 from delphin.mrs.config import IVARG_ROLE
@@ -88,16 +89,17 @@ def decode_mrs(elem):
     #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
     elem = elem.find('.')  # in case elem is ElementTree rather than Element
-    global _vars
-    _vars = {}
+    variables = defaultdict(list)
     # normalize_vars(elem) # try to make all vars have a sort
-    return Mrs(ltop=decode_label(elem.find('label')),
-               index=decode_var(elem.find('var')),
-               rels=list(map(decode_ep, elem.iter('ep'))),
+    return Mrs(top=decode_label(elem.find('label')),
+               index=decode_var(elem.find('var'), variables=variables),
+               rels=[decode_ep(ep, variables) for ep in elem.iter('ep')],
                hcons=list(map(decode_hcons, elem.iter('hcons'))),
+               icons=list(map(decode_icons, elem.iter('icons'))), # future
                lnk=decode_lnk(elem.get('cfrom'), elem.get('cto')),
                surface=elem.get('surface'),
-               identifier=elem.get('ident'))
+               identifier=elem.get('ident'),
+               vars=variables)
 
 
 def decode_label(elem):
@@ -107,42 +109,38 @@ def decode_label(elem):
     return decode_var(elem, sort='h')
 
 
-def decode_var(elem, sort=None):
+def decode_var(elem, sort=None, variables=None):
     # <!ELEMENT var (extrapair*)>
     # <!ATTLIST var
     #           vid  CDATA #REQUIRED
     #           sort (x|e|h|u|l|i) #IMPLIED >
+    if variables is None: variables = defaultdict(list)
     vid = elem.get('vid')
     srt = sort or elem.get('sort')
+    var = '%s%s' % (srt, str(vid))
     props = decode_extrapairs(elem.iter('extrapair'))
-    if vid in _vars:
-        if srt != _vars[vid].sort:
-            raise XDE('Variable {}{} has a conflicting sort with {}'
-                      .format(srt, vid, str(_vars[vid])))
-        _vars[vid].properties.update(props)
-    else:
-        _vars[vid] = MrsVariable(vid=vid, sort=srt, properties=props)
-    return _vars[vid]
+    variables[var].extend(props)
+    return var
 
 
 def decode_extrapairs(elems):
     # <!ELEMENT extrapair (path,value)>
     # <!ELEMENT path (#PCDATA)>
     # <!ELEMENT value (#PCDATA)>
-    return OrderedDict((e.find('path').text.upper(), e.find('value').text)
-                       for e in elems)
+    return [(e.find('path').text.upper(), e.find('value').text) for e in elems]
 
 
-def decode_ep(elem):
+def decode_ep(elem, variables=None):
     # <!ELEMENT ep ((pred|spred|realpred), label, fvpair*)>
     # <!ATTLIST ep
     #           cfrom CDATA #IMPLIED
     #           cto   CDATA #IMPLIED
     #           surface   CDATA #IMPLIED
     #           base      CDATA #IMPLIED >
-    return ElementaryPredication(pred=decode_pred(elem.find('./')),
-                                 label=decode_label(elem.find('label')),
-                                 args=decode_args(elem),
+    return ElementaryPredication(None,  # no nodeid in MRS
+                                 decode_pred(elem.find('./')),
+                                 decode_label(elem.find('label')),
+                                 args=decode_args(elem, variables=variables),
                                  lnk=decode_lnk(elem.get('cfrom'),
                                                 elem.get('cto')),
                                  surface=elem.get('surface'),
@@ -167,20 +165,20 @@ def decode_pred(elem):
                              elem.get('sense'))
 
 
-def decode_args(elem):
+def decode_args(elem, variables=None):
     # <!ELEMENT fvpair (rargname, (var|constant))>
     # iv is the intrinsic variable (probably ARG0, given by IVARG_ROLE)
     # carg is the constant arg (e.g. a quoted string; given by CONSTARG_ROLE)
     # This code assumes that only cargs have constant values, and all
     # other args (including IVs) have var values.
-    args = []
+    args = {}
     for e in elem.findall('fvpair'):
         rargname = e.find('rargname').text.upper()
         if e.find('constant') is not None:
             argval = e.find('constant').text
         elif e.find('var') is not None:
-            argval = decode_var(e.find('var'))
-        args.append(Argument.mrs_argument(rargname, argval))
+            argval = decode_var(e.find('var'), variables=variables)
+        args[rargname] = argval
     return args
 
 
@@ -195,6 +193,18 @@ def decode_hcons(elem):
                             elem.get('hreln'),
                             decode_var(lo) if lo.tag == 'var' else
                             decode_label(lo))
+
+
+# this isn't part of the spec; just putting here in case it's added later
+def decode_icons(elem):
+    # <!ELEMENT icons (left, right)>
+    # <!ATTLIST icons
+    #           ireln #REQUIRED >
+    # <!ELEMENT left (var)>
+    # <!ELEMENT right (var)>
+    return IndividualConstraint(decode_var(elem.find('left/var')),
+                                elem.get('ireln'),
+                                decode_var(elem.find('right/var')))
 
 
 def decode_lnk(cfrom, cto):
@@ -225,36 +235,39 @@ def encode(ms, encoding='unicode', pretty_print=False):
 
 
 def encode_mrs(m):
+    varprops = {v: vd['props'] for v, vd in m._vars.items() if vd['props']}
     attributes = {'cfrom': str(m.cfrom), 'cto': str(m.cto)}
     if m.surface is not None:
         attributes['surface'] = m.surface
     if m.identifier is not None:
         attributes['ident'] = m.identifier
     e = etree.Element('mrs', attrib=attributes)
-    listed_vars = set()
-    if m.ltop is not None:
-        e.append(encode_label(m.ltop))
+    if m.top is not None:
+        e.append(encode_label(m.top))
     if m.index is not None:
-        e.append(encode_variable(m.index, listed_vars))
-    for ep in m.rels:
-        e.append(encode_ep(ep, listed_vars))
-    for hcon in m.hcons:
+        e.append(encode_variable(m.index, varprops))
+    for ep in elementarypredications(m):
+        e.append(encode_ep(ep, varprops))
+    for hcon in hcons(m):
         e.append(encode_hcon(hcon))
+    for icon in icons(m):
+        e.append(encode_icon(icon))
     return e
 
 
 def encode_label(label):
-    return etree.Element('label', vid=str(label.vid))
+    srt, vid = sort_vid_split(label)
+    return etree.Element('label', vid=vid)
 
 
-def encode_variable(v, listed_vars=None):
-    if listed_vars is None:
-        listed_vars = set()
-    var = etree.Element('var', vid=str(v.vid), sort=v.sort)
-    if v.vid not in listed_vars and v.properties:
+def encode_variable(v, varprops=None):
+    if varprops is None: varprops = {}
+    srt, vid = sort_vid_split(v)
+    var = etree.Element('var', vid=vid, sort=srt)
+    if v in varprops:
         var.extend(encode_extrapair(key, val)
-                   for key, val in v.properties.items())
-        listed_vars.add(v.vid)
+                   for key, val in varprops[v])
+        del varprops[v]
     return var
 
 
@@ -268,7 +281,7 @@ def encode_extrapair(key, value):
     return extrapair
 
 
-def encode_ep(ep, listed_vars):
+def encode_ep(ep, varprops=None):
     attributes = {'cfrom': str(ep.cfrom), 'cto': str(ep.cto)}
     if ep.surface is not None:
         attributes['surface'] = ep.surface
@@ -278,13 +291,12 @@ def encode_ep(ep, listed_vars):
     e.append(encode_pred(ep.pred))
     e.append(encode_label(ep.label))
     if ep.iv is not None:
-        e.append(encode_arg(IVARG_ROLE, encode_variable(ep.iv, listed_vars)))
-    for arg in ep.args:
-        if isinstance(arg.value, MrsVariable):
-            e.append(encode_arg(arg.rargname,
-                                encode_variable(arg.value, listed_vars)))
+        e.append(encode_arg(IVARG_ROLE, encode_variable(ep.iv, varprops)))
+    for rargname, val in ep.args.items():
+        if var_re.match(val):
+            e.append(encode_arg(rargname, encode_variable(val, varprops)))
         else:
-            e.append(encode_arg(arg.rargname, encode_constant(arg.value)))
+            e.append(encode_arg(rargname, encode_constant(val)))
     return e
 
 
@@ -320,10 +332,19 @@ def encode_constant(value):
 
 
 def encode_hcon(hcon):
-    hcons = etree.Element('hcons', hreln=hcon.relation)
+    hcons_ = etree.Element('hcons', hreln=hcon.relation)
     hi = etree.Element('hi')
     hi.append(encode_variable(hcon.hi))
     lo = etree.Element('lo')
     lo.append(encode_variable(hcon.lo))
-    hcons.extend([hi, lo])
-    return hcons
+    hcons_.extend([hi, lo])
+    return hcons_
+
+def encode_icon(icon):
+    icons_ = etree.Element('icons', ireln=icon.relation)
+    left = etree.Element('left')
+    left.append(encode_variable(icon.left))
+    right = etree.Element('right')
+    right.append(encode_variable(icon.right))
+    icons_.extend([left, right])
+    return icons_

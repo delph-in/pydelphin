@@ -12,7 +12,7 @@ from itertools import chain
 
 from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .components import (
-    Hook, HandleConstraint, LnkMixin, var_re
+    HandleConstraint, LnkMixin, var_re
 )
 from .config import (
     HANDLESORT, IVARG_ROLE, CONSTARG_ROLE, LTOP_NODEID, FIRST_NODEID,
@@ -29,16 +29,35 @@ class Xmrs(LnkMixin):
                  eps=None, hcons=None, icons=None, vars=None,
                  lnk=None, surface=None, identifier=None):
         """
-        Xmrs can be instantiated directly, but it is meant to be created
-        by the constructor methods :py:meth:`Mrs`, :py:meth:`Rmrs`, or
-        :py:meth:`Dmrs`.
+        Xmrs can be instantiated directly, but it may be more
+        convenient to use the `Mrs()`, `Rmrs()`, or `Dmrs()`
+        constructor functions.
+
+        Variables are simply strings, but must be of the proper form
+        in order to be recognized as variables and not constants. The
+        form is basically a sequence of non-integers followed by a
+        sequence of integers, but see `delphin.mrs.components.var_re`
+        for the regular expression used to determine a match.
+
+        The *eps* argument is an iterable of tuples representing
+        ElementaryPredications. These can be objects of the
+        ElementaryPredication class itself, or an equivalent tuple.
+        The same goes for *hcons* and *icons* with the
+        HandleConstraint and IndividualConstraint classes,
+        respectively.
 
         Args:
-            graph: a graph of the \*MRS structure
-            hook: a |Hook| object to contain the ltop, xarg, and index
-            lnk: the |Lnk| object associating the Xmrs to the surface form
+            top: the TOP (or maybe LTOP) variable
+            index: the INDEX variable
+            xarg: the XARG variable
+            eps: an iterable of EPs (see above)
+            hcons: an iterable of HCONS (see above)
+            icons: an iterable of ICONS (see above)
+            vars: a mapping of variable to a list of property-value pairs
+            lnk: the Lnk object associating the Xmrs to the surface form
             surface: the surface string
             identifier: a discourse-utterance id
+
         """
         self.top = top
         self.index = index
@@ -78,11 +97,12 @@ class Xmrs(LnkMixin):
         # (nodeid, pred, label, args, lnk, surface, base)
         _nodeids, _eps, _vars = self._nodeids, self._eps, self._vars
         for ep in eps:
-            if len(ep) < 4:
+            eplen = len(ep)
+            if eplen < 3:
                 raise XmrsError(
-                    'EPs must have length >= 4: (nodeid, pred, label, argdict)'
+                    'EPs must have length >= 3: (nodeid, pred, label, ...)'
                 )
-            nodeid, pred, lbl, args = ep[0], ep[1], ep[2], ep[3]
+            nodeid, pred, lbl = ep[0], ep[1], ep[2]
             if nodeid in _eps:
                 raise XmrsError(
                     'EP already exists in Xmrs: {} ({})'
@@ -92,6 +112,9 @@ class Xmrs(LnkMixin):
             _eps[nodeid] = ep
             if lbl is not None:
                 _vars[lbl]['refs']['LBL'].append(nodeid)
+            args = None
+            if eplen >= 4: args = ep[3]
+            if args is None: args = {}
             for role, val in args.items():
                 # if the val is not in _vars, it might still be a
                 # variable; check with var_re
@@ -463,7 +486,7 @@ class Xmrs(LnkMixin):
 
 
 def Mrs(top=None, index=None, xarg=None, rels=None, hcons=None, icons=None,
-        lnk=None, surface=None, identifier=None):
+        lnk=None, surface=None, identifier=None, vars=None):
     """
     Construct an |Xmrs| using MRS components.
 
@@ -473,52 +496,56 @@ def Mrs(top=None, index=None, xarg=None, rels=None, hcons=None, icons=None,
     arguments, are expected to be contained by the |EPs|.
 
     Args:
-        hook: A |Hook| object to contain LTOP, INDEX, etc.
-        rels: An iterable of |ElementaryPredications|
-        hcons: An iterable of |HandleConstraints|
-        icons: An iterable of IndividualConstraints (planned feature)
-        lnk: The |Lnk| object associating the MRS to the surface form
-        surface: The surface string
-        identifier: A discourse-utterance id
+        top: the TOP (or maybe LTOP) variable
+        index: the INDEX variable
+        xarg: the XARG variable
+        rels: an iterable of ElementaryPredications
+        hcons: an iterable of HandleConstraints
+        icons: an iterable of IndividualConstraints
+        lnk: the Lnk object associating the MRS to the surface form
+        surface: the surface string
+        identifier: a discourse-utterance id
+        vars: a mapping of variables to a list of (property, value) pairs
     Returns:
-        An |Xmrs| object
+        An Xmrs object
 
     Example:
 
-    >>> ltop = MrsVariable(vid=0, sort='h')
-    >>> rain_label = MrsVariable(vid=1, sort='h')
-    >>> index = MrsVariable(vid=2, sort='e')
     >>> m = Mrs(
-    >>>     hook=Hook(ltop=ltop, index=index),
+    >>>     top='h0',
+    >>>     index='e2',
     >>>     rels=[ElementaryPredication(
     >>>         Pred.stringpred('_rain_v_1_rel'),
-    >>>         label=rain_label,
-    >>>         args=[Argument.mrs_argument('ARG0', index)]
-    >>>         )
-    >>>     ],
-    >>>     hcons=[HandleConstraint(ltop, 'qeq', rain_label)]
+    >>>         label='h1',
+    >>>         args={'ARG0': 'e2'},
+    >>>         vars={'e2': {'SF': 'prop-or-ques', 'TENSE': 'present'}}
+    >>>     )],
+    >>>     hcons=[HandleConstraint('h0', 'qeq', 'h1')]
     >>> )
     """
     eps = list(rels or [])
     hcons = list(hcons or [])
     icons = list(icons or [])
-    vars = {}  # FIXME
+    if vars is None: vars = {}
     # first give eps a nodeid (this is propagated to args)
     next_nodeid = FIRST_NODEID
     for ep in eps:
         if ep.nodeid is not None and ep.nodeid >= next_nodeid:
             next_nodeid = ep.nodeid + 1
+    eps_ = []
     for i, ep in enumerate(eps):
         if ep.nodeid is None:
-            ep.nodeid = next_nodeid + i
+            eps_.append(tuple([next_nodeid + i] + list(ep[1:])))
+        else:
+            eps_.append(ep)
     return Xmrs(top=top, index=index, xarg=xarg,
-                eps=eps, hcons=hcons, icons=icons, vars=vars,
+                eps=eps_, hcons=hcons, icons=icons, vars=vars,
                 lnk=lnk, surface=surface, identifier=identifier)
 
 
 def Rmrs(top=None, index=None, xarg=None,
          eps=None, args=None, hcons=None, icons=None,
-         lnk=None, surface=None, identifier=None):
+         lnk=None, surface=None, identifier=None, vars=None):
     """
     Construct an |Xmrs| from RMRS components.
 
@@ -527,36 +554,38 @@ def Rmrs(top=None, index=None, xarg=None,
     by the source |EPs|, but instead reference the nodeid of their |EP|.
 
     Args:
-        hook: A |Hook| object
-        eps: An iterable of |EP| objects
-        args: An iterable of |Argument| objects
-        hcons: An iterable of |HandleConstraint| objects
-        icons: An iterable of |IndividualConstraint| objects
-        lnk: A |Lnk| object
-        surface: The surface string
-        identifier: A discourse-utterance id
+        top: the TOP (or maybe LTOP) variable
+        index: the INDEX variable
+        xarg: the XARG variable
+        eps: an iterable of EPs
+        args: a nested mapping of {nodeid: {rargname: value}}
+        hcons: an iterable of HandleConstraint objects
+        icons: an iterable of IndividualConstraint objects
+        lnk: the Lnk object associating the MRS to the surface form
+        surface: the surface string
+        identifier: a discourse-utterance id
+        vars: a mapping of variables to a list of (property, value) pairs
     Returns:
-        An |Xmrs| object
+        An Xmrs object
 
     Example:
 
-    >>> ltop = MrsVariable(vid=0, sort='h')
-    >>> rain_label = MrsVariable(vid=1, sort='h')
-    >>> index = MrsVariable(vid=2, sort='e')
     >>> m = Rmrs(
-    >>>     hook=Hook(ltop=ltop, index=index),
+    >>>     top='h0',
+    >>>     index='e2',
     >>>     eps=[ElementaryPredication(
+    >>>         10000,
     >>>         Pred.stringpred('_rain_v_1_rel'),
-    >>>         label=rain_label,
-    >>>         nodeid=10000
-    >>>         )
-    >>>     ],
-    >>>     args=[Argument.rmrs_argument(10000, 'ARG0', index)],
-    >>>     hcons=[HandleConstraint(ltop, 'qeq', rain_label)]
+    >>>         'h1'
+    >>>     )],
+    >>>     args={10000: {'ARG0': 'e2'}},
+    >>>     hcons=[HandleConstraint('h0', 'qeq', 'h1'),
+    >>>     vars={'e2': {'SF': 'prop-or-ques', 'TENSE': 'present'}}
     >>> )
     """
     eps = list(eps or [])
     args = list(args or [])
+    if vars is None: vars = {}
     for arg in args:
         if arg.nodeid is None:
             raise XmrsStructureError("RMRS args must have a nodeid.")
@@ -564,13 +593,13 @@ def Rmrs(top=None, index=None, xarg=None,
     for ep in eps:
         if ep.nodeid is None:
             raise XmrsStructureError("RMRS EPs must have a nodeid.")
-        argdict = OrderedDict((a.rargname, a) for a in args
-                              if a.nodeid == ep.nodeid)
-        ep.argdict = argdict
+        epargs = ep.args
+        for rargname, value in args.get(ep.nodeid, {}).items():
+            epargs[rargname] = value
     hcons = list(hcons or [])
     icons = list(icons or [])
     return Xmrs(top=top, index=index, xarg=xarg,
-                eps=eps, hcons=hcons, icons=icons,
+                eps=eps, hcons=hcons, icons=icons, vars=vars,
                 lnk=lnk, surface=surface, identifier=identifier)
 
 
@@ -587,13 +616,13 @@ def Dmrs(nodes=None, links=None,
     |Node|)
 
     Args:
-        nodes: An iterable of |Node| objects
-        links: An iterable of |Link| objects
-        lnk: The |Lnk| object associating the MRS to the surface form
-        surface: The surface string
-        identifier: A discourse-utterance id
+        nodes: an iterable of Node objects
+        links: an iterable of Link objects
+        lnk: the Lnk object associating the MRS to the surface form
+        surface: the surface string
+        identifier: a discourse-utterance id
     Returns:
-        An |Xmrs| object
+        An Xmrs object
 
     Example:
 

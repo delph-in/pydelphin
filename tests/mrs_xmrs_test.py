@@ -34,14 +34,18 @@ class TestXmrs():
         with pytest.raises(XmrsError):
             x.add_eps([(10000, Pred.stringpred('_v_v_rel'))])
         assert len(x.eps()) == 0
-        # nodeid, pred, and label
-        with pytest.raises(XmrsError):
-            x.add_eps([(10000, Pred.stringpred('_v_v_rel'), 'h1')])
-        assert len(x.eps()) == 0
-
-        # nodeid, pred, label, and argdict (the minimum)
-        x.add_eps([(10000, Pred.stringpred('_v_v_rel'), 'h1', {})])
+        # nodeid, pred, and label (the minimum)
+        x.add_eps([(10000, Pred.stringpred('_v_v_rel'), 'h1')])
         # make sure it was entered correctly and is unchanged
+        assert len(x.eps()) == 1
+        assert x.eps()[0][0] == 10000
+        ep = x.ep(10000)
+        assert isinstance(ep[1], Pred) and ep[1].string == '_v_v_rel'
+        assert ep[2] == 'h1'
+
+        # nodeid, pred, label, and argdict
+        x = Xmrs()
+        x.add_eps([(10000, Pred.stringpred('_v_v_rel'), 'h1', {})])
         assert len(x.eps()) == 1
         assert x.eps()[0][0] == 10000
         ep = x.ep(10000)

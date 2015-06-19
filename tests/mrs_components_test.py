@@ -3,8 +3,8 @@
 import pytest
 
 from delphin.mrs.components import (
-    MrsVariable, sort_vid_split, var_sort, var_id,
-    Lnk, LnkMixin, Hook,
+    sort_vid_split, var_sort, var_id,
+    Lnk, LnkMixin,
     Link, HandleConstraint,
     Pred, Node, ElementaryPredication as EP
 )
@@ -13,74 +13,6 @@ from delphin.mrs.config import (
     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
     LTOP_NODEID, FIRST_NODEID
 )
-
-class TestMrsVariable():
-    def test_construct(self):
-        with pytest.raises(TypeError): MrsVariable()
-        with pytest.raises(ValueError): MrsVariable(1)
-        with pytest.raises(ValueError): MrsVariable('h')
-        with pytest.raises(TypeError): MrsVariable(properties={'a':'1'})
-        assert MrsVariable('h1') is not None
-
-    def test_varstring(self):
-        with pytest.raises(ValueError): MrsVariable('1x')
-        with pytest.raises(ValueError): MrsVariable('var')
-        v = MrsVariable('x1')
-        assert v.sort == 'x'
-        assert v.vid == 1
-        assert v.varstring == 'x1'
-        assert v.properties == {}
-        v = MrsVariable('x1', properties={'a': '1'})
-        assert v.varstring == 'x1'
-        assert v.properties == {'a': '1'}
-        v = MrsVariable('individual10')
-        assert v.sort == 'individual'
-        assert v.vid == 10
-        assert v.varstring == 'individual10'
-
-    def test_from_vidsort(self):
-        with pytest.raises(TypeError): MrsVariable.from_vidsort()
-        with pytest.raises(TypeError): MrsVariable.from_vidsort(1)
-        with pytest.raises(TypeError): MrsVariable.from_vidsort(sort='h')
-        v = MrsVariable.from_vidsort(1, 'h')
-        assert v.sort == 'h'
-        assert v.vid == 1
-        assert v.varstring == 'h1'
-        assert v.properties == {}
-        v = MrsVariable.from_vidsort(1, 'x', properties={'a': '1'})
-        assert v.varstring == 'x1'
-        assert v.properties == {'a': '1'}
-        v = MrsVariable.from_vidsort(10, 'event')
-        assert v.varstring == 'event10'
-
-    def test_str(self):
-        v = MrsVariable('x1')
-        assert str(v) == 'x1'
-        v = MrsVariable.from_vidsort(1, 'x')
-        assert str(v) == 'x1'
-
-    def test_equality(self):
-        v = MrsVariable('x1')
-        assert v == MrsVariable('x1')
-        assert v != MrsVariable('x2')
-        assert v != MrsVariable('e1')
-        assert v == MrsVariable.from_vidsort(1, 'x')
-        assert v == 'x1'
-        v = MrsVariable('e2', properties={'a': 1})
-        assert v != MrsVariable('e2')
-        assert v == MrsVariable('e2', properties={'a': 1})
-        assert v != 'e2'
-
-    def test_hashable(self):
-        v1 = MrsVariable('x1')
-        v2 = MrsVariable('e2')
-        d = {v1:'one', v2:'two'}
-        assert d[v1] == 'one'
-        assert d['x1'] == 'one'
-        assert d[v2] == 'two'
-        # note: it's invalid to have two variables with different VIDs
-        with pytest.raises(KeyError): d[v1.vid]
-        with pytest.raises(KeyError): d[v1.sort]
 
 
 def test_sort_vid_split():
@@ -183,19 +115,6 @@ class TestLnkMixin():
         assert n.cfrom == 0
 
 
-class TestHook():
-    def test_construct(self):
-        h = Hook()
-        assert h.ltop == None
-        assert h.index == None
-        assert h.xarg == None
-        h = Hook(top=MrsVariable('h1'), index=MrsVariable('e2'),
-                 xarg=MrsVariable('x3'))
-        assert h.ltop == 'h1'
-        assert h.index == 'e2'
-        assert h.xarg == 'x3'
-
-
 class TestLink():
     def test_construct(self):
         with pytest.raises(TypeError): Link()
@@ -211,8 +130,8 @@ class TestLink():
 
 class TestHandleConstraint():
     def test_construct(self):
-        h1 = MrsVariable('handle1')
-        h2 = MrsVariable('handle2')
+        h1 = 'handle1'
+        h2 = 'handle2'
         with pytest.raises(TypeError): HandleConstraint()
         with pytest.raises(TypeError): HandleConstraint(h1)
         with pytest.raises(TypeError): HandleConstraint(h1, HandleConstraint.QEQ)
@@ -227,16 +146,16 @@ class TestHandleConstraint():
         assert hc.lo == 'h2'
 
     def test_equality(self):
-        h1 = MrsVariable('h1')
-        h2 = MrsVariable('h2')
+        h1 = 'h1'
+        h2 = 'h2'
         hc1 = HandleConstraint(h1, HandleConstraint.QEQ, h2)
         assert hc1 == HandleConstraint(h1, HandleConstraint.QEQ, h2)
         assert hc1 != HandleConstraint(h2, HandleConstraint.QEQ, h1)
         assert hc1 != HandleConstraint(h1, HandleConstraint.LHEQ, h2)
 
     def test_hashable(self):
-        hc1 = HandleConstraint(MrsVariable('h1'), HandleConstraint.QEQ, MrsVariable('h2'))
-        hc2 = HandleConstraint(MrsVariable('h3'), HandleConstraint.QEQ, MrsVariable('h4'))
+        hc1 = HandleConstraint('h1', HandleConstraint.QEQ, 'h2')
+        hc2 = HandleConstraint('h3', HandleConstraint.QEQ, 'h4')
         d = {hc1:1, hc2:2}
         assert d[hc1] == 1
         assert d[hc2] == 2
@@ -376,34 +295,21 @@ class TestElementaryPredication():
         with pytest.raises(TypeError): EP()
         with pytest.raises(TypeError): EP(10)
         with pytest.raises(TypeError): EP(10, Pred.stringpred('_dog_n_rel'))
-        e = EP(10, Pred.stringpred('_dog_n_rel'), MrsVariable('h1'))
+        e = EP(10, Pred.stringpred('_dog_n_rel'), 'h1')
         assert e.nodeid == 10
         assert e.pred == '_dog_n_rel'
-        assert e.label == MrsVariable('h1')
-
-    def test_properties(self):
-        p = Pred.stringpred('_dog_n_rel')
-        lbl = MrsVariable('h1')
-        e = EP(11, p, lbl)
-        assert len(e.properties) == 0
-        v = MrsVariable('x2', properties={'num': 'sg'})
-        # properties only come from intrinsic arg
-        e = EP(11, p, lbl, args={'ARG1': v})
-        assert len(e.properties) == 0
-        e = EP(11, p, lbl, args={IVARG_ROLE: v})
-        assert len(e.properties) == 1
-        assert e.properties['num'] == 'sg'
+        assert e.label == 'h1'
 
     def test_args(self):
         p = Pred.stringpred('_chase_v_rel')
-        lbl = MrsVariable('h1')
+        lbl = 'h1'
         e = EP(11, p, lbl)
         assert len(e.args) == 0
-        v1 = MrsVariable('e2', properties={'tense': 'pres'})
+        v1 = 'e2'
         e = EP(11, p, lbl, args={IVARG_ROLE: v1})
         assert len(e.args) == 1
         assert e.args[IVARG_ROLE] == v1
-        v2 = MrsVariable('x3', properties={'num': 'sg'})
+        v2 = 'x3'
         e = EP(11, p, lbl, args={IVARG_ROLE: v1, 'ARG1': v2})
         assert len(e.args) == 2
         assert e.args[IVARG_ROLE] == v1

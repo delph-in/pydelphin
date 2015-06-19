@@ -33,12 +33,12 @@ classes, such as |ElementaryPredication|, |Node|, or
 
 # these may be order-sensitive
 from .components import (
-    Hook, Lnk, Node, ElementaryPredication, MrsVariable,
+    Lnk, Node, ElementaryPredication,
     HandleConstraint, Pred, Link
 )
 from .xmrs import Xmrs, Mrs, Dmrs, Rmrs
 
-__all__ = [Hook, Lnk, Node, ElementaryPredication, MrsVariable,
+__all__ = [Lnk, Node, ElementaryPredication,
            HandleConstraint, Pred, Link, Xmrs, Mrs, Dmrs]
 
 

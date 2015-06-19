@@ -8,14 +8,12 @@
 
 from __future__ import print_function
 
-from collections import OrderedDict, deque
+from collections import deque, defaultdict
 import re
 from delphin.mrs import Xmrs, Mrs
 from delphin.mrs.components import (
-    Hook, ElementaryPredication, Pred,
-    MrsVariable, Lnk, HandleConstraint, IndividualConstraint,
-    sort_vid_split, var_sort, var_re,
-    hcons, icons
+    ElementaryPredication, Pred, Lnk, HandleConstraint, IndividualConstraint,
+    sort_vid_split, var_sort, var_re, hcons, icons
 )
 from delphin.mrs.config import (HANDLESORT, CONSTARG_ROLE)
 from delphin.mrs.util import rargname_sortkey
@@ -192,7 +190,7 @@ def invalid_token_error(token, expected):
     raise XDE('Invalid token: "{}"\tExpected: "{}"'.format(token, expected))
 
 
-def deserialize(string, strict=False):
+def deserialize(string, strict=True):
     if strict:
         read = read_mrs
     else:
@@ -323,7 +321,7 @@ def read_mrs(tokens, version=_default_version):
     """Decode a sequence of Simple-MRS tokens. Assume LTOP, INDEX, RELS,
        HCONS, and ICONS occur in that order."""
     # variables needs to be passed to any function that can call read_variable
-    variables = {}
+    variables = defaultdict(list)
     # [ LTOP : handle INDEX : variable RELS : rels-list HCONS : hcons-list ]
     try:
         validate_token(tokens.popleft(), _left_bracket)
@@ -347,7 +345,8 @@ def read_mrs(tokens, version=_default_version):
                 hcons=hcons,
                 icons=icons,
                 lnk=lnk,
-                surface=surface)
+                surface=surface,
+                vars=variables)
     except IndexError:
         unexpected_termination_error()
     return m
@@ -355,8 +354,6 @@ def read_mrs(tokens, version=_default_version):
 
 def read_featval(tokens, feat=None, sort=None, variables=None):
     # FEAT : (var-or-handle|const)
-    if variables is None:
-        variables = {}
     name = tokens.popleft()
     if feat is not None:
         validate_token(name, feat)
@@ -370,11 +367,13 @@ def read_featval(tokens, feat=None, sort=None, variables=None):
 
 
 def read_variable(tokens, sort=None, variables=None):
-    """Read and return the MrsVariable object for the value of the
-       variable. Fail if the sort does not match the expected."""
+    """
+    Read and return the variable and update a property dict.
+    Fail if the sort does not match the expected.
+    """
     # var [ vartype PROP : val ... ]
     if variables is None:
-        variables = {}
+        variables = defaultdict(list)
     var = tokens.popleft()
     srt, vid = sort_vid_split(var)
     # consider something like not(srt <= sort) in the case of subsumptive sorts
@@ -388,22 +387,16 @@ def read_variable(tokens, sort=None, variables=None):
     if srt == 'h' and props:
         raise XDE('Handle variable "{}" has a non-empty property set {}.'
                   .format(var, props))
-    if vid in variables:
-        var_ = variables[vid].varstring
-        srt_, _ = sort_vid_split(var_)
-        if srt != srt_:
-            raise XDE('Variable {} has a conflicting sort with {}'
-                      .format(var, var_))
-        variables[vid].properties.update(props)
-    else:
-        variables[vid] = MrsVariable(var, properties=props)
-    return variables[vid]
+    variables[var].extend(props)
+    return (var, props)
 
 
 def read_props(tokens):
-    """Read and return a dictionary of variable properties."""
+    """
+    Read and return a list of variable properties paired with their values.
+    """
     # [ vartype PROP1 : val1 PROP2 : val2 ... ]
-    props = OrderedDict()
+    props = []
     if not tokens or tokens[0] != _left_bracket:
         return None, props
     tokens.popleft()  # get rid of bracket (we just checked it)
@@ -415,7 +408,7 @@ def read_props(tokens):
         prop = tokens.popleft()
         validate_token(tokens.popleft(), _colon)
         val = tokens.popleft()
-        props[prop] = val
+        props.append((prop, val))
     tokens.popleft()  # we know this is a right bracket
     return vartype, props
 
@@ -455,8 +448,12 @@ def read_ep(tokens, variables=None):
     while tokens[0] != _right_bracket:
         args.append(read_argument(tokens, variables=variables))
     tokens.popleft()  # we know this is a right bracket
-    return ElementaryPredication(pred=pred, label=label, args=args,
-                                 lnk=lnk, surface=surface)
+    return ElementaryPredication(None,  # no nodeid in MRS
+                                 pred,
+                                 label,
+                                 args=args,
+                                 lnk=lnk,
+                                 surface=surface)
 
 
 def read_argument(tokens, variables=None):
@@ -512,7 +509,6 @@ def read_hcons(tokens, variables=None):
     hcons = []
     validate_tokens(tokens, [_colon, _left_angle])
     while tokens[0] != _right_angle:
-        # only keep varstring of MrsVariables
         hi = read_variable(tokens, sort='h', variables=variables)[0]
         # rels are case-insensitive and the convention is lower-case
         rel = tokens.popleft().lower()
@@ -539,7 +535,6 @@ def read_icons(tokens, variables=None):
     icons = []
     validate_tokens(tokens, [_colon, _left_angle])
     while tokens[0] != _right_angle:
-        # only keep varstring of MrsVariables
         left = read_variable(tokens, variables=variables)[0]
         relation = tokens.popleft().lower()
         right = read_variable(tokens, variables=variables)[0]
@@ -590,7 +585,6 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
             _index, m.index, varprops
         ))
     delim = ' ' if not pretty_print else '\n          '
-    _eps = m._eps
     toks.append('RELS: < {eps} >'.format(
         eps=delim.join(serialize_ep(ep, varprops, version=version)
                        for ep in m.eps())
