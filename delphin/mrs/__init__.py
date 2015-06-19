@@ -31,22 +31,6 @@ classes, such as |ElementaryPredication|, |Node|, or
 #     scope. When more than one |EP| share a label, they share a scope,
 #     and are said to be in an **EP Conjunction**.
 
-# check dependencies
-
-import imp
-try:
-    imp.find_module('networkx')
-except ImportError as ex:
-    msg = '''\n
-The `networkx` package is required for the `delphin.mrs` package.
-You can install `networkx` in several ways:
-  * With your operating system\'s package manager (e.g.
-    `apt-get install python3-networkx` or `pacman -S python-networkx)
-  * With PIP (e.g. `pip install networkx`); make sure you're installing
-    for Python3 (you may need to use `pip3` instead of `pip`)
-  * Or from the project homepage: http://networkx.github.io'''
-    raise ImportError(msg) from ex
-
 # these may be order-sensitive
 from .components import (
     Hook, Lnk, Node, ElementaryPredication, MrsVariable,
@@ -96,16 +80,8 @@ def convert(txt, src_fmt, tgt_fmt, single=True, **kwargs):
         =========  ============================
     """
     from importlib import import_module
-    try:
-        reader = import_module('{}.{}'.format('delphin.mrs', src_fmt.lower()))
-    except ImportError as ex:
-        msg = '\nCannot find serializer: {}'.format(src_fmt.lower())
-        raise ImportError(msg) from ex
-    try:
-        writer = import_module('{}.{}'.format('delphin.mrs', tgt_fmt.lower()))
-    except ImportError as ex:
-        msg = '\nCannot find serializer: {}'.format(tgt_fmt.lower())
-        raise ImportError(msg) from ex
+    reader = import_module('{}.{}'.format('delphin.mrs', src_fmt.lower()))
+    writer = import_module('{}.{}'.format('delphin.mrs', tgt_fmt.lower()))
     return writer.dumps(
         reader.loads(txt, single=single),
         single=single,

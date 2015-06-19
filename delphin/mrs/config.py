@@ -13,8 +13,6 @@ QUANTIFIER_POS = 'q' # for quantifier preds
 # MRS strings
 IVARG_ROLE     = 'ARG0'
 CONSTARG_ROLE  = 'CARG'
-# RMRS strings
-ANCHOR_SORT    = HANDLESORT # LKB output is like h10001, but in papers it's a1
 # DMRS strings
 RSTR_ROLE      = 'RSTR' # DMRS establishes that quantifiers have a RSTR link
 EQ_POST        = 'EQ'

@@ -28,8 +28,21 @@ class TdlError(PyDelphinException):
 
 
 class TdlParsingError(TdlError):
-    def __init__(self, *args, filename=None, line_number=None, identifier=None,
-                 **kwargs):
+    def __init__(self, *args, **kwargs):
+        # Python2 doesn't allow parameters like:
+        #   (*args, key=val, **kwargs)
+        # so do this manaully.
+        filename = line_number = identifier = None
+        if 'filename' in kwargs:
+            filename = kwargs['filename']
+            del kwargs['filename']
+        if 'line_number' in kwargs:
+            line_number = kwargs['line_number']
+            del kwargs['line_number']
+        if 'identifier' in kwargs:
+            identifier = kwargs['identifier']
+            del kwargs['identifier']
+
         TdlError.__init__(self, *args, **kwargs)
         self.filename = filename
         self.line_number = line_number

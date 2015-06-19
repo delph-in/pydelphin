@@ -9,12 +9,6 @@
 
 from collections import (OrderedDict, defaultdict)
 from itertools import chain
-import logging
-# consider using this:
-# from functools import lru_cache
-
-#import networkx as nx
-#from networkx import DiGraph, relabel_nodes
 
 from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .components import (
@@ -30,13 +24,6 @@ class Xmrs(LnkMixin):
     """
     Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
     """
-
-    __slots__ = ('top', 'index', 'xarg', '_nodeids', '_eps',
-                 '_hcons', '_icons', 'vars')
-    # nodeids, preds, lnks, label, args, variables, surface, base,
-    # hcons, icons, constants
-# nodeid: (pred, label, args, lnk, surface, base)
-    # vid: variable
 
     def __init__(self, top=None, index=None, xarg=None,
                  eps=None, hcons=None, icons=None, vars=None,
@@ -80,12 +67,6 @@ class Xmrs(LnkMixin):
         if icons is not None:
             self.add_icons(icons)
 
-        # # if top or index weren't encountered, throw a warning
-        # if top is not None and top not in self._vars:
-        #     logging.warning('Top variable does not exist in Xmrs: %s' % top)
-        # if index is not None and index not in self._vars:
-        #     logging.warning('Index variable does not exist in Xmrs: %s'%index)
-
         #: A |Lnk| object to associate the Xmrs to the surface form
         self.lnk = lnk  # Lnk object (MRS-level lnk spans the whole input)
         #: The surface string
@@ -95,7 +76,6 @@ class Xmrs(LnkMixin):
 
     def add_eps(self, eps):
         # (nodeid, pred, label, args, lnk, surface, base)
-        #CONST = Argument.CONSTANT_ARG  # assign locally to avoid global lookup
         _nodeids, _eps, _vars = self._nodeids, self._eps, self._vars
         for ep in eps:
             if len(ep) < 4:
@@ -198,7 +178,6 @@ class Xmrs(LnkMixin):
             return False
         zipped_ps = zip(self.eps(nodeids=nodeids),
                          other.eps(nodeids=nodeids))
-        #zipped_ps = zip(sorted(eps1), sorted(eps2))
         for p1, p2 in zipped_ps:
             if p1 != p2:
                 return False
@@ -231,25 +210,30 @@ class Xmrs(LnkMixin):
 
     # access to internal sub-structures
 
-    def properties(self, obj):
-        if obj in self._vars:
-            return dict(self._vars[obj]['props'])
-        elif obj in self._eps:
-            var = self._eps[obj][3].get(IVARG_ROLE)
+    def properties(self, var_or_nodeid):
+        if var_or_nodeid in self._vars:
+            return dict(self._vars[var_or_nodeid]['props'])
+        elif var_or_nodeid in self._eps:
+            var = self._eps[var_or_nodeid][3].get(IVARG_ROLE)
             return dict(self._vars.get(var, []))
         else:
-            raise KeyError(obj)
+            raise KeyError(var_or_nodeid)
 
-    def pred(self, nid): return self._eps[nid][1]
+    def pred(self, nodeid): return self._eps[nodeid][1]
 
-    def preds(self, nids=None):
-        if nids is None: nids = self._nodeids
+    def preds(self, nodeids=None):
+        if nodeids is None: nodeids = self._nodeids
         _eps = self._eps
-        return [_eps[nid][1] for nid in nids]
+        return [_eps[nid][1] for nid in nodeids]
 
-    def labels(self): return [ep[2] for ep in self.eps()]
+    def label(self, nodeid): return self._eps[nodeid][2]
 
-    def args(self, nid): return self._eps[nid][3]
+    def labels(self, nodeids=None):
+        if nodeids is None: nodeids = self._nodeids
+        _eps = self._eps
+        return [_eps[nid][2] for nid in nodeids]
+
+    def args(self, nodeid): return self._eps[nodeid][3]
 
     # calculated sub-structures
 
@@ -268,23 +252,6 @@ class Xmrs(LnkMixin):
         in_args = []
         if 'hcrefs' in vd:
             pass
-        # elif
-        # for role, ref in _vars[lbl]['refs']:
-        #     # not considering shared LBLs as args
-        #     if role.upper() == 'LBL': continue
-        #     for refval in ref:
-        #         if refval in _eps:
-        #             in_args.append((refval, role, lbl))
-        #         elif refval in _vars:
-        #             refvd = _vars[refval]
-        #             if 'hcons' in refvd:
-        #                 for hcrole, hcref in refvd['refs']:
-
-
-
-
-
-
 
     def labelset(self, label):
         """
@@ -296,10 +263,6 @@ class Xmrs(LnkMixin):
             A set of nodeids, which may be an empty set.
         """
         return self._vars[label]['refs']['LBL']
-
-    # def out_args(self, nodeid):
-    #     args = self._eps[nodeid][3]
-    #     return [(role, val)
 
     def labelset_heads(self, label):
         """
@@ -536,11 +499,10 @@ def Mrs(top=None, index=None, xarg=None, rels=None, hcons=None, icons=None,
     >>>     hcons=[HandleConstraint(ltop, 'qeq', rain_label)]
     >>> )
     """
-    if hook is None:
-        hook = Hook()
-    eps = sorted(rels or [])  # sorted to try and make nodeids predictable
+    eps = list(rels or [])
     hcons = list(hcons or [])
     icons = list(icons or [])
+    vars = {}  # FIXME
     # first give eps a nodeid (this is propagated to args)
     next_nodeid = FIRST_NODEID
     for ep in eps:
@@ -549,11 +511,13 @@ def Mrs(top=None, index=None, xarg=None, rels=None, hcons=None, icons=None,
     for i, ep in enumerate(eps):
         if ep.nodeid is None:
             ep.nodeid = next_nodeid + i
-    graph = build_graph(hook, eps, hcons, icons)
-    return Xmrs(graph, hook, lnk, surface, identifier)
+    return Xmrs(top=top, index=index, xarg=xarg,
+                eps=eps, hcons=hcons, icons=icons, vars=vars,
+                lnk=lnk, surface=surface, identifier=identifier)
 
 
-def Rmrs(hook=None, eps=None, args=None, hcons=None, icons=None,
+def Rmrs(top=None, index=None, xarg=None,
+         eps=None, args=None, hcons=None, icons=None,
          lnk=None, surface=None, identifier=None):
     """
     Construct an |Xmrs| from RMRS components.
@@ -591,8 +555,6 @@ def Rmrs(hook=None, eps=None, args=None, hcons=None, icons=None,
     >>>     hcons=[HandleConstraint(ltop, 'qeq', rain_label)]
     >>> )
     """
-    if hook is None:
-        hook = Hook()
     eps = list(eps or [])
     args = list(args or [])
     for arg in args:
@@ -607,8 +569,9 @@ def Rmrs(hook=None, eps=None, args=None, hcons=None, icons=None,
         ep.argdict = argdict
     hcons = list(hcons or [])
     icons = list(icons or [])
-    graph = build_graph(hook, eps, hcons, icons)
-    return Xmrs(graph, hook, lnk, surface, identifier)
+    return Xmrs(top=top, index=index, xarg=xarg,
+                eps=eps, hcons=hcons, icons=icons,
+                lnk=lnk, surface=surface, identifier=identifier)
 
 
 def Dmrs(nodes=None, links=None,

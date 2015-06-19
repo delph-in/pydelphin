@@ -204,10 +204,10 @@ $ ./pyDelphin --input ~/logon/dfki/jacy/tsdb/gold/mrs \
 
 ## Installation and Requirements
 
-pyDelphin is developed for [Python 3](http://python.org/download/). The
-[NetworkX](http://networkx.github.io/) library is necessary for the MRS
-package. [Pygments](http://pygments.org/) is required for TDL syntax
-highlighting.
+pyDelphin is developed for [Python 3](http://python.org/download/),
+but it has also been tested to work with Python 2.6+. The
+[Pygments](http://pygments.org/) package is required for TDL and
+SimpleMRS syntax highlighting.
 
 Likely pyDelphin does not need to be installed to be used. You can
 adjust `PYTHONPATH` to include the pyDelphin directory, or copy the
@@ -234,7 +234,7 @@ The following packages/modules are available:
 - `mrs`: Minimal Recursion Semantics
 - `tdl`: Type-Description Language (currently just lexing)
 - `extra.highlight`: [Pygments](http://pygments.org/)-based syntax
-  highlighting (currently just for TDL)
+  highlighting (currently just for TDL and SimpleMRS)
 - `interfaces.ace`: Python wrapper for common tasks using
   [ACE](http://sweaglesw.org/linguistics/ace/)
 
@@ -246,3 +246,6 @@ And the following libraries are planned:
 ## Contributors
 
 - [T.J. Trimble](https://github.com/dantiston/)
+
+The original author and maintainer of pyDelphin is
+[Michael Wayne Goodman](https://github.com/goodmami)

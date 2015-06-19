@@ -1,14 +1,17 @@
 import re
 import logging
 from collections import namedtuple
-from collections.abc import MutableMapping
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping  # Python2
 from itertools import starmap
 from functools import total_ordering
 
 from delphin._exceptions import XmrsStructureError
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE,
-    HANDLESORT, CVARSORT, ANCHOR_SORT, QUANTIFIER_POS,
+    HANDLESORT, CVARSORT, QUANTIFIER_POS,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST
 )
 
@@ -1121,4 +1124,3 @@ def get_ep(xmrs, pid):
     #     return ep
     # except KeyError:
     #     return None
-

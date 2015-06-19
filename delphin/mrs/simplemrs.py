@@ -6,6 +6,8 @@
 #          and dumps.
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
+from __future__ import print_function
+
 from collections import OrderedDict, deque
 import re
 from delphin.mrs import Xmrs, Mrs

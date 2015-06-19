@@ -9,6 +9,8 @@
 #
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
+from __future__ import print_function
+
 from collections import OrderedDict
 from io import BytesIO
 import re

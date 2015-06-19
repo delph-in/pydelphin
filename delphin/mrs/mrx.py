@@ -8,16 +8,19 @@
 #          of MRX instances, and they read and write incrementally.
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
+from __future__ import print_function
+
 from collections import OrderedDict
-from io import BytesIO
+import xml.etree.ElementTree as etree
+
 from delphin.mrs import Mrs
 from delphin.mrs.components import (
     ElementaryPredication, Argument, Pred, MrsVariable, Lnk, HandleConstraint
 )
 from delphin._exceptions import XmrsDeserializationError as XDE
 from delphin.mrs.config import IVARG_ROLE
+from delphin.mrs.util import etree_tostring
 
-import xml.etree.ElementTree as etree
 
 ##############################################################################
 ##############################################################################
@@ -31,11 +34,13 @@ def load(fh, single=False):
     return ms
 
 
-def loads(s, single=False, encoding='utf-8'):
-    ms = decode(BytesIO(bytes(s, encoding=encoding)))
+def loads(s, single=False):
+    corpus = etree.fromstring(s)
     if single:
-        ms = next(ms)
-    return ms
+        ds = decode_mrs(next(corpus))
+    else:
+        ds = (decode_mrs(mrs_elem) for mrs_elem in corpus)
+    return ds
 
 
 def dump(fh, ms, **kwargs):
@@ -86,8 +91,8 @@ def decode_mrs(elem):
     global _vars
     _vars = {}
     # normalize_vars(elem) # try to make all vars have a sort
-    return Mrs(hook=Hook(ltop=decode_label(elem.find('label')),
-                         index=decode_var(elem.find('var'))),
+    return Mrs(ltop=decode_label(elem.find('label')),
+               index=decode_var(elem.find('var')),
                rels=list(map(decode_ep, elem.iter('ep'))),
                hcons=list(map(decode_hcons, elem.iter('hcons'))),
                lnk=decode_lnk(elem.get('cfrom'), elem.get('cto')),
@@ -214,9 +219,9 @@ def encode(ms, encoding='unicode', pretty_print=False):
         pprint_re = re.compile(r'(<mrs[^-]|</mrs>|</mrs-list>'
                                r'|<ep\s|<fvpair>|<extrapair>|<hcons\s)',
                                re.IGNORECASE)
-        string = etree.tostring(e, encoding=encoding)
+        string = etree_tostring(e, encoding=encoding)
         return pprint_re.sub(r'\n\1', string)
-    return etree.tostring(e, encoding=encoding)
+    return etree_tostring(e, encoding=encoding)
 
 
 def encode_mrs(m):

@@ -17,12 +17,14 @@ The `tdl` module is a library of functions, not a script, so import it:
 
 ```
 
-##Tokenization
+## String Operations
+
+### Tokenization
 
 The `tdl.tokenize()` method breaks up streams of TDL text into the
 logical units for parsing.
 
-### Types and Features
+##### Types and Features
 
 Basic atoms should be tokenized. Some kinds of punctuation are allowed.
 
@@ -32,7 +34,7 @@ Basic atoms should be tokenized. Some kinds of punctuation are allowed.
 
 ```
 
-### Strings
+##### Strings
 
 Strings should be kept together until the terminating quote is found
 (for double-quoted strings), or until a space or breakable punctuation
@@ -47,7 +49,7 @@ characters are inside the quote.
 
 ```
 
-### Lists
+##### Lists
 
 ```python
 >>> list(tdl.tokenize('< list, items >'))
@@ -61,7 +63,7 @@ characters are inside the quote.
 
 ```
 
-### Basic Type Definitions
+##### Basic Type Definitions
 
 There are at least three assignment operators (`:=`, `:+`, and `:<`).
 
@@ -75,7 +77,7 @@ There are at least three assignment operators (`:=`, `:+`, and `:<`).
 
 ```
 
-### Features
+##### Features
 
 Feature paths can be delimited using dots (`.`) or with open brackets
 (`[`). In the latter case, a closing bracket (`]`) must terminate the
@@ -91,7 +93,7 @@ group of sub-features that share the path prefix:
 
 ```
 
-### Conjunctions
+##### Conjunctions
 
 ```python
 >>> list(tdl.tokenize('supertype1 & supertype2'))
@@ -103,7 +105,7 @@ group of sub-features that share the path prefix:
 
 ```
 
-### Coreference
+##### Coreference
 
 While it was mostly an arbitrary decision, I chose to keep the hash
 character (`#`) on the identifier of the coreference to keep it distinct
@@ -117,7 +119,7 @@ from similar type names.
 
 ```
 
-### Inflectional Rules
+##### Inflectional Rules
 
 Similarly, I chose to keep the bang/exclamation character (`!`) on the
 letterset macro:
@@ -129,23 +131,46 @@ letterset macro:
 ```
 
 
-## Lexing
+## File Operations
 
-Tokenization is a first step; the next step is to group related tokens
+TDL code is stored in grammar files, so the more sophisticated parsing
+functions, like `tdl.lex()` and `tdl.parse()`, work on file-like
+objects. Normally this is an open file:
+
+```python
+grammar = tdl.parse(open('mygrammar.tdl', 'r'))
+```
+
+Sometimes you may have a string you want to use with these functions.
+For example, when running this file as a doctest, or if the code is
+being filtered by a program, etc. Python's `io.StringIO()` and
+`io.BytesIO()` functions make this easy. Use `io.StringIO()` for
+unicode data (regular strings in Python 3 or `unicode` objects in
+Python 2), and `io.BytesIO()` for byte strings (`bytes` objects in
+Python 3 or `str` objects in Python 2). To help this file run as a
+doctest for both Python 2 and 3, I define the following function:
+
+```python
+>>> from io import StringIO, BytesIO
+>>> from delphin.lib.six import PY3
+>>> file_from_string = StringIO if PY3 else BytesIO
+
+```
+
+### Lexing
+
+After tokenization, the next step is to group related tokens
 and classify the group by its purpose. The `tdl.lex()` function does
-that. `tdl.lex()` works on file objects, so if you're using a string,
-the `io.StringIO()` class in the Python standard libraries is useful
-to emulate file objects.
+that.
 
 For convenience:
 
 ```python
->>> from io import StringIO
->>> lex = lambda s: list(tdl.lex(StringIO(s)))
+>>> def lex(s): return list(tdl.lex(file_from_string(s)))
 
 ```
 
-### Type Definitions
+##### Type Definitions
 
 Type definitions can be simple type hierarchies, type and feature
 definitions, type addenda, or affixing inflectional rules.
@@ -169,7 +194,7 @@ definitions, type addenda, or affixing inflectional rules.
 
 ```
 
-### Comments
+##### Comments
 
 Comments can be on a single line or span multiple lines:
 
@@ -185,7 +210,7 @@ Comments can be on a single line or span multiple lines:
 
 ```
 
-### Lettersets
+##### Lettersets
 
 Letter sets function like macros for affixing rules.
 
@@ -210,11 +235,11 @@ return a `TdlType` object for every type definition in the file.
 For convenience:
 
 ```python
->>> parsetdl = lambda s: next(tdl.parse(StringIO(s)))
+>>> def parsetdl(s): return next(tdl.parse(file_from_string(s)))
 
 ```
 
-### Basic Subtyping
+##### Basic Subtyping
 
 ```python
 >>> t = parsetdl('type-name := supertype.')
@@ -230,7 +255,7 @@ For convenience:
 
 ```
 
-### Basic Features
+##### Basic Features
 
 An AVM with no features:
 
@@ -330,7 +355,7 @@ Multiple features on a sub-AVM:
 
 ```
 
-### Features with Supertypes
+##### Features with Supertypes
 
 The `features()` function stops when a value with a type is found, but
 the `local_constraints()` function retrieves the full paths of all
@@ -351,7 +376,7 @@ constraints on the type:
 
 ```
 
-### Normal Lists
+##### Normal Lists
 
 Empty lists return `None` (an thus cannot be further specified with
 values later):
@@ -434,7 +459,7 @@ A dot (`.`), instead of a comma, delimiter allows access to the final
 
 ```
 
-### Diff Lists
+##### Diff Lists
 
 Empty diff lists link the `LIST` path to the `LAST` path:
 

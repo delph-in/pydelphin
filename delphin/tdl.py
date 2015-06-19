@@ -1,6 +1,7 @@
 import re
 from collections import deque, defaultdict
 from itertools import chain
+from delphin.lib.six import raise_from
 from delphin._exceptions import TdlError, TdlParsingError
 
 _list_head = 'FIRST'
@@ -181,7 +182,7 @@ def _nest_level(in_pattern, out_pattern, tokens):
     return sum(lookup.get(tok, 0) for tok in tokens)
 
 
-def parse(f):   
+def parse(f):
     for line_no, event, data in lex(f):
         data = deque(data)
         try:
@@ -214,10 +215,10 @@ def parse_typedef(tokens):
         )
     except AssertionError as ex:
         msg = 'Remaining tokens: {}'.format(list(tokens))
-        raise TdlParsingError(msg, identifier=identifier) from ex
+        raise_from(TdlParsingError(msg, identifier=identifier), ex)
     except StopIteration as ex:
         msg = 'Unexpected termination.'
-        raise TdlParsingError(msg, identifier=identifier or '?') from ex
+        raise_from(TdlParsingError(msg, identifier=identifier or '?'), ex)
     return t
 
 

@@ -9,14 +9,16 @@
 #
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
+from __future__ import print_function
+
 from collections import OrderedDict
-from io import BytesIO
 import re
+import xml.etree.ElementTree as etree
+
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
 from delphin.mrs.components import (nodes, links)
 from delphin.mrs.config import QUANTIFIER_POS
-
-import xml.etree.ElementTree as etree
+from delphin.mrs.util import etree_tostring
 
 ##############################################################################
 ##############################################################################
@@ -30,11 +32,13 @@ def load(fh, single=False):
     return ms
 
 
-def loads(s, single=False, encoding='utf-8'):
-    ms = decode(BytesIO(bytes(s, encoding=encoding)))
+def loads(s, single=False):
+    corpus = etree.fromstring(s)
     if single:
-        ms = next(ms)
-    return ms
+        ds = decode_dmrs(next(corpus))
+    else:
+        ds = (decode_dmrs(dmrs_elem) for dmrs_elem in corpus)
+    return ds
 
 
 def dump(fh, ms, **kwargs):
@@ -164,11 +168,11 @@ def encode(ms, strict=False, encoding='unicode', pretty_print=False):
     # for now, pretty_print=True is the same as pretty_print='LKB'
     if pretty_print in ('LKB', 'lkb', 'Lkb', True):
         lkb_pprint_re = re.compile(r'(<dmrs[^>]+>|</node>|</link>|</dmrs>)')
-        string = str(etree.tostring(e, encoding=encoding))
+        string = str(etree_tostring(e, encoding=encoding))
         return lkb_pprint_re.sub(r'\1\n', string)
     # pretty_print is only lxml. Look into tostringlist, maybe?
     # return etree.tostring(e, pretty_print=pretty_print, encoding='unicode')
-    return etree.tostring(e, encoding=encoding)
+    return etree_tostring(e, encoding=encoding)
 
 
 def encode_dmrs(m, strict=False):

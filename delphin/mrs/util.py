@@ -80,3 +80,17 @@ def rargname_sortkey(rargname):
         rargname.endswith('HNDL'),
         rargname
     )
+
+
+# Python2 doesn't have 'unicode' as an encoding option, so fake it
+# (inefficiently, but oh well)
+import xml.etree.ElementTree as etree
+try:
+    etree.tostring(etree.Element('tag'), encoding='unicode')
+    etree_tostring = etree.tostring
+except LookupError:
+    def etree_tostring(elem, encoding='unicode', **kwargs):
+        if encoding == 'unicode':
+            return etree.tostring(elem, encoding='utf-8', **kwargs).decode('utf-8')
+        else:
+            return etree.tostring(elem, encoding=encoding, **kwargs)
