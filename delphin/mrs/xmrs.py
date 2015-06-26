@@ -65,7 +65,7 @@ class Xmrs(LnkMixin):
         self._nodeids = []
         self._eps = {}
         self._hcons = {}
-        self._icons = defaultdict(list)
+        self._icons = {}
         self._vars = defaultdict(
             lambda: {'props': [], 'refs': defaultdict(list)}
         )
@@ -161,6 +161,8 @@ class Xmrs(LnkMixin):
                 )
             left = ic[0]
             right = ic[2]
+            if left not in _icons:
+                _icons[left] = []
             _icons[left].append(ic)
             # the following should also ensure left and right are in _vars
             if 'icrefs' not in _vars[right]:
@@ -178,32 +180,23 @@ class Xmrs(LnkMixin):
     def __contains__(self, obj):
         return obj in self._eps or obj in self._vars
 
-    def __hash__(self):
-        # isomorphic MRSs should hash to the same thing, but
-        # calculating isomorphism is expensive. Approximate it.
-        return hash(' '.join(
-            sorted(
-                '{}:{}'.format(ep.pred.short_form(), len(ep.argdict))
-                for ep in self._eps.values()
-            )
-        ))
-
     def __eq__(self, other):
         # actual equality is more than isomorphism, all variables and
         # things must have the same form, not just the same shape
         if not isinstance(other, Xmrs):
-            return False
+            return NotImplemented
         if ((self.top, self.index, self.xarg) !=
                 (other.top, other.index, other.xarg)):
             return False
-        nodeids = sorted(self._nodeids)
-        if nodeids != sorted(other._nodeids):
+        a, b = sorted(self.eps()), sorted(other.eps())
+        if len(a) != len(b) or any(ep1 != ep2 for ep1, ep2 in zip(a, b)):
             return False
-        zipped_ps = zip(self.eps(nodeids=nodeids),
-                         other.eps(nodeids=nodeids))
-        for p1, p2 in zipped_ps:
-            if p1 != p2:
-                return False
+        a, b = sorted(self.hcons()), sorted(other.hcons())
+        if len(a) != len(b) or any(hc1 != hc2 for hc1, hc2 in zip(a, b)):
+            return False
+        a, b = sorted(self.icons()), sorted(other.icons())
+        if len(a) != len(b) or any(ic1 != ic2 for ic1, ic2 in zip(a, b)):
+            return False
         return True
 
     @property
@@ -293,11 +286,8 @@ class Xmrs(LnkMixin):
 
         Args:
             label: The label from which to find head nodes/EPs.
-            single: If False, find all possible heads, otherwise find
-                the most "heady" one.
         Returns:
-            A nodeid, if single is True, otherwise an iterable of
-            nodeids.
+            An iterable of nodeids.
         """
         _eps = self._eps
         _vars = self._vars
@@ -387,7 +377,7 @@ class Xmrs(LnkMixin):
             hc = _hcons.get(var, None)
             if hc is not None and hc[2] in lbls:
                 hcons.append(hc)
-            for ic in _icons[var]:
+            for ic in _icons.get(var, []):
                 if ic[0] in subvars and ic[2] in subvars:
                     icons.append(ic)
         return Xmrs(

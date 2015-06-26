@@ -9,7 +9,7 @@ class PyTest(TestCommand):
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        self.pytest_args = []
+        self.pytest_args = ['--doctest-glob=tests/*.md']
 
     def finalize_options(self):
         TestCommand.finalize_options(self)
@@ -37,6 +37,9 @@ setup(
         'Intended Audience :: Information Technology',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
@@ -54,6 +57,8 @@ setup(
         'delphin.codecs'
     ],
     install_requires=[
+        'networkx',
+        'Pygments'
     ],
     # entry_points={
     #     'console_scripts': [

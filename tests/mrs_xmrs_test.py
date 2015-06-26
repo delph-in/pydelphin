@@ -61,12 +61,9 @@ class TestXmrs():
 
     def test_add_hcons(self):
         x = Xmrs()
-        # only hi
         with pytest.raises(XmrsError):
-            x.add_hcons([('h0')])
-        # only hi and relation
-        with pytest.raises(XmrsError):
-            x.add_hcons([('h0', 'qeq')])
+            x.add_hcons([('h0')])  # only hi
+            x.add_hcons([('h0', 'qeq')])  # only hi and relation
         # hi, relation, and lo (the minimum, but probably max, too)
         x.add_hcons([('h0', 'qeq', 'h1')])
         assert len(x.hcons()) == 1
@@ -82,12 +79,9 @@ class TestXmrs():
 
     def test_add_icons(self):
         x = Xmrs()
-        # only hi
         with pytest.raises(XmrsError):
-            x.add_icons([('x0')])
-        # only hi and relation
-        with pytest.raises(XmrsError):
-            x.add_icons([('x0', 'topic')])
+            x.add_icons([('x0')])  # only left
+            x.add_icons([('x0', 'topic')])  # only left and relation
         # hi, relation, and lo (the minimum, but probably max, too)
         x.add_icons([('x0', 'topic', 'x1')])
         assert len(x.icons()) == 1
@@ -114,24 +108,36 @@ class TestXmrs():
         x = Xmrs(xarg='e0')
         assert x.xarg == 'e0'
 
-    def test_eps(self):
-        x = Xmrs()
+    def test_ep(self):
         sp = Pred.stringpred
+        x = Xmrs()
+        with pytest.raises(TypeError):
+            x.ep()
+        with pytest.raises(KeyError):
+            x.ep(10)
+        x.add_eps([(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
+        assert x.ep(10)[1] == sp('_n_n_rel')
+
+    def test_eps(self):
+        sp = Pred.stringpred
+        x = Xmrs()
         assert len(x.eps()) == 0
         x.add_eps([(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
-        assert len(x.eps()) == 1
-        assert x.eps()[0][0] == 10
-        assert x.eps()[0][1] == sp('_n_n_rel')
-        assert x.eps()[0][2] == 'h3'
-        assert x.eps()[0][3] == {'ARG0': 'x4'}
+        eps = x.eps()
+        assert len(eps) == 1
+        assert eps[0][0] == 10
+        assert eps[0][1] == sp('_n_n_rel')
+        assert eps[0][2] == 'h3'
+        assert eps[0][3] == {'ARG0': 'x4'}
         x.add_eps([
             (11, sp('_q_q_rel'), 'h5', {'ARG0': 'x4', 'RSTR': 'h6'}),
             (12, sp('_v_v_rel'), 'h7', {'ARG0': 'e2', 'ARG1': 'x4'})
         ])
-        assert len(x.eps()) == 3
-        assert x.eps()[0][1] == sp('_n_n_rel')
-        assert x.eps()[1][1] == sp('_q_q_rel')
-        assert x.eps()[2][1] == sp('_v_v_rel')
+        eps = x.eps()
+        assert len(eps) == 3
+        assert eps[0][1] == sp('_n_n_rel')
+        assert eps[1][1] == sp('_q_q_rel')
+        assert eps[2][1] == sp('_v_v_rel')
         # make sure order is preserved
         x = Xmrs()
         x.add_eps([
@@ -139,11 +145,61 @@ class TestXmrs():
             (11, sp('_q_q_rel'), 'h5', {'ARG0':'x4', 'RSTR': 'h6'}),
             (10, sp('_n_n_rel'), 'h3', {'ARG0':'x4'})
         ])
-        assert x.eps()[0][1] == sp('_v_v_rel')
-        assert x.eps()[1][1] == sp('_q_q_rel')
-        assert x.eps()[2][1] == sp('_n_n_rel')
+        eps = x.eps()
+        assert eps[0][1] == sp('_v_v_rel')
+        assert eps[1][1] == sp('_q_q_rel')
+        assert eps[2][1] == sp('_n_n_rel')
+        # only get with given nodeids and in that order
+        eps = x.eps(nodeids=[10, 11])
+        assert eps[0][1] == sp('_n_n_rel')
+        assert eps[1][1] == sp('_q_q_rel')
+        # but asking for a non-existing one raises a KeyError
+        with pytest.raises(KeyError):
+            x.eps(nodeids=[10, 13])
 
-    def test_variables(self):
+    def test_hcon(self):
+        x = Xmrs()
+        with pytest.raises(TypeError):
+            x.hcon()
+        with pytest.raises(KeyError):
+            x.hcon('h0')
+        x.add_hcons([('h0', 'qeq', 'h1')])
+        assert x.hcon('h0') == ('h0', 'qeq', 'h1')
+        with pytest.raises(KeyError):
+            x.hcon('h1')
+
+    def test_hcons(self):
+        x = Xmrs()
+        assert len(x.hcons()) == 0
+        x.add_hcons([('h0', 'qeq', 'h1')])
+        hcs = x.hcons()
+        assert len(hcs) == 1
+        assert hcs[0] == ('h0', 'qeq', 'h1')
+        x.add_hcons([('h3', 'qeq', 'h5')])
+        hcs = sorted(x.hcons())  # hcons are not stored in sorted order
+        assert len(hcs) == 2
+        assert hcs[1] == ('h3', 'qeq', 'h5')
+
+    def test_icons(self):
+        x = Xmrs()
+        with pytest.raises(KeyError):
+            x.icons(left='x5')
+        assert len(x.icons()) == 0
+        x.add_icons([('e2', 'topic', 'e5')])
+        ics = x.icons()
+        assert len(ics) == 1
+        assert ics[0] == ('e2', 'topic', 'e5')
+        x.add_icons([('e2', 'focus', 'x4'), ('x7', 'info-str', 'x9')])
+        ics = x.icons(left='e2')  # icons are not stored sorted
+        assert len(ics) == 2
+        assert set(ics) == {('e2', 'topic', 'e5'), ('e2', 'focus', 'x4')}
+        with pytest.raises(KeyError):
+            assert len(x.icons(left='e5')) == 0
+            assert len(x.icons(left='x4')) == 0
+            assert len(x.icons(left='x9')) == 0
+        assert len(x.icons(left='x7')) == 1
+
+    def test_variables_and_properties(self):
         sp = Pred.stringpred
         # variables can be passed in with properties
         x = Xmrs(vars={'x1':{'PERS':'3','NUM':'sg'}, 'e2':{'SF':'prop'}})
@@ -185,25 +241,60 @@ class TestXmrs():
                        {'ARG0': 'e2', 'ARG1': '1', 'ARG2': '"x5"'})])
         assert set(x.variables()) == {'h3', 'e2'}
 
+    def test_pred(self): pass
+    def test_preds(self): pass
+    def test_label(self): pass
+    def test_labels(self): pass
+    def test_args(self): pass
+    def test_outgoing_args(self): pass
+    def test_incoming_args(self): pass
+
     def test___eq__(self):
-        pass
+        x = read('[ TOP: h0 RELS: < [ _v_v_rel LBL: h1 ARG0: e2 ] > ]')
+        # just a string
+        assert x != '[ TOP: h0 RELS: < [ _v_v_rel LBL: h1 ARG0: e2 ] > ]'
+        # comparing the same Xmrs objects is fine
+        y = read('[ TOP: h0 RELS: < [ _v_v_rel LBL: h1 ARG0: e2 ] > ]')
+        assert x == y
+        # different var names
+        y = read('[ TOP: h0 RELS: < [ _v_v_rel LBL: h1 ARG0: e5 ] > ]')
+        assert x != y
+        # different var locations
+        y = read('[ TOP: h1 RELS: < [ _v_v_rel LBL: h0 ARG0: e2 ] > ]')
+        assert x != y
+        # different var associations
+        y = read('[ TOP: h0 RELS: < [ _v_v_rel LBL: h0 ARG0: e2 ] > ]')
+        assert x != y
+        # hcons vs none
+        y = read('[ TOP: h0 RELS: < [ _v_v_rel LBL: h1 ARG0: e2 ] > '
+                 '  HCONS: < h0 qeq h1 > ]')
+        assert x != y
 
     def test___contains__(self):
-        pass
+        x = Xmrs()
+        assert 'x1' not in x
+        assert 10000 not in x
+        assert 0 not in x
+        assert None not in x
+        x = read('[ TOP: h0 ]')
+        assert 'h0' in x
+        assert 10000 not in x
+        assert 0 not in x
+        x = read('[ TOP: h0 RELS: < [ _v_v_rel LBL: h1 ARG0: e2 ] > ]')
+        assert all(_ in x for _ in ('h0', 'h1', 'e2', 10000)) == True
+        assert 10001 not in x
+        assert '10000' not in x
+        assert '_v_v_rel' not in x
+        assert Pred.stringpred('_v_v_rel') not in x
 
-    def test_outgoing_args(self):
-        pass
-
-    def test_incoming_args(self):
-        pass
+    def test_labelset(self): pass
+    def test_labelset_heads(self): pass
 
     def test_is_connected(self):
         # empty Xmrs objects cannot be checked for connectedness
         with pytest.raises(XmrsError):
             Xmrs().is_connected()
-        with pytest.raises(XmrsError):
             Xmrs(top='h0').is_connected()
-        with pytest.raises(XmrsError):
             Xmrs(hcons=[('h0', 'qeq', 'h1')]).is_connected()
         # just a pred is fine (even without ARG0)
         x = Xmrs(eps=[(10, Pred.stringpred('_v_v_rel'), 'h1', {})])

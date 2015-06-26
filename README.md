@@ -49,7 +49,7 @@ Here's an example of loading a SimpleMRS representation:
 MrsVariable(h1)
 >>> for r in m.rels:
 ...     print(r.pred)
-... 
+...
 udef_q_rel
 "_ame_n_rel"
 "_furu_v_1_rel"
@@ -207,7 +207,9 @@ $ ./pyDelphin --input ~/logon/dfki/jacy/tsdb/gold/mrs \
 pyDelphin is developed for [Python 3](http://python.org/download/),
 but it has also been tested to work with Python 2.6+. The
 [Pygments](http://pygments.org/) package is required for TDL and
-SimpleMRS syntax highlighting.
+SimpleMRS syntax highlighting, and
+[NetworkX](http://networkx.github.io/) is required for isomorphism
+checking.
 
 Likely pyDelphin does not need to be installed to be used. You can
 adjust `PYTHONPATH` to include the pyDelphin directory, or copy the
