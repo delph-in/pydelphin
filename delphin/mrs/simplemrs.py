@@ -306,9 +306,14 @@ def _read_cons(tokens, constype, vars_):
         tokens.popleft()  # :
         tokens.popleft()  # <
         while tokens[0] != _right_angle:
+            # NOTE: I don't think properties are allowed on variables
+            #  in the *CONS lists, but I could be wrong. For now, throw
+            #  them away if they are there.
             left = tokens.popleft()
+            _ = _read_props(tokens)  # throw away for now
             reln = tokens.popleft()
             rght = tokens.popleft()
+            _ = _read_props(tokens)  # throw away for now
             cons.append((left, reln, rght))
             # now just make sure they are in the vars_ dict
             vars_.setdefault(left, [])
@@ -535,6 +540,8 @@ def read_icons(tokens, variables=None):
     icons = []
     validate_tokens(tokens, [_colon, _left_angle])
     while tokens[0] != _right_angle:
+        # NOTE: This ignores any properties specified on the variables
+        #  (I don't think this is allowed anyway, but i'm not sure yet)
         left = read_variable(tokens, variables=variables)[0]
         relation = tokens.popleft().lower()
         right = read_variable(tokens, variables=variables)[0]
