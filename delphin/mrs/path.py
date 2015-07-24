@@ -69,8 +69,10 @@ def _walk(nodeid, linkdict, visited, method, sort_key):
     axes = sorted(_get_axes(method, local_links), key=sort_key)
     for axis in axes:
         tgtnid = local_links[axis]
-        # don't follow undirected links twice
+        # if this undirected link was already traversed in the other
+        # direction, just yield this step but don't recurse
         if axis == ':/EQ:' and tgtnid in visited:
+            yield (nodeid, tgtnid, axis)
             continue
         yield (nodeid, tgtnid, axis)
         for step in _walk(tgtnid, linkdict, visited, method, sort_key):
@@ -510,7 +512,9 @@ def _explore(
     # remove :/EQ: if necessary and generate mapping for overlapping axes
     overlap = {}
     for end, axes in steps.items():
-        if not (flags & UNDIRECTEDAXES):
+        if (':/EQ:' in axes and
+                (not (flags & UNDIRECTEDAXES) or
+                 (end in visited and ':/EQ:' in stepmap[end].get(start, [])))):
             axes.difference_update([':/EQ:'])
         if len(axes) > 1:
             # don't sort if this significantly hurts performance
