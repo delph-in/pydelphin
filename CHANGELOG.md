@@ -48,6 +48,8 @@ unit tests for pyDelphin.
   - delphin._exceptions.TdlParsingError
 * delphin.mrs.simplemrs no longer crashes if variable properties are
   specified on the HCONS or ICONS lists (but the varprops are ignored)
+* Xmrs now converts variable properties to lists on construction, in
+  case a dict is given (which caused problems during serialization).
 
 ### Changed
 

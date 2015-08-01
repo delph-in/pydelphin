@@ -78,6 +78,8 @@ class Xmrs(LnkMixin):
         if vars is not None:
             _vars = self._vars
             for var, props in vars.items():
+                if hasattr(props, 'items'):
+                    props = list(props.items())
                 _vars[var]['props'] = props
         if eps is not None:
             self.add_eps(eps)
