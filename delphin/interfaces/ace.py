@@ -45,9 +45,7 @@ class AceProcess(object):
     def interact(self, datum):
         self.send(datum)
         result = self.receive()
-        return result
-
-    def read_result(self, result):
+        result['INPUT'] = datum
         return result
 
     def close(self):
@@ -62,6 +60,7 @@ class AceParser(AceProcess):
 
     def receive(self):
         response = {
+            'INPUT': None,
             'NOTES': [],
             'WARNINGS': [],
             'ERRORS': [],
@@ -84,7 +83,7 @@ class AceParser(AceProcess):
                   line.startswith('WARNING') or
                   line.startswith('ERROR')):
                 level, message = line.split(': ', 1)
-                response['{}S'.format(level)].append(message)
+                response['%sS' % level].append(message)
             else:
                 mrs, deriv = line.split(' ; ')
                 response['RESULTS'].append({
@@ -101,11 +100,12 @@ class AceGenerator(AceProcess):
 
     def receive(self):
         response = {
-            'NOTE': None,
-            'WARNING': None,
-            'ERROR': None,
+            'INPUT': None,
+            'NOTES': [],
+            'WARNINGS': [],
+            'ERRORS': [],
             'SENT': None,
-            'RESULTS': None
+            'RESULTS': []
         }
         results = []
 
@@ -114,13 +114,13 @@ class AceGenerator(AceProcess):
         while not line.startswith('NOTE: '):
             if line.startswith('WARNING') or line.startswith('ERROR'):
                 level, message = line.split(': ', 1)
-                response[level] = message
+                response['%sS' % level] = message
             else:
-                results.append(line)
+                results.append({'SENT': line})
             line = stdout.readline().rstrip()
         # sometimes error messages aren't prefixed with ERROR
         if line.endswith('[0 results]') and len(results) > 0:
-            response['ERROR'] = '\n'.join(results)
+            response['ERRORS'] = '\n'.join(results)
             results = []
         response['RESULTS'] = results
         return response
@@ -160,22 +160,3 @@ def generate_from_iterable(dat_file, data, **kwargs):
 
 def generate(dat_file, datum, **kwargs):
     return next(generate_from_iterable(dat_file, [datum], **kwargs))
-
-
-# def do(cmd):
-#     # validate cmd here (e.g. that it has a 'grammar' key, correct 'task', etc)
-#     task = cmd['task']
-#     grammar = cmd['grammar']
-#     cmdargs = cmd['arguments'] + ['-g', grammar]
-#     if task == 'parse':
-#         process_output = parse_results
-#     elif task == 'transfer':
-#         process_output = transfer_results
-#     elif task == 'generate':
-#         process_output = generation_results
-#     else:
-#         logging.error('Task "{}" is unsupported by the ACE interface.'
-#                       .format(task))
-#         return
-#     cmdargs = map(lambda a: a.format(**cmd['variables']), cmdargs)
-#     _do()

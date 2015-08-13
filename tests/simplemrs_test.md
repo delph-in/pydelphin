@@ -271,13 +271,14 @@ nicely.
 ```
 
 And by specifying the version to be 1.0, the extra information is not
-printed.
+printed, although for compatibility with ACE the ICONS list is printed.
 
 ```python
 >>> print(simplemrs.dumps([m], pretty_print=True, version=1.0))
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
-  HCONS: < h0 qeq h1 > ]
+  HCONS: < h0 qeq h1 >
+  ICONS: < e2 focus e2 > ]
 
 ```

@@ -310,14 +310,16 @@ def _read_cons(tokens, constype, vars_):
             #  in the *CONS lists, but I could be wrong. For now, throw
             #  them away if they are there.
             left = tokens.popleft()
-            _ = _read_props(tokens)  # throw away for now
+            lprops = _read_props(tokens)
             reln = tokens.popleft()
             rght = tokens.popleft()
-            _ = _read_props(tokens)  # throw away for now
+            rprops = _read_props(tokens)
             cons.append((left, reln, rght))
-            # now just make sure they are in the vars_ dict
-            vars_.setdefault(left, [])
-            vars_.setdefault(rght, [])
+            # update properties
+            if left not in vars_: vars_[left] = []
+            vars_[left].extend(lprops)
+            if rght not in vars_: vars_[rght] = []
+            vars_[rght].extend(lprops)
         tokens.popleft()  # >
     return cons
 
@@ -598,7 +600,7 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
     ))
     toks += [serialize_hcons(hcons(m))]
     icons_ = icons(m)
-    if version >= 1.1 and icons_:  # remove `and icons_` for "ICONS: < >"
+    if icons_:  # make unconditional for "ICONS: < >"
         toks += [serialize_icons(icons_)]
     delim = ' ' if not pretty_print else '\n  '
     return '{} {} {}'.format(_left_bracket, delim.join(toks), _right_bracket)

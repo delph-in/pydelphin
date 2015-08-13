@@ -8,7 +8,7 @@ except ImportError:
 from itertools import starmap
 from functools import total_ordering
 
-from delphin._exceptions import XmrsStructureError
+from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE,
     HANDLESORT, CVARSORT, QUANTIFIER_POS,
@@ -50,7 +50,7 @@ class VarGenerator(object):
     def new(self, sort, properties=None):
         varstring = '{}{}'.format(sort, self.vid)
         if properties is None:
-            properties = {}
+            properties = []
         self.store[varstring] = properties
         self.vid += 1
         return (varstring, properties)
@@ -104,6 +104,12 @@ class Lnk(namedtuple('Lnk', ('type', 'data'))):
     TOKENS = 2  # Token numbers: a list of indices
     EDGE = 3  # An edge identifier: a number
 
+    def __init__(self, type, data):
+        # class methods below use __new__ to instantiate data, so
+        # don't do it here
+        if type not in (Lnk.CHARSPAN, Lnk.CHARTSPAN, Lnk.TOKENS, Lnk.EDGE):
+            raise XmrsError('Invalid Lnk type: {}'.format(type))
+
     @classmethod
     def charspan(cls, start, end):
         """
@@ -150,11 +156,11 @@ class Lnk(namedtuple('Lnk', ('type', 'data'))):
         if self.type == Lnk.CHARSPAN:
             return '<{}:{}>'.format(self.data[0], self.data[1])
         elif self.type == Lnk.CHARTSPAN:
-            return '<{}#{}>'.format(self.data[0], self.data[2])
+            return '<{}#{}>'.format(self.data[0], self.data[1])
         elif self.type == Lnk.EDGE:
             return '<@{}>'.format(self.data)
         elif self.type == Lnk.TOKENS:
-            return '<{}>'.format(' '.join(self.data))
+            return '<{}>'.format(' '.join(map(str, self.data)))
 
     def __repr__(self):
         return '<Lnk object {} at {}>'.format(str(self), id(self))
@@ -413,12 +419,12 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
     @classmethod
     def stringpred(cls, predstr):
-        lemma, pos, sense, end = split_pred_string(predstr.strip('"\''))
+        lemma, pos, sense, end = split_pred_string(predstr)
         return cls(Pred.STRINGPRED, lemma, pos, sense, predstr)
 
     @classmethod
     def grammarpred(cls, predstr):
-        lemma, pos, sense, end = split_pred_string(predstr.strip('"\''))
+        lemma, pos, sense, end = split_pred_string(predstr)
         return cls(Pred.GRAMMARPRED, lemma, pos, sense, predstr)
 
     @staticmethod
@@ -468,6 +474,7 @@ def split_pred_string(predstr):
         >>> Pred.split_pred_string('quant_rel')
         ('quant', None, None, 'rel')
     """
+    predstr = predstr.strip('"\'')  # surrounding quotes don't matter
     if not predstr.lower().endswith('_rel'):
         logging.debug('Predicate does not end in "_rel": {}'
                       .format(predstr))
@@ -480,18 +487,16 @@ def split_pred_string(predstr):
             match.group('sense'), match.group('end'))
 
 
-def is_valid_pred_string(predstr, suffix_required=True):
+def is_valid_pred_string(predstr):
     """
     Return True if the given predicate string represents a valid
-    Pred, False otherwise. If suffix_required is False,
-    abbreviated Pred strings will be accepted (e.g. _dog_n_1
-    instead of _dog_n_1_rel)
+    Pred, False otherwise.
     """
     predstr = predstr.strip('"').lstrip("'")
-    if (not suffix_required and
-        predstr.rsplit('_', 1)[-1] not in ('rel', 'relation')):
-        predstr += '_rel'
-    return Pred.pred_re.match(predstr) is not None
+    if not predstr.endswith('_rel'):
+        return False
+    # this is a stricter regex than in Pred, but doesn't check POS
+    return re.match(r'_?((?:[^_\\]|\\.)+_){1,3}rel', predstr) is not None
 
 
 def normalize_pred_string(predstr):
@@ -504,7 +509,10 @@ def normalize_pred_string(predstr):
              Pred.pred_re.match(predstr + '_rel'))
     if match:
         d = match.groupdict()
-        tokens = [d['lemma']]
+        tokens = []
+        if predstr.startswith('_'):
+            tokens.append('')  # so initial _ is joined
+        tokens.append(d['lemma'])
         if d['pos']:
             tokens.append(d['pos'])
         if d['sense']:

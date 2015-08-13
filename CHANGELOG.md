@@ -47,9 +47,10 @@ unit tests for pyDelphin.
 * Python 2.6+ compatibility
   - delphin._exceptions.TdlParsingError
 * delphin.mrs.simplemrs no longer crashes if variable properties are
-  specified on the HCONS or ICONS lists (but the varprops are ignored)
+  specified on the HCONS or ICONS lists
 * Xmrs now converts variable properties to lists on construction, in
   case a dict is given (which caused problems during serialization).
+* delphin.mrs.components.normalize_pred_string() is more robust
 
 ### Changed
 
@@ -65,11 +66,16 @@ unit tests for pyDelphin.
     - All (remaining) components for building MRS structures are now
       subclasses of namedtuples. This means the individual attributes
       cannot be reassigned (but mutable ones can be changed).
+    - Lnk can no longer be instantiated with non-standard types
     - Lnk parameters are reversed: Lnk(type, data) (I don't remember
       why, though)
+    - VarGenerator stores properties as a list by default (as is done
+      with Xmrs properties)
+    - is_valid_pred_string() is stricter in checking for valid preds
   - config.QUANTIFIER_SORT renamed to QUANTIFIER_POS
   - simplemrs.load() and loads() take a "strict" parameter (if True,
     more tests are performed during parsing)
+  - simplemrs.dump() and dumps() will output ICONS even with version=1.0
   - dmrx.loads() no longer has an "encoding" parameter
   - mrx
     - loads() no longer takes an "encoding" parameter
@@ -79,6 +85,11 @@ unit tests for pyDelphin.
       "nodeid"
     - select_icons() "target" and "clause" parameters renamed to "left"
       and "right", respectively
+* delphin.interfaces.ace
+  - `INPUT` key is added when AceProcess.interact() is called.
+  - Generation response dictionaries are made consistent with parsing
+    ones (including having dictionaries in RESULTS instead of just
+    strings)
 * test now use pyTest for unittests (and doctests)
 
 ### Removed
