@@ -29,7 +29,6 @@ setup(
     author='Michael Wayne Goodman',
     author_email='goodman.m.w@gmail.com',
     description='Libraries and scripts for DELPH-IN data.',
-<<<<<<< HEAD
     license='MIT',
     classifiers=[
         'Development Status :: 4 - Beta',

@@ -1,372 +1,222 @@
+
 import re
+from collections import namedtuple
 
-class Derivation(object):
+
+class UdfNode(
+    namedtuple('UdfNode',
+               ('id', 'entity', 'score', 'start', 'end', 'daughters'))):
     """
-    A class for reading, writing, and storing derivation tree objects.
-
-    @author: T.J. Trimble
+    Normal (non-leaf) nodes in the Unified Derivation Format. Root nodes
+    are just UdfNodes whose *id*, by convention, is `None`. The
+    *daughters* list can composed of either UdfNodes or other objects
+    (generally it should be uniformly one or the other). In the latter
+    case, the UdfNode is a preterminal, and the daughters are terminal
+    nodes.
+    See: http://moin.delph-in.net/ItsdbDerivations
     """
 
-    legal_punctuation = re.escape("'’-+=/:.!?$<>@#%^&*")
-    strip_quotes = re.compile("^[\'\"]|[\'\"]$")
-    ace_pattern = " ".join(("(?P<EDGE_ID>\d+)",
-                            "(?P<LABEL>{0}[\w{1}]+{0})",
-                            "(?P<TOKEN>({0}[\w{1}]+{0}|nil))",
-                            "(?P<CHART_ID>\d+)",
-                            "(?P<RULE_NAME>[\w{1}]+)",)).format("[\'\"]?", legal_punctuation)
+    def __new__(cls, id, entity,
+                score=None, start=None, end=None, daughters=None):
+        # numeric fields can be underspecified as -1 if not a root
+        if id is not None:
+            id = int(id)
+            score = -1.0 if score is None else float(score)
+            start = -1 if start is None else int(start)
+            end = -1 if end is None else int(end)
+        # for convenience make sure daughters is a list if None
+        if daughters is None: daughters = []
+        # make sure daughters are not roots (is this check unnecessary?)
+        for dtr in daughters:
+            if isinstance(dtr, UdfNode) and dtr.id is None:
+                raise ValueError(
+                    'Daughter nodes cannot be roots (with id=None).'
+                )
+        return super(UdfNode, cls).__new__(
+            cls, id, entity, score, start, end, daughters
+        )
 
-    def __init__(self, definition, data_package=None, children=None):
-        """
-        Two constructors:
-            Derivation(str:definition):
-                Construct a Derivation object from a bracketed tree structure from ACE.
-                ex. Derivation("#T[<EDGE_ID> "<LABEL>" "<TOKEN>"|nil >CHART_ID> <RULE_NAME> <CHILDREN>]")
+    def __repr__(self):
+        return '<UdfNode object ({}) at {}>'.format(self.entity, id(self))
 
-            Derivation(None, tuple:data_package, list:children):
-                Construct a Derivation object from tuple of values and a list of children.
-                The contents of data_package are:
-                    edge_ID, label, token, chart_ID, rule_name, [tree_ID]
-                ex. Derivation(None, data_package=(...), children=[])
-        """
-        if definition:
-            tree = Derivation.read_ACE(definition)
-            data_package = (tree.edge_ID, tree.label, tree.token, tree.chart_ID, tree.rule_name, tree.tree_ID)
-            children = tree.children
-        if children is None:
-            raise TypeError("%s: Expected a node value and child list "
-                            % type(self).__name__)
-        elif isinstance(children, str):
-            raise TypeError("%s() argument 2 should be a list, not a "
-                            "string" % type(self).__name__)
-        else:
-            if len(data_package) not in (5, 6):
-                raise ValueError("%s() data_package argument must be a "
-                                 "tuple of length 5" % self.__class__.__name__)
-        try:
-            self.children = children
-            self.edge_ID = data_package[0]
-            self.label = Derivation.strip_quotes.sub("", data_package[1])
-            self.token = Derivation.strip_quotes.sub("", data_package[2]) if data_package[2] not in (None, "nil") else None
-            self.chart_ID = data_package[3]
-            self.rule_name = data_package[4]
-            self.tree_ID = data_package[5] if len(data_package) >= 6 else None
-        except Exception as e:
-            print("{} data_package at failue is {}".format(self.__class__.__name__, data_package))
-            raise e
-                
-    # Interface specific methods
-    #  Maybe move these to their respective interface classes?
-
-    @classmethod
-    def read_ACE(cls, s):
-        """
-        Based on NLTK's Tree.fromstring()
-
-        Input Format:
-            tree 1 #T[1 'S' nil 3 subj-head #T[2 'N' 'I' 93 i] #T[2 'V' 'run' 93 run_v1]] "I run"
-        """
-        s = s.strip()
-        # Parse introduction
-        if s.startswith("tree "):
-            _, tree_ID, s = s.split(None, 2)
-            if s.endswith('"'): # Only do this if there's a quote at the end
-                s = s.rsplit('"', 2)[0].strip() # assumes no quote in text
-        else:
-            tree_ID = None
-        # Initialize bracket pointers        
-        open_b = "#T["
-        close_b = "]"
-        open_pattern, close_pattern = (re.escape(open_b), re.escape(close_b))
-        # Leaves and nodes contain non-whitespace, non-bracket characters
-        valid_chars = '[^\s%s%s]+' % (open_pattern, close_pattern)
-        bracket_patterns = '[%s%s]+' % (open_pattern, close_pattern)
-        # Construct a regexp that will tokenize the string.
-        token_re = re.compile('%s%s|%s|(%s)' % (
-            open_pattern, Derivation.ace_pattern, close_pattern, valid_chars))
-        # Walk through each token, updating a stack of trees.
-        stack = [(None, [])] # list of (node, children) tuples
-        tokens = list(token_re.finditer(s))
-        for i, match in enumerate(tokens):
-            token = match.group()
-            # Definition of a tree/subtree
-            #  #T[EDGE_ID LABEL TOKEN CHART_ID RULE_NAME
-            if token.startswith(open_b):
-                if len(stack) == 1 and len(stack[0][1]) > 0:
-                    cls._parse_error(s, match, 'end-of-string')
-                edge_ID = match.group('EDGE_ID')
-                label = match.group('LABEL')
-                token = match.group('TOKEN')
-                chart_ID = match.group('CHART_ID')
-                rule_name = match.group('RULE_NAME')
-                stack.append(((edge_ID, label, token, chart_ID, rule_name), []))
-            # End of a tree/subtree
-            elif token == close_b:
-                if len(stack) == 1:
-                    if len(stack[0][1]) == 0:
-                        cls._parse_error(s, match, open_b)
-                    else:
-                        cls._parse_error(s, match, 'end-of-string')
-                data, children = stack.pop()
-                stack[-1][1].append(cls(None, data_package=data, children=children))
-            # Leaf node
+    def __str__(self):
+        dtrs = []
+        for dtr in self.daughters:
+            if isinstance(dtr, UdfNode):
+                dtrs.append(str(dtr))
             else:
-                if len(stack) == 1:
-                    cls._parse_error(s, match, open_b)
-                stack[-1][1].append(token)
-
-        # check that we got exactly one complete tree.
-        if len(stack) > 1:
-            cls._parse_error(s, 'end-of-string', close_b)
-        elif len(stack[0][1]) == 0:
-            cls._parse_error(s, 'end-of-string', open_b)
+                # terminal (i.e. token) node
+                dtrs.append('({})'.format(' '.join(str(x) for x in dtr)))
+        dtrs = ' '.join(dtrs)
+        if self.id is None:
+            return '({} {})'.format(self.entity, dtrs)
         else:
-            assert stack[0][0] is None
-            assert len(stack[0][1]) == 1
-        tree = stack[0][1][0]
+            # :g for score makes -1.0 look like -1
+            return '({} {} {:g} {} {} {})'.format(
+                self.id,
+                self.entity,
+                self.score,
+                self.start,
+                self.end,
+                dtrs
+            )
 
-        # Get tree ID
-        tree.tree_ID = tree_ID
-        # return the tree
-        return tree
-
-    @classmethod
-    def _parse_error(cls, s, match, expecting):
-        """
-        From NLTK: http://www.nltk.org/_modules/nltk/tree.html
-        """
-        # Construct a basic error message
-        if match == 'end-of-string':
-            pos, token = len(s), 'end-of-string'
-        else:
-            pos, token = match.start(), match.group()
-        msg = '%s.read(): expected %r but got %r\n%sat index %d.' % (
-            cls.__name__, expecting, token, ' '*12, pos)
-        # Add a display showing the error token itsels:
-        s = s.replace('\n', ' ').replace('\t', ' ')
-        offset = pos
-        if len(s) > pos+10:
-            s = s[:pos+10]+'...'
-        if pos > 10:
-            s = '...'+s[pos-10:]
-            offset = 13
-        msg += '\n%s"%s"\n%s^' % (' '*16, s, ' '*(17+offset))
-        raise ValueError(msg)
-
-
-    # Core methods
     def __eq__(self, other):
         """
-        Two trees are equal if their labels, tokens, rule names, and 
-        structures are the same. Edge IDs and chart IDs are irrelevant.
+        Two derivations are equal if their entities, tokenization, and
+        daughters are the same. IDs and scores are irrelevant. Note that
+        edge IDs appearing in leaf nodes are considered, because the
+        formatting of leaf nodes is fairly open.
         """
-        if not isinstance(other, Derivation):
-            return False
+        if not isinstance(other, UdfNode):
+            return NotImplemented
         # Check attributes
-        if self.label != other.label:
+        if self.entity != other.entity:
             return False
-        if self.token != other.token:
+        if self.start != other.start or self.end != other.end:
             return False
-        if self.rule_name != other.rule_name:
+        if len(self.daughters) != len(other.daughters):
             return False
-        ## Check children
-        if len(self.children) != len(other.children):
+        if any(a != b for a, b in zip(self.daughters, other.daughters)):
             return False
-        for i in range(len(self.children)):
-            if self.children[i] != other.children[i]:
-                return False
         # Return true if they're the same!
         return True
 
-    ## Output methods
-    # Standard methods
-    def _output(self, format_string="[{LABEL}{TOKEN}{RULE}{CHILDREN}]"):
-        format_map = {
-            "EDGE_ID": " "+self.edge_ID,
-            "LABEL": " "+self.label if self.label else "XP",
-            "TOKEN": " "+self.token if self.token else "",
-            "CHART_ID": " "+self.chart_ID,
-            "RULE": " "+self.rule_name if self.rule_name else "",
-            "CHILDREN": " {}".format(" ".join(child._output(format_string=format_string) for child in self.children)) if self.children else "",
-        }
-        return format_string.format(**format_map)
+    # for some reason != is not the opposite of __eq__ by default...
+    def __ne__(self, other):
+        ne = self.__eq__(other)
+        if ne is NotImplemented: return ne  # pass this one along
+        return not ne
 
-    def __str__(self):
-        return self._output()
-
-    def __repr__(self):
-        return "<{}:{}>".format(self.__class__.__name__, str(self))
-
-    def output_ACE(self):
+    def is_root(self):
         """
-        Return ACE-like derivation string. Format:
-            #T[{EDGE_ID}{LABEL}{TOKEN}{CHART_ID}{RULE}{CHILDREN}]
-        
-        where values are joined by spaces.
+        Return True if the node is a root node. Note that this is a
+        specific type of node, and not just the top node. By convention,
+        a node is root if its *id* is `None`.
         """
-        return self._output(format_string="#T[{EDGE_ID}{LABEL}{TOKEN}{CHART_ID}{RULE}{CHILDREN}]")
+        return self.id is None
 
-    # HTML Methods
-    def output_HTML(self, top=True, title_text=True):
+    # UDX extensions
+
+    def is_head(self):
         """
-        Returns HTML representation of tree in the following format:
-            
-            <div class="derivationTree" id={TREE_ID}>
-                <ul>
-                    <li>
-                        <a id={CHART_ID}{TITLE}>{PARENT_LABEL}</a>
-                        <ul>
-                            <li><a id={CHART_ID}{TITLE}><p>{TERMINAL_LABEL}</p><p>{TOKEN}</p></a></li>
-                            <li><a id={CHART_ID}{TITLE}><p>{TERMINAL_LABEL}</p><p>{TOKEN}</p></a></li>
-                        </ul>
-                    </li>
-                    <li><a id={CHART_ID}{TITLE}>{TERMINAL_LABEL}</a></li>
-                </ul>
-            </div>
-
-        See http://thecodeplayer.com/walkthrough/css3-family-tree
-        
-        By default, this method returns HTML styled with the HTML's title
-        attribute set to the rule used and the parse chart ID. Pass
-        title_text=False to disable this.
+        Return True if the node is a head, otherwise False. If the
+        derivation is in the export (UDX) format, head entities will be
+        prefixed with a caret (`^`). Note that in regular UDF, this
+        function is meaningless.
         """
-        top_formatter = "<div class=\"derivationTree\"{tree_ID}><ul>{values}</ul></div>"
-        formatter = "<li{CLASS}{CHART_ID}{TITLE}><p>{LABEL}</p>{TOKEN}{CHILDREN}</li>"
-        # Add token if applicable
-        values = {
-            "CLASS": " class=\"terminal\"" if not self.children else "",
-            "CHART_ID": " id={}".format(self.chart_ID),
-            "TITLE": " title=\"{}: {}\"".format(self.chart_ID, self.rule_name) if title_text else "",
-            "LABEL": self.label,
-            "TOKEN": "<p>{}</p>".format(self.token) if self.token else "",
-            "CHILDREN": "<ul>{}</ul>".format("".join(child.output_HTML(top=False, title_text=title_text) for child in self.children)) if self.children else ""
-        }
-        # Return result
-        result = formatter.format(**values)
-        if top:
-            tree_ID = " id=\"{}\"".format(self.tree_ID) if self.tree_ID else ""
-            result = top_formatter.format(tree_ID=tree_ID, values=result)
-        return result
+        return self.entity.startswith('^')
 
-    # Pickle Methods
-    def read(self):
-        pass
+    def basic_entity(self):
+        """
+        Return the entity without the lexical type information. In the
+        export (UDX) format, lexical types follow entities of
+        preterminal nodes, joined by an at-sign (`@`). In regular UDF or
+        non-preterminal nodes, this will just return the entity string.
+        """
+        return self.entity.split('@', 1)[0]
 
-    def reads(self):
-        pass
-
-    def dump(self):
-        pass
-
-    def dumps(self):
-        pass
+    def lexical_type(self):
+        """
+        Return the lexical type of a preterminal node. In export (UDX)
+        format, lexical types follow entities of preterminal nodes,
+        joined by an at-sign (`@`). In regular UDF or non-preterminal
+        nodes, this will return None.
+        """
+        toks = self.entity.split('@', 1)
+        if len(toks) == 2:
+            return toks[-1]
+        return None
 
 
+class Derivation(UdfNode):
+    """
+    A class for reading, writing, and storing derivation trees. Objects
+    of this class are UDF nodes.
+    """
 
-#### ARCHIVE ####
-    # def _parse_definition(self, pointer, i, representation):
-    #     """
-    #     Parses ACE output definition
-    #     """
-    #     print("\nREPRESENTATION: " + str(representation))
-    #     definition = representation[pointer:i].split(None, 5)
-    #     print("\nDEFINITION: " + str(definition))
-    #     try:
-    #         self.edge_ID, self.label, self.token, self.chart_ID, self.rule_name = definition[:5]
-    #     except ValueError as e: # TODO: this
-    #         raise e
+    # note that this regex doesn't have the initial open-parenthesis
+    # (see from_string())
+    udf_re = re.compile(
+            # root symbol
+            r'\s*(?P<root>{token})\s*\('
+            # regular node
+            r'|\s*(?P<id>{token})\s+(?P<entity>{string}|{token})'
+            r'\s+(?P<score>{token})\s+(?P<start>{token})'
+            r'\s+(?P<end>{token})\s*\('
+            # branch end
+            r'|\s*(?P<done>\))'
+            # terminal node (lexical token info; unbound list)
+            r'|\s*(?P<tokens>(?:{string}|{token}|\s+)*)\s*\)'
+            .format(token=r'[^\s()]+', string=r'"[^"\\]*(?:\\.[^"\\]*)*"')
+        )
 
-    # def read_ACE(self, representation):
-    #     # 'TREE_ID #T[EDGE_ID "LABEL" ("TOKEN"|nil) CHART_ID RULE_NAME [#T[]]]'
-    #     # 'No parse found for X'
-    #     if representation.startswith('No parse found for '):
-    #         self.no_parse = True
-    #         return
-    #     print("NEW TREE! parent: " + str(self.parent or "None"))
-    #     representation = representation.strip()
-    #     self.children = []
-    #     # Parse representation
-    #     self.pointer = 2 if representation.startswith("#T[") else 0 # base case
-    #     length = len(representation)
-    #     i = 0
-    #     while True:
-    #         c = representation[i]
-    #         print(c, end=" ")
-    #         if c == "[":
-    #             print("\n[ at %s, pointer is at %s" % (str(i), str(self.pointer)))
-    #             if i != self.pointer: # avoids base case
-    #                 # Found a definition
-    #                 self._parse_definition(self.pointer, i, representation)
-    #                 print("REST: " + str(representation[i:]))
-    #                 child = Derivation(representation[i:], parent=self)
-    #                 print(" CHILD %s -> %s" % (child.label, self))
-    #                 self.children.append(child)
-    #                 i += child.pointer+4 # Hop over parsed child
-    #                 # find next bracket
-    #                 self.pointer = i-1
-    #                 print("Jumped to: " + str(i))
-    #             else:
-    #                 self.pointer = i+1 # base case
-    #         elif c == "]":
-    #             print("\n] at " + str(i)) 
-    #             # terminal case
-    #             if self.pointer == 1:
-    #                 self._parse_definition(self.pointer, i, representation)
-    #             self.pointer = i # Mark position of end bracket
-    #             return # stop parsing
-    #         i += 1
-    #         if i >= len(representation):
-    #             raise ValueError("Unbalanced parentheses!") # TODO: this
-        
-    # def read_ACE(self, representation):
-    #     # 'TREE_ID #T[EDGE_ID "LABEL" ("TOKEN"|nil) CHART_ID RULE_NAME [#T[]]]'
-    #     # 'No parse found for X'
-    #     representation = representation.strip()
-    #     if representation.startswith('No parse found for '):
-    #         self.no_parse = True
-    #     else:
-    #         # Parse metadata
-    #         match = Derivation.ace_tree.match(representation)
-    #         self.tree_ID = match.group('TREE_ID') or None
-    #         self.sent = match.group('SENT') or None
-    #         tree = match.group('TREE')[3:-1] # strip "#T[.*]"
-    #         # Parse tree into memory
-    #         tree = tree.split(None, 5)
-    #         print(tree)
-    #         self.edge_ID = tree[0]
-    #         self.label = tree[1].strip('"')
-    #         self.token = tree[2] if tree[2] != "nil" else None
-    #         self.chart_ID = tree[3]
-    #         self.rule_name = tree[4]
-    #         if len(tree) >= 6:
-    #             children = Derivation.ace_children.findall(tree[5])
-    #             print("REGEX: " + str(children))
-    #             self.children = [Derivation(child) for child in children]
-    #             print(self.children)
+    def __init__(self, id, entity,
+                 score=None, start=None, end=None, daughters=None):
+        # Note: Attribute assignment is done in UdfNode.__new__(), so
+        #       this only checks the arguments.
+        # If id is None, it is a root, and score, start, and end must
+        # all be None, and daughters must be a list with one UdfNode
+        if id is None:
+            if score is not None or start is not None or end is not None:
+                raise TypeError(
+                    'Root nodes (with id=None) of Derivation objects '
+                    'must have *score*, *start*, and *end* set to None.'
+                )
+            if (daughters is None or len(daughters) != 1
+                    or not isinstance(daughters[0], UdfNode)):
+                raise ValueError(
+                    'Root nodes (with id=None) of Derivation objects '
+                    'must have a single daughter node.'
+                )
 
+    @classmethod
+    def from_string(cls, s):
+        """
+        Instantiate a Derivation from a standard string representation.
+        See here for details: http://moin.delph-in.net/ItsdbDerivations
 
-    # def read_ACE(self, representation):
-    #     # 'TREE_ID #T[EDGE_ID "LABEL" ("TOKEN"|nil) CHART_ID RULE_NAME [#T[]]]'
-    #     # 'No parse found for X'
-    #     error = ValueError("Derivation Tree is malformed: {}".format(representation))
-    #     result = Derivation.ace_tree_compile.match(representation)
-    #     if not result:
-    #         raise error
-    #     elif result.group('NO_PARSE'):
-    #         self.no_parse = True
-    #         return
-    #     try:
-    #         self.tree_ID = result.group('TREE_ID') or None
-    #         self.edge_ID = result.group('EDGE_ID')
-    #         self.label = result.group('LABEL').strip('"')
-    #         self.token = result.group('TOKEN').strip('"') if result.group('TOKEN') != "nil" else None
-    #         self.chart_ID = result.group('CHART_ID')
-    #         self.rule_name = result.group('RULE_NAME')
-    #         # Read in children
-    #         children = result.group('CHILDREN') or "" # defaults
-    #         children = Derivation.ace_children.findall(children)
-    #         if children:
-    #             self.children = [Derivation(child) for child in children]
-    #         else:
-    #             self.children = []
-    #     except IndexError:
-    #         raise error
+        This method accommodates both the normal UDF format and the
+        UDX export format.
+        """
+        if not (s.startswith('(') and s.endswith(')')):
+            raise ValueError(
+                'Derivations must begin and end with parentheses: ( )'
+            )
+        s_ = s[1:]  # get rid of initial open-parenthesis
+        stack = []
+        deriv = None
+        try:
+            matches = cls.udf_re.finditer(s_)
+            for match in matches:
+                if match.group('done'):
+                    node = stack.pop()
+                    if len(stack) == 0:
+                        deriv = node
+                        break
+                    else:
+                        stack[-1].daughters.append(node)
+                elif match.group('tokens'):
+                    if len(stack) == 0:
+                        raise ValueError('Possible leaf node with no parent.')
+                    tokens = tuple(re.findall(
+                        r'{string}|{token}'
+                        .format(string=r'"[^"\\]*(?:\\.[^"\\]*)*"',
+                                token=r'[^\s()]+'),
+                        match.group('tokens')
+                    ))
+                    stack[-1].daughters.append(tokens)
+                elif match.group('id'):
+                    gd = match.groupdict()
+                    udf = UdfNode(gd['id'], gd['entity'], gd['score'],
+                                  gd['start'], gd['end'])
+                    stack.append(udf)
+                elif match.group('root'):
+                    udf = UdfNode(None, match.group('root'))
+                    stack.append(udf)
+        except (ValueError, AttributeError):
+            raise ValueError('Invalid derivation: %s' % s)
+        if stack or deriv is None:
+            raise ValueError('Invalid derivation; possibly unbalanced '
+                             'parentheses: %s' % s)
+        return deriv
