@@ -1,4 +1,61 @@
 
+"""
+Classes and functions related to Derivation trees.
+see here: http://moin.delph-in.net/ItsdbDerivations
+
+Here's an example from Jacy for:
+
+    遠く    に  銃声    が  聞こえ た 。
+    tooku   ni  juusei  ga  kikoe-ta
+    distant LOC gunshot NOM can.hear-PFV
+    "Shots were heard in the distance."
+
+(utterance-root
+ (564 utterance_rule-decl-finite 1.02132 0 6
+  (563 hf-adj-i-rule 1.04014 0 6
+   (557 hf-complement-rule -0.27164 0 2
+    (556 quantify-n-rule 0.311511 0 1
+     (23 tooku_1 0.152496 0 1
+      ("遠く" 0 1)))
+    (42 ni-narg 0.478407 1 2
+     ("に" 1 2)))
+   (562 head_subj_rule 1.512 2 6
+    (559 hf-complement-rule -0.378462 2 4
+     (558 quantify-n-rule 0.159015 2 3
+      (55 juusei_1 0 2 3
+       ("銃声" 2 3)))
+     (56 ga 0.462257 3 4
+      ("が" 3 4)))
+    (561 vstem-vend-rule 1.34202 4 6
+     (560 i-lexeme-v-stem-infl-rule 0.365568 4 5
+      (65 kikoeru-stem 0 4 5
+       ("聞こえ" 4 5)))
+     (81 ta-end 0.0227589 5 6
+      ("た" 5 6)))))))
+
+Derivation trees have 3 types of nodes:
+  * root nodes, with only an entity name and a single child
+  * normal nodes, with 5 fields (below) and a list of children
+    - *id* (an integer id given by the processor that produced the derivation)
+    - *entity* (e.g. rule or type name)
+    - *score* (a (MaxEnt) score for the subtree rooted at the current node)
+    - *start* (the character index of the left-most side of the tree)
+    - *end* (the character index of the right-most side of the tree)
+  * terminal/left/lexical nodes, which contain the input tokens processed
+    by that subtree; the content of leaf nodes is open-ended
+
+This module has a class UdfNode for capturing root and normal nodes.
+Root nodes are expressed as a UdfNode whose *id* is `None`. For root
+nodes, all fields except entity and the list of daughters are expected
+to be `None`. Leaf nodes are simply an iterable of token information.
+
+The Derivation class---itself a UdfNode---, has some tree-level
+operations defined, in particular the `from_string()` method, which is
+used to read the serialized derivation into a Python object.
+
+"""
+
+
 import re
 from collections import namedtuple
 

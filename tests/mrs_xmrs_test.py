@@ -206,6 +206,11 @@ class TestXmrs():
         assert len(x.variables()) == 2
         assert x.properties('x1')['PERS'] == '3'
         assert x.properties('e2')['SF'] == 'prop'
+        # when there's no EP, you cannot retrieve properties via a nodeid
+        with pytest.raises(KeyError): x.properties(10)
+        # but when an EP with an ARG0 exists, you can
+        x.add_eps([(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x1'})])
+        assert x.properties(10) == {'PERS': '3', 'NUM': 'sg'}
         # variables can also be inferred from structural things
         x = Xmrs(top='h0', index='e2', xarg='e5')
         assert set(x.variables()) == {'h0', 'e2', 'e5'}
@@ -241,13 +246,163 @@ class TestXmrs():
                        {'ARG0': 'e2', 'ARG1': '1', 'ARG2': '"x5"'})])
         assert set(x.variables()) == {'h3', 'e2'}
 
-    def test_pred(self): pass
-    def test_preds(self): pass
-    def test_label(self): pass
-    def test_labels(self): pass
-    def test_args(self): pass
-    def test_outgoing_args(self): pass
-    def test_incoming_args(self): pass
+    def test_pred(self):
+        x = Xmrs()
+        # KeyError on bad nodeid
+        with pytest.raises(KeyError): x.pred(10)
+        # but otherwise preds can be retrieved by nodeid
+        x.add_eps([(10, Pred.stringpred('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
+        assert x.pred(10).string == '_n_n_rel'
+
+    def test_preds(self):
+        sp = Pred.stringpred
+        x = Xmrs(
+            eps=[
+                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2', 'ARG1': 'x4'}),
+                (11, sp('_n_n_rel'), 'h5', {'ARG0': 'x4'}),
+                (12, sp('q_q_rel'), 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
+            ],
+            hcons=[('h6', 'qeq', 'h5')]
+        )
+        # works like xmrs.pred(), but with a list of nodeids
+        ps = x.preds([10, 11])
+        assert [p.string for p in ps] == ['_v_v_rel', '_n_n_rel']
+        # order should be preserved
+        ps = x.preds([12, 11])
+        assert [p.string for p in ps] == ['q_q_rel', '_n_n_rel']
+        # KeyError on bad nodeid
+        with pytest.raises(KeyError): x.preds([10, 11, 13])
+        # with no arguments, all preds are returned in original order
+        ps = x.preds()
+        assert [p.string for p in ps] == ['_v_v_rel', '_n_n_rel', 'q_q_rel']
+        x = Xmrs(
+            eps=[
+                (12, sp('q_q_rel'), 'h7', {'ARG0': 'x4', 'RSTR': 'h6'}),
+                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2', 'ARG1': 'x4'}),
+                (11, sp('_n_n_rel'), 'h5', {'ARG0': 'x4'})
+            ],
+            hcons=[('h6', 'qeq', 'h5')]
+        )
+        ps = x.preds()
+        assert [p.string for p in ps] == ['q_q_rel', '_v_v_rel', '_n_n_rel']
+
+    def test_label(self):
+        # retrieve the label for a single ep, or KeyError if no such nodeid
+        x = Xmrs(eps=[(10, Pred.stringpred('_v_v_rel'), 'h3', {'ARG0': 'e2'})])
+        assert x.label(10) == 'h3'
+        with pytest.raises(KeyError): x.label(11)
+
+    def test_labels(self):
+        sp = Pred.stringpred
+        # same as Xmrs.labels() but with a list of nodeids
+        x = Xmrs(
+            eps=[
+                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2', 'ARG1': 'x4'}),
+                (11, sp('_n_n_rel'), 'h5', {'ARG0': 'x4'}),
+                (12, sp('q_q_rel'), 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
+            ],
+            hcons=[('h6', 'qeq', 'h5')]
+        )
+        assert x.labels([10, 12]) == ['h3', 'h7']
+        with pytest.raises(KeyError): x.labels([12, 13])
+        # no argument means all labels, in EP order
+        assert x.labels() == ['h3', 'h5', 'h7']
+
+    def test_args(self):
+        # return the argument dict of a nodeid, or KeyError for missing nodeid
+        x = Xmrs(
+            eps=[(10, Pred.stringpred('_v_v_rel'), 'h3',
+                  {'ARG0': 'e2', 'ARG1': 'x4'})]
+        )
+        assert x.args(10) == {'ARG0': 'e2', 'ARG1': 'x4'}
+        with pytest.raises(KeyError): x.args(11)
+        # retrieved dict does not edit original
+        x.args(10)['ARG1'] = 'x6'
+        assert x.args(10)['ARG1'] == 'x4'
+
+    def test_outgoing_args(self):
+        sp = Pred.stringpred
+        # Outgoing args are those that, from some start node, go to
+        # another in some way. These ways include:
+        # regular variable args
+        x = Xmrs(
+            eps=[
+                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2'}),
+                (11, sp('_a_a_rel'), 'h5', {'ARG0': 'e4', 'ARG1': 'e2'})
+            ]
+        )
+        assert x.outgoing_args(10) == {}  # no outgoing args
+        assert x.outgoing_args(11) == {'ARG1': 'e2'}
+        # label equality args
+        x = Xmrs(
+            eps=[
+                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2', 'ARG1': 'h5'}),
+                (11, sp('_v_v_rel'), 'h5', {'ARG0': 'e4'})
+            ],
+        )
+        assert x.outgoing_args(10) == {'ARG1': 'h5'}
+        assert x.outgoing_args(11) == {}  # no outgoing args
+        # handle constraints
+        x = Xmrs(
+            eps=[
+                (11, sp('_n_n_rel'), 'h5', {'ARG0': 'x4'}),
+                (12, sp('q_q_rel'), 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
+            ],
+            hcons=[('h6', 'qeq', 'h5')]
+        )
+        assert x.outgoing_args(11) == {}  # no outgoing args
+        assert x.outgoing_args(12) == {'RSTR': 'h6'}  # not shared ARG0
+        # basic label equality is not "outgoing"
+        x = Xmrs(
+            eps=[
+                (11, sp('_nearly_x_deg_rel'), 'h5', {'ARG0': 'e4'}),
+                (12, sp('q_q_rel'), 'h5', {'ARG0': 'x6', 'RSTR': 'h7'})
+            ],
+        )
+        assert x.outgoing_args(11) == {}
+        assert x.outgoing_args(12) == {}  # RSTR would be if HCONS was there
+
+    def test_incoming_args(self):
+        # incoming_args() is like the reverse of outgoing_args(), but
+        # now it's many-to-one instead of one-to-many
+        sp = Pred.stringpred
+        x = Xmrs(
+            eps=[
+                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2'}),
+                (11, sp('_a_a_rel'), 'h5', {'ARG0': 'e4', 'ARG1': 'e2'})
+            ]
+        )
+        assert x.incoming_args(10) == {11: {'ARG1': 'e2'}}
+        assert x.incoming_args(11) == {}  # no incoming args
+        # label equality args
+        x = Xmrs(
+            eps=[
+                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2', 'ARG1': 'h5'}),
+                (11, sp('_v_v_rel'), 'h5', {'ARG0': 'e4'})
+            ],
+        )
+        assert x.incoming_args(10) == {}  # no incoming args
+        assert x.incoming_args(11) == {10: {'ARG1': 'h5'}}
+        # handle constraints
+        x = Xmrs(
+            eps=[
+                (11, sp('_n_n_rel'), 'h5', {'ARG0': 'x4'}),
+                (12, sp('q_q_rel'), 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
+            ],
+            hcons=[('h6', 'qeq', 'h5')]
+        )
+        assert x.incoming_args(11) == {12: {'RSTR': 'h6'}}
+        assert x.incoming_args(12) == {}  # no incoming args
+        # basic label equality is not "incoming"
+        x = Xmrs(
+            eps=[
+                (11, sp('_nearly_x_deg_rel'), 'h5', {'ARG0': 'e4'}),
+                (12, sp('q_q_rel'), 'h5', {'ARG0': 'x6', 'RSTR': 'h7'})
+            ],
+        )
+        assert x.incoming_args(11) == {}
+        assert x.incoming_args(12) == {}
+
 
     def test___eq__(self):
         x = read('[ TOP: h0 RELS: < [ _v_v_rel LBL: h1 ARG0: e2 ] > ]')

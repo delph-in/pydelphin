@@ -3,16 +3,18 @@
 ## [Unreleased][unreleased]
 
 This release simplifies the pyDelphin core classes and improves
-performance for many MRS tasks. Most significantly, the inspection of
-Xmrs objects by their components is done internally with basic tuple
+performance for many MRS tasks. Most significantly, the inspection
+ofXmrs objects by their components is done internally with basic tuple
 (or namedtuple) and dict types, but the old "classy" interface can be
-had with functions in delphin.mrs.components. This release also improves
-Python 2 compatibility, and co-occurs with improved documentation and
-unit tests for pyDelphin.
+had with functions in delphin.mrs.components. This release also adds a
+module for working with derivation trees, improves Python 2
+compatibility, and co-occurs with improved documentation and unit
+tests for pyDelphin.
 
 ### Added
 
 * use setuptools for setup.py
+* delphin.derivation (and associated tests)
 * delphin.interfaces.ace.AceProcess `env` parameter for custom
   environment variables
 * delphin.mrs
@@ -36,6 +38,8 @@ unit tests for pyDelphin.
   - path.XmrsPathNode.depth()
   - path.XmrsPathNode.order()
   - util.rargname_sortkey()
+  - xmrs.Xmrs.outgoing_args()
+  - xmrs.Xmrs.incoming_args()
 * delphin.itsdb.ItsdbSkeleton
 * recipes/ package for small, useful snippets (which also show how to
   use pyDelphin as a library)

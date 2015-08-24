@@ -251,25 +251,50 @@ class Xmrs(LnkMixin):
         _eps = self._eps
         return [_eps[nid][2] for nid in nodeids]
 
-    def args(self, nodeid): return self._eps[nodeid][3]
+    def args(self, nodeid): return dict(self._eps[nodeid][3])
 
     # calculated sub-structures
 
     def outgoing_args(self, nodeid):
         _vars = self._vars
-        args = self.args(nodeid)
-        for arg, val in args.items():
-            pass
+        _hcons = self._hcons
+        args = self.args(nodeid)  # args is a copy; we can edit it
+        for arg, val in list(args.items()):
+            # don't include constant args or intrinsic args
+            if arg == IVARG_ROLE or val not in _vars:
+                del args[arg]
+            refs = _vars[val]['refs']
+            # don't include if not HCONS or pointing to other IV or LBL
+            if not (val in _hcons or IVARG_ROLE in refs or 'LBL' in refs):
+                del args[arg]
+        return args
 
     def incoming_args(self, nodeid):
         _vars = self._vars
-        _eps = self._eps
-        ep = _eps[nodeid]
+        ep = self._eps[nodeid]
         lbl = ep[2]
         iv = ep[3].get(IVARG_ROLE)
-        in_args = []
-        if 'hcrefs' in vd:
-            pass
+        in_args_list = []
+        # variable args
+        if iv in _vars:
+            for role, nids in _vars[iv]['refs'].items():
+                # ignore intrinsic args, even if shared
+                if role != IVARG_ROLE:
+                    in_args_list.append((nids, role, iv))
+        if lbl in _vars:
+            for role, nids in _vars[lbl]['refs'].items():
+                # basic label equality isn't "incoming"; ignore
+                if role != 'LBL':
+                    in_args_list.append((nids, role, lbl))
+            for nid, role, hi in _vars[lbl].get('hcrefs', []):
+                in_args_list.append(([nid], role, hi))
+        in_args = {}
+        for nids, role, tgt in in_args_list:
+            for nid in nids:
+                if nid not in in_args:
+                    in_args[nid] = {}
+                in_args[nid][role] = tgt
+        return in_args
 
     def labelset(self, label):
         """
