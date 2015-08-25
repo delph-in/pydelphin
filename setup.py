@@ -22,6 +22,16 @@ class PyTest(TestCommand):
         errno = pytest.main(self.pytest_args)
         sys.exit(errno)
 
+class PyTestCoverage(PyTest):
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = [
+            '--doctest-glob=tests/*.md',
+            '--cov=delphin',
+            '--cov-report=html'
+        ]
+
+
 setup(
     name='pyDelphin',
     version='0.2',
@@ -38,7 +48,6 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
@@ -66,5 +75,5 @@ setup(
     #     ]
     # }
     tests_require=['pytest'],
-    cmdclass={'test':PyTest}
+    cmdclass={'test':PyTest, 'coverage':PyTestCoverage}
 )
