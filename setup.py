@@ -34,8 +34,8 @@ class PyTestCoverage(PyTest):
 
 setup(
     name='pyDelphin',
-    version='0.2',
-    url='https://github.com/goodmami/pydelphin',
+    version='0.3',
+    url='https://github.com/delph-in/pydelphin',
     author='Michael Wayne Goodman',
     author_email='goodman.m.w@gmail.com',
     description='Libraries and scripts for DELPH-IN data.',

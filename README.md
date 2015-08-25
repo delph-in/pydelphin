@@ -1,5 +1,14 @@
 # pyDelphin <br/> Python libraries for DELPH-IN
 
+> NOTE for previous pyDelphin users: The latest version (0.3) has some
+> backward-**incompatible** changes that may break your code. The
+> upgrade path shouldn't be difficult (contact me if there's trouble),
+> and the changes bring big performance gains, so I think it's worth
+> it. Sorry for the trouble while the API stabilizes.
+> 
+> Also note that the primary repo for pyDelphin is now
+> https://github.com/delph-in/pydelphin
+
 pyDelphin is a set of Python libraries for the
 processing of [DELPH-IN](http://delph-in.net) data. It doesn't aim to
 do heavy tasks like parsing or treebanking, but rather to provide Python

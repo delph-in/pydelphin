@@ -2,6 +2,8 @@
 
 ## [Unreleased][unreleased]
 
+## [v0.3][]
+
 This release simplifies the pyDelphin core classes and improves
 performance for many MRS tasks. Most significantly, the inspection
 ofXmrs objects by their components is done internally with basic tuple
