@@ -29,20 +29,22 @@ class TdlDefinition(TypedFeatureStructure):
     def _is_notable(self):
         """
         TdlDefinitions are notable if they define supertypes or have no
-        sub-features.
+        sub-features or more than one sub-feature.
         """
-        return bool(self.supertypes) or not self._avm
+        return bool(self.supertypes) or len(self._avm) != 1
 
     def local_constraints(self):
+        cs = []
         for feat, val in self._avm.items():
             try:
                 if val.supertypes and not val._avm:
-                    yield (feat, val)
+                    cs.append((feat, val))
                 else:
                     for subfeat, subval in val.features():
-                        yield ('{}.{}'.format(feat, subfeat), subval)
+                        cs.append(('{}.{}'.format(feat, subfeat), subval))
             except AttributeError:
-                yield (feat, val)
+                cs.append((feat, val))
+        return cs
 
 
 class TdlType(TdlDefinition):
@@ -364,11 +366,3 @@ def _make_coreferences(corefs):
             .format(str(cr), repr(paths))
         )
     return corefs
-
-
-if __name__ == '__main__':
-    import sys
-    for x in parse(open(sys.argv[1], 'r')):
-       print(x)
-    # for line in sys.stdin:
-    #    print(tokenize(line))

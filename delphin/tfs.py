@@ -57,18 +57,20 @@ class TypedFeatureStructure(object):
         Notability determines if the TFS should be listed as the value
         of a feature or if the feature should just "pass through" its
         avm to get the next value. A notable TypedFeatureStructure is
-        one without any other features (i.e. an empty AVM)
+        one with more than one sub-feature.
         """
-        return not self._avm
+        return len(self._avm) != 1
 
     def features(self):
+        fs = []
         for feat, val in self._avm.items():
             try:
                 if val._is_notable():
-                    yield (feat, val)
+                    fs.append((feat, val))
                 else:
                     for subfeat, subval in val.features():
-                        yield ('{}.{}'.format(feat, subfeat), subval)
+                        fs.append(('{}.{}'.format(feat, subfeat), subval))
             except AttributeError:
-                yield (feat, val)
+                fs.append((feat, val))
+        return fs
 

@@ -345,13 +345,12 @@ Multiple features on an AVM:
 
 ```
 
-Multiple features on a sub-AVM:
+Multiple features on a sub-AVM only returns the top level:
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR [ SUB1 val1, SUB2 val2 ] ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.SUB1', <TdlDefinition object ...>),
- ('ATTR.SUB2', <TdlDefinition object ...>)]
+[('ATTR', <TdlDefinition object ...>)]
 
 ```
 
@@ -396,9 +395,9 @@ Single, bounded (terminated) list---the last item is `None`:
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR < a > ].')
->>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.FIRST', <TdlDefinition object ...>),
- ('ATTR.REST', None)]
+>>> sorted(t['ATTR'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('FIRST', <TdlDefinition object ...>),
+ ('REST', None)]
 
 ```
 
@@ -406,9 +405,9 @@ Single list item with features:
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR < a & [ SUB val ] > ].')
->>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.FIRST', <TdlDefinition object ...>),
- ('ATTR.REST', None)]
+>>> sorted(t['ATTR'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('FIRST', <TdlDefinition object ...>),
+ ('REST', None)]
 >>> list(t['ATTR.FIRST'].features())  # doctest: +ELLIPSIS
 [('SUB', <TdlDefinition object ...>)]
 >>> t['ATTR.FIRST.SUB'].supertypes
@@ -420,10 +419,12 @@ Bounded list with multiple items:
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR < a, b > ].')
->>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.FIRST', <TdlDefinition object ...>),
- ('ATTR.REST.FIRST', <TdlDefinition object ...>),
- ('ATTR.REST.REST', None)]
+>>> sorted(t['ATTR'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('FIRST', <TdlDefinition object ...>),
+ ('REST', <TdlDefinition object ...>)]
+>>> sorted(t['ATTR.REST'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('FIRST', <TdlDefinition object ...>),
+ ('REST', None)]
 
 ```
 
@@ -451,9 +452,11 @@ A dot (`.`), instead of a comma, delimiter allows access to the final
 ```python
 >>> t = parsetdl('type := super & [ ATTR1 < a . #rest >, ATTR2 #rest ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR1.FIRST', <TdlDefinition object ...>),
- ('ATTR1.REST', <TdlDefinition object ...>),
+[('ATTR1', <TdlDefinition object ...>),
  ('ATTR2', <TdlDefinition object ...>)]
+>>> sorted(t['ATTR1'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('FIRST', <TdlDefinition object ...>),
+ ('REST', <TdlDefinition object ...>)]
 >>> t.coreferences
 [('#rest', ['ATTR1.REST', 'ATTR2'])]
 
@@ -465,9 +468,9 @@ Empty diff lists link the `LIST` path to the `LAST` path:
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR <! !> ].')
->>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.LAST', <TdlDefinition object ...>),
- ('ATTR.LIST', <TdlDefinition object ...>)]
+>>> sorted(t['ATTR'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('LAST', <TdlDefinition object ...>),
+ ('LIST', <TdlDefinition object ...>)]
 >>> t.coreferences
 [(None, ['ATTR.LIST', 'ATTR.LAST'])]
 
@@ -478,9 +481,9 @@ item:
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR <! a !> ].')
->>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.LAST', <TdlDefinition object ...>),
- ('ATTR.LIST.FIRST', <TdlDefinition object ...>)]
+>>> sorted(t['ATTR'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('LAST', <TdlDefinition object ...>),
+ ('LIST.FIRST', <TdlDefinition object ...>)]
 >>> t.coreferences
 [(None, ['ATTR.LIST.REST', 'ATTR.LAST'])]
 
@@ -490,10 +493,12 @@ Multiple items on a diff list; same behavior as above:
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR <! a, b !> ].')
->>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR.LAST', <TdlDefinition object ...>),
- ('ATTR.LIST.FIRST', <TdlDefinition object ...>),
- ('ATTR.LIST.REST.FIRST', <TdlDefinition object ...>)]
+>>> sorted(t['ATTR'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('LAST', <TdlDefinition object ...>),
+ ('LIST', <TdlDefinition object ...>)]
+>>> sorted(t['ATTR.LIST'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+[('FIRST', <TdlDefinition object ...>),
+ ('REST.FIRST', <TdlDefinition object ...>)]
 >>> t.coreferences
 [(None, ['ATTR.LIST.REST.REST', 'ATTR.LAST'])]
 

@@ -94,6 +94,13 @@ tests for pyDelphin.
   - Generation response dictionaries are made consistent with parsing
     ones (including having dictionaries in RESULTS instead of just
     strings)
+* delphin.tfs.TypedFeatureStructure
+  - `features()` now returns a list, and sub-AVMs are only descended
+    into if there is one feature and no supertypes.
+* delphin.tdl.TdlDefinition
+  - `features()` now returns a list, and sub-AVMs are only descended
+    into if there is one feature and no supertypes.
+  - `local_constraints()` now returns a list
 * test now use pyTest for unittests (and doctests)
 
 ### Removed
