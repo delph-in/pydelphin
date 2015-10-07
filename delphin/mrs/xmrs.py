@@ -379,12 +379,9 @@ class Xmrs(LnkMixin):
         if self.top:
             top = self.top
             tophc = _hcons.get(top, None)
-            if top in lbls:
+            if tophc is not None and tophc[2] in lbls:
                 subvars[top] = {}
-            elif tophc is not None and tophc[2] in lbls:
-                subvars[top] = {}
-                hcons.append(tophc)
-            else:
+            elif top not in lbls:
                 top = None  # nevermind, set it back to None
         # do index after we know if it is an EPs intrinsic variable.
         # what about xarg? I'm not really sure.. just put it in
