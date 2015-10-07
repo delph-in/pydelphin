@@ -2,8 +2,8 @@
 
 import pytest
 
-from delphin.mrs.components import Pred
-from delphin.mrs.xmrs import Xmrs
+from delphin.mrs.components import Pred, Node, Link
+from delphin.mrs.xmrs import Xmrs, Dmrs
 from delphin.mrs import simplemrs  # for convenience in later tests
 from delphin._exceptions import XmrsError
 
@@ -509,4 +509,8 @@ class TestXmrs():
         pass
 
     def test_subgraph(self):
-        pass
+        nodes = [Node(1,Pred.stringpred('verb'))]
+        links = [Link(0,1,'','H')]
+        graph = Dmrs(nodes,links)
+        new_graph = graph.subgraph([1])
+        assert len(new_graph._eps) == 1
