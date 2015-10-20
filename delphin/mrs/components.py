@@ -22,7 +22,7 @@ from .config import (
 
 # VARIABLES and LNKS
 
-var_re = re.compile(r'^(\w*\D)(\d+)$')
+var_re = re.compile(r'^([-\w]*\D)(\d+)$')
 
 
 def sort_vid_split(vs):

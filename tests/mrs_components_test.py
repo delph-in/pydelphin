@@ -86,6 +86,7 @@ x5 = Xmrs(
 def test_sort_vid_split():
     assert sort_vid_split('x1') == ('x', '1')
     assert sort_vid_split('event10') == ('event', '10')
+    assert sort_vid_split('ref-ind2') == ('ref-ind', '2')
     with pytest.raises(ValueError): sort_vid_split('x')
     with pytest.raises(ValueError): sort_vid_split('1')
     with pytest.raises(ValueError): sort_vid_split('1x')
@@ -94,12 +95,14 @@ def test_sort_vid_split():
 def test_var_sort():
     assert var_sort('x1') == 'x'
     assert var_sort('event10') == 'event'
+    assert var_sort('ref-ind2') == 'ref-ind'
     with pytest.raises(ValueError): var_sort('x')
 
 
 def test_var_id():
     assert var_id('x1') == 1
     assert var_id('event10') == 10
+    assert var_id('ref-ind2') == 2
     with pytest.raises(ValueError): var_id('1')
 
 
