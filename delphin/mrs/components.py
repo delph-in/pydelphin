@@ -45,14 +45,20 @@ class VarGenerator(object):
 
     def __init__(self, starting_vid=1):
         self.vid = starting_vid
+        self.index = {}  # to map vid to created variable
         self.store = {}  # to recall properties from varstrings
 
     def new(self, sort, properties=None):
-        varstring = '{}{}'.format(sort, self.vid)
+        # find next available vid
+        vid, index = self.vid, self.index
+        while vid in index:
+            vid += 1
+        varstring = '{}{}'.format(sort, vid)
+        index[vid] = varstring
         if properties is None:
             properties = []
         self.store[varstring] = properties
-        self.vid += 1
+        self.vid = vid + 1
         return (varstring, properties)
 
 

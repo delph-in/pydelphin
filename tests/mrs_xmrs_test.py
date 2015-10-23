@@ -319,6 +319,9 @@ class TestXmrs():
         # retrieved dict does not edit original
         x.args(10)['ARG1'] = 'x6'
         assert x.args(10)['ARG1'] == 'x4'
+        # return empty arg dict for EP without specified args:
+        x = Xmrs(eps=[(10, Pred.stringpred('_v_v_rel'), 'h3')])
+        assert x.args(10) == {}
 
     def test_outgoing_args(self):
         sp = Pred.stringpred

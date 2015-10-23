@@ -12,7 +12,7 @@ from itertools import chain
 
 from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .components import (
-    HandleConstraint, LnkMixin, var_re
+    ElementaryPredication, HandleConstraint, LnkMixin, var_re
 )
 from .config import (
     HANDLESORT, IVARG_ROLE, CONSTARG_ROLE, LTOP_NODEID, FIRST_NODEID,
@@ -99,12 +99,17 @@ class Xmrs(LnkMixin):
         # (nodeid, pred, label, args, lnk, surface, base)
         _nodeids, _eps, _vars = self._nodeids, self._eps, self._vars
         for ep in eps:
-            eplen = len(ep)
-            if eplen < 3:
-                raise XmrsError(
-                    'EPs must have length >= 3: (nodeid, pred, label, ...)'
-                )
-            nodeid, pred, lbl = ep[0], ep[1], ep[2]
+            try:
+                if not isinstance(ep, ElementaryPredication):
+                    ep = ElementaryPredication(*ep)
+            except TypeError:
+                raise XmrsError('Invalid EP data: {}'.format(repr(ep)))
+            # eplen = len(ep)
+            # if eplen < 3:
+            #     raise XmrsError(
+            #         'EPs must have length >= 3: (nodeid, pred, label, ...)'
+            #     )
+            nodeid, pred, lbl = ep.nodeid, ep.pred, ep.label
             if nodeid in _eps:
                 raise XmrsError(
                     'EP already exists in Xmrs: {} ({})'
@@ -114,10 +119,7 @@ class Xmrs(LnkMixin):
             _eps[nodeid] = ep
             if lbl is not None:
                 _vars[lbl]['refs']['LBL'].append(nodeid)
-            args = None
-            if eplen >= 4: args = ep[3]
-            if args is None: args = {}
-            for role, val in args.items():
+            for role, val in ep.args.items():
                 # if the val is not in _vars, it might still be a
                 # variable; check with var_re
                 if val in _vars or var_re.match(val):

@@ -306,9 +306,6 @@ def _read_cons(tokens, constype, vars_):
         tokens.popleft()  # :
         tokens.popleft()  # <
         while tokens[0] != _right_angle:
-            # NOTE: I don't think properties are allowed on variables
-            #  in the *CONS lists, but I could be wrong. For now, throw
-            #  them away if they are there.
             left = tokens.popleft()
             lprops = _read_props(tokens)
             reln = tokens.popleft()
@@ -579,7 +576,7 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
     toks = []
     if version >= 1.1:
         header_toks = []
-        if m.lnk is not None:
+        if m.lnk is not None and m.lnk.data != (-1, -1):  # don't do <-1:-1>
             header_toks.append(serialize_lnk(m.lnk))
         if m.surface is not None:
             header_toks.append('"{}"'.format(m.surface))
@@ -614,7 +611,8 @@ def serialize_argument(rargname, value, varprops):
         props = ' [ {} ]'.format(
             ' '.join(
                 [var_sort(value)] +
-                list(map('{0[0]}: {0[1]}'.format, varprops[value]))
+                list(map('{0[0]}: {0[1]}'.format,
+                         [(k.upper(), v) for k, v in varprops[value]]))
             )
         )
         del varprops[value]  # only print props once
