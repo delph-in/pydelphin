@@ -35,7 +35,7 @@ def load(fh, single=False):
 def loads(s, single=False):
     corpus = etree.fromstring(s)
     if single:
-        ds = decode_dmrs(next(corpus))
+        ds = decode_dmrs(next(iter(corpus)))
     else:
         ds = (decode_dmrs(dmrs_elem) for dmrs_elem in corpus)
     return ds
