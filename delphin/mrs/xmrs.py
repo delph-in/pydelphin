@@ -701,20 +701,28 @@ def Dmrs(nodes=None, links=None,
     )
 
 def _make_labels(nodes, links, vgen):
-    labels = {}
-    labels[LTOP_NODEID] = vgen.new(HANDLESORT)[0]  # reserve h0 for ltop
-    for l in sorted(links, key=lambda l: min(l.start, l.end)):
+    eq_edges = defaultdict(set)
+    for l in links:
         if l.post == EQ_POST:
-            lbl = (labels.get(l.start) or
-                   labels.get(l.end) or
-                   vgen.new(HANDLESORT)[0])
-            labels[l.start] = labels[l.end] = lbl
-    # create any remaining uninstantiated labels
-    for n in nodes:
-        if n.nodeid not in labels:
-            labels[n.nodeid] = vgen.new(HANDLESORT)[0]
+            eq_edges[l.start].add(l.end)
+            eq_edges[l.end].add(l.start)
+    # thanks: http://stackoverflow.com/a/13837045/1441112
+    seen = set()
+    def conjunction(nodeid):
+        nids = {nodeid}
+        while nids:
+            nid = nids.pop()
+            seen.add(nid)
+            nids |= eq_edges[nid] - seen
+            yield nid
+    labels = {}
+    # be sure to do LTOP_NODEID first so it gets h0
+    for nid in chain([LTOP_NODEID], (node.nodeid for node in nodes)):
+        if nid not in seen:
+            lbl = vgen.new(HANDLESORT)[0]
+            for conj_nid in conjunction(nid):
+                labels[conj_nid] = lbl
     return labels
-
 
 def _make_ivs(nodes, vgen):
     ivs = {}
