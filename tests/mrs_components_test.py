@@ -402,6 +402,7 @@ class TestPred():
         assert Pred.grammarpred('pron_rel') == 'pron_rel'
         assert Pred.string_or_grammar_pred('_dog_n_rel') != Pred.string_or_grammar_pred('dog_n_rel')
         assert (spred('_dog_n_rel') == None) == False
+        assert spred('_dog_n_1_rel') == spred('_Dog_N_1_rel')
 
 
 def test_split_pred_string():

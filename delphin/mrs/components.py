@@ -412,7 +412,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
             return False
         if isinstance(other, Pred):
             other = other.string
-        return self.string.strip('"\'') == other.strip('"\'')
+        return self.string.strip('"\'').lower() == other.strip('"\'').lower()
 
     def __str__ (self):
         return self.string
