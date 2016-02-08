@@ -703,7 +703,7 @@ def Dmrs(nodes=None, links=None,
 def _make_labels(nodes, links, vgen):
     labels = {}
     labels[LTOP_NODEID] = vgen.new(HANDLESORT)[0]  # reserve h0 for ltop
-    for l in links:
+    for l in sorted(links, key=lambda l: min(l.start, l.end)):
         if l.post == EQ_POST:
             lbl = (labels.get(l.start) or
                    labels.get(l.end) or
