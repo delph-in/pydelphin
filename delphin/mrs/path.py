@@ -72,7 +72,7 @@ def _walk(nodeid, linkdict, visited, method, sort_key):
         # if this undirected link was already traversed in the other
         # direction, just yield this step but don't recurse
         if axis == ':/EQ:' and tgtnid in visited:
-            yield (nodeid, tgtnid, axis)
+            #yield (nodeid, tgtnid, axis)
             continue
         yield (nodeid, tgtnid, axis)
         for step in _walk(tgtnid, linkdict, visited, method, sort_key):
@@ -652,7 +652,10 @@ def _read_context(tokens):
             context['@{}'.format(attr)] = val
         elif mtype == 'axis':
             tgt = _read_node(tokens)
-            for ax in map(str.strip, mtext.split('&')):
+            start, end = mtext[0], mtext[-1]
+            axes = mtext[1:-1].split('&')
+            for ax in axes:
+                ax = '%s%s%s' % (start, ax.strip(), end)
                 context[ax] = tgt
         else:
             raise XmrsPathError(
@@ -676,7 +679,10 @@ def _read_links(tokens):
         mtype, mtext = token
         if mtype == 'axis':
             tgt = _read_node(tokens)
-            for ax in map(str.strip, mtext.split('&')):
+            start, end = mtext[0], mtext[-1]
+            axes = mtext[1:-1].split('&')
+            for ax in axes:
+                ax = '%s%s%s' % (start, ax.strip(), end)
                 links[ax] = tgt
         else:
             raise XmrsPathError('Invalid conjunct in axes: {}'.format(mtext))
