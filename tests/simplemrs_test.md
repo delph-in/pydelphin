@@ -137,30 +137,6 @@ Lnk values can take 4 forms in SimpleMRS:
 
 ```
 
-"It rains", case-insensitivity
-
-```python
->>> m = next(simplemrs.loads('''[ ltop: h0
-... InDeX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
-... Rels: < [ "_rain_v_1_rel"<3:9> lbl: h1 arg0: e2 ] >
-... HCons: < h0 QEQ h1 > ]'''))
->>> m.ltop
-'h0'
->>> m.index
-'e2'
->>> len(m.eps())
-1
->>> EP(*m.eps()[0]).label
-'h1'
->>> EP(*m.eps()[0]).args['ARG0']
-'e2'
->>> len(m.hcons())
-1
->>> Hcons(*m.hcons()[0]).relation
-'qeq'
-
-```
-
 "It rains", SimpleMRS 1.1 format without surface forms or a top LNK value.
 
 ```python
@@ -306,3 +282,37 @@ printed, although for compatibility with ACE the ICONS list is printed.
   ICONS: < e2 focus e2 > ]
 
 ```
+
+## Parsing Robustness
+
+"It rains", case-insensitivity
+
+```python
+>>> m = next(simplemrs.loads('''[ ltop: h0
+... InDeX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
+... Rels: < [ "_rain_v_1_rel"<3:9> lbl: h1 arg0: e2 ] >
+... HCons: < h0 QEQ h1 > ]'''))
+>>> m.ltop
+'h0'
+>>> m.index
+'e2'
+>>> len(m.eps())
+1
+>>> EP(*m.eps()[0]).label
+'h1'
+>>> EP(*m.eps()[0]).args['ARG0']
+'e2'
+>>> len(m.hcons())
+1
+>>> Hcons(*m.hcons()[0]).relation
+'qeq'
+
+```
+
+Uncommon predicate forms:
+
+```python
+>>> m = next(simplemrs.loads('''[ RELS: <
+... [ _<\sccil.org>/nn_u_unknown<40:51> LBL: h1 ARG0: x2 ]
+... > ]'''))
+ 

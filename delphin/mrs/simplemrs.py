@@ -160,11 +160,13 @@ dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 
 # The tokenizer has 3 sub-regexen:
 #   the first is for strings (e.g. "_dog_n_rel", "\"quoted string\"")
+#   the second looks for unquoted type preds (lookahead for space or lnk)
 #   the second is for args, variables, preds, etc (e.g. ARG1, _dog_n_rel, x4)
 #   the last is for contentful punctuation (e.g. [ ] < > : # @)
 
 tokenizer = re.compile(r'("[^"\\]*(?:\\.[^"\\]*)*"'
-                       r'|[^\s:#@\[\]<>"]+'
+                       r'|_(?:[^\s<]|<(?![-0-9:#@ ]*>))*'
+                       r'|[^\s:#@\[\]"<>]+'
                        r'|[:#@\[\]<>])')
 
 
