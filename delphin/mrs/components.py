@@ -10,7 +10,7 @@ from functools import total_ordering
 
 from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .config import (
-    IVARG_ROLE, CONSTARG_ROLE,
+    IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
     HANDLESORT, CVARSORT, QUANTIFIER_POS,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST
 )
@@ -399,7 +399,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
         r'_?(?P<lemma>.*?)_'  # match until last 1 or 2 parts
         r'((?P<pos>[a-z])_)?'  # pos is always only 1 char
         r'((?P<sense>([^_\\]|(?:\\.))+)_)?'  # no unescaped _s
-        r'(?P<end>rel(ation)?)$',  # NB only _rel is valid
+        r'(?P<end>rel)$',
         re.IGNORECASE
     )
     # Pred types (used mainly in input/output, not internally in pyDelphin)
@@ -481,16 +481,19 @@ def split_pred_string(predstr):
         ('quant', None, None, 'rel')
     """
     predstr = predstr.strip('"\'')  # surrounding quotes don't matter
+    rel_added = False
     if not predstr.lower().endswith('_rel'):
         logging.debug('Predicate does not end in "_rel": {}'
                       .format(predstr))
+        rel_added = True
+        predstr += '_rel'
     match = Pred.pred_re.search(predstr)
     if match is None:
         logging.debug('Unexpected predicate string: {}'.format(predstr))
         return (predstr, None, None, None)
     # _lemma_pos(_sense)?_end
     return (match.group('lemma'), match.group('pos'),
-            match.group('sense'), match.group('end'))
+            match.group('sense'), None if rel_added else match.group('end'))
 
 
 def is_valid_pred_string(predstr):
@@ -510,22 +513,13 @@ def normalize_pred_string(predstr):
     Make pred strings more consistent by removing quotes and using
     the _rel suffix.
     """
-    predstr = predstr.strip('"').lstrip("'")
-    match = (Pred.pred_re.match(predstr) or
-             Pred.pred_re.match(predstr + '_rel'))
-    if match:
-        d = match.groupdict()
-        tokens = []
-        if predstr.startswith('_'):
-            tokens.append('')  # so initial _ is joined
-        tokens.append(d['lemma'])
-        if d['pos']:
-            tokens.append(d['pos'])
-        if d['sense']:
-            tokens.append(d['sense'])
+    tokens = []
+    if predstr.lstrip('\'"')[:1] == '_':
+        tokens.append('')
+    tokens.extend(t for t in split_pred_string(predstr) if t is not None)
+    if not tokens[-1] == 'rel':
         tokens.append('rel')
-        return '_'.join(tokens)
-    return None
+    return '_'.join(tokens)
 
 
 @total_ordering
@@ -717,7 +711,7 @@ class ElementaryPredication(
         return self.args.get(CONSTARG_ROLE, None)
 
     def is_quantifier(self):
-        return self.pred.is_quantifier()
+        return RSTR_ROLE in self.args
 
 
 def elementarypredications(xmrs):

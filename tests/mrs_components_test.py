@@ -13,7 +13,7 @@ from delphin.mrs.components import (
 spred = Pred.stringpred
 from delphin.mrs.xmrs import Xmrs
 from delphin.mrs.config import (
-    CVARSORT, IVARG_ROLE, CONSTARG_ROLE,
+    CVARSORT, IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
     LTOP_NODEID, FIRST_NODEID
 )
@@ -404,6 +404,17 @@ class TestPred():
         assert (spred('_dog_n_rel') == None) == False
         assert spred('_dog_n_1_rel') == spred('_Dog_N_1_rel')
 
+    def test_is_quantifier(self):
+        assert spred('"_the_q_rel"').is_quantifier() == True
+        assert spred('_udef_q_rel').is_quantifier() == True
+        # how do we do this one?
+        # assert spred('quant_rel').is_quantifier() == True
+        assert spred('abstract_q_rel').is_quantifier() == True
+        assert spred('_the_q').is_quantifier() == True
+        assert spred('"_the_q"').is_quantifier() == True
+        assert spred('_q_n_letter_rel').is_quantifier() == False
+
+
 
 def test_split_pred_string():
     sps = split_pred_string
@@ -415,7 +426,7 @@ def test_split_pred_string():
     assert sps('"_bark_v_1_rel"') == ('bark', 'v', '1', 'rel')
     # some odd variations (some are not strictly well-formed)
     assert sps('coord') == ('coord', None, None, None)
-    assert sps('some_relation') == ('some', None, None, 'relation')
+    assert sps('some_relation') == ('some', None, 'relation', None)
     assert sps('_24/7_a_1_rel') == ('24/7', 'a', '1', 'rel')
     assert sps('_a+bit_q_rel') == ('a+bit', 'q', None, 'rel')
     assert sps('_A$_n_1_rel') == ('A$', 'n', '1', 'rel')
@@ -444,7 +455,6 @@ def test_is_valid_pred_string():
 def test_normalize_pred_string():
     nps = normalize_pred_string
     assert nps('pron') == 'pron_rel'
-    assert nps('pron_relation') == 'pron_rel'
     assert nps('"udef_q_rel"') == 'udef_q_rel'
     assert nps('\'udef_q_rel') == 'udef_q_rel'
     assert nps('_dog_n_1_rel') == '_dog_n_1_rel'
@@ -517,3 +527,13 @@ class TestElementaryPredication():
         assert len(e.args) == 2
         assert e.args[IVARG_ROLE] == v1
         assert e.args['ARG1'] == v2
+
+    def test_is_quantifier(self):
+        e = EP(10, spred('_the_q_rel'), 'h1', args={RSTR_ROLE: 'h2'})
+        assert e.is_quantifier() == True
+        # not a q pred, but has RSTR
+        e = EP(10, spred('_dog_n_rel'), 'h1', args={RSTR_ROLE: 'h2'})
+        assert e.is_quantifier() == True
+        # a q pred, but no RSTR
+        e = EP(10, spred('_the_q_rel'), 'h1', args={})
+        assert e.is_quantifier() == False
