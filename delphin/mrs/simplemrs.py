@@ -213,12 +213,12 @@ def _read_mrs(tokens, version=_default_version):
             lnk = read_lnk(tokens)
         if tokens[0].startswith('"'):  # and tokens[0].endswith('"'):
             surface = tokens.popleft()[1:-1]  # get rid of first quotes
-        if tokens[0] in (_ltop, _top):
+        if tokens[0].upper() in (_ltop, _top):
             tokens.popleft()  # LTOP / TOP
             tokens.popleft()  # :
             top = tokens.popleft()
             vars_[top] = []
-        if tokens[0] == _index:
+        if tokens[0].upper() == _index:
             tokens.popleft()  # INDEX
             tokens.popleft()  # :
             idx = tokens.popleft()
@@ -255,7 +255,7 @@ def _read_props(tokens):
 def _read_rels(tokens, vars_):
     rels = None
     nid = 10000
-    if tokens[0] == _rels:
+    if tokens[0].upper() == _rels:
         rels = []
         tokens.popleft()  # RELS
         tokens.popleft()  # :
@@ -278,14 +278,14 @@ def _read_ep(tokens, nid, vars_):
     surface = label = None
     if tokens[0].startswith('"'):
         surface = tokens.popleft()[1:-1]  # get rid of first quotes
-    if tokens[0] == _lbl:
+    if tokens[0].upper() == _lbl:
         tokens.popleft()  # LBL
         tokens.popleft()  # :
         label = tokens.popleft()
         vars_[label] = []
     args = {}
     while tokens[0] != _right_bracket:
-        role = tokens.popleft()
+        role = tokens.popleft().upper()
         tokens.popleft()  # :
         val = tokens.popleft()
         if _var_re.match(val) is not None and role.upper() != CARG:
@@ -300,7 +300,7 @@ def _read_ep(tokens, nid, vars_):
 
 def _read_cons(tokens, constype, vars_):
     cons = None
-    if tokens[0] == constype:
+    if tokens[0].upper() == constype:
         cons = []
         tokens.popleft()  # (H|I)CONS
         tokens.popleft()  # :
@@ -308,7 +308,7 @@ def _read_cons(tokens, constype, vars_):
         while tokens[0] != _right_angle:
             left = tokens.popleft()
             lprops = _read_props(tokens)
-            reln = tokens.popleft()
+            reln = tokens.popleft().lower()
             rght = tokens.popleft()
             rprops = _read_props(tokens)
             cons.append((left, reln, rght))
