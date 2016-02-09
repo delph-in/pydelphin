@@ -211,6 +211,8 @@ def parse_affixes(tokens):
 
 
 def parse_conjunction(tokens):
+    if tokens and tokens[0][:1] in ('\'"'):
+        return tokens.popleft(), []  # basic string value
     supertypes = []
     features = []
     coreferences = []
@@ -245,7 +247,8 @@ def parse_conjunction(tokens):
             feats, corefs = parse_cons_list(tokens)
         elif tokens[0] == '<!':
             feats, corefs = parse_diff_list(tokens)
-        # strings and other types are caught here
+        # elif tokens[0][:1] in ('\'"'):
+        #     raise TdlParsingError('String cannot be part of a conjunction.')
         else:
             supertypes.append(tokens.popleft())
 

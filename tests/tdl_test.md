@@ -279,15 +279,21 @@ Simple feature and value; attribute names are case-insensitive:
 
 ```
 
-String values and integer values (just treated as types):
+String values are primitives:
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR "val" ].')
 >>> list(t.features())  # doctest: +ELLIPSIS
-[('ATTR', <TdlDefinition object ...>)]
+[('ATTR', '"val"')]
 >>> t = parsetdl("type := super & [ ATTR 'val ].")
 >>> list(t.features())  # doctest: +ELLIPSIS
-[('ATTR', <TdlDefinition object ...>)]
+[('ATTR', "'val")]
+
+```
+
+Integer values, however, are not primitives:
+
+```python
 >>> t = parsetdl('type := super & [ ATTR 1 ].')
 >>> list(t.features())  # doctest: +ELLIPSIS
 [('ATTR', <TdlDefinition object ...>)]
