@@ -354,6 +354,41 @@ Multiple features on a sub-AVM only returns the top level:
 
 ```
 
+The `in` operator works with keys, even dot-delimited ones, but not
+for supertypes:
+
+```python
+>>> t = parsetdl('type := super & [ ATTR.SUB val ].')
+>>> 'ATTR' in t
+True
+>>> 'ATTR.SUB' in t
+True
+>>> 'SUB' in t
+False
+>>> 'SUB' in t['ATTR']
+True
+>>> 'super' in t
+False
+
+```
+
+Features can be set with the standard Python syntax:
+
+```python
+>>> t = parsetdl('type := super & [ ATTR val ].')
+>>> t['ATTR'].supertypes
+['val']
+>>> t['ATTR'] = "string"
+>>> t['ATTR']
+'string'
+>>> t['ATTR1.ATTR2'] = "string"
+>>> t['ATTR1']  # doctest: +ELLIPSIS
+<TdlDefinition object...>
+>>> t['ATTR1.ATTR2']
+'string'
+
+```
+
 ##### Features with Supertypes
 
 The `features()` function stops when a value with a supertype is found,

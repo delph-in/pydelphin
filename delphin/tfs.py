@@ -12,32 +12,43 @@ class TypedFeatureStructure(object):
         for feat, val in list(featvals or []):
             self[feat] = val
 
+    @classmethod
+    def default(cls): return cls(None)
+
     def __repr__(self):
         return '<TypedFeatureStructure object ({}) at {}>'.format(
             self.type, id(self)
         )
 
     def __setitem__(self, key, val):
-        try:
-            first, rest = key.split('.', 1)
-        except ValueError:
-            self._avm[key.upper()] = val
+        subkeys = key.split('.', 1)
+        subkey = subkeys[0].upper()
+        if len(subkeys) == 1:
+            self._avm[subkey] = val
         else:
-            first = first.upper()  # features are case-insensitive
-            try:
-                subdef = self._avm[first]
-            except KeyError:
-                # use type(self) so it still works with inherited classes
-                subdef = self._avm.setdefault(first, type(self)())
-            subdef[rest] = val
+            if subkey in self._avm:
+                subdef = self._avm[subkey]
+            else:
+                subdef = self._avm[subkey] = self.default()
+            subdef[subkeys[1]] = val
 
     def __getitem__(self, key):
-        try:
-            first, rest = key.split('.', 1)
-        except ValueError:
-            return self._avm[key.upper()]
-        else:
-            return self._avm[first.upper()][rest]
+        subkeys = key.split('.', 1)
+        subkey = subkeys[0].upper()
+        val = self._avm[subkey]
+        if len(subkeys) == 2:
+            val = val[subkeys[1]]
+        return val
+
+    def __contains__(self, key):
+        subkeys = key.split('.', 1)
+        subkey = subkeys[0].upper()
+        if subkey in self._avm:
+            if len(subkeys) == 2:
+                return subkeys[1] in self._avm[subkey]
+            else:
+                return True
+        return False
 
     @property
     def type(self):
@@ -73,4 +84,3 @@ class TypedFeatureStructure(object):
             except AttributeError:
                 fs.append((feat, val))
         return fs
-

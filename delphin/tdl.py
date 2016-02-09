@@ -18,10 +18,14 @@ class TdlDefinition(TypedFeatureStructure):
     may have a list of supertypes instead of a type. It also allows for
     comments.
     """
+
     def __init__(self, supertypes=None, featvals=None, comment=None):
         TypedFeatureStructure.__init__(self, None, featvals=featvals)
         self.supertypes = list(supertypes or [])
         self.comment = comment
+
+    @classmethod
+    def default(cls): return TdlDefinition()
 
     def __repr__(self):
         return '<TdlDefinition object at {}>'.format(id(self))
