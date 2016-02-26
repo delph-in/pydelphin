@@ -3,6 +3,7 @@
 import sys
 import argparse
 from delphin.mrs import simplemrs, mrx, dmrx, eds, simpledmrs
+from delphin.extra.latex import dmrs_tikz_dependency
 
 mrsformats = {
     'simplemrs': simplemrs,
@@ -11,15 +12,24 @@ mrsformats = {
     'eds': eds,
     'simpledmrs': simpledmrs
 }
+extraformats = {
+    'dmrs-tikz': dmrs_tikz_dependency
+}
 
 parser = argparse.ArgumentParser(description="Utility for manipulating MRSs")
 subparsers = parser.add_subparsers(dest='command')
 
 convert_parser = subparsers.add_parser('convert', aliases=['c'])
-convert_parser.add_argument('--from', '-f', dest='srcfmt',
-                            choices=list(mrsformats.keys()))
-convert_parser.add_argument('--to', '-t', dest='tgtfmt',
-                            choices=list(mrsformats.keys()))
+convert_parser.add_argument(
+    '--from', '-f',
+    dest='srcfmt',
+    choices=list(mrsformats.keys())
+)
+convert_parser.add_argument(
+    '--to', '-t',
+    dest='tgtfmt',
+    choices=list(mrsformats.keys()) + list(extraformats.keys())
+)
 convert_parser.add_argument('--pretty-print', '-p', action='store_true')
 convert_parser.add_argument('--color', '-c', action='store_true')
 convert_parser.add_argument('infile', metavar='PATH', nargs='?')
@@ -36,8 +46,16 @@ if args.command in ('convert', 'c'):
         ms = srcfmt.load(open(args.infile, 'r'))
     else:
         ms = srcfmt.loads(sys.stdin.read())
-    output = mrsformats[args.tgtfmt].dumps(ms, pretty_print=args.pretty_print,
-                                           color=args.color)
+
+    output = ''
+    if args.tgtfmt in mrsformats:
+        output = mrsformats[args.tgtfmt].dumps(
+            ms,
+            pretty_print=args.pretty_print,
+            color=args.color
+        )
+    elif args.tgtfmt in extraformats:
+        output = extraformats[args.tgtfmt](ms)
     print(output)
 
 elif args.command in ('paths', 'p'):
