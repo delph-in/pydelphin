@@ -416,19 +416,17 @@ constraints on the type:
 
 ```
 
-##### Normal Lists
+##### Normal (Cons) Lists
 
-Empty lists return `None` (an thus cannot be further specified with
-values later):
+Special TdlConsList class is instantiated for contents. Empty lists
+don't instantiate any features.
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR < > ].')
->>> list(t.features())
-[('ATTR', None)]
->>> list(t.local_constraints())
-[('ATTR', None)]
->>> t['ATTR'] is None
-True
+>>> list(t.features())  # doctest: +ELLIPSIS
+[('ATTR', <TdlConsList object ...>)]
+>>> t['ATTR'].features()
+[]
 
 ```
 
@@ -469,12 +467,25 @@ Bounded list with multiple items:
 
 ```
 
+List items can be obtained more conveniently through the `values()`
+method:
+
+```python
+>>> list(t['ATTR'].values())  # doctest: +ELLIPSIS
+[<TdlDefinition object ...>, <TdlDefinition object ...>]
+>>> for x in t['ATTR'].values():
+...     print(x.supertypes)
+['a']
+['b']
+
+```
+
 Simple unbounded list:
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR < ... > ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS
-[('ATTR', <TdlDefinition object ...>)]
+[('ATTR', <TdlConsList object ...>)]
 
 ```
 
@@ -493,7 +504,7 @@ A dot (`.`), instead of a comma, delimiter allows access to the final
 ```python
 >>> t = parsetdl('type := super & [ ATTR1 < a . #rest >, ATTR2 #rest ].')
 >>> sorted(t.features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-[('ATTR1', <TdlDefinition object ...>),
+[('ATTR1', <TdlConsList object ...>),
  ('ATTR2', <TdlDefinition object ...>)]
 >>> sorted(t['ATTR1'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
 [('FIRST', <TdlDefinition object ...>),
@@ -509,6 +520,8 @@ Empty diff lists link the `LIST` path to the `LAST` path:
 
 ```python
 >>> t = parsetdl('type := super & [ ATTR <! !> ].')
+>>> t.features()  # doctest: +ELLIPSIS
+[('ATTR', <TdlDiffList object ...>)]
 >>> sorted(t['ATTR'].features())  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
 [('LAST', <TdlDefinition object ...>),
  ('LIST', <TdlDefinition object ...>)]
@@ -542,5 +555,15 @@ Multiple items on a diff list; same behavior as above:
  ('REST.FIRST', <TdlDefinition object ...>)]
 >>> t.coreferences
 [(None, ['ATTR.LIST.REST.REST', 'ATTR.LAST'])]
+
+```
+
+List items can be returned with `values()`:
+
+```python
+>>> for x in t['ATTR'].values():
+...     print(x.supertypes)
+['a']
+['b']
 
 ```

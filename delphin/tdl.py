@@ -51,6 +51,32 @@ class TdlDefinition(TypedFeatureStructure):
         return cs
 
 
+class TdlConsList(TdlDefinition):
+    def __repr__(self):
+        return "<TdlConsList object at {}>".format(id(self))
+
+    def values(self):
+        def collect(d):
+            if d is None or d.get('FIRST') is None: return []
+            vals = [d['FIRST']]
+            vals.extend(collect(d.get('REST')))
+            return vals
+        return collect(self)
+
+
+class TdlDiffList(TdlDefinition):
+    def __repr__(self):
+        return "<TdlDiffList object at {}>".format(id(self))
+
+    def values(self):
+        def collect(d):
+            if d is None or d.get('FIRST') is None: return []
+            vals = [d['FIRST']]
+            vals.extend(collect(d.get('REST')))
+            return vals
+        return collect(self.get('LIST'))
+
+
 class TdlType(TdlDefinition):
     def __init__(self, identifier, definition, coreferences=None):
         TdlDefinition.__init__(self, definition.supertypes,
@@ -218,6 +244,7 @@ def parse_conjunction(tokens):
     coreferences = []
     comment = None
 
+    cls = TdlDefinition  # default type
     tokens.appendleft('&')  # this just makes the loop simpler
     while tokens[0] == '&':
 
@@ -245,8 +272,10 @@ def parse_conjunction(tokens):
             feats, corefs = parse_avm(tokens)
         elif tokens[0] == '<':
             feats, corefs = parse_cons_list(tokens)
+            cls = TdlConsList
         elif tokens[0] == '<!':
             feats, corefs = parse_diff_list(tokens)
+            cls = TdlDiffList
         # elif tokens[0][:1] in ('\'"'):
         #     raise TdlParsingError('String cannot be part of a conjunction.')
         else:
@@ -259,10 +288,10 @@ def parse_conjunction(tokens):
             features.extend(feats)
         coreferences.extend(corefs)
 
-    if features is None:
+    if features is None and cls is TdlDefinition:
         tdldef = None
     else:
-        tdldef = TdlDefinition(supertypes, features, comment=comment)
+        tdldef = cls(supertypes, features, comment=comment)
 
     return tdldef, coreferences
 

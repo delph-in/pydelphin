@@ -61,7 +61,8 @@ class TypedFeatureStructure(object):
         try:
             val = self[key]
         except KeyError:
-            return default
+            val = default
+        return val
 
     def _is_notable(self):
         """
