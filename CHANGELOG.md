@@ -2,6 +2,67 @@
 
 ## [Unreleased][unreleased]
 
+## [v0.4.0][]
+
+This release fixes a number of bugs (including fixes from two new
+contributors; see the [README][]), and adds some minor features:
+
+* more convenient introspection of TDL lists
+* a LaTeX exporter for DMRS
+
+From [v0.4.0][], pyDelphin uses [semantic versioning](http://semver.org/),
+and is available on [PyPI](https://pypi.python.org/pypi/pyDelphin).
+
+This release also drops support for Python 2.6 (Python 2.7 is still
+supported and tested).
+
+### Added
+
+* `delphin.extra.latex` is added for exporting to LaTeX; currently
+  contains DMRS export via `dmrs_tikz_dependency()`
+* TdlConsList and TdlDiffList classes are added, which make working
+  with list structures in TDL more convenient; e.g., the `values()`
+  function returns a Python list of the elements (instead of having
+  to get them via `REST.REST.FIRST`, etc.)
+
+### Removed
+
+* Python2.6 support
+* unused top-level util.py
+
+### Fixed
+
+* `Xmrs.subgraph()` no longer crashes when selecting only the top node
+* allow hyphens in long-style variable sorts (e.g. `ref-ind2`)
+* `dmrx.loads()` no longer fails for Python2
+* DMRS->MRS conversion no longer generates invalid labels for
+  transitive `*/EQ` links in particular orders
+* MrsPath walks don't no longer cross `/EQ` links twice
+* fix a bug in compound `ARG&ARG2` connectors in MrsPath
+
+### Changed
+
+* `delphin.mrs.simplemrs`
+  - uppercase variable property names
+  - don't print top-level `<-1:-1>` Lnk values for SimpleMRS 1.1
+  - normalize case for other features and role names
+* EPs in Xmrs are stored as ElementaryPredication objects instead of
+  plain tuples (with no significant drop in performance)
+* VarGenerator uses next unused vid instead of next in sequence (i.e.
+  it fills in gaps)
+* `delphin.mrs.components.Pred`
+  - comparison is now case-insensitive
+  - characters like `<` are now allowed inside a pred
+  - don't allow the invalid `_relation` suffix, and pretend the `_rel`
+    suffix is there if it isn't
+* `ElementaryPredication.is_quantifier()` looks for the `RSTR` role;
+  Pred and Node still look for a `q` POS, since they don't have access
+  to the arguments/links
+* added `__contains__()` method to TypedFeatureStructure to check for
+  the presence of features
+* TDL parsing treats strings as primitives instead of as the supertype
+  of some TypedFeatureStructure
+
 ## [v0.3][]
 
 This release simplifies the pyDelphin core classes and improves
@@ -136,8 +197,10 @@ tests for pyDelphin.
 
 There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
-[commit messages](https://github.com/goodmami/pydelphin/commits/v0.2).
+[commit messages](../../commits/v0.2).
 
-[unreleased]: https://github.com/goodmami/pydelphin/tree/develop
-[v0.3]: https://github.com/goodmami/pydelphin/releases/tag/v0.3
-[v0.2]: https://github.com/goodmami/pydelphin/releases/tag/v0.2
+[unreleased]: ../../tree/develop
+[v0.4.0]: ../../releases/tag/v0.4.0
+[v0.3]: ../../releases/tag/v0.3
+[v0.2]: ../../releases/tag/v0.2
+[README]: README.md

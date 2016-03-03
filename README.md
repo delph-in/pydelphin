@@ -1,13 +1,9 @@
 # pyDelphin <br/> Python libraries for DELPH-IN
 
-> NOTE for previous pyDelphin users: The latest version (0.3) has some
-> backward-**incompatible** changes that may break your code. The
-> upgrade path shouldn't be difficult (contact me if there's trouble),
-> and the changes bring big performance gains, so I think it's worth
-> it. Sorry for the trouble while the API stabilizes.
-> 
-> Also note that the primary repo for pyDelphin is now
-> https://github.com/delph-in/pydelphin
+> NOTE for previous pyDelphin users: Recent versions of pyDelphin may
+> have backwards-incompatible changes with prior versions. Please
+> [file an issue](https://github.com/delph-in/pydelphin/issues) if you
+> have trouble upgrading.
 
 pyDelphin is a set of Python libraries for the
 processing of [DELPH-IN](http://delph-in.net) data. It doesn't aim to
@@ -108,15 +104,21 @@ And here's how to compile, parse, and generate with the ACE wrapper:
 ## Installation and Requirements
 
 pyDelphin is developed for [Python 3](http://python.org/download/)
-(3.3+), but it has also been tested to work with Python 2.7. The
-[Pygments](http://pygments.org/) package is required for TDL and
-SimpleMRS syntax highlighting, and
-[NetworkX](http://networkx.github.io/) is required for isomorphism
-checking.
+(3.3+), but it has also been tested to work with Python 2.7. Optional
+requirements include:
+  - [NetworkX](http://networkx.github.io/) for MRS isomorphism
+    checking
+  - [Pygments](http://pygments.org/) for TDL and SimpleMRS syntax
+    highlighting
+  - [tikz-dependency](https://www.ctan.org/pkg/tikz-dependency), while
+    not a Python requirement, is needed for compiling LaTeX documents
+    using exported DMRSs
 
-pyDelphin does not need to be installed to be used. You can
-adjust `PYTHONPATH` to include the pyDelphin directory, or copy the
-`delphin/` subdirectory into your project's main directory.
+pyDelphin itself does not need to be installed to be used. You can
+[adjust `PYTHONPATH`](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH)
+to include the pyDelphin directory, or copy the `delphin/`
+subdirectory into your project's main directory (but in this latter
+case be aware of licensing requirements).
 
 If you want to have the `delphin` packages generally available for
 importing, you can use the provided `setup.py` script to install (you
@@ -142,6 +144,7 @@ The following packages/modules are available:
 - `tfs`: Typed-Feature Structures
 - `extra.highlight`: [Pygments](http://pygments.org/)-based syntax
   highlighting (currently just for TDL and SimpleMRS)
+- `extra.latex`: Formatting for LaTeX (just DMRS)
 - `interfaces.ace`: Python wrapper for common tasks using
   [ACE](http://sweaglesw.org/linguistics/ace/)
 
@@ -149,3 +152,14 @@ The following packages/modules are available:
 
 - [Michael Wayne Goodman](https://github.com/goodmami/) (primary author)
 - [T.J. Trimble](https://github.com/dantiston/) (packaging, derivations, ACE)
+- [Guy Emerson](https://github.com/guyemerson/) (MRS)
+- [Alex Kuhnle](https://github.com/AlexKuhnle/) (MRS)
+
+## Related Software
+
+- https://github.com/wpm/Ruby-DELPH-IN
+- https://github.com/ned2/typediff
+- Also, on the DELPH-IN wiki:
+  - http://moin.delph-in.net/
+  - http://moin.delph-in.net/ToolsTop
+  - http://moin.delph-in.net/DelphinApplications

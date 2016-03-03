@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import os
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
@@ -31,15 +32,29 @@ class PyTestCoverage(PyTest):
             '--cov-report=html'
         ]
 
+long_description = '''\
+pyDelphin provides a suite of libraries for modeling Minimal Recursion
+Semantics (MRS; including DMRS), derivation trees, and [incr tsdb()]
+profiles; introspection tools for Type Description Language (TDL),
+which is used to define HPSG grammars; a Python wrapper for the ACE
+parser; and some extra tools for syntax highlighting or LaTeX output.
+Python developers who work with DELPH-IN data can rely on pyDelphin to
+correctly deal with such data via convenient interfaces.'''
+
+base_dir = os.path.dirname(__file__)
+about = {}
+with open(os.path.join(base_dir, "delphin", "__about__.py")) as f:
+    exec(f.read(), about)
 
 setup(
-    name='pyDelphin',
-    version='0.3',
-    url='https://github.com/delph-in/pydelphin',
-    author='Michael Wayne Goodman',
-    author_email='goodman.m.w@gmail.com',
-    description='Libraries and scripts for DELPH-IN data.',
-    license='MIT',
+    name=about['__title__'],
+    version=about['__version__'],
+    description=about['__summary__'],
+    long_description=long_description,
+    url=about['__uri__'],
+    author=about['__author__'],
+    author_email=about['__email__'],
+    license=about['__license__'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -52,6 +67,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Text Processing :: Linguistic',
@@ -60,10 +76,11 @@ setup(
     keywords='nlp semantics hpsg delph-in',
     packages=[
         'delphin',
+        'delphin.lib',
         'delphin.interfaces',
         'delphin.mrs',
         'delphin.extra',
-        'delphin.codecs',
+        'delphin.codecs'
     ],
     install_requires=[
         'networkx',
