@@ -9,11 +9,15 @@
   - `Xmrs.nodeid(iv)`
 * `tests.mrs_Dmrs_test`
 
+### Fixed
+
+* Quantifiers in DMRS now always point to quantifiees.
+* `delphin.mrs.components.VarGenerator` uses a default sort (`u`) if
+  none is given
+
 ### Changed
 
 * `delphin.mrs.xmrs.Dmrs()` no longer creates unlinked TOP
-* `delphin.mrs.components.VarGenerator` uses a default sort (`u`) if
-  none is given
 
 ## [v0.4.0][]
 

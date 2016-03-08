@@ -81,7 +81,25 @@ x5 = Xmrs(
     hcons=[('h0', 'qeq', 'h1'), ('h5', 'qeq', 'h7'),
            ('h10', 'qeq', 'h13')]
 )
-
+# ARG/NEQ from modifiers; "The big and scary dog barked."
+x6 = Xmrs(
+    top='h0',
+    eps=[
+        EP(10000, spred('_the_q_rel'), 'h4',
+           {'ARG0': 'x3', 'RSTR': 'h5'}),
+        EP(10001, spred('"_big_a_1_rel"'), 'h7',
+           {'ARG0': 'e8', 'ARG1': 'x3'}),
+        EP(10002, spred('_and_c_rel'), 'h9',
+           {'ARG0': 'e10', 'L-INDEX': 'e8', 'R-INDEX': 'e11',
+            'L-HNDL': 'h7', 'R-HNDL': 'h12'}),
+        EP(10003, spred('"_scary_a_for_rel"'), 'h12',
+           {'ARG0': 'e11', 'ARG1': 'x3'}),
+        EP(10004, spred('"_dog_n_1_rel"'), 'h9', {'ARG0': 'x3'}),
+        EP(10005, spred('"_bark_v_1_rel"'), 'h1',
+              {'ARG0': 'e2', 'ARG1': 'x3'})
+    ],
+    hcons=[('h0', 'qeq', 'h1'), ('h5', 'qeq', 'h9')]
+)
 
 def test_sort_vid_split():
     assert sort_vid_split('x1') == ('x', '1')
@@ -253,6 +271,18 @@ def test_links():
         (10003, 10004, 'ARG1', 'NEQ'),
         (10005, 10004, 'ARG1', 'NEQ'),
         (10006, 10001, 'ARG1', 'NEQ')
+    ]
+    assert sorted(links(x6)) == [
+        (0, 10005, None, 'H'),
+        (10000, 10004, 'RSTR', 'H'),
+        (10001, 10004, 'ARG1', 'NEQ'),
+        (10002, 10001, 'L-HNDL', 'HEQ'),
+        (10002, 10001, 'L-INDEX', 'NEQ'),
+        (10002, 10003, 'R-HNDL', 'HEQ'),
+        (10002, 10003, 'R-INDEX', 'NEQ'),
+        (10002, 10004, None, 'EQ'),
+        (10003, 10004, 'ARG1', 'NEQ'),
+        (10005, 10004, 'ARG1', 'NEQ')
     ]
 
 
