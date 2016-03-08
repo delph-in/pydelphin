@@ -2,6 +2,19 @@
 
 ## [Unreleased][unreleased]
 
+### Added
+
+* `delphin.mrs.xmrs`
+  - `Xmrs.nodeids()`
+  - `Xmrs.nodeid(iv)`
+* `tests.mrs_Dmrs_test`
+
+### Changed
+
+* `delphin.mrs.xmrs.Dmrs()` no longer creates unlinked TOP
+* `delphin.mrs.components.VarGenerator` uses a default sort (`u`) if
+  none is given
+
 ## [v0.4.0][]
 
 This release fixes a number of bugs (including fixes from two new

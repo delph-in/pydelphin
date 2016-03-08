@@ -209,6 +209,24 @@ class Xmrs(LnkMixin):
 
     # basic access to internal structures
 
+    def nodeid(self, iv, quantifier=False):
+        return next(iter(self.nodeids(ivs=[iv], quantifier=quantifier)), None)
+
+    def nodeids(self, ivs=None, quantifier=None):
+        if ivs is None:
+            nids = list(self._nodeids)
+        else:
+            _vars = self._vars
+            nids = []
+            for iv in ivs:
+                if iv in _vars and IVARG_ROLE in _vars[iv]['refs']:
+                    nids.extend(_vars[iv]['refs'][IVARG_ROLE])
+                else:
+                    raise KeyError(iv)
+        if quantifier is not None:
+            nids = [n for n in nids if self.ep(n).is_quantifier()==quantifier]
+        return nids
+
     def ep(self, nodeid): return self._eps[nodeid]
 
     def eps(self, nodeids=None):
@@ -648,12 +666,13 @@ def Dmrs(nodes=None, links=None,
     >>> d = Dmrs([rain], [ltop_link])
     """
     from .components import VarGenerator
+    if nodes is None: nodes = []
+    if links is None: links = []
     qeq = HandleConstraint.qeq
-    vgen = VarGenerator(starting_vid=0)
+    vgen = VarGenerator()
     labels = _make_labels(nodes, links, vgen)
     ivs = _make_ivs(nodes, vgen)
-    top=labels[LTOP_NODEID]
-    index = xarg = None  # for now; maybe get them from kwargs?
+    top = index = xarg = None  # for now; maybe get them from kwargs?
     # initialize args with ARG0 for intrinsic variables
     args = {nid: {IVARG_ROLE: iv} for nid, iv in ivs.items()}
     hcons = []
@@ -665,6 +684,7 @@ def Dmrs(nodes=None, links=None,
         # assumes a QEQ. Label equality would have been captured by
         # _make_labels() earlier.
         if l.start == LTOP_NODEID:
+            top = labels[LTOP_NODEID]
             if l.post == H_POST or l.post == NIL_POST:
                 hcons += [qeq(labels[LTOP_NODEID], labels[l.end])]
         else:
@@ -702,7 +722,11 @@ def Dmrs(nodes=None, links=None,
 
 def _make_labels(nodes, links, vgen):
     eq_edges = defaultdict(set)
+    nids = [node.nodeid for node in nodes]
     for l in links:
+        if l.start == LTOP_NODEID:
+            vgen.vid = 0  # start at h0 for TOP
+            nids = [LTOP_NODEID] + nids
         if l.post == EQ_POST:
             eq_edges[l.start].add(l.end)
             eq_edges[l.end].add(l.start)
@@ -717,7 +741,7 @@ def _make_labels(nodes, links, vgen):
             yield nid
     labels = {}
     # be sure to do LTOP_NODEID first so it gets h0
-    for nid in chain([LTOP_NODEID], (node.nodeid for node in nodes)):
+    for nid in nids:
         if nid not in seen:
             lbl = vgen.new(HANDLESORT)[0]
             for conj_nid in conjunction(nid):

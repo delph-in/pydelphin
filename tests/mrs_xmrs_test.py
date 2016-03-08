@@ -19,6 +19,7 @@ class TestXmrs():
         assert x.top is None
         assert x.index is None
         assert x.xarg is None
+        assert len(x.nodeids()) == 0
         assert len(x.eps()) == 0
         assert len(x.hcons()) == 0
         assert len(x.icons()) == 0
@@ -107,6 +108,37 @@ class TestXmrs():
     def test_xarg(self):
         x = Xmrs(xarg='e0')
         assert x.xarg == 'e0'
+
+    def test_nodeid(self):
+        sp = Pred.stringpred
+        x = Xmrs()
+        with pytest.raises(KeyError):
+            x.nodeid('e2')
+        x.add_eps([(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
+        assert x.nodeid('x4') == 10
+        assert x.nodeid('x4', quantifier=False) == 10
+        assert x.nodeid('x4', quantifier=None) == 10
+        assert x.nodeid('x4', quantifier=True) == None
+        x.add_eps([(11, sp('_the_q_rel'), 'h5', {'ARG0': 'x4', 'RSTR': 'h6'})])
+        x.add_hcons([('h6', 'qeq', 'h3')])
+        assert x.nodeid('x4') == 10
+        assert x.nodeid('x4', quantifier=False) == 10
+        assert x.nodeid('x4', quantifier=True) == 11
+
+    def test_nodeids(self):
+        sp = Pred.stringpred
+        x = Xmrs(eps=[(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
+        assert x.nodeids() == [10]
+        assert x.nodeids(ivs=['x4']) == [10]
+        assert x.nodeids(quantifier=False) == [10]
+        assert x.nodeids(quantifier=None) == [10]
+        assert x.nodeids(quantifier=True) == []
+        x.add_eps([(11, sp('_the_q_rel'), 'h5', {'ARG0': 'x4', 'RSTR': 'h6'})])
+        x.add_hcons([('h6', 'qeq', 'h3')])
+        assert sorted(x.nodeids()) == [10, 11]
+        assert sorted(x.nodeids(ivs=['x4'])) == [10, 11]
+        assert sorted(x.nodeids(ivs=['x4'], quantifier=True)) == [11]
+        assert sorted(x.nodeids(ivs=['x4'], quantifier=False)) == [10]
 
     def test_ep(self):
         sp = Pred.stringpred

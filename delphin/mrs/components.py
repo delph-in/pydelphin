@@ -11,7 +11,7 @@ from functools import total_ordering
 from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
-    HANDLESORT, CVARSORT, QUANTIFIER_POS,
+    UNKNOWNSORT, HANDLESORT, CVARSORT, QUANTIFIER_POS,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST
 )
 
@@ -49,6 +49,8 @@ class VarGenerator(object):
         self.store = {}  # to recall properties from varstrings
 
     def new(self, sort, properties=None):
+        if sort is None:
+            sort = UNKNOWNSORT
         # find next available vid
         vid, index = self.vid, self.index
         while vid in index:
