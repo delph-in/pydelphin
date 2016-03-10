@@ -1,5 +1,10 @@
 # pyDelphin <br/> Python libraries for DELPH-IN
 
+| Branch | Status |
+| ------ | ------ |
+| [master](https://github.com/delph-in/pydelphin/tree/master)  | [![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=master)](https://travis-ci.org/delph-in/pydelphin) |
+| [develop](https://github.com/delph-in/pydelphin/tree/develop) | [![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=develop)](https://travis-ci.org/delph-in/pydelphin) |
+
 > NOTE for previous pyDelphin users: Recent versions of pyDelphin may
 > have backwards-incompatible changes with prior versions. Please
 > [file an issue](https://github.com/delph-in/pydelphin/issues) if you
@@ -116,22 +121,14 @@ requirements include:
 
 pyDelphin itself does not need to be installed to be used. You can
 [adjust `PYTHONPATH`](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH)
-to include the pyDelphin directory, or copy the `delphin/`
-subdirectory into your project's main directory (but in this latter
-case be aware of licensing requirements).
+to include the pyDelphin directory.
 
-If you want to have the `delphin` packages generally available for
-importing, you can use the provided `setup.py` script to install (you
-may need to run the following as root):
+If you would rather install it, however, it is available on
+[PyPI](https://pypi.python.org/pypi/pyDelphin):
 
 ```bash
-$ ./setup.py install
+$ pip install pydelphin
 ```
-
-The `setup.py` script, unfortunately, does not have an
-uninstall/remove option, so in order to remove an installed pyDelphin,
-you'll need to track down and remove the files that were installed (in
-your Python site packages).
 
 ## Sub-packages
 
