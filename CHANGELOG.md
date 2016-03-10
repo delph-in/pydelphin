@@ -14,6 +14,8 @@
 * Quantifiers in DMRS now always point to quantifiees.
 * `delphin.mrs.components.VarGenerator` uses a default sort (`u`) if
   none is given
+* `delphin.itsdb.ItsdbProfile.join()` now raises an `ItsdbError` when
+  the tables don't share a key
 
 ### Changed
 

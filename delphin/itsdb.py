@@ -631,9 +631,12 @@ class ItsdbProfile(object):
         """
         get_keys = lambda t: (f.name for f in self.relations[t] if f.key)
         keys = set(get_keys(table1)).intersection(get_keys(table2))
+        if not keys:
+            raise ItsdbError(
+                'Cannot join tables "{}" and "{}"; no shared key exists.'
+                .format(table1, table2)
+            )
         key = keys.pop()
-        if key is None:
-            raise StopIteration
         # this join method stores the whole of table2 in memory, but it is
         # MUCH faster than a nested loop method. Most profiles will fit in
         # memory anyway, so it's a decent tradeoff
