@@ -120,7 +120,7 @@ class AceGenerator(AceProcess):
             line = stdout.readline().rstrip()
         # sometimes error messages aren't prefixed with ERROR
         if line.endswith('[0 results]') and len(results) > 0:
-            response['ERRORS'] = '\n'.join(results)
+            response['ERRORS'] = '\n'.join(d['SENT'] for d in results)
             results = []
         response['RESULTS'] = results
         return response
