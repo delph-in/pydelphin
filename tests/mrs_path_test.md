@@ -94,7 +94,7 @@ Here is a table of flags:
 | `INAXES`         | `IN`       | `pred<ARG1/EQ:`                             |
 | `UNDIRECTEDAXES` | `UND`      | `pred:/EQ:`                                 |
 | `SUBPATHS`       | `SP`       | `pred:ARG1/NEQ>pred2`                       |
-| `CARG`           | `C`        | `pred:CARG>"constant"                       |
+| `CARG`           | `C`        | `pred:CARG>"constant"`                      |
 | `BALANCED`       | `B`        | all AXES on a pred have subpaths or none do |
 
 There are also some convenient composed flags:

@@ -46,13 +46,18 @@ def axis_sort(axis):
     )
 
 
-def walk(xmrs, start=0, method='headed', sort_key=axis_sort):
+def step_sort(step):
+    nodeid, axis = step
+    return tuple(
+        list(axis_sort(axis)) + [nodeid]
+    )
+
+
+def walk(xmrs, start=0, method='headed', sort_key=step_sort):
     if method not in ('top-down', 'bottom-up', 'headed'):
         raise XmrsPathError("Invalid path-finding method: {}".format(method))
 
-    if start == 0 or xmrs.pred(start):
-        yield (None, start, None)
-    else:
+    if not (start == 0 or xmrs.pred(start)):
         raise XmrsPathError('Start nodeid not in Xmrs graph.')
 
     linkdict = _build_linkdict(xmrs)
@@ -65,10 +70,12 @@ def _walk(nodeid, linkdict, visited, method, sort_key):
         return
     visited.add(nodeid)
 
-    local_links = linkdict.get(nodeid, {})
-    axes = sorted(_get_axes(method, local_links), key=sort_key)
-    for axis in axes:
-        tgtnid = local_links[axis]
+    local_links = linkdict.get(nodeid, [])
+    steps = sorted(
+        filter(_axis_filter(method), local_links),
+        key=sort_key
+    )
+    for tgtnid, axis in steps:
         # if this undirected link was already traversed in the other
         # direction, just yield this step but don't recurse
         if axis == ':/EQ:' and tgtnid in visited:
@@ -80,28 +87,30 @@ def _walk(nodeid, linkdict, visited, method, sort_key):
 
 
 def _build_linkdict(xmrs):
-    ld = defaultdict(dict)
+    ld = defaultdict(list)
     for link in links(xmrs):
         axis = '{}/{}'.format(link.rargname or '', link.post)
         if link_is_directed(link):
-            ld[link.start][':{}>'.format(axis)] = link.end
-            ld[link.end]['<{}:'.format(axis)] = link.start
+            ld[link.start].append((link.end, ':{}>'.format(axis)))
+            ld[link.end].append((link.start, '<{}:'.format(axis)))
         else:
             # pretend they are directed
             #ld[link.end]['<{}:'.format(axis)] = link.start
-            ld[link.start][':{}:'.format(axis)] = link.end
-            ld[link.end][':{}:'.format(axis)] = link.start
+            ld[link.start].append((link.end, ':{}:'.format(axis)))
+            ld[link.end].append((link.start, ':{}:'.format(axis)))
     return ld
 
 
-def _get_axes(method, links):
+def _axis_filter(method):
     # top-down: :X/Y> or :X/Y: (the latter only if added)
-    if method == 'top-down':
-        return [c for c in links if c.startswith(':')]
-    elif method == 'bottom-up':
-        return [c for c in links if c.endswith(':')]
-    elif method == 'headed':
-        return [c for c in links if headed(c)]
+    def axis_filter(step):
+        nid, axis = step
+        if method == 'headed' and headed(axis) or \
+           method == 'top-down' and axis.startswith(':') or \
+           method == 'bottom-up' and axis.endswith(':'):
+            return True
+        return False
+    return axis_filter
 
 
 def link_is_directed(link):
