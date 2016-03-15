@@ -508,6 +508,10 @@ class TestXmrs():
         x = read('[ TOP: h0 '
                  '  RELS: < [ _v_v_rel LBL: h1 ARG0: e2 ARG1: x4 ]'
                  '          [ _n_n_rel LBL: h3 ARG0: x4 ] > ]')
+        # they can link to previous EPs, too
+        x = read('[ TOP: h0 '
+                 '  RELS: < [ _n_n_rel LBL: h3 ARG0: x4 ]'
+                 '          [ _v_v_rel LBL: h1 ARG0: e2 ARG1: x4 ] > ]')
         assert x.is_connected() == True
         # they can also be linked by LBL
         x = read('[ TOP: h0 '
@@ -538,7 +542,6 @@ class TestXmrs():
                  '          [ _v_v_rel LBL: h5 ARG0: e2 ARG1: x8 ]'
                  '          [ _n_n_rel LBL: h7 ARG0: x8 ] > ]')
         assert x.is_connected() == True
-
 
     def test_is_well_formed(self):
         pass

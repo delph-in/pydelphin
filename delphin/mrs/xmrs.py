@@ -7,7 +7,7 @@
     the hi variable of exactly one handle constraint
 """
 
-from collections import (OrderedDict, defaultdict)
+from collections import (defaultdict, deque)
 from itertools import chain
 
 from delphin._exceptions import (XmrsError, XmrsStructureError)
@@ -437,58 +437,43 @@ class Xmrs(LnkMixin):
         QEQs, and label equalities.
         """
         nids = set(self._nodeids)  # the nids left to find
-        nidlen = len(nids)
-        if nidlen == 0:
+        if len(nids) == 0:
             raise XmrsError('Cannot compute connectedness of an empty Xmrs.')
-        _eps, _hcons, _vars = self._eps, self._hcons, self._vars
-        explored = set()
-        seen = set()
-        agenda = [next(iter(nids))]
-
-        while agenda:
-            curnid = agenda.pop()
-            ep = _eps[curnid]
-            lbl = ep[2]
-            conns = set()
-
-            # labels can be shared, targets of HCONS, or targets of args
-            if lbl in _vars:  # every EP should have a LBL
-                for refrole, ref in _vars[lbl]['refs'].items():
-                    if refrole == 'hcons':
-                        for hc in ref:
-                            if hc[0] in _vars:
-                                refnids = _vars[hc[0]]['refs'].values()
-                                conns.update(chain.from_iterable(refnids))
-                    elif refrole != 'icons':
-                        conns.update(ref)
-
-            for role, var in ep[3].items():
-                if var not in _vars:
+        # build a basic dict graph of relations
+        edges = []
+        # label connections
+        for lbl in self.labels():
+            lblset = self.labelset(lbl)
+            edges.extend((x, y) for x in lblset for y in lblset if x != y)
+        # argument connections
+        _vars = self._vars
+        for nid in nids:
+            for rarg, tgt in self.args(nid).items():
+                if tgt not in _vars:
                     continue
-                vd = _vars[var]
-                if IVARG_ROLE in vd['refs']:
-                    conns.update(chain.from_iterable(vd['refs'].values()))
-                # if 'iv' in vd:
-                #     conns.add(vd['iv'])
-                # if 'bv' in vd:
-                #     conns.add(vd['bv'])
-                if var in _hcons:
-                    lo = _hcons[var][2]
-                    if lo in _vars:
-                        conns.update(_vars[lo]['refs']['LBL'])
-                if 'LBL' in vd['refs']:
-                    conns.update(vd['refs']['LBL'])
-
-            explored.add(curnid)
-            for conn in conns:
-                if conn not in explored:
-                    agenda.append(conn)
-            seen.update(conns)
-            # len(seen) is a quicker check
-            if len(seen) == nidlen and len(nids.difference(seen)) == 0:
-                break
-
-        return len(nids.difference(seen)) == 0
+                if IVARG_ROLE in _vars[tgt]['refs']:
+                    tgtnids = list(_vars[tgt]['refs'][IVARG_ROLE])
+                elif tgt in self._hcons:
+                    tgtnids = list(self.labelset(self.hcon(tgt)[2]))
+                elif 'LBL' in _vars[tgt]['refs']:
+                    tgtnids = list(_vars[tgt]['refs']['LBL'])
+                else:
+                    tgtnids = []
+                # connections are bidirectional
+                edges.extend((nid, t) for t in tgtnids if nid != t)
+                edges.extend((t, nid) for t in tgtnids if nid != t)
+        g = {nid: set() for nid in nids}
+        for x, y in edges:
+            g[x].add(y)
+        connected_nids = _bfs(g)
+        if connected_nids == nids:
+            return True
+        elif connected_nids.difference(nids):
+            raise XmrsError(
+                'Possibly bogus nodeids: {}'
+                .format(', '.join(connected_nids.difference(nids)))
+            )
+        return False
 
     def is_well_formed(self):
         """
@@ -730,22 +715,14 @@ def _make_labels(nodes, links, vgen):
         if l.post == EQ_POST:
             eq_edges[l.start].add(l.end)
             eq_edges[l.end].add(l.start)
-    # thanks: http://stackoverflow.com/a/13837045/1441112
     seen = set()
-    def conjunction(nodeid):
-        nids = {nodeid}
-        while nids:
-            nid = nids.pop()
-            seen.add(nid)
-            nids |= eq_edges[nid] - seen
-            yield nid
     labels = {}
-    # be sure to do LTOP_NODEID first so it gets h0
     for nid in nids:
         if nid not in seen:
             lbl = vgen.new(HANDLESORT)[0]
-            for conj_nid in conjunction(nid):
+            for conj_nid in _bfs(eq_edges, nid):
                 labels[conj_nid] = lbl
+                seen.add(conj_nid)
     return labels
 
 def _make_ivs(nodes, vgen):
@@ -758,3 +735,19 @@ def _make_ivs(nodes, vgen):
                          if key != CVARSORT)
             ivs[node.nodeid] = vgen.new(node.cvarsort, props)[0]
     return ivs
+
+# inspired by NetworkX is_connected():
+# https://networkx.github.io/documentation/latest/_modules/networkx/algorithms/components/connected.html#is_connected
+def _bfs(g, start=None):
+    if not g:
+        return {start} if start is not None else set()
+    seen = set()
+    if start is None:
+        start = next(iter(g))
+    agenda = deque([start])
+    while agenda:
+        x = agenda.popleft()
+        if x not in seen:
+            seen.add(x)
+            agenda.extend(y for y in g.get(x, []) if y not in seen)
+    return seen
