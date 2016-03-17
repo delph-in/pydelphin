@@ -270,15 +270,10 @@ def links(xmrs):
             tgtlbl = _eps[tgt][2]
             post = EQ_POST if srclbl == tgtlbl else NEQ_POST
         elif val in _hcons:
-            ep = _eps.get(src)  # ep is None for TOP
-            if ep is not None and ep.is_quantifier():
-                # other EP sharing ARG0 is quantifiee
-                tgt = xmrs.nodeid(ep.iv, quantifier=False)
-            else:
-                lbl = _hcons[val][2]
-                if lbl not in lblheads or len(lblheads[lbl]) == 0:
-                    continue  # broken MRS; log this?
-                tgt = lblheads[lbl][0]  # sorted list; first item is most "heady"
+            lbl = _hcons[val][2]
+            if lbl not in lblheads or len(lblheads[lbl]) == 0:
+                continue  # broken MRS; log this?
+            tgt = lblheads[lbl][0]  # sorted list; first item is most "heady"
             post = H_POST
         elif 'LBL' in vd['refs']:
             if val not in lblheads or len(lblheads[val]) == 0:

@@ -352,15 +352,16 @@ class Xmrs(LnkMixin):
         # out_deg is 1 for ARG0, but <= 1 because sometimes ARG0 is missing
         candidates = [n for n, out_deg in out.items() if out_deg <= 1]
         in_ = {}
-        q = {}
+        q = {}  # quantifier or quantified
         for n in candidates:
             iv = nodeids[n]
             if iv in _vars:
                 in_[n] = sum(1 for slist in _vars[iv]['refs'].values()
                              for s in slist if s in nodeids)
+                q[n] = 1 if self.nodeid(iv, quantifier=True) is not None else 0
             else:
                 in_[n] = 0
-            q[n] = 1 if _eps[n][1].is_quantifier() else 0
+                q[n] = 1 if _eps[n][1].is_quantifier() else 0
 
         return sorted(
             candidates,
@@ -370,7 +371,7 @@ class Xmrs(LnkMixin):
                 # prefer more incoming args from eps in the labelset
                 -in_[n],
                 # prefer quantifiers (if it has a labelset > 1, it's a
-                # compound quantifier, like "nearly all")
+                # compound quantifier, like "nearly all") or quantified
                 -q[n],
                 # finally sort by the nodeid itself
                 n
