@@ -12,7 +12,8 @@ from itertools import chain
 
 from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .components import (
-    ElementaryPredication, HandleConstraint, LnkMixin, var_re
+    ElementaryPredication, HandleConstraint, IndividualConstraint,
+    LnkMixin, var_re
 )
 from .config import (
     HANDLESORT, IVARG_ROLE, CONSTARG_ROLE, LTOP_NODEID, FIRST_NODEID,
@@ -136,13 +137,14 @@ class Xmrs(LnkMixin):
         _vars = self._vars
         _hcons = self._hcons
         for hc in hcons:
-            if len(hc) < 3:
-                raise XmrsError(
-                    'Handle constraints must have length >= 3: '
-                    '(hi, relation, lo)'
-                )
-            hi = hc[0]
-            lo = hc[2]
+            try:
+                if not isinstance(hc, HandleConstraint):
+                    hc = HandleConstraint(*hc)
+            except TypeError:
+                raise XmrsError('Invalid HCONS data: {}'.format(repr(hc)))
+
+            hi = hc.hi
+            lo = hc.lo
             if hi in _hcons:
                 raise XmrsError(
                     'Handle constraint already exists for hole %s.' % hi
@@ -158,13 +160,13 @@ class Xmrs(LnkMixin):
     def add_icons(self, icons):
         _vars, _icons = self._vars, self._icons
         for ic in icons:
-            if len(ic) < 3:
-                raise XmrsError(
-                    'Individual constraints must have length >= 3: '
-                    '(left, relation, right)'
-                )
-            left = ic[0]
-            right = ic[2]
+            try:
+                if not isinstance(ic, IndividualConstraint):
+                    ic = IndividualConstraint(*ic)
+            except TypeError:
+                raise XmrsError('Invalid ICONS data: {}'.format(repr(ic)))
+            left = ic.left
+            right = ic.right
             if left not in _icons:
                 _icons[left] = []
             _icons[left].append(ic)

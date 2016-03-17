@@ -8,6 +8,7 @@
   - `Xmrs.nodeids()`
   - `Xmrs.nodeid(iv)`
 * `tests.mrs_Dmrs_test`
+* `tests.mrs_query_test`
 
 ### Fixed
 
@@ -16,10 +17,31 @@
   none is given
 * `delphin.itsdb.ItsdbProfile.join()` now raises an `ItsdbError` when
   the tables don't share a key
+* AceGenerator now correctly joins error messages
+* The search in `Xmrs.is_connected()` is fixed
+* `mrs.path.walk()` now traverses multiple axes of the same name
+* `mrs.query`, fixed the following (also see Added tests):
+  - `select_nodeids()`
+  - `select_nodes()`
+  - `select_eps()`
+  - `select_args()`
+  - `select_links()`
+  - `select_hcons()`
+  - `select_icons()`
+  - `find_argument_target()`
+  - `find_subgraphs_by_preds()`
 
 ### Changed
 
 * `delphin.mrs.xmrs.Dmrs()` no longer creates unlinked TOP
+* `Xmrs` now stores ICONS as IndividualConstraint objects (and HCONS, but this was already the case, but not made explicit)
+
+### Deprecated
+
+* `mrs.query`
+  - `find_quantifier()` (use `xmrs.nodeid(..., quantifier=True)`)
+  - `get_outbound_args()` (use `xmrs.outgoing_args()`)
+  - `nodeid()` (use `xmrs.nodeid()`)
 
 ## [v0.4.0][]
 

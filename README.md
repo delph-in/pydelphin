@@ -150,7 +150,7 @@ The following packages/modules are available:
 - [Michael Wayne Goodman](https://github.com/goodmami/) (primary author)
 - [T.J. Trimble](https://github.com/dantiston/) (packaging, derivations, ACE)
 - [Guy Emerson](https://github.com/guyemerson/) (MRS)
-- [Alex Kuhnle](https://github.com/AlexKuhnle/) (MRS)
+- [Alex Kuhnle](https://github.com/AlexKuhnle/) (MRS, ACE)
 
 ## Related Software
 
