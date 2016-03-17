@@ -328,9 +328,7 @@ def hcons(xmrs):
     """The list of all |HandleConstraints|."""
     return [
         HandleConstraint(hi, reln, lo)
-        for hi, reln, lo in sorted(xmrs.hcons(),
-                                   key=lambda hc: var_id(hc[0]),
-                                   reverse=True)
+        for hi, reln, lo in sorted(xmrs.hcons(), key=lambda hc: var_id(hc[0]))
     ]
 
 
@@ -343,8 +341,7 @@ def icons(xmrs):
     return [
         IndividualConstraint(left, reln, right)
         for left, reln, right in sorted(xmrs.icons(),
-                                        key=lambda ic: var_id(ic[0]),
-                                        reverse=True)
+                                        key=lambda ic: var_id(ic[0]))
     ]
 
 
