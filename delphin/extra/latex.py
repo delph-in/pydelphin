@@ -1,5 +1,11 @@
 
+from collections import defaultdict
+
 from delphin.mrs.components import nodes, links
+from delphin.mrs.config import (
+    RSTR_ROLE, EQ_POST, H_POST
+)
+
 from delphin.mrs.xmrs import Xmrs
 
 # latex character escaping code copied from Xigt:
@@ -30,15 +36,32 @@ def latex_escape(s):
     return s
 
 def dmrs_tikz_dependency(xs):
+    def link_label(link):
+        return '{}/{}'.format(link.rargname or '', link.post)
+
+    def label_side(link):
+        if ((link.post == H_POST and link.rargname == RSTR_ROLE)
+                or link.post == EQ_POST):
+            return 'edge below'
+        return 'edge above'
+
     if isinstance(xs, Xmrs):
         xs = [xs]
+
+    slots = defaultdict(set)  # from/(+-)to; + for above, - for below
     lines = [
         '\\documentclass{standalone}',
         '\\usepackage{tikz-dependency}',
         '\\begin{document}'
     ]
     for x in xs:
-        lines.append('\\begin{dependency}[label style={font=\\footnotesize}]')
+        lines.append(
+            '\\begin{dependency}['
+            'text only label,'
+            'label style={above,font=\\footnotesize},'
+            'edge unit distance=2ex'
+            ']'
+        )
         ns = nodes(x)
         ls = links(x)
         predlist = [latex_escape(n.pred.short_form()) for n in ns]
@@ -57,10 +80,17 @@ def dmrs_tikz_dependency(xs):
                     )
                 )
             else:
-                lines.append('  \\depedge{{{}}}{{{}}}{{{}}}'.format(
+                side = label_side(link)
+                opts = [side]
+                slot = link.end * -1 if side.endswith('below') else link.end
+                if slot in slots[link.start]:
+                    opts.append('edge unit distance=4ex')
+                slots[link.start].add(slot)
+                lines.append('  \\depedge[{}]{{{}}}{{{}}}{{{}}}'.format(
+                    ','.join(opts),
                     nodeidx[link.start],
                     nodeidx[link.end],
-                    latex_escape('{}/{}'.format(link.rargname, link.post))
+                    latex_escape(link_label(link))
                 ))
         lines.append('\\end{dependency}')
     lines.append('\\end{document}')
