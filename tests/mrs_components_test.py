@@ -351,6 +351,12 @@ class TestPred():
         assert p.pos == 'q'
         assert p.sense == None
         assert p.short_form() == 'udef_q'
+        p = Pred.grammarpred('udef_q')
+        assert p.string == 'udef_q'
+        assert p.lemma == 'udef'
+        assert p.pos == 'q'
+        assert p.sense == None
+        assert p.short_form() == 'udef_q'
         p = Pred.grammarpred('abc_def_ghi_rel')
         assert p.type == Pred.GRAMMARPRED
         assert p.string == 'abc_def_ghi_rel'
@@ -379,6 +385,13 @@ class TestPred():
         p = spred('"_dog_n_1_rel"')
         assert p.type == Pred.STRINGPRED
         assert p.string == '"_dog_n_1_rel"'
+        assert p.lemma == 'dog'
+        assert p.pos == 'n'
+        assert p.sense == '1'
+        assert p.short_form() == '_dog_n_1'
+        p = spred('"_dog_n_1"')
+        assert p.type == Pred.STRINGPRED
+        assert p.string == '"_dog_n_1"'
         assert p.lemma == 'dog'
         assert p.pos == 'n'
         assert p.sense == '1'
@@ -433,6 +446,8 @@ class TestPred():
         assert Pred.string_or_grammar_pred('_dog_n_rel') != Pred.string_or_grammar_pred('dog_n_rel')
         assert (spred('_dog_n_rel') == None) == False
         assert spred('_dog_n_1_rel') == spred('_Dog_N_1_rel')
+        assert spred('_dog_n_1_rel') == spred('_dog_n_1')
+
 
     def test_is_quantifier(self):
         assert spred('"_the_q_rel"').is_quantifier() == True
@@ -510,6 +525,19 @@ class TestNode():
         n2 = Node(10001, spred('_cat_n_rel'),
                   sortinfo=dict([(CVARSORT,'x'), ('PER','3')]))
         assert n.sortinfo == n2.sortinfo
+
+    def test_properties(self):
+        n = Node(10000, spred('_dog_n_rel'))
+        assert len(n.properties) == 0
+        n = Node(10000, spred('_dog_n_rel'),
+                 sortinfo=[(CVARSORT, 'x')])
+        assert len(n.properties) == 0
+        n = Node(10000, spred('_dog_n_rel'),
+                 sortinfo=[(CVARSORT, 'x'), ('PER', '3')])
+        assert len(n.properties) == 1
+        n2 = Node(10001, spred('_cat_n_rel'),
+                  sortinfo=dict([(CVARSORT,'x'), ('PER','3')]))
+        assert n.properties == n2.properties
 
     def test_lnk(self):
         n = Node(10000, spred('_dog_n_rel'))

@@ -250,14 +250,18 @@ class Xmrs(LnkMixin):
 
     # access to internal sub-structures
 
-    def properties(self, var_or_nodeid):
+    def properties(self, var_or_nodeid, as_list=False):
+        props = []
         if var_or_nodeid in self._vars:
-            return dict(self._vars[var_or_nodeid]['props'])
+            props = self._vars[var_or_nodeid]['props']
         elif var_or_nodeid in self._eps:
             var = self._eps[var_or_nodeid][3].get(IVARG_ROLE)
-            return dict(self._vars.get(var, {}).get('props', []))
+            props = self._vars.get(var, {}).get('props', [])
         else:
             raise KeyError(var_or_nodeid)
+        if not as_list:
+            props = dict(props)
+        return props
 
     def pred(self, nodeid): return self._eps[nodeid][1]
 
@@ -285,10 +289,11 @@ class Xmrs(LnkMixin):
             # don't include constant args or intrinsic args
             if arg == IVARG_ROLE or val not in _vars:
                 del args[arg]
-            refs = _vars[val]['refs']
-            # don't include if not HCONS or pointing to other IV or LBL
-            if not (val in _hcons or IVARG_ROLE in refs or 'LBL' in refs):
-                del args[arg]
+            else:
+                refs = _vars[val]['refs']
+                # don't include if not HCONS or pointing to other IV or LBL
+                if not (val in _hcons or IVARG_ROLE in refs or 'LBL' in refs):
+                    del args[arg]
         return args
 
     def incoming_args(self, nodeid):

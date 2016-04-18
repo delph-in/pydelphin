@@ -409,9 +409,9 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
     def __eq__(self, other):
         if other is None:
             return False
-        if isinstance(other, Pred):
-            other = other.string
-        return self.string.strip('"\'').lower() == other.strip('"\'').lower()
+        if not isinstance(other, Pred):
+            other = Pred.stringpred(other)
+        return self.short_form().lower() == other.short_form().lower()
 
     def __str__ (self):
         return self.string
@@ -458,7 +458,8 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
             >>> p.short_form()
             '_cat_n_1'
         """
-        return self.string.strip('"').lstrip("'").rsplit('_', 1)[0]
+        s = self.string.strip('"').lstrip("'")
+        return re.sub(r'(.*)_rel$', r'\1', s, re.U|re.I)
 
     def is_quantifier(self):
         return self.pos == QUANTIFIER_POS
@@ -550,7 +551,7 @@ class Node(
         elif not isinstance(sortinfo, MutableMapping):
             sortinfo = dict(sortinfo)
         return super(Node, cls).__new__(
-            cls, int(nodeid), pred, sortinfo, lnk, surface, base, carg
+            cls, nodeid, pred, sortinfo, lnk, surface, base, carg
         )
 
     def __repr__(self):
@@ -598,6 +599,13 @@ class Node(
     def cvarsort(self, value):
         self.sortinfo[CVARSORT] = value
 
+    @property
+    def properties(self):
+        d = dict(self.sortinfo)
+        if CVARSORT in d:
+            del d[CVARSORT]
+        return d
+
     def is_quantifier(self):
         """
         Return True if the Node is a quantifier, or False otherwise.
@@ -607,28 +615,18 @@ class Node(
 def nodes(xmrs):
     """The list of Nodes."""
     nodes = []
-    _vars = xmrs._vars
     _props = xmrs.properties
     varsplit = sort_vid_split
     for p in xmrs.eps():
-        eplen = len(p)
-        nid = p[0]
-        pred = p[1]
-        args = p[3]
-        sortinfo = lnk = surface = base = None
-        iv = args.get(IVARG_ROLE, None)
+        sortinfo = None
+        iv = p.intrinsic_variable
         if iv is not None:
             sort, _ = varsplit(iv)
             sortinfo = _props(iv)
             sortinfo[CVARSORT] = sort
-        if eplen >= 5:
-            lnk = p[4]
-        if eplen >= 6:
-            surface = p[5]
-        if eplen >= 7:
-            base = p[6]
-        carg = args.get(CONSTARG_ROLE, None)
-        nodes.append(Node(nid, pred, sortinfo, lnk, surface, base, carg))
+        nodes.append(
+            Node(p.nodeid, p.pred, sortinfo, p.lnk, p.surface, p.base, p.carg)
+        )
     return nodes
 
 
