@@ -1,31 +1,16 @@
 
-class PyDelphinException(Exception):
-    pass
+class PyDelphinException(Exception): pass
+class PyDelphinWarning(Warning): pass
 
+class ItsdbError(PyDelphinException): pass
 
-class ItsdbError(PyDelphinException):
-    pass
+class XmrsError(PyDelphinException): pass
+class XmrsSerializationError(XmrsError): pass
+class XmrsDeserializationError(XmrsError): pass
+class XmrsStructureError(XmrsError): pass
+class XmrsWarning(PyDelphinWarning): pass
 
-
-class XmrsError(PyDelphinException):
-    pass
-
-
-class XmrsSerializationError(XmrsError):
-    pass
-
-
-class XmrsDeserializationError(XmrsError):
-    pass
-
-
-class XmrsStructureError(XmrsError):
-    pass
-
-
-class TdlError(PyDelphinException):
-    pass
-
+class TdlError(PyDelphinException): pass
 
 class TdlParsingError(TdlError):
     def __init__(self, *args, **kwargs):

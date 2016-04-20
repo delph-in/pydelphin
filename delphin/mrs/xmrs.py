@@ -485,26 +485,58 @@ class Xmrs(LnkMixin):
         A well-formed Xmrs has the following properties (note, `node`
         below refers to a node in the graph, but is more like an EP than
         a DMRS Node):
+          * All nodes have an intrinsic variable
+          * Every intrinsic variable belongs one node and maybe one quantifier
+          * All nominal nodes have a quantifier
+          * All nodes have a label
           * The graph of nodes form a net (i.e. are connected).
             Connectivity can be established with variable arguments,
             QEQs, or label-equality.
-          * All nodes have a label
           * The lo-handle for each QEQ must exist as the label of a node
-          * All nominal nodes have a quantifier
         """
-        _eps = self._eps
+        try:
+            self.validate()
+        except XmrsError:
+            return False
+        return True
+
+    def validate(self):
+        errors = []
+        ivs, bvs = {}, {}
         _vars = self._vars
-        nodeids = self._nodeids
-        hcons = [_vars[argval]['hcons']
-                 for nid in nodeids
-                 for argval in _eps[nid][3].values()
-                 if 'hcons' in _vars.get(argval, {})]
-        return (
-            self.is_connected() and
-            all(_eps[nid][2] in _vars for nid in nodeids) and
-            all(lo in _vars and len(_vars[lo]['refs'].get('LBL', [])) > 0
-                for _, _, lo in hcons)
-        )
+        _hcons = self._hcons
+        labels = defaultdict(set)
+        # ep_args = {}
+        for ep in self.eps():
+            nid, lbl, args, is_q = (
+                ep.nodeid, ep.label, ep.args, ep.is_quantifier()
+            )
+            if lbl is None:
+                errors.append('EP ({}) is missing a label.'.format(nid))
+            labels[lbl].add(nid)
+            iv = args.get(IVARG_ROLE)
+            if iv is None:
+                errors.append('EP (nid) is missing an intrinsic variable.'
+                              .format(nid))
+            if is_q:
+                if iv in bvs:
+                    errors.append('{} is the bound variable for more than '
+                                  'one quantifier.'.format(iv))
+                bvs[iv] = nid
+            else:
+                if iv in ivs:
+                    errors.append('{} is the intrinsic variable for more '
+                                  'than one EP.'.format(iv))
+                ivs[iv] = nid
+            # ep_args[nid] = args
+        for hc in _hcons.values():
+            if hc[2] not in labels:
+                errors.append('Lo variable of HCONS ({} {} {}) is not the '
+                              'label of any EP.'.format(*hc))
+        if not self.is_connected():
+            errors.append('Xmrs structure is not connected.')
+        if errors:
+            raise XmrsError('\n'.join(errors))
 
 
 def Mrs(top=None, index=None, xarg=None, rels=None, hcons=None, icons=None,
