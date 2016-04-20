@@ -2,13 +2,22 @@
 
 ## [Unreleased][unreleased]
 
+## [v0.4.1][]
+
+This release fixes a number of bugs and adds some minor features. The
+`delphin.mrs.query` module has also been fixed and tested to work with
+the current version.
+
 ### Added
 
 * `delphin.mrs.xmrs`
   - `Xmrs.nodeids()`
   - `Xmrs.nodeid(iv)`
+  - `Xmrs.validate()`
 * `tests.mrs_Dmrs_test`
 * `tests.mrs_query_test`
+* `errors=(ignore|warn|strict)` parameter for SimpleMRS deserialization;
+  with `warn` or `strict`, it uses `Xmrs.validate()` to notify of errors
 
 ### Fixed
 
@@ -30,11 +39,17 @@
   - `select_icons()`
   - `find_argument_target()`
   - `find_subgraphs_by_preds()`
+* HCONS and ICONS now serialize in the regular order; they were being
+  reversed for some reason
+* Improved label equality set head finding involving quantifiers
 
 ### Changed
 
 * `delphin.mrs.xmrs.Dmrs()` no longer creates unlinked TOP
-* `Xmrs` now stores ICONS as IndividualConstraint objects (and HCONS, but this was already the case, but not made explicit)
+* `Xmrs` now stores ICONS as IndividualConstraint objects (and HCONS,
+  but this was already the case, but not made explicit)
+* `delphin.extra.latex.dmrs_tikz_dependency()` now accounts for
+  multiple edges with the same source and target
 
 ### Deprecated
 
@@ -241,6 +256,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v0.4.1]: ../../releases/tag/v0.4.1
 [v0.4.0]: ../../releases/tag/v0.4.0
 [v0.3]: ../../releases/tag/v0.3
 [v0.2]: ../../releases/tag/v0.2

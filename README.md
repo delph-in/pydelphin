@@ -28,12 +28,12 @@ schema, creating sub-profiles, or converting between MRS representations
 * [Installation and Requirements](#installation-and-requirements)
 * [Libraries](#sub-packages)
 
-[front-end tool]: https://github.com/goodmami/pydelphin/wiki/Command-line-Tutorial
+[front-end tool]: https://github.com/delph-in/pydelphin/wiki/Command-line-Tutorial
 
 #### Documentation
 
 API documentation is developing on the
-[wiki](https://github.com/goodmami/pydelphin/wiki). Help is
+[wiki](https://github.com/delph-in/pydelphin/wiki). Help is
 appreciated!
 
 #### Usage Examples
@@ -154,9 +154,20 @@ The following packages/modules are available:
 
 ## Related Software
 
-- https://github.com/wpm/Ruby-DELPH-IN
-- https://github.com/ned2/typediff
-- Also, on the DELPH-IN wiki:
-  - http://moin.delph-in.net/
+* Parser/Generators (chronological order)
+  - LKB: http://moin.delph-in.net/LkbTop
+  - PET: http://moin.delph-in.net/PetTop
+  - ACE: http://sweaglesw.org/linguistics/ace/
+  - agree: http://moin.delph-in.net/AgreeTop
+* Grammar profiling, testing, and analysis
+  - [incr tsdb()]: http://www.delph-in.net/itsdb/
+  - gDelta: https://github.com/ned2/gdelta
+  - Typediff: https://github.com/ned2/typediff
+  - gTest: https://github.com/goodmami/gtest
+* Software libraries and repositories
+  - LOGON: http://moin.delph-in.net/LogonTop
+  - Ruby-DELPH-IN: https://github.com/wpm/Ruby-DELPH-IN
+  - pydmrs: https://github.com/delph-in/pydmrs
+* Also see (may have overlap with the above):
   - http://moin.delph-in.net/ToolsTop
   - http://moin.delph-in.net/DelphinApplications

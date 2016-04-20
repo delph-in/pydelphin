@@ -2,13 +2,20 @@
 
 Basic idea: Fork and submit pull requests!
 
-Please use the issue tracker
-(https://github.com/goodmami/pydelphin/issues), as it creates
-documentation for the bugs and features.
+Please use the [issue tracker][issues], as it creates documentation
+for the bugs and features.
 
 Always run the unit tests before committing.
 
+    tox
+
+[Tox](https://testrun.org/tox/latest/) must be installed, along with
+Python versions 2.7, 3.3, 3.4, and 3.5. For basic unit testing, you
+may instead run:
+
     ./setup.py test
+
+But be sure to test against all versions with `tox` prior to committing.
 
 If you're contributing an untested bug fix or new code, try to ensure full test
 coverage. Coverage can be computed like this:
@@ -52,15 +59,10 @@ import compatibility).
 
 #### Version Compatibility
 
-I aim for pyDelphin to be compatible with both Python 2 and 3, but
-it's not a strict requirement. pyDelphin is firstly a Python 3
-library, so patches should guarantee Python 3 compatibility first,
-and then Python 2 if possible.
-
-More specifically, pyDelphin should first be compatible with Python
-3.3+, and then 2.7. After that, as far as is possible without
-significant effort or awkward contortions, compatibility for 3.1 and
-3.2 can be added. Support for 2.6 or earlier is not a goal.
+PyDelphin currently maintains compatibility with Python 2.7 and 3.3+.
+Versions prior to 2.6 and 3.0--3.2 are not targeted. Testing with
+`tox` will run the unit tests against these versions, so make sure
+you have the old versions installed.
 
 #### Branching
 
@@ -84,3 +86,27 @@ often more efficient). Also try to avoid adding extraneous fields to data
 structures, and instead keep them minimal.
 
 [namedtuple]: https://docs.python.org/3/library/collections.html#collections.namedtuple
+
+# Release Checklist
+
+Do the following tasks prior to releasing on GitHub and PyPI.
+
+- [ ] Ensure all [issues][] are resolved for the version (check [milestones][])
+- [ ] Make the release commit on `develop` branch
+  - [ ] Update `CHANGELOG.md`
+  - [ ] Update `README.md` (contributors, requirements, etc.) if necessary
+  - [ ] Ensure tests pass: `tox`
+  - [ ] Bump the version in `delphin/__about__.py`
+  - [ ] commit
+  - [ ] push
+- [ ] Merge to master
+  - [ ] Test again: `tox`
+  - [ ] push
+- [ ] [Make a new release](https://github.com/delph-in/pydelphin/releases/new)
+- [ ] Create a source distribution: `setup.py sdist`
+- [ ] Build a wheel distribution: `setup.py bdist_wheel --universal`
+- [ ] Upload to PyPI: `twine upload dist/*`
+- [ ] Announce
+
+[issues]: https://github.com/delph-in/pydelphin/issues
+[milestones]: https://github.com/delph-in/pydelphin/milestones
