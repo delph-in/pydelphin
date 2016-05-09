@@ -137,6 +137,36 @@ Lnk values can take 4 forms in SimpleMRS:
 
 ```
 
+Multiple MRSs can be parsed with `simplemrs.loads()`:
+
+"It rains." and "It snows."
+
+```python
+>>> mrs_gen = simplemrs.loads('''[ LTOP: h0
+... INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
+... RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
+... HCONS: < h0 qeq h1 > ] [ LTOP: h0
+... INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
+... RELS: < [ "_snow_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
+... HCONS: < h0 qeq h1 > ]''')
+>>> next(mrs_gen)  # doctest: +ELLIPSIS
+<Xmrs object (rain) at ...>
+>>> next(mrs_gen)  # doctest: +ELLIPSIS
+<Xmrs object (snow) at ...>
+
+```
+
+But requesting more than is available causes a `StopIteration` exception:
+
+```python
+>>> try:
+...     next(mrs_gen)
+... except StopIteration:
+...     print('StopIteration caught!')
+StopIteration caught!
+
+```
+
 "It rains", SimpleMRS 1.1 format without surface forms or a top LNK value.
 
 ```python

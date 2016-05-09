@@ -2,6 +2,10 @@
 
 ## [Unreleased][unreleased]
 
+### Fixed
+
+* Fixed a regression in reading multiple SimpleMRSs (#70)
+
 ## [v0.4.1][]
 
 This release fixes a number of bugs and adds some minor features. The

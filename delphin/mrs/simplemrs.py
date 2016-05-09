@@ -218,7 +218,7 @@ def _read_mrs(tokens, version, errors):
         rels = _read_rels(tokens, vars_)
         hcons = _read_cons(tokens, 'HCONS', vars_)
         icons = _read_cons(tokens, 'ICONS', vars_)
-        _read_literals(']')
+        _read_literals(tokens, ']')
         # at this point, we could uniquify proplists in vars_, but most
         # likely it isn't necessary, and might night harm things if we
         # leave potential dupes in there. let's see how it plays out.
