@@ -1,13 +1,18 @@
 import pytest
 
-from delphin.derivation import Derivation as D
+from delphin.derivation import (
+    Derivation as D,
+    UdfNode as N,
+    UdfTerminal as T,
+    UdfToken as Tk
+)
 
 class TestDerivation():
     def test_init(self):
         with pytest.raises(TypeError): D()
         with pytest.raises(TypeError): D(1)
         t = D(1, 'some-type')
-        t = D(1, 'some-type', 0.5, 0, 3, [('some-token',)])
+        t = D(1, 'some-type', 0.5, 0, 3, [T('some-token')])
         # roots are special: id is None, entity is root, daughters must
         # exactly 1 node; rest are None
         with pytest.raises(TypeError): t = D(None)
@@ -16,17 +21,17 @@ class TestDerivation():
         with pytest.raises(TypeError): t = D(None, 'some-root', end=1)
         with pytest.raises(ValueError):
             t = D(None, 'some-root',
-                   daughters=[D(1, 'some-type'), D(2, 'some-type')])
+                   daughters=[N(1, 'some-type'), N(2, 'some-type')])
         with pytest.raises(ValueError):
-            t = D(None, 'some-root', daughters=[('some-token',)])
-        t = D(None, 'some-root', daughters=[D(1, 'some-type')])
+            t = D(None, 'some-root', daughters=[T('some-token')])
+        t = D(None, 'some-root', daughters=[N(1, 'some-type')])
         t = D(None, 'some-root', None, None, None,
-               daughters=[D(1, 'some-type')])
+               daughters=[N(1, 'some-type')])
         # root not as top
         with pytest.raises(ValueError):
             D(1, 'some-type', daughters=[
-                D(None, 'some-root', daughters=[
-                    D(2, 'a-lex', daughters=[('some-token',)])
+                N(None, 'some-root', daughters=[
+                    N(2, 'a-lex', daughters=[T('some-token')])
                 ])
             ])
 
@@ -38,13 +43,13 @@ class TestDerivation():
         assert t.start == -1
         assert t.end == -1
         assert t.daughters == []
-        t = D(1, 'some-type', 0.5, 1, 6, ['some token'])
+        t = D(1, 'some-type', 0.5, 1, 6, [T('some token')])
         assert t.id == 1
         assert t.entity == 'some-type'
         assert t.score == 0.5
         assert t.start == 1
         assert t.end == 6
-        assert t.daughters == ['some token']
+        assert t.daughters == [T('some token')]
         t = D(None, 'some-root', daughters=[D(1, 'some-type')])
         assert t.id == None
         assert t.entity == 'some-root'
@@ -72,7 +77,7 @@ class TestDerivation():
         assert t.score == -1.0
         assert t.start == -1
         assert t.end == -1
-        assert t.daughters == [('"token"',)]
+        assert t.daughters == [T('token')]
         # newlines in tree
         t = D.from_string('''(1 some-type -1 -1 -1
                                 ("token"))''')
@@ -81,7 +86,29 @@ class TestDerivation():
         assert t.score == -1.0
         assert t.start == -1
         assert t.end == -1
-        assert t.daughters == [('"token"',)]
+        assert t.daughters == [T('token')]
+        # LKB-style terminals
+        t = D.from_string('''(1 some-type -1 -1 -1
+                                ("to ken" 1 2))''')
+        assert t.id == 1
+        assert t.entity == 'some-type'
+        assert t.score == -1.0
+        assert t.start == -1
+        assert t.end == -1
+        assert t.daughters == [T('to ken')]  # start/end ignored
+        # TFS-style terminals
+        t = D.from_string(r'''(1 some-type -1 -1 -1
+                                ("to ken" 2 "token [ +FORM \"to\" ]"
+                                          3 "token [ +FORM \"ken\" ]"))''')
+        assert t.id == 1
+        assert t.entity == 'some-type'
+        assert t.score == -1.0
+        assert t.start == -1
+        assert t.end == -1
+        assert t.daughters == [
+            T('to ken', [Tk(2, r'token [ +FORM \"to\" ]'),
+                         Tk(3, r'token [ +FORM \"ken\" ]')])
+        ]
         # longer example
         t = D.from_string(r'''(root
             (1 some-type 0.4 0 5
@@ -105,14 +132,15 @@ class TestDerivation():
         assert lex.score == 0.8
         assert lex.start == 0
         assert lex.end == 1
-        assert lex.daughters == [('"a"', '1', r'"token [ +FORM \"a\" ]"')]
+        assert lex.daughters == [T('a', [Tk(1, r'token [ +FORM \"a\" ]')])]
         lex = top.daughters[1]
         assert lex.id == 3
         assert lex.entity == 'bcd-lex'
         assert lex.score == 0.5
         assert lex.start == 2
         assert lex.end == 5
-        assert lex.daughters == [('"bcd"', '2', r'"token [ +FORM \"bcd\" ]"')]
+        assert lex.daughters == [T('bcd',
+                                   [Tk(2, r'token [ +FORM \"bcd\" ]')])]
 
     def test_str(self):
         s = '(1 some-type -1 -1 -1 ("token"))'
@@ -160,39 +188,152 @@ class TestDerivation():
     def test_is_head(self):
         # NOTE: is_head() is undefined for standard UDF without the
         # head marker ^
-        a = D.from_string('(root (1 some-type -1 -1 -1 ("a"))'
-                          '      (2 ^some-type -1 -1 -1 ("b")))')
-        assert a.daughters[0].is_head() == False
-        assert a.daughters[1].is_head() == True
+        a = D.from_string('(root (1 some-type -1 -1 -1'
+                          '  (2 some-type -1 -1 -1 ("a"))'
+                          '  (3 ^some-type -1 -1 -1 ("b"))))')
+        node = a.daughters[0]
+        assert node.daughters[0].is_head() == False
+        assert node.daughters[1].is_head() == True
 
     def test_basic_entity(self):
         # this works for both UDX and standard UDF
-        a = D.from_string('(root (1 a-type -1 -1 -1 ("a"))'
-                          '      (2 b-type -1 -1 -1 ("b")))')
+        a = D.from_string('(root (1 some-type -1 -1 -1'
+                          '  (2 a-type -1 -1 -1 ("a"))'
+                          '  (3 b-type -1 -1 -1 ("b"))))')
         assert a.basic_entity() == 'root'
-        assert a.daughters[0].basic_entity() == 'a-type'
-        assert a.daughters[1].basic_entity() == 'b-type'
-        a = D.from_string('(root (1 a-type@a-type_le -1 -1 -1 ("a"))'
-                          '      (2 b-type@b-type_le -1 -1 -1 ("b")))')
+        node = a.daughters[0]
+        assert node.daughters[0].basic_entity() == 'a-type'
+        assert node.daughters[1].basic_entity() == 'b-type'
+        a = D.from_string('(root (1 some-type -1 -1 -1'
+                          '  (2 a-type@a-type_le -1 -1 -1 ("a"))'
+                          '  (3 b-type@b-type_le -1 -1 -1 ("b"))))')
         assert a.basic_entity() == 'root'
-        assert a.daughters[0].entity == 'a-type@a-type_le'
-        assert a.daughters[0].basic_entity() == 'a-type'
-        assert a.daughters[1].entity == 'b-type@b-type_le'
-        assert a.daughters[1].basic_entity() == 'b-type'
+        node = a.daughters[0]
+        assert node.basic_entity() == 'some-type'
+        assert node.daughters[0].entity == 'a-type@a-type_le'
+        assert node.daughters[0].basic_entity() == 'a-type'
+        assert node.daughters[1].entity == 'b-type@b-type_le'
+        assert node.daughters[1].basic_entity() == 'b-type'
 
     def test_lexical_type(self):
         # NOTE: this returns None for standard UDF or non-preterminals
-        a = D.from_string('(root (1 a-type -1 -1 -1 ("a"))'
-                          '      (2 b-type -1 -1 -1 ("b")))')
+        a = D.from_string('(root (1 some-type -1 -1 -1'
+                          '  (2 a-type -1 -1 -1 ("a"))'
+                          '  (3 b-type -1 -1 -1 ("b"))))')
         assert a.lexical_type() == None
-        assert a.daughters[0].lexical_type() == None
-        assert a.daughters[1].lexical_type() == None
-        a = D.from_string('(root (1 a-type@a-type_le -1 -1 -1 ("a"))'
-                          '      (2 b-type@b-type_le -1 -1 -1 ("b")))')
+        node = a.daughters[0]
+        assert node.daughters[0].lexical_type() == None
+        assert node.daughters[1].lexical_type() == None
+        a = D.from_string('(root (1 some-type -1 -1 -1'
+                          '  (2 a-type@a-type_le -1 -1 -1 ("a"))'
+                          '  (3 b-type@b-type_le -1 -1 -1 ("b"))))')
         assert a.lexical_type() == None
-        assert a.daughters[0].lexical_type() == 'a-type_le'
-        assert a.daughters[1].lexical_type() == 'b-type_le'
+        node = a.daughters[0]
+        assert node.daughters[0].lexical_type() == 'a-type_le'
+        assert node.daughters[1].lexical_type() == 'b-type_le'
 
+    def test_to_udf(self):
+        s = '(1 some-type -1 -1 -1 ("token"))'
+        assert D.from_string(s).to_udf(indent=None) == s
+        assert D.from_string(s).to_udf(indent=1) == (
+            '(1 some-type -1 -1 -1\n'
+            ' ("token"))'
+        )
+        s = (r'(root (1 some-type 0.4 0 5 (2 a-lex 0.8 0 1 '
+             r'("a" 3 "token [ +FORM \"a\" ]")) '
+             r'(4 bcd-lex 0.5 2 5 ("bcd" 5 "token [ +FORM \"bcd\" ]"))))')
+        assert D.from_string(s).to_udf(indent=1) == (
+            '(root\n'
+            ' (1 some-type 0.4 0 5\n'
+            '  (2 a-lex 0.8 0 1\n'
+            '   ("a"\n'
+            '    3 "token [ +FORM \\"a\\" ]"))\n'
+            '  (4 bcd-lex 0.5 2 5\n'
+            '   ("bcd"\n'
+            '    5 "token [ +FORM \\"bcd\\" ]"))))'
+        )
+        s = (r'(root (1 some-type 0.4 0 5 (2 a-lex 0.8 0 1 '
+             r'("a b" 3 "token [ +FORM \"a\" ]" 4 "token [ +FORM \"b\" ]"))))')
+        assert D.from_string(s).to_udf(indent=1) == (
+            '(root\n'
+            ' (1 some-type 0.4 0 5\n'
+            '  (2 a-lex 0.8 0 1\n'
+            '   ("a b"\n'
+            '    3 "token [ +FORM \\"a\\" ]"\n'
+            '    4 "token [ +FORM \\"b\\" ]"))))'
+        )
+
+
+    def test_to_dict(self):
+        s = '(1 some-type -1 -1 -1 ("token"))'
+        assert D.from_string(s).to_dict() == {
+            'id': 1,
+            'entity': 'some-type',
+            'score': -1.0,
+            'start': -1,
+            'end': -1,
+            'form': 'token'
+        }
+        fields = ('id', 'entity', 'score')
+        # daughters and form are always shown
+        assert D.from_string(s).to_dict(fields=fields) == {
+            'id': 1,
+            'entity': 'some-type',
+            'score': -1.0,
+            'form': 'token'
+        }
+        s = (   r'(1 a-lex -1 -1 -1 ("a b" 2 "token [ +FORM \"a\" ]"'
+                r' 3 "token [ +FORM \"b\" ]"))' )
+        assert D.from_string(s).to_dict() == {
+            'id': 1,
+            'entity': 'a-lex',
+            'score': -1.0,
+            'start': -1,
+            'end': -1,
+            'form': 'a b',
+            'tokens': [
+                {'id': 2, 'tfs': r'token [ +FORM \"a\" ]'},
+                {'id': 3, 'tfs': r'token [ +FORM \"b\" ]'}
+            ]
+        }
+        assert D.from_string(s).to_dict(fields=fields) == {
+            'id': 1,
+            'entity': 'a-lex',
+            'score': -1.0,
+            'form': 'a b'
+        }
+
+    def test_from_dict(self):
+        s = '(root (1 some-type -1 -1 -1 ("a")))'
+        d = {
+            'entity': 'root',
+            'daughters': [
+                {
+                    'id': 1,
+                    'entity': 'some-type',
+                    'form': 'a'
+                }
+            ]
+        }
+        assert D.from_dict(d) == D.from_string(s)
+        s = (   r'(root (1 some-type -1 -1 -1 ("a b"'
+                r' 2 "token [ +FORM \"a\" ]"'
+                r' 3 "token [ +FORM \"b\" ]")))' )
+        d = {
+            'entity': 'root',
+            'daughters': [
+                {
+                    'id': 1,
+                    'entity': 'some-type',
+                    'form': 'a b',
+                    'tokens': [
+                        {'id': 2, 'tfs': r'token [ +FORM \"a\" ]'},
+                        {'id': 3, 'tfs': r'token [ +FORM \"b\" ]'}
+                    ]
+                }
+            ]
+        }
+        assert D.from_dict(d) == D.from_string(s)
 
 # from delphin.derivation import Derivation
 
