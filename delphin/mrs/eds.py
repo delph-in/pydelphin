@@ -2,57 +2,336 @@
 from __future__ import print_function
 
 from itertools import count
-from delphin.mrs.query import get_outbound_args
 
-def dump(fh, ms, single=False, pretty_print=True, color=False, **kwargs):
+from delphin.mrs.xmrs import Xmrs, _bfs
+from delphin.mrs.components import (
+    var_sort,
+    Lnk,
+    Pred,
+    Node,
+    nodes as make_nodes
+)
+from delphin.mrs.query import find_argument_target
+from delphin.mrs.util import rargname_sortkey
+from delphin.mrs.config import CVARSORT
+from delphin.lib.pegre import (
+    literal as lit,
+    regex,
+    nonterminal as nt,
+    sequence as seq,
+    zero_or_more,
+    optional as opt,
+    delimited,
+    bounded,
+    Ignore,
+    Peg
+)
+
+class Eds(object):
+    def __init__(self, top=None, nodes=None, edges=None):
+        if nodes is None: nodes = []
+        if edges is None: edges = []
+
+        self.top = top
+        self._nodeids = [node.nodeid for node in nodes]
+        self._nodes = {node.nodeid: node for node in nodes}
+        self._edges = {node.nodeid: {} for node in nodes}
+        for start, rargname, end in edges:
+            self._edges[start][rargname] = end
+
+    @classmethod
+    def from_xmrs(cls, xmrs):
+        eps = xmrs.eps()
+        deps = _find_dependencies(xmrs, eps)
+        ids = _unique_ids(eps, deps)
+        root = _find_root(xmrs)
+        if root is not None:
+            root = ids[root]
+        nodes = [Node(ids[n.nodeid], *n[1:]) for n in make_nodes(xmrs)]
+        edges = [(ids[a], rarg, ids[b]) for a, deplist in deps.items()
+                                        for rarg, b in deplist]
+        return cls(top=root, nodes=nodes, edges=edges)
+
+    def __eq__(self, other):
+        if not isinstance(other, Eds):
+            return False
+        return (
+            self.top == other.top and
+            all(a == b for a, b in zip(self.nodes(), other.nodes())) and
+            self._edges == other._edges
+        )
+
+    def nodeids(self):
+        return list(self._nodeids)
+
+    def node(self, nodeid):
+        return self._nodes[nodeid]
+
+    def nodes(self):
+        getnode = self._nodes.__getitem__
+        return [getnode(nid) for nid in self._nodeids]
+
+    def edges(self, nodeid):
+        return dict(self._edges.get(nodeid, []))
+
+    def to_dict(self, properties=True):
+        nodes = {}
+        for node in self.nodes():
+            nd = {
+                'label': node.pred.short_form(),
+                'edges': self.edges(node.nodeid)
+            }
+            if node.lnk is not None:
+                nd['lnk'] = {'from': node.cfrom, 'to': node.cto}
+            if properties:
+                props = node.sortinfo
+                if props:
+                    if CVARSORT in props:
+                        props['type'] = props[CVARSORT]
+                        del props[CVARSORT]
+                    nd['properties'] = props
+            if node.carg is not None:
+                nd['carg'] = node.carg
+            nodes[node.nodeid] = nd
+        return {'top': self.top, 'nodes': nodes}
+
+    @classmethod
+    def from_dict(cls, d):
+        stringpred, charspan = Pred.stringpred, Lnk.charspan
+        top = d.get('top')
+        nodes, edges = [], []
+        for nid, node in d.get('nodes', {}).items():
+            props = node.get('properties')
+            if 'type' in props:
+                props[CVARSORT] = props['type']
+                del props['type']
+            lnk = None
+            if 'lnk' in node:
+                lnk = charspan(node['lnk']['from'], node['lnk']['to'])
+            nodes.append(
+                Node(
+                    nodeid=nid,
+                    pred=stringpred(node['label']),
+                    sortinfo=props,
+                    lnk=lnk,
+                    carg=node.get('carg')
+                )
+            )
+            edges.extend(
+                (nid, rargname, tgtnid)
+                for rargname, tgtnid in node.get('edges', {}).items()
+            )
+        nodes.sort(key=lambda n: (n.cfrom, -n.cto))
+        return cls(top, nodes=nodes, edges=edges)
+
+
+def _find_dependencies(m, eps):
+    deps = {}
+    for ep in eps:
+        nid = ep.nodeid
+        if ep.is_quantifier():
+            deps[nid] = [('BV', m.nodeid(ep.intrinsic_variable))]
+        else:
+            epdeps = []
+            args = m.outgoing_args(nid)
+            for rargname, val in args.items():
+                tgtnid = find_argument_target(m, nid, rargname)
+                epdeps.append((rargname, tgtnid))
+            deps[nid] = epdeps
+    return deps
+
+def _unique_ids(eps, deps):
+    # deps can be used to single out ep from set sharing ARG0s
+    new_ids = ('_{}'.format(i) for i in count(start=1))
+    ids = {}
+    used = {}
+    for ep in eps:
+        nid = ep.nodeid
+        iv = ep.intrinsic_variable
+        if iv is None or ep.is_quantifier():
+            iv = next(new_ids)
+        ids[nid] = iv
+        used.setdefault(iv, set()).add(nid)
+    # give new ids when there's duplicates (use deps to select winner)
+    for _id, nids in used.items():
+        if len(nids) > 1:
+            nids = sorted(
+                nids,
+                key=lambda n: any(d in nids for _, d in deps.get(n, []))
+            )
+            for nid in nids[1:]:
+                ids[nid] = next(new_ids)
+    return ids
+
+def _find_root(m):
+    if m.index is not None:
+        return m.nodeid(m.index)
+    else:
+        try:
+            top_hcons = m.hcon(m.top)
+            return m.labelset_heads(top_hcons.lo)[0]
+        except (KeyError, StopIteration):
+            # try to find top?
+            return None
+
+
+## Serialization
+
+def load(fh, single=False):
+    if isinstance(fh, str):
+        s = open(fh, 'r').read()
+    else:
+        s = fh.read()
+    return loads(s, single=single)
+
+def loads(s, single=False):
+    es = deserialize(s)
+    if single:
+        return next(es)
+    return es
+
+def dump(fh, ms, single=False, properties=False, pretty_print=True, **kwargs):
     print(dumps(ms,
                 single=single,
+                properties=properties,
                 pretty_print=pretty_print,
-                color=color,
                 **kwargs),
           file=fh)
 
-def dumps(ms, single=False, pretty_print=True, color=False, **kwargs):
+def dumps(ms, single=False, properties=False, pretty_print=True, **kwargs):
     if single:
         ms = [ms]
-    return '\n'.join(
-        serialize(ms, pretty_print=pretty_print, color=color, **kwargs)
+    return serialize(
+        ms,
+        properties=properties,
+        pretty_print=pretty_print,
+        **kwargs
     )
 
-eds = '{{{index}{delim}{ed_list}}}'
-ed =  '{membership}{id}:{pred}{lnk}{carg}[{dep_list}]{delim}'
+def load_one(fh, **kwargs): return load(fh, single=True, **kwargs)
+def loads_one(s, **kwargs): return loads(s, single=True, **kwargs)
+def dump_one(fh, m, **kwargs): dump(fh, m, single=True, **kwargs)
+def dumps_one(m, **kwargs): return dumps(m, single=True, **kwargs)
+
+
+def _make_eds(d):
+    top, data = d
+    nodes, edges = [], []
+    for node, _edges in data:
+        nodes.append(node)
+        edges.extend(_edges)
+    return Eds(top=top, nodes=nodes, edges=edges)
+
+def _make_nodedata(d):
+    nid = d[0]
+    node = Node(nid, pred=d[1], sortinfo=d[4], lnk=d[2], carg=d[3])
+    edges = [(nid, rarg, tgt) for rarg, tgt in d[5]]
+    return (node, edges)
+
+_EDS     = nt('EDS', value=_make_eds)
+_TOP     = opt(nt('TOP'), default=None)
+_FLAG    = opt(regex(r'\s*\(fragmented\)', value=Ignore))
+_NODE    = nt('NODE', value=_make_nodedata)
+_DSCN    = opt(lit('|', value=Ignore))
+_SYMBOL  = regex(r'[-+\w]+')
+_PRED    = regex(r'((?!<-?\d|\("|\{|\[)\w)+', value=Pred.stringpred)
+_LNK     = opt(nt('LNK', value=lambda d: Lnk.charspan(*d)), default=None)
+_CARG    = opt(nt('CARG'), default=None)
+_PROPS   = opt(nt('PROPS', value=lambda d: d[0] + d[1]), default=None)
+_EDGES   = nt('EDGES')
+_TYPE    = opt(_SYMBOL, value=lambda i: [(CVARSORT, i)], default=[])
+_AVLIST  = nt('AVLIST')
+_ATTRVAL = nt('ATTRVAL')
+_COLON   = regex(r'\s*:\s*', value=Ignore)
+_COMMA   = regex(r',\s*')
+_INT     = regex(r'-?\d+', value=int)
+_STRING  = regex(r'"[^"\\]*(?:\\.[^"\\]*)*"', value=lambda s: s[1:-1])
+_SPACE   = regex(r'\s*')
+_SPACES  = regex(r'\s+', value=Ignore)
+
+_eds_parser = Peg(
+    grammar=dict(
+        start=delimited(_EDS, _SPACE),
+        EDS=bounded(regex(r'\{\s*'), seq(_TOP, nt('NODES')), regex(r'\s*\}')),
+        TOP=seq(_SYMBOL, _COLON, _FLAG, _SPACE, value=lambda d: d[0]),
+        NODES=delimited(_NODE, _SPACE),
+        NODE=seq(_DSCN, _SYMBOL, _COLON, _PRED, _LNK, _CARG, _PROPS, _EDGES),
+        LNK=bounded(lit('<'), seq(_INT, _COLON, _INT), lit('>')),
+        CARG=bounded(lit('('), _STRING, lit(')')),
+        PROPS=bounded(lit('{'), seq(_TYPE, _SPACES, _AVLIST), lit('}')),
+        EDGES=bounded(lit('['), _AVLIST, lit(']')),
+        AVLIST=delimited(_ATTRVAL, _COMMA),
+        ATTRVAL=seq(_SYMBOL, _SPACES, _SYMBOL)
+    )
+)
+
+def deserialize(s):
+    for e in _eds_parser.parse(s):
+        yield e
+
+eds = '{{{top}{flag}{delim}{ed_list}{enddelim}}}'
+ed =  '{membership}{id}:{pred}{lnk}{carg}{props}[{dep_list}]'
 carg = '({constant})'
+proplist = '{{{varsort}{proplist}}}'
 dep = '{argname} {value}'
 
-def serialize(ms, pretty_print=True, color=False, **kwargs):
-    q_ids = ('_{}'.format(i) for i in count(start=1))
-    delim = '\n'
-    connected = ' '
-    disconnected = '|'
-    if not pretty_print:
-        delim = ' '
-        connected = ''
-    for m in ms:
-        yield eds.format(
-            index=str(m.index) + ':' if m.index is not None else '',
-            delim=delim,
-            ed_list=''.join(
-                ed.format(
-                    membership=connected,  # if m.is_connected(ep.nodeid)?
-                    id=ep.iv if not ep.is_quantifier() else next(q_ids),
-                    pred=ep.pred.short_form(),
-                    lnk=str(ep.lnk),
-                    carg=carg.format(constant=ep.carg) if ep.carg else '',
-                    dep_list=(
-                        ', '.join(
-                            dep.format(argname=a.argname, value=a.value)
-                            for a in get_outbound_args(m, ep.nodeid,
-                                                       allow_unbound=False)
-                        ) if not ep.is_quantifier() else
-                        dep.format(argname='BV', value=ep.iv)
-                    ),
-                    delim=delim
-                )
-                for ep in m.eps
-            )
+def serialize(ms, properties=False, pretty_print=True, **kwargs):
+    delim = '\n' if pretty_print else ' '
+    return delim.join(
+        _serialize_eds(
+            m,
+            properties=properties,
+            pretty_print=pretty_print,
+            **kwargs
         )
+        for m in ms
+    )
+
+def _serialize_eds(e, properties=False, pretty_print=True, **kwargs):
+    if not isinstance(e, Eds):
+        e = Eds.from_xmrs(e)
+    # do something predictable for empty EDS
+    if len(e.nodeids()) == 0:
+        return '{\n}' if pretty_print else '{}'
+
+    # determine if graph is connected
+    g = {n: set() for n in e.nodeids()}
+    for n in e.nodeids():
+        for rargname, tgt in e.edges(n).items():
+            g[n].add(tgt)
+            g[tgt].add(n)
+    nidgrp = _bfs(g, start=e.top)
+
+    delim = '\n' if pretty_print else ' '
+    connected = ' ' if pretty_print else ''
+
+    return eds.format(
+        top=e.top + ':' if e.top is not None else '',
+        flag='' if nidgrp == set(e.nodeids()) else ' (fragmented)',
+        delim=delim,
+        ed_list=delim.join(
+            ed.format(
+                membership=connected if n.nodeid in nidgrp else '|',
+                id=n.nodeid,
+                pred=n.pred.short_form(),
+                lnk=str(n.lnk) if n.lnk else '',
+                carg=carg.format(constant=n.carg) if n.carg else '',
+                props=proplist.format(
+                    varsort=n.cvarsort + ' ' if n.cvarsort else '',
+                    proplist=', '.join(
+                        '{} {}'.format(k, v)
+                        for k, v in sorted(n.properties.items())
+                    )
+                ) if properties and n.sortinfo else '',
+                dep_list=(', '.join(
+                    '{} {}'.format(rargname, tgt)
+                    for rargname, tgt in sorted(
+                        e.edges(n.nodeid).items(),
+                        key=lambda x: rargname_sortkey(x[0])
+                    )
+                )),
+            )
+            for n in e.nodes()
+        ),
+        enddelim='\n' if pretty_print else ''
+    )

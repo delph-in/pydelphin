@@ -97,7 +97,7 @@ def decode_node(elem):
     #           base      CDATA #IMPLIED
     #           carg CDATA #IMPLIED >
     return Node(pred=decode_pred(elem.find('*[1]')),
-                nodeid=elem.get('nodeid'),
+                nodeid=int(elem.get('nodeid')),
                 sortinfo=decode_sortinfo(elem.find('sortinfo')),
                 lnk=decode_lnk(elem),
                 surface=elem.get('surface'),
