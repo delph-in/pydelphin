@@ -13,7 +13,7 @@ from itertools import chain
 from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
-    LnkMixin, var_re, VarGenerator, Pred, Node, nodes, Link, links
+    LnkMixin, var_re, var_sort, VarGenerator, Pred, Node, nodes, Link, links
 )
 from .config import (
     HANDLESORT, UNKNOWNSORT, LTOP_NODEID, FIRST_NODEID,
@@ -545,8 +545,7 @@ class Xmrs(LnkMixin):
             raise XmrsError('\n'.join(errors))
 
 
-def Mrs(top=None, index=None, xarg=None, rels=None, hcons=None, icons=None,
-        lnk=None, surface=None, identifier=None, vars=None):
+class Mrs(Xmrs):
     """
     Construct an |Xmrs| using MRS components.
 
@@ -583,24 +582,93 @@ def Mrs(top=None, index=None, xarg=None, rels=None, hcons=None, icons=None,
     >>>     hcons=[HandleConstraint('h0', 'qeq', 'h1')]
     >>> )
     """
-    eps = list(rels or [])
-    hcons = list(hcons or [])
-    icons = list(icons or [])
-    if vars is None: vars = {}
-    # first give eps a nodeid (this is propagated to args)
-    next_nodeid = FIRST_NODEID
-    for ep in eps:
-        if ep.nodeid is not None and ep.nodeid >= next_nodeid:
-            next_nodeid = ep.nodeid + 1
-    eps_ = []
-    for i, ep in enumerate(eps):
-        if ep.nodeid is None:
-            eps_.append(tuple([next_nodeid + i] + list(ep[1:])))
-        else:
-            eps_.append(ep)
-    return Xmrs(top=top, index=index, xarg=xarg,
-                eps=eps_, hcons=hcons, icons=icons, vars=vars,
-                lnk=lnk, surface=surface, identifier=identifier)
+    def __init__(
+            self,
+            top=None, index=None, xarg=None,
+            rels=None, hcons=None, icons=None,
+            lnk=None, surface=None, identifier=None, vars=None):
+        eps = list(rels or [])
+        hcons = list(hcons or [])
+        icons = list(icons or [])
+        if vars is None: vars = {}
+        # first give eps a nodeid (this is propagated to args)
+        next_nodeid = FIRST_NODEID
+        for ep in eps:
+            if ep.nodeid is not None and ep.nodeid >= next_nodeid:
+                next_nodeid = ep.nodeid + 1
+        eps_ = []
+        for i, ep in enumerate(eps):
+            if ep.nodeid is None:
+                eps_.append(tuple([next_nodeid + i] + list(ep[1:])))
+            else:
+                eps_.append(ep)
+        return super(Mrs, self).__init__(
+            top=top, index=index, xarg=xarg,
+            eps=eps_, hcons=hcons, icons=icons, vars=vars,
+            lnk=lnk, surface=surface, identifier=identifier
+        )
+
+    def to_dict(self, short_pred=True):
+        def _lnk(obj): return {'from': obj.cfrom, 'to': obj.cto}
+        def _ep(ep, short_pred=True):
+            p = ep.pred.short_form() if short_pred else ep.pred.string
+            d = dict(label=ep.label, predicate=p, arguments=ep.args)
+            if ep.lnk is not None: d['lnk'] = _lnk(ep)
+            return d
+        def _hcons(hc): return {'relation':hc[1], 'high':hc[0], 'low':hc[2]}
+        def _icons(ic): return {'relation':ic[1], 'left':ic[0], 'right':ic[2]}
+        def _var(v):
+            d = {'type': var_sort(v)}
+            if self.properties(v): d['properties'] = self.properties(v)
+            return d
+
+        d = dict(
+            relations=[_ep(ep, short_pred=short_pred) for ep in self.eps()],
+            constraints=([_hcons(hc) for hc in self.hcons()] +
+                         [_icons(ic) for ic in self.icons()]),
+            variables={v: _var(v) for v in self.variables()}
+        )
+        if self.top is not None: d['top'] = self.top
+        if self.index is not None: d['index'] = self.index
+        # if self.xarg is not None: d['xarg'] = self.xarg
+        # if self.lnk is not None: d['lnk'] = self.lnk
+        # if self.surface is not None: d['surface'] = self.surface
+        # if self.identifier is not None: d['identifier'] = self.identifier
+        return d
+
+    @classmethod
+    def from_dict(cls, d):
+        def _lnk(o):
+            return None if o is None else Lnk.charspan(o['from'], o['to'])
+        def _ep(ep):
+            return ElementaryPredication(
+                nodeid=None,
+                pred=Pred.string_or_grammar_pred(ep['predicate']),
+                label=ep['label'],
+                args=ep.get('arguments', {}),
+                lnk=_lnk(ep.get('lnk')),
+                surface=ep.get('surface'),
+                base=ep.get('base')
+            )
+        eps = [_ep(rel) for rel in d.get('relations', [])]
+        hcons = [(c['high'], c['relation'], c['low'])
+                 for c in d.get('constraints', []) if 'high' in c]
+        icons = [(c['high'], c['relation'], c['low'])
+                 for c in d.get('constraints', []) if 'left' in c]
+        variables = {var: {k:v for k, v in data.items() if k != 'type'}
+                     for var, data in d.get('variables', {}).items()}
+        return cls(
+            top=d.get('top'),
+            index=d.get('index'),
+            xarg=d.get('xarg'),
+            rels=eps,
+            hcons=hcons,
+            icons=icons,
+            lnk=_lnk(d.get('lnk')),
+            surface=d.get('surface'),
+            identifier=d.get('identifier'),
+            vars=variables
+        )
 
 
 def Rmrs(top=None, index=None, xarg=None,

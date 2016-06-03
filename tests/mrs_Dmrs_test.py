@@ -3,7 +3,7 @@
 import pytest
 
 from delphin.mrs.components import Pred, Node, Link, nodes, links
-from delphin.mrs import Dmrs, Xmrs
+from delphin.mrs import Dmrs
 #from delphin.mrs import simplemrs  # for convenience in later tests
 from delphin._exceptions import XmrsError
 
