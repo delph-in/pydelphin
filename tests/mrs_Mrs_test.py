@@ -11,7 +11,7 @@ from delphin.mrs.components import (
     IndividualConstraint as Icons,
     icons,
 )
-from delphin.mrs.config import FIRST_NODEID
+from delphin.mrs.config import (FIRST_NODEID, UNKNOWNSORT)
 from delphin.mrs import Mrs
 #from delphin.mrs import simplemrs  # for convenience in later tests
 from delphin._exceptions import XmrsError
@@ -81,7 +81,8 @@ class TestMrs():
         x = Mrs(
             top='h0',
             rels=[EP(10, sp('"_rain_v_1_rel"'), 'h1', {'ARG0': 'e2'})],
-            hcons=[('h0', 'qeq', 'h1')]
+            hcons=[('h0', 'qeq', 'h1')],
+            vars={'e2': {'SF': 'prop', 'TENSE': 'pres'}}
         )
         assert x.to_dict() == {
             'top': 'h0',
@@ -91,7 +92,21 @@ class TestMrs():
             ],
             'constraints': [{'relation': 'qeq', 'high': 'h0', 'low': 'h1'}],
             'variables': {
-                'h0': {'type': 'h'}, 'h1': {'type': 'h'}, 'e2': {'type': 'e'}
+                'h0': {'type': 'h'}, 'h1': {'type': 'h'},
+                'e2': {'type': 'e',
+                       'properties': {'SF': 'prop', 'TENSE': 'pres'}}
+            }
+        }
+        assert x.to_dict(properties=False) == {
+            'top': 'h0',
+            'relations': [
+                {'label': 'h1', 'predicate': '_rain_v_1',
+                 'arguments': {'ARG0': 'e2'}}
+            ],
+            'constraints': [{'relation': 'qeq', 'high': 'h0', 'low': 'h1'}],
+            'variables': {
+                'h0': {'type': 'h'}, 'h1': {'type': 'h'},
+                'e2': {'type': 'e'}
             }
         }
 

@@ -609,7 +609,7 @@ class Mrs(Xmrs):
             lnk=lnk, surface=surface, identifier=identifier
         )
 
-    def to_dict(self, short_pred=True):
+    def to_dict(self, short_pred=True, properties=True):
         def _lnk(obj): return {'from': obj.cfrom, 'to': obj.cto}
         def _ep(ep, short_pred=True):
             p = ep.pred.short_form() if short_pred else ep.pred.string
@@ -620,7 +620,8 @@ class Mrs(Xmrs):
         def _icons(ic): return {'relation':ic[1], 'left':ic[0], 'right':ic[2]}
         def _var(v):
             d = {'type': var_sort(v)}
-            if self.properties(v): d['properties'] = self.properties(v)
+            if properties and self.properties(v):
+                d['properties'] = self.properties(v)
             return d
 
         d = dict(
@@ -816,13 +817,13 @@ class Dmrs(Xmrs):
             lnk=lnk, surface=surface, identifier=identifier
         )
 
-    def to_dict(self, short_pred=True):
+    def to_dict(self, short_pred=True, properties=True):
         def _lnk(obj): return {'from': obj.cfrom, 'to': obj.cto}
         def _node(node, short_pred=True):
             p = node.pred.short_form() if short_pred else node.pred.string
             d = dict(nodeid=node.nodeid, predicate=p)
             if node.lnk is not None: d['lnk'] = _lnk(node)
-            if node.properties or node.cvarsort != UNKNOWNSORT:
+            if properties and node.sortinfo:
                 if not node.is_quantifier():
                     d['sortinfo'] = node.sortinfo
             if node.surface is not None: d['surface'] = node.surface
