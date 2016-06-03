@@ -102,7 +102,7 @@ class Eds(object):
         nodes, edges = [], []
         for nid, node in d.get('nodes', {}).items():
             props = node.get('properties')
-            if 'type' in props:
+            if props is not None and 'type' in props:
                 props[CVARSORT] = props['type']
                 del props['type']
             lnk = None

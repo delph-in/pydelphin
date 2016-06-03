@@ -13,7 +13,8 @@ from itertools import chain
 from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
-    LnkMixin, var_re, var_sort, VarGenerator, Pred, Node, nodes, Link, links
+    Lnk, LnkMixin, var_re, var_sort, VarGenerator,
+    Pred, Node, nodes, Link, links
 )
 from .config import (
     HANDLESORT, UNKNOWNSORT, LTOP_NODEID, FIRST_NODEID,
