@@ -97,7 +97,7 @@ class Eds(object):
 
     @classmethod
     def from_dict(cls, d):
-        stringpred, charspan = Pred.stringpred, Lnk.charspan
+        makepred, charspan = Pred.string_or_grammar_pred, Lnk.charspan
         top = d.get('top')
         nodes, edges = [], []
         for nid, node in d.get('nodes', {}).items():
@@ -111,7 +111,7 @@ class Eds(object):
             nodes.append(
                 Node(
                     nodeid=nid,
-                    pred=stringpred(node['label']),
+                    pred=makepred(node['label']),
                     sortinfo=props,
                     lnk=lnk,
                     carg=node.get('carg')
@@ -234,7 +234,8 @@ _FLAG    = opt(regex(r'\s*\(fragmented\)', value=Ignore))
 _NODE    = nt('NODE', value=_make_nodedata)
 _DSCN    = opt(lit('|', value=Ignore))
 _SYMBOL  = regex(r'[-+\w]+')
-_PRED    = regex(r'((?!<-?\d|\("|\{|\[)\w)+', value=Pred.stringpred)
+_PRED    = regex(r'((?!<-?\d|\("|\{|\[)\w)+',
+                 value=Pred.string_or_grammar_pred)
 _LNK     = opt(nt('LNK', value=lambda d: Lnk.charspan(*d)), default=None)
 _CARG    = opt(nt('CARG'), default=None)
 _PROPS   = opt(nt('PROPS', value=lambda d: d[0] + d[1]), default=None)

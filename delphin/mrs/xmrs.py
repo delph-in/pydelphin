@@ -13,11 +13,12 @@ from itertools import chain
 from delphin._exceptions import (XmrsError, XmrsStructureError)
 from .components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
-    LnkMixin, var_re
+    LnkMixin, var_re, VarGenerator, Pred, Node, nodes, Link, links
 )
 from .config import (
-    HANDLESORT, IVARG_ROLE, CONSTARG_ROLE, LTOP_NODEID, FIRST_NODEID,
-    RSTR_ROLE, EQ_POST, HEQ_POST, H_POST, NIL_POST, CVARSORT
+    HANDLESORT, UNKNOWNSORT, LTOP_NODEID, FIRST_NODEID,
+    IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
+    EQ_POST, HEQ_POST, H_POST, NIL_POST, CVARSORT
 )
 
 
@@ -662,9 +663,7 @@ def Rmrs(top=None, index=None, xarg=None,
                 lnk=lnk, surface=surface, identifier=identifier)
 
 
-def Dmrs(nodes=None, links=None,
-         lnk=None, surface=None, identifier=None,
-         **kwargs):
+class Dmrs(Xmrs):
     """
     Construct an |Xmrs| using DMRS components.
 
@@ -690,60 +689,115 @@ def Dmrs(nodes=None, links=None,
     >>> ltop_link = Link(0, 10000, post='H')
     >>> d = Dmrs([rain], [ltop_link])
     """
-    from .components import VarGenerator
-    if nodes is None: nodes = []
-    if links is None: links = []
-    qeq = HandleConstraint.qeq
-    vgen = VarGenerator()
-    labels = _make_labels(nodes, links, vgen)
-    ivs = _make_ivs(nodes, vgen)
-    top = index = xarg = None  # for now; maybe get them from kwargs?
-    # initialize args with ARG0 for intrinsic variables
-    args = {nid: {IVARG_ROLE: iv} for nid, iv in ivs.items()}
-    hcons = []
-    for l in links:
-        if l.start not in args:
-            args[l.start] = {}
-        # FIXME: I don't have a clear answer about how LTOP links are
-        # constructed, so I will assume that H_POST or NIL_POST
-        # assumes a QEQ. Label equality would have been captured by
-        # _make_labels() earlier.
-        if l.start == LTOP_NODEID:
-            top = labels[LTOP_NODEID]
-            if l.post == H_POST or l.post == NIL_POST:
-                hcons += [qeq(labels[LTOP_NODEID], labels[l.end])]
-        else:
-            if not l.rargname or l.rargname.upper() == 'NIL':
-                continue  # don't make an argument for bare EQ links
-            if l.post == H_POST:
-                hole = vgen.new(HANDLESORT)[0]
-                hcons += [qeq(hole, labels[l.end])]
-                args[l.start][l.rargname] = hole
-                # if the arg is RSTR, it's a quantifier, so we can
-                # find its intrinsic variable now
-                if l.rargname.upper() == RSTR_ROLE:
-                    ivs[l.start] = ivs[l.end]
-                    args[l.start][IVARG_ROLE] = ivs[l.start]
-            elif l.post == HEQ_POST:
-                args[l.start][l.rargname] = labels[l.end]
-            else:  # NEQ_POST or EQ_POST
-                args[l.start][l.rargname] = ivs[l.end]
-    eps = []
-    for node in nodes:
-        nid = node.nodeid
-        if node.carg is not None:
-            args[nid][CONSTARG_ROLE] = node.carg
-        ep = (nid, node.pred, labels[nid], args[nid],
-              node.lnk, node.surface, node.base)
-        eps.append(ep)
+    def __init__(
+            self,
+            nodes=None, links=None, lnk=None, surface=None, identifier=None,
+            **kwargs):
+        if nodes is None: nodes = []
+        if links is None: links = []
+        qeq = HandleConstraint.qeq
+        vgen = VarGenerator()
+        labels = _make_labels(nodes, links, vgen)
+        ivs = _make_ivs(nodes, vgen)
+        top = index = xarg = None  # for now; maybe get them from kwargs?
+        # initialize args with ARG0 for intrinsic variables
+        args = {nid: {IVARG_ROLE: iv} for nid, iv in ivs.items()}
+        hcons = []
+        for l in links:
+            if l.start not in args:
+                args[l.start] = {}
+            # FIXME: I don't have a clear answer about how LTOP links are
+            # constructed, so I will assume that H_POST or NIL_POST
+            # assumes a QEQ. Label equality would have been captured by
+            # _make_labels() earlier.
+            if l.start == LTOP_NODEID:
+                top = labels[LTOP_NODEID]
+                if l.post == H_POST or l.post == NIL_POST:
+                    hcons += [qeq(labels[LTOP_NODEID], labels[l.end])]
+            else:
+                if not l.rargname or l.rargname.upper() == 'NIL':
+                    continue  # don't make an argument for bare EQ links
+                if l.post == H_POST:
+                    hole = vgen.new(HANDLESORT)[0]
+                    hcons += [qeq(hole, labels[l.end])]
+                    args[l.start][l.rargname] = hole
+                    # if the arg is RSTR, it's a quantifier, so we can
+                    # find its intrinsic variable now
+                    if l.rargname.upper() == RSTR_ROLE:
+                        ivs[l.start] = ivs[l.end]
+                        args[l.start][IVARG_ROLE] = ivs[l.start]
+                elif l.post == HEQ_POST:
+                    args[l.start][l.rargname] = labels[l.end]
+                else:  # NEQ_POST or EQ_POST
+                    args[l.start][l.rargname] = ivs[l.end]
+        eps = []
+        for node in nodes:
+            nid = node.nodeid
+            if node.carg is not None:
+                args[nid][CONSTARG_ROLE] = node.carg
+            ep = (nid, node.pred, labels[nid], args[nid],
+                  node.lnk, node.surface, node.base)
+            eps.append(ep)
 
-    icons = None  # future feature
+        icons = None  # future feature
 
-    return Xmrs(
-        top=top, index=index, xarg=xarg,
-        eps=eps, hcons=hcons, icons=icons, vars=vgen.store,
-        lnk=lnk, surface=surface, identifier=identifier
-    )
+        return super(Dmrs, self).__init__(
+            top=top, index=index, xarg=xarg,
+            eps=eps, hcons=hcons, icons=icons, vars=vgen.store,
+            lnk=lnk, surface=surface, identifier=identifier
+        )
+
+    def to_dict(self, short_pred=True):
+        def _lnk(obj): return {'from': obj.cfrom, 'to': obj.cto}
+        def _node(node, short_pred=True):
+            p = node.pred.short_form() if short_pred else node.pred.string
+            d = dict(nodeid=node.nodeid, predicate=p)
+            if node.lnk is not None: d['lnk'] = _lnk(node)
+            if node.properties or node.cvarsort != UNKNOWNSORT:
+                if not node.is_quantifier():
+                    d['sortinfo'] = node.sortinfo
+            if node.surface is not None: d['surface'] = node.surface
+            if node.base is not None: d['base'] = node.base
+            if node.carg is not None: d['carg'] = node.carg
+            return d
+        def _link(link): return {
+            'from': link.start, 'to': link.end,
+            'rargname': link.rargname, 'post': link.post
+        }
+
+        d = dict(
+            nodes=[_node(n) for n in nodes(self)],
+            links=[_link(l) for l in links(self)]
+        )
+        if self.lnk is not None: d['lnk'] = _lnk(self)
+        if self.surface is not None: d['surface'] = self.surface
+        if self.identifier is not None: d['identifier'] = self.identifier
+        return d
+
+    @classmethod
+    def from_dict(cls, d):
+        def _node(obj):
+            return Node(
+                obj.get('nodeid'),
+                Pred.string_or_grammar_pred(obj.get('predicate')),
+                sortinfo=obj.get('sortinfo'),
+                lnk=_lnk(obj.get('lnk')),
+                surface=obj.get('surface'),
+                base=obj.get('base'),
+                carg=obj.get('carg')
+            )
+        def _link(obj):
+            return Link(obj.get('from'), obj.get('to'),
+                        obj.get('rargname'), obj.get('post'))
+        def _lnk(o):
+            return None if o is None else Lnk.charspan(o['from'], o['to'])
+        return cls(
+            nodes=[_node(n) for n in d.get('nodes', [])],
+            links=[_link(l) for l in d.get('links', [])],
+            lnk=_lnk(d.get('lnk')),
+            surface=d.get('surface'),
+            identifier=d.get('identifier')
+        )
 
 def _make_labels(nodes, links, vgen):
     eq_edges = defaultdict(set)
