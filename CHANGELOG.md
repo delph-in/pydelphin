@@ -2,9 +2,37 @@
 
 ## [Unreleased][unreleased]
 
+### Added
+
+* `delphin.interfaces.rest` (#66)
+* `delphin.mrs.xmrs.Mrs`: `to_dict()` and `from_dict()` methods (#68)
+* `delphin.mrs.xmrs.Dmrs`: `to_dict()` and `from_dict()` methods (#68)
+* `delphin.mrs.eds` (#25, #26)
+* `delphin.lib.pegre` [Pegre](https://github.com/goodmami/pegre)
+  parsing framework to help with EDS deserialization
+* `properties` property accessor on `delphin.mrs.components.Node`
+
+### Changed
+
+* `delphin.mrs.xmrs.Mrs` is now a subclass of Xmrs
+* `delphin.mrs.xmrs.Dmrs` is now a subclass of Xmrs
+* `delphin.mrs.components.Node` no longer coerces `nodeid` to an
+  integer (since `Node` is used by EDS as well)
+* `delphin.mrs.dmrx` now casts nodeids to integers (see above)
+* `delphin.mrs.xmrs.Xmrs.properties()` can take an `as_list=True`
+  parameter to return the properties as a list instead of as a dict
+  (to preserve the original order)
+
 ### Fixed
 
 * Fixed a regression in reading multiple SimpleMRSs (#70)
+* `delphin.mrs.components.Pred`
+  - `short_form()` now works as expected when the predicate is already
+    short (e.g. has no `_rel` suffix)
+  - Short and full preds are now compared as equal
+* `delphin.mrs.xmrs.Xmrs.outgoing_args()` no longer tries to remove
+  `CARG` from the argument dict twice.
+* `delphin.derivation` improve modeling of terminal nodes
 
 ## [v0.4.1][]
 

@@ -113,6 +113,8 @@ pyDelphin is developed for [Python 3](http://python.org/download/)
 requirements include:
   - [NetworkX](http://networkx.github.io/) for MRS isomorphism
     checking
+  - [requests](http://requests.readthedocs.io/en/master/) for the
+    REST client
   - [Pygments](http://pygments.org/) for TDL and SimpleMRS syntax
     highlighting
   - [tikz-dependency](https://www.ctan.org/pkg/tikz-dependency), while

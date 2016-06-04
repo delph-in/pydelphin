@@ -84,6 +84,7 @@ setup(
     ],
     install_requires=[
         'networkx',
+        'requests',
         'Pygments'
     ],
     # entry_points={
