@@ -22,6 +22,9 @@
 * `delphin.mrs.xmrs.Xmrs.properties()` can take an `as_list=True`
   parameter to return the properties as a list instead of as a dict
   (to preserve the original order)
+* `delphin._exceptions` is now `delphin.exceptions`
+* Renamed a number of objects meant to be internal so their
+  identifiers start with `_` (e.g. `delphin.derivation._UdfNodeBase`)
 
 ### Fixed
 
@@ -33,6 +36,11 @@
 * `delphin.mrs.xmrs.Xmrs.outgoing_args()` no longer tries to remove
   `CARG` from the argument dict twice.
 * `delphin.derivation` improve modeling of terminal nodes
+
+### Documented
+
+* Added or updated documentation throughout. Coverage is not complete,
+  but should be significantly better.
 
 ## [v0.4.1][]
 

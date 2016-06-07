@@ -8,7 +8,7 @@ except ImportError:
 from itertools import starmap
 from functools import total_ordering
 
-from delphin._exceptions import (XmrsError, XmrsStructureError)
+from delphin.exceptions import (XmrsError, XmrsStructureError)
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
     UNKNOWNSORT, HANDLESORT, CVARSORT, QUANTIFIER_POS,
@@ -26,6 +26,7 @@ var_re = re.compile(r'^([-\w]*\D)(\d+)$')
 
 
 def sort_vid_split(vs):
+    """Split a valid variable string into the variable sort and id."""
     match = var_re.match(vs)
     if match is None:
         raise ValueError('Invalid variable string: {}'.format(str(vs)))
@@ -33,15 +34,21 @@ def sort_vid_split(vs):
         return match.groups()
 
 
-def var_sort(v): return sort_vid_split(v)[0]
+def var_sort(v):
+    """Return the sort of a valid variable string."""
+    return sort_vid_split(v)[0]
 
 
-def var_id(v): return int(sort_vid_split(v)[1])
+def var_id(v):
+    """Return the integer id of a valid variable string."""
+    return int(sort_vid_split(v)[1])
 
 
-class VarGenerator(object):
-    """Simple class to produce variables, incrementing the vid for
-       each one."""
+class _VarGenerator(object):
+    """
+    Simple class to produce variables, incrementing the vid for each
+    one.
+    """
 
     def __init__(self, starting_vid=1):
         self.vid = starting_vid
@@ -49,6 +56,9 @@ class VarGenerator(object):
         self.store = {}  # to recall properties from varstrings
 
     def new(self, sort, properties=None):
+        """
+        Create a new variable for the given *sort*.
+        """
         if sort is None:
             sort = UNKNOWNSORT
         # find next available vid
@@ -75,22 +85,18 @@ class Lnk(namedtuple('Lnk', ('type', 'data'))):
         type: the way the Lnk relates the semantics to the surface form
 
     Note:
-
         Valid *types* and their associated *data* shown in the table
         below.
 
-        =========  =================================================
-        type       data
-        =========  =================================================
-        charspan   a tuple of start and end character positions from
-                   the surface string
-        chartspan  a tuple of start and end parse chart vertices
-        tokens     a list of token identifiers
-        edge       an edge identifier
-        =========  =================================================
+        | *type*    | *data*              | example   |
+        | --------- | ------------------- | --------- |
+        | charspan  | surface string span | (0, 5)    |
+        | chartspan | chart vertex span   | (0, 5)    |
+        | tokens    | token identifiers   | (0, 1, 2) |
+        | edge      | edge identifier     | 1         |
+
 
     Example:
-
         Lnk objects should be created using the classmethods:
 
         >>> Lnk.charspan(0,5)
@@ -101,7 +107,6 @@ class Lnk(namedtuple('Lnk', ('type', 'data'))):
         '<0 1 2>'
         >>> Lnk.edge(1)
         '<@1>'
-
     """
 
     # These types determine how a lnk on an EP or MRS are to be
@@ -177,14 +182,13 @@ class Lnk(namedtuple('Lnk', ('type', 'data'))):
         return self.type == other.type and self.data == other.data
 
 
-class LnkMixin(object):
+class _LnkMixin(object):
     """
-    A mixin class for predications (|EPs| or |Nodes|) or full |Xmrs|
+    A mixin class for predications ([EPs] or [Nodes]) or full [Xmrs]
     objects, which are the types that can be linked to surface strings.
-    This class provides the :py:attr:`~delphin.mrs.lnk.LnkMixin.cfrom`
-    and :py:attr:`~delphin.mrs.lnk.LnkMixin.cto` properties so they are
-    always available (defaulting to a value of -1 if there is no lnk or
-    if the lnk is not a Lnk.CHARSPAN type).
+    This class provides the `cfrom` and `cto` properties so they are
+    always available (defaulting to a value of `-1` if there is no lnk
+    or if the lnk is not a Lnk.CHARSPAN type).
     """
     @property
     def cfrom(self):
@@ -218,9 +222,13 @@ class LnkMixin(object):
 # LINKS and CONSTRAINTS
 
 class Link(namedtuple('Link', ('start', 'end', 'rargname', 'post'))):
-    """DMRS-style Links are a way of representing arguments without
-       variables. A Link encodes a start and end node, the argument
-       name, and label information (e.g. label equality, qeq, etc)."""
+    """
+    DMRS-style dependency link.
+
+    Links are a way of representing arguments without variables. A
+    Link encodes a start and end node, the argument name, and label
+    information (e.g. label equality, qeq, etc).
+    """
     def __new__(cls, start, end, rargname, post):
         return super(Link, cls).__new__(
             cls, int(start), int(end), rargname, post
@@ -233,12 +241,12 @@ class Link(namedtuple('Link', ('start', 'end', 'rargname', 'post'))):
 
 
 def links(xmrs):
-    """The list of |Links|."""
-    # Return the set of links for the XMRS structure. Links exist for
-    # every non-intrinsic argument that has a variable that is the
-    # intrinsic variable of some other predicate, as well as for label
-    # equalities when no argument link exists (even considering
-    # transitivity).
+    """Return the list of [Links] for the *xmrs*."""
+
+    # Links exist for every non-intrinsic argument that has a variable
+    # that is the intrinsic variable of some other predicate, as well
+    # as for label equalities when no argument link exists (even
+    # considering transitivity).
     links = []
     prelinks = []
 
@@ -320,7 +328,7 @@ class HandleConstraint(
 
 
 def hcons(xmrs):
-    """The list of all |HandleConstraints|."""
+    """Return the list of all [HandleConstraints] in *xmrs*."""
     return [
         HandleConstraint(hi, reln, lo)
         for hi, reln, lo in sorted(xmrs.hcons(), key=lambda hc: var_id(hc[0]))
@@ -332,7 +340,7 @@ IndividualConstraint = namedtuple('IndividualConstraint',
 
 
 def icons(xmrs):
-    """The list of all |IndividualConstraints|."""
+    """Return the list of all [IndividualConstraints] in *xmrs*."""
     return [
         IndividualConstraint(left, reln, right)
         for left, reln, right in sorted(xmrs.icons(),
@@ -347,38 +355,30 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
     """
     A semantic predicate.
 
+    **Abstract** predicates don't begin with an underscore, and they
+    generally are defined as types in a grammar. **Surface**
+    predicates always begin with an underscore (ignoring possible
+    quotes), and are often defined as strings in a lexicon.
+
+    In pyDelphin, Preds are equivalent if they have the same lemma,
+    pos, and sense, and are both abstract or both surface preds.
+    Other factors are ignored for comparison, such as their being
+    string-, grammar-, or real-preds, whether they are quoted or not,
+    whether they end with `_rel` or not, or differences in
+    capitalization.
+
     Args:
-        predtype: the type of predicate; valid values are grammarpred,
-            stringpred, or realpred, although in practice one won't use
-            this constructor directly, but instead use one of the
-            classmethods
+        type: the type of predicate; valid values are
+            Pred.GRAMMARPRED, Pred.REALPRED, and Pred.STRINGPRED,
+            although in practice Preds are instantiated via
+            classmethods that select the type
         lemma: the lemma of the predicate
         pos: the part-of-speech; a single, lowercase character
         sense: the (often omitted) sense of the predicate
     Returns:
-        an instantiated Pred object
-
-    Preds come in three flavors:
-
-    * **grammar preds** (gpreds): preds defined in a semantic hierarchy
-      in the grammar, and are not necessarily tied to a lexical entry;
-      grammar preds may not begin with a leading underscore
-    * **real preds** (realpreds): preds that are defined as the
-      composition of a lemma, a part-of-speech (pos), and sometimes a
-      sense---parts-of-speech are always single characters, and senses
-      may be numbers or string descriptions
-    * **string preds** (spreds): a string (often double-quoted) that
-      represents a real pred; string preds must begin with a leading
-      underscore
-
-    While MRS representations may distinguish real preds and string
-    preds, in pyDelphin they are equivalent. All well-formed predicates,
-    when represented as strings, end with ``_rel``, but in practice this
-    may not be true (some may end in ``_relation``, or have no such
-    suffix).
+        a Pred object
 
     Example:
-
         Preds are compared using their string representations.
         Surrounding quotes (double or single) are ignored, and
         capitalization doesn't matter. In addition, preds may be
@@ -424,16 +424,19 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
     @classmethod
     def stringpred(cls, predstr):
+        """Return a Pred from its quoted string representation."""
         lemma, pos, sense, end = split_pred_string(predstr)
         return cls(Pred.STRINGPRED, lemma, pos, sense, predstr)
 
     @classmethod
     def grammarpred(cls, predstr):
+        """Return a Pred from its symbol string."""
         lemma, pos, sense, end = split_pred_string(predstr)
         return cls(Pred.GRAMMARPRED, lemma, pos, sense, predstr)
 
     @staticmethod
     def string_or_grammar_pred(predstr):
+        """Return a Pred from either its string or grammar symbol."""
         if predstr.strip('"').lstrip("'").startswith('_'):
             return Pred.stringpred(predstr)
         else:
@@ -441,6 +444,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
     @classmethod
     def realpred(cls, lemma, pos, sense=None):
+        """Return a Pred from its components."""
         string_tokens = [lemma, pos]
         if sense is not None:
             sense = str(sense)
@@ -462,6 +466,9 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
         return re.sub(r'(.*)_rel$', r'\1', s, re.U|re.I)
 
     def is_quantifier(self):
+        """
+        Return `True` if the predicate has a quantifier part-of-speech.
+        """
         return self.pos == QUANTIFIER_POS
 
 
@@ -498,8 +505,8 @@ def split_pred_string(predstr):
 
 def is_valid_pred_string(predstr):
     """
-    Return True if the given predicate string represents a valid
-    Pred, False otherwise.
+    Return `True` if the given predicate string represents a valid
+    Pred, `False` otherwise.
     """
     predstr = predstr.strip('"').lstrip("'")
     if not predstr.endswith('_rel'):
@@ -526,13 +533,12 @@ def normalize_pred_string(predstr):
 class Node(
     namedtuple('Node', ('nodeid', 'pred', 'sortinfo',
                         'lnk', 'surface', 'base', 'carg')),
-    LnkMixin):
+    _LnkMixin):
     """
-    A very simple predication for DMRSs. Nodes don't have |Arguments|
-    or labels like |EPs|, but they do have a
-    :py:attr:`~delphin.mrs.node.Node.carg` property for constant
-    arguments, and their sortal type is given by the `cvarsort` value
-    on their property mapping.
+    A very simple predication for DMRSs. Nodes don't have arguments
+    or labels like [ElementaryPredication] objects, but they do have
+    a property for CARGs and contain their variable sort and
+    properties in sortinfo.
 
     Args:
         nodeid: node identifier
@@ -608,12 +614,13 @@ class Node(
 
     def is_quantifier(self):
         """
-        Return True if the Node is a quantifier, or False otherwise.
+        Return `True` if the Node's [Pred] appears to be a quantifier.
         """
         return self.pred.is_quantifier()
 
+
 def nodes(xmrs):
-    """The list of Nodes."""
+    """Return the list of Nodes for *xmrs*."""
     nodes = []
     _props = xmrs.properties
     varsplit = sort_vid_split
@@ -634,7 +641,7 @@ def nodes(xmrs):
 class ElementaryPredication(
     namedtuple('ElementaryPredication',
                ('nodeid', 'pred', 'label', 'args', 'lnk', 'surface', 'base')),
-    LnkMixin):
+    _LnkMixin):
     """
     An elementary predication (EP) combines a predicate with various
     structural semantic properties.
@@ -645,16 +652,6 @@ class ElementaryPredication(
     assigned a nodeid. Generally EPs will have an ARG0 on their `args`
     dictionary to indicate their intrinisic variable, but it is not
     required.
-
-    NOTE: the concept of "EP" on Xmrs is not the same as the
-    ElementaryPredication class, but just the tuple of the same shape
-    and containing the same kind of data. This is done for
-    performance reasons. To get a more user-friendly
-    ElementaryPredication object, it can easily be instantiated:
-
-        ep = ElementaryPredication(*xmrs.ep(10000))
-
-    Note the use of argument unpacking (with the star `*` operator).
 
     Args:
         nodeid: an int nodeid
@@ -696,23 +693,32 @@ class ElementaryPredication(
 
     @property
     def intrinsic_variable(self):
+        """
+        The value of the intrinsic argument (ARG0).
+        """
         if IVARG_ROLE in self.args:
             return self.args[IVARG_ROLE]
         return None
 
-    #: A synonym for :py:meth:`intrinsic_variable`
+    #: A synonym for ElementaryPredication.intrinsic_variable
     iv = intrinsic_variable
 
     @property
     def carg(self):
+        """
+        The value of the constant argument.
+        """
         return self.args.get(CONSTARG_ROLE, None)
 
     def is_quantifier(self):
+        """
+        Return `True` if the EP is a quantifier predication.
+        """
         return RSTR_ROLE in self.args
 
 
 def elementarypredications(xmrs):
-    """The list of |ElementaryPredications|."""
+    """Return the list of |ElementaryPredication| objects in *xmrs*."""
     return list(starmap(ElementaryPredication, xmrs.eps()))
 
 

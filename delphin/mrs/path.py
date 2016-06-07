@@ -7,7 +7,7 @@ from itertools import product
 from .components import (Pred, links, var_sort)
 from .util import powerset
 from .config import IVARG_ROLE
-from delphin._exceptions import XmrsError
+from delphin.exceptions import XmrsError
 # for rebuilding Xmrs from paths
 from delphin.mrs import Node, Link, Pred, Dmrs
 

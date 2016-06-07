@@ -131,7 +131,7 @@ def find_argument_target(xmrs, nodeid, rargname):
         If the argument value is an intrinsic variable whose target is
         an EP that has a quantifier, the non-quantifier EP's nodeid
         will be returned. With this nodeid, one can then use
-        :py:meth:`find_quantifier` to get its quantifier's nodeid.
+        find_quantifier() to get its quantifier's nodeid.
     """
     tgt = xmrs.args(nodeid)[rargname]
     if tgt in xmrs.variables():
@@ -163,7 +163,7 @@ def find_subgraphs_by_preds(xmrs, preds, connected=None):
         xmrs: The |Xmrs| object to use.
         preds: An iterable of |Preds| to include in subgraphs.
         connected: If True, all yielded subgraphs must be connected,
-            as determined by :py:meth:`Xmrs.is_connected`.
+            as determined by Xmrs.is_connected().
     Yields:
         |Xmrs| objects for the found subgraphs.
     """

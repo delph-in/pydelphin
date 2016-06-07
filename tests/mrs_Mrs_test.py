@@ -14,7 +14,7 @@ from delphin.mrs.components import (
 from delphin.mrs.config import (FIRST_NODEID, UNKNOWNSORT)
 from delphin.mrs import Mrs
 #from delphin.mrs import simplemrs  # for convenience in later tests
-from delphin._exceptions import XmrsError
+from delphin.exceptions import XmrsError
 
 sp = Pred.stringpred
 

@@ -9,8 +9,8 @@ from delphin.mrs.components import var_id, var_sort
 from delphin.mrs.config import CONSTARG_ROLE, IVARG_ROLE
 
 # NOTES:
-#  the somewhat naive implementations in node_isomorphic and
-#  var_isomorphic have terrible runtimes for the pathological case,
+#  the somewhat naive implementations in _node_isomorphic and
+#  _var_isomorphic have terrible runtimes for the pathological case,
 #  and I didn't finish the Turbo_ISO implementation before I had to
 #  move on, so I'm conceding defeat for the time being and using
 #  networkx just for isomorphism (so I build a nx DiGraph here, then
@@ -47,7 +47,7 @@ def _make_digraph(x, check_varprops):
                       for hi, reln, lo in x.hcons())
     return dg
 
-def turbo_isomorphic(q, g, check_varprops=True):
+def _turbo_isomorphic(q, g, check_varprops=True):
     """
     Query Xmrs q is isomorphic to given Xmrs g if there exists an
     isomorphism (bijection of eps and vars) from q to g.
@@ -57,13 +57,13 @@ def turbo_isomorphic(q, g, check_varprops=True):
     if len(q.variables()) != len(g.variables()): return False
     #if len(a.hcons()) != len(b.hcons()): return False
     try:
-        next(isomorphisms(q, g, check_varprops=check_varprops))
+        next(_isomorphisms(q, g, check_varprops=check_varprops))
         return True
     except StopIteration:
         return False
 
 
-def isomorphisms(q, g, check_varprops=True):
+def _isomorphisms(q, g, check_varprops=True):
     """
     Inspired by Turbo_ISO: http://dl.acm.org/citation.cfm?id=2465300
     """
@@ -207,7 +207,7 @@ def _isomorphism_explore_CR(q_, v_m, qig, gig):
             continue
 
 
-def node_isomorphic(a, b, check_varprops=True):
+def _node_isomorphic(a, b, check_varprops=True):
     """
     Two Xmrs objects are isomorphic if they have the same structure as
     determined by variable linkages between preds.
@@ -344,7 +344,7 @@ def _node_isomorphic(agenda, a_sigs, b_nd, isomap, failed):
                 yield iso_
 
 
-def var_isomorphic(a, b, check_varprops=True):
+def _var_isomorphic(a, b, check_varprops=True):
     """
     Two Xmrs objects are isomorphic if they have the same structure as
     determined by variable linkages between preds.

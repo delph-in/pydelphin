@@ -3,7 +3,7 @@ from collections import deque, defaultdict
 from itertools import chain
 
 from delphin.lib.six import raise_from
-from delphin._exceptions import TdlError, TdlParsingError
+from delphin.exceptions import TdlError, TdlParsingError
 from delphin.tfs import TypedFeatureStructure
 
 _list_head = 'FIRST'

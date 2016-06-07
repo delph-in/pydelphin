@@ -43,7 +43,7 @@ Derivation trees have 3 types of nodes:
     - *start* (the character index of the left-most side of the tree)
     - *end* (the character index of the right-most side of the tree)
   * terminal/left/lexical nodes, which contain the input tokens processed
-    by that subtree; the content of leaf nodes is open-ended
+    by that subtree
 
 This module has a class UdfNode for capturing root and normal nodes.
 Root nodes are expressed as a UdfNode whose *id* is `None`. For root
@@ -65,7 +65,10 @@ _token_fields = ('id', 'tfs')
 _nonterminal_fields = ('id', 'entity', 'score', 'start', 'end', 'daughters')
 _all_fields = tuple(set(_terminal_fields).union(_nonterminal_fields))
 
-class UdfNodeBase(object):
+class _UdfNodeBase(object):
+    """
+    Base class for UdfNodes and UdfTerminals.
+    """
     def __str__(self):
         return self.to_udf(indent=None)
 
@@ -86,9 +89,15 @@ class UdfNodeBase(object):
     # serialization
 
     def to_udf(self, indent=1):
+        """
+        Encode the node and its descendants in the UDF format.
+        """
         return _to_udf(self, indent, 1)
 
     def to_dict(self, fields=_all_fields):
+        """
+        Encode the node as a dictionary suitable for JSON serialization.
+        """
         fields = set(fields)
         diff = fields.difference(_all_fields)
         if diff:
@@ -183,7 +192,7 @@ class UdfToken(namedtuple('UdfToken', _token_fields)):
         return self.tfs == other.tfs
 
 
-class UdfTerminal(namedtuple('UdfTerminal', _terminal_fields), UdfNodeBase):
+class UdfTerminal(namedtuple('UdfTerminal', _terminal_fields), _UdfNodeBase):
     """
     Terminal nodes in the Unified Derivation Format. The *form*
     field is always set, but *tokens* may be `None`.
@@ -212,7 +221,7 @@ class UdfTerminal(namedtuple('UdfTerminal', _terminal_fields), UdfNodeBase):
         return True
 
 
-class UdfNode(namedtuple('UdfNode', _nonterminal_fields), UdfNodeBase):
+class UdfNode(namedtuple('UdfNode', _nonterminal_fields), _UdfNodeBase):
     """
     Normal (non-leaf) nodes in the Unified Derivation Format. Root nodes
     are just UdfNodes whose *id*, by convention, is `None`. The
@@ -397,6 +406,9 @@ class Derivation(UdfNode):
 
     @classmethod
     def from_dict(cls, d):
+        """
+        Decode from a dictionary as from UdfNode.to_dict().
+        """
         return cls(*_from_dict(d))
 
 def _unquote(s):

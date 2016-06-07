@@ -1,6 +1,6 @@
 from itertools import chain, combinations
 from operator import itemgetter
-from delphin._exceptions import XmrsStructureError
+from delphin.exceptions import XmrsStructureError
 
 
 first = itemgetter(0)

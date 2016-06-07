@@ -2,10 +2,10 @@
 
 import pytest
 
-from delphin._exceptions import XmrsError
+from delphin.exceptions import XmrsError
 from delphin.mrs.components import (
-    sort_vid_split, var_sort, var_id, VarGenerator,
-    Lnk, LnkMixin,
+    sort_vid_split, var_sort, var_id, _VarGenerator,
+    Lnk, _LnkMixin,
     Link, links, HandleConstraint, hcons,
     Pred, split_pred_string, is_valid_pred_string, normalize_pred_string,
     Node, ElementaryPredication as EP
@@ -126,15 +126,15 @@ def test_var_id():
 
 class TestVarGenerator():
     def test_init(self):
-        vg = VarGenerator()
+        vg = _VarGenerator()
         assert vg.vid == 1
         assert len(vg.store) == 0
-        vg = VarGenerator(starting_vid=5)
+        vg = _VarGenerator(starting_vid=5)
         assert vg.vid == 5
         assert len(vg.store) == 0
 
     def test_new(self):
-        vg = VarGenerator()
+        vg = _VarGenerator()
         v, vps = vg.new('x')
         assert v == 'x1'
         assert vg.vid == 2
@@ -205,27 +205,27 @@ class TestLnk():
 
 class TestLnkMixin():
     def test_inherit(self):
-        class NoLnk(LnkMixin):
+        class NoLnk(_LnkMixin):
             pass
         n = NoLnk()
         assert n.cfrom == -1
         assert n.cto == -1
 
-        class WithNoneLnk(LnkMixin):
+        class WithNoneLnk(_LnkMixin):
             def __init__(self):
                 self.lnk = None
         n = WithNoneLnk()
         assert n.cfrom == -1
         assert n.cto == -1
 
-        class WithNonCharspanLnk(LnkMixin):
+        class WithNonCharspanLnk(_LnkMixin):
             def __init__(self):
                 self.lnk = Lnk.chartspan(0,1)
         n = WithNonCharspanLnk()
         assert n.cfrom == -1
         assert n.cto == -1
 
-        class WithCharspanLnk(LnkMixin):
+        class WithCharspanLnk(_LnkMixin):
             def __init__(self):
                 self.lnk = Lnk.charspan(0,1)
         n = WithCharspanLnk()

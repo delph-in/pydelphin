@@ -7,9 +7,12 @@ from pygments.token import (
     Comment, Error
 )
 
-tdl_break_characters = re.escape(r'<>!=:.#&,[];$()^/')
+_tdl_break_characters = re.escape(r'<>!=:.#&,[];$()^/')
 
 class TdlLexer(RegexLexer):
+    """
+    A Pygments-based Lexer for Typed Description Language.
+    """
     name = 'TDL'
     aliases = ['tdl']
     filenames = ['*.tdl']
@@ -54,11 +57,11 @@ class TdlLexer(RegexLexer):
             (r'\[', Punctuation, 'avm'),
             (r'<!', Punctuation, 'difflist'),
             (r'<', Punctuation, 'conslist'),
-            (r'#[^\s{}]+'.format(tdl_break_characters), Name.Label),
+            (r'#[^\s{}]+'.format(_tdl_break_characters), Name.Label),
             include('strings'),
             (r'\*top\*', Keyword.Constant),
             (r'\.\.\.', Name),
-            (r'[^\s{}]+'.format(tdl_break_characters), Name),
+            (r'[^\s{}]+'.format(_tdl_break_characters), Name),
             (r'', Text, '#pop')
         ],
         'avm': [
@@ -67,7 +70,7 @@ class TdlLexer(RegexLexer):
             (r'\]', Punctuation, '#pop'),
             (r',', Punctuation),
             (r'((?:[^\s{0}]+)(?:\s*\.\s*[^\s{0}]+)*)'
-             .format(tdl_break_characters), Name.Attribute, 'conjunction')
+             .format(_tdl_break_characters), Name.Attribute, 'conjunction')
         ],
         'conslist': [
             (r'>', Punctuation, '#pop'),
@@ -144,6 +147,9 @@ mrs_colorscheme = {
 
 
 class SimpleMrsLexer(RegexLexer):
+    """
+    A Pygments-based Lexer for the SimpleMRS serialization format.
+    """
     name = 'SimpleMRS'
     aliases = ['mrs']
     filenames = ['*.mrs']

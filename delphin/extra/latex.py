@@ -12,7 +12,7 @@ from delphin.mrs.xmrs import Xmrs
 #   (https://github.com/xigt/xigt)
 
 # order matters here
-LATEX_CHARMAP = [
+_LATEX_CHARMAP = [
     ('\\', '\\textbackslash'),
     ('&', '\\&'),
     ('%', '\\%'),
@@ -25,17 +25,22 @@ LATEX_CHARMAP = [
     ('^', '\\textasciicircum'),
  ]
 
-def latex_escape(s):
+def _latex_escape(s):
     # consider a re sub with a function. e.g.
     # _character_unescapes = {'\\s': _field_delimiter, '\\n': '\n', '\\\\':     '\\'}
     # _unescape_func = lambda m: _character_unescapes[m.group(0)]
     # _unescape_re = re.compile(r'(\\s|\\n|\\\\)')
     # _unescape_re.sub(_unescape_func, string, re.UNICODE)
-    for c, r in LATEX_CHARMAP:
+    for c, r in _LATEX_CHARMAP:
         s = s.replace(c, r)
     return s
 
 def dmrs_tikz_dependency(xs):
+    """
+    Return a LaTeX document with each Xmrs in *xs* rendered as DMRSs.
+
+    DMRSs use the tikz-dependency package for visualization.
+    """
     def link_label(link):
         return '{}/{}'.format(link.rargname or '', link.post)
 
@@ -64,7 +69,7 @@ def dmrs_tikz_dependency(xs):
         )
         ns = nodes(x)
         ls = links(x)
-        predlist = [latex_escape(n.pred.short_form()) for n in ns]
+        predlist = [_latex_escape(n.pred.short_form()) for n in ns]
         lines.extend([
             '  \\begin{deptext}[column sep=10pt]',
             '    {} \\\\'.format(' \\& '.join(predlist)),
@@ -76,7 +81,7 @@ def dmrs_tikz_dependency(xs):
                 lines.append(
                     '  \\deproot[edge unit distance=2ex]{{{}}}{{{}}}'.format(
                         nodeidx[link.end],
-                        'TOP'  # latex_escape('/' + link.post)
+                        'TOP'  # _latex_escape('/' + link.post)
                     )
                 )
             else:
@@ -90,7 +95,7 @@ def dmrs_tikz_dependency(xs):
                     ','.join(opts),
                     nodeidx[link.start],
                     nodeidx[link.end],
-                    latex_escape(link_label(link))
+                    _latex_escape(link_label(link))
                 ))
         lines.append('\\end{dependency}')
     lines.append('\\end{document}')

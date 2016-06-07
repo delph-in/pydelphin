@@ -146,6 +146,8 @@ The following packages/modules are available:
 - `extra.latex`: Formatting for LaTeX (just DMRS)
 - `interfaces.ace`: Python wrapper for common tasks using
   [ACE](http://sweaglesw.org/linguistics/ace/)
+- `interfaces.rest`: Client for the RESTful web 
+  [API](http://moin.delph-in.net/ErgApi)
 
 ## Contributors
 

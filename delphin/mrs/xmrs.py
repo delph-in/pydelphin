@@ -1,19 +1,15 @@
 
 """
-`delphin.mrs.xmrs` - Classes and functions for general *MRS
-
-### known limitations (hopefully only good limitations):
-  * Xmrs assumes each hole appears as an argument exactly once and as
-    the hi variable of exactly one handle constraint
+Classes and functions for general *MRS processing.
 """
 
 from collections import (defaultdict, deque)
 from itertools import chain
 
-from delphin._exceptions import (XmrsError, XmrsStructureError)
+from delphin.exceptions import (XmrsError, XmrsStructureError)
 from .components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
-    Lnk, LnkMixin, var_re, var_sort, VarGenerator,
+    Lnk, _LnkMixin, var_re, var_sort, _VarGenerator,
     Pred, Node, nodes, Link, links
 )
 from .config import (
@@ -23,9 +19,17 @@ from .config import (
 )
 
 
-class Xmrs(LnkMixin):
+class Xmrs(_LnkMixin):
     """
     Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
+
+    Attributes:
+        top: the top (i.e. LTOP) handle
+        index: the semantic index
+        xarg: the externa argument
+        lnk: [Lnk] object associating the [Xmrs] to the surface form
+        surface: the surface string
+        identifier: a discourse-utterance ID (often unset)
     """
 
     def __init__(self, top=None, index=None, xarg=None,
@@ -99,6 +103,9 @@ class Xmrs(LnkMixin):
         self.identifier = identifier  # Associates an utterance with the RMRS
 
     def add_eps(self, eps):
+        """
+        Incorporate the list of [EPs] given by *eps*.
+        """
         # (nodeid, pred, label, args, lnk, surface, base)
         _nodeids, _eps, _vars = self._nodeids, self._eps, self._vars
         for ep in eps:
@@ -135,6 +142,9 @@ class Xmrs(LnkMixin):
                     #         vardict['iv'] = nodeid
 
     def add_hcons(self, hcons):
+        """
+        Incorporate the list of [HandleConstraints] given by *hcons*.
+        """
         # (hi, relation, lo)
         _vars = self._vars
         _hcons = self._hcons
@@ -160,6 +170,9 @@ class Xmrs(LnkMixin):
                     _vars[lo]['hcrefs'].append((nodeid, role, hi))
 
     def add_icons(self, icons):
+        """
+        Incorporate the [IndividualConstraints] given by *icons*.
+        """
         _vars, _icons = self._vars, self._icons
         for ic in icons:
             try:
@@ -209,14 +222,39 @@ class Xmrs(LnkMixin):
 
     @property
     def ltop(self):
+        """
+        The top handle if specified; `None` otherwise.
+
+        Note:
+            Equivalent to [Xmrs.top]
+        """
         return self.top
 
     # basic access to internal structures
 
     def nodeid(self, iv, quantifier=False):
+        """
+        Return the nodeid of the predication selected by *iv*.
+
+        Args:
+            iv: the intrinsic variable of the predication to select
+            quantifier: if `True`, treat *iv* as a bound variable and
+                find its quantifier; otherwise the non-quantifier will
+                be returned
+        """
         return next(iter(self.nodeids(ivs=[iv], quantifier=quantifier)), None)
 
     def nodeids(self, ivs=None, quantifier=None):
+        """
+        Return the list of nodeids given by *ivs*, or all nodeids.
+
+        Args:
+            ivs: the intrinsic variables of the predications to select;
+                if `None`, return all nodeids (but see *quantifier*)
+            quantifier: if `True`, only return nodeids of quantifiers;
+                if `False`, only return non-quantifiers; if `None` (the
+                default), return both
+        """
         if ivs is None:
             nids = list(self._nodeids)
         else:
@@ -231,28 +269,67 @@ class Xmrs(LnkMixin):
             nids = [n for n in nids if self.ep(n).is_quantifier()==quantifier]
         return nids
 
-    def ep(self, nodeid): return self._eps[nodeid]
+    def ep(self, nodeid):
+        """
+        Return the [ElementaryPredication] with the given *nodeid*.
+        """
+        return self._eps[nodeid]
 
     def eps(self, nodeids=None):
+        """
+        Return the [EPs] with the given *nodeid*, or all [EPs].
+
+        Args:
+            nodeids: an iterable of nodeids of [EPs] to return; if
+                `None`, return all [EPs]
+        """
         if nodeids is None: nodeids = self._nodeids
         _eps = self._eps
         return [_eps[nodeid] for nodeid in nodeids]
 
-    def hcon(self, hi): return self._hcons[hi]
+    def hcon(self, hi):
+        """
+        Return the [HandleConstraint] with high variable *hi*.
+        """
+        return self._hcons[hi]
 
-    def hcons(self): return list(self._hcons.values())
+    def hcons(self):
+        """
+        Return the [ICONS] with left variable *left*, or all [ICONS].
+
+        Args:
+            left: the left variable of the [ICONS] to return; if `None`,
+                return all [ICONS]
+        """
+        return list(self._hcons.values())
 
     def icons(self, left=None):
+        """
+        Return the list of all variables.
+        """
         if left is not None:
             return self._icons[left]
         else:
             return list(chain.from_iterable(self._icons.values()))
 
-    def variables(self): return list(self._vars)
+    def variables(self):
+        """
+        Return a dictionary of variable properties for *var_or_nodeid*.
+
+        Args:
+            var_or_nodeid: if a variable, return the properties
+                associated with the variable; if a nodeid, return the
+                properties associated with the intrinsic variable of the
+                predication given by the nodeid
+        """
+        return list(self._vars)
 
     # access to internal sub-structures
 
     def properties(self, var_or_nodeid, as_list=False):
+        """
+        Return the [Pred] object for the predications given by *nodeid*.
+        """
         props = []
         if var_or_nodeid in self._vars:
             props = self._vars[var_or_nodeid]['props']
@@ -265,25 +342,86 @@ class Xmrs(LnkMixin):
             props = dict(props)
         return props
 
-    def pred(self, nodeid): return self._eps[nodeid][1]
+    def pred(self, nodeid):
+        """
+        Return the [Pred] objects for *nodeids*, or all [Preds].
+
+        Args:
+            nodeids: an iterable of nodeids of predications to return
+                [Preds] from; if `None`, return all [Preds]
+        """
+        return self._eps[nodeid][1]
 
     def preds(self, nodeids=None):
+        """
+        Return the [Pred] objects for *nodeids*, or all [Preds].
+
+        Args:
+            nodeids: an iterable of nodeids of predications to return
+                [Preds] from; if `None`, return all [Preds]
+        """
         if nodeids is None: nodeids = self._nodeids
         _eps = self._eps
         return [_eps[nid][1] for nid in nodeids]
 
-    def label(self, nodeid): return self._eps[nodeid][2]
+    def label(self, nodeid):
+        """
+        Return the label of the predication given by *nodeid*
+        """
+        return self._eps[nodeid][2]
 
     def labels(self, nodeids=None):
+        """
+        Return the list of labels for *nodeids*, or all labels.
+
+        Args:
+            nodeids: an iterable of nodeids for predications to get
+                labels from; if `None`, return labels for all
+                predications
+        Note:
+            This returns the label of each predication, even if it's
+            shared by another predication. Thus,
+            `zip(nodeids, xmrs.labels(nodeids))` will pair nodeids with
+            their labels.
+        Returns:
+            A list of labels
+        """
         if nodeids is None: nodeids = self._nodeids
         _eps = self._eps
         return [_eps[nid][2] for nid in nodeids]
 
-    def args(self, nodeid): return dict(self._eps[nodeid][3])
+    def args(self, nodeid):
+        """
+        Return the arguments for the predication given by *nodeid*.
+
+        All arguments (including intrinsic and constant arguments) are
+        included. DMRS-style undirected links are not considered
+        arguments. If only arguments that target other predications are
+        desired, see [Xmrs.outgoing_args].
+
+        Args:
+            nodeid: the nodeid of the EP that is the arguments' source
+        Returns:
+            A dictionary mapping {nodeid: {rargname: value}}
+        """
+        return dict(self._eps[nodeid][3])
 
     # calculated sub-structures
 
     def outgoing_args(self, nodeid):
+        """
+        Return the arguments going from *nodeid* to other predications.
+
+        Valid arguments include regular variable arguments and scopal
+        (label-selecting or HCONS) arguments. DMRS-style undirected
+        links, intrinsic arguments, and constant arguments are not
+        included.
+
+        Args:
+            nodeid: the nodeid of the EP that is the arguments' source
+        Returns:
+            A dictionary mapping {nodeid: {rargname: value}}
+        """
         _vars = self._vars
         _hcons = self._hcons
         args = self.args(nodeid)  # args is a copy; we can edit it
@@ -299,6 +437,18 @@ class Xmrs(LnkMixin):
         return args
 
     def incoming_args(self, nodeid):
+        """
+        Return the arguments that target *nodeid*.
+
+        Valid arguments include regular variable arguments and scopal
+        (label-selecting or HCONS) arguments. DMRS-style undirected
+        links and intrinsic arguments are not included.
+
+        Args:
+            nodeid: the nodeid of the EP that is the arguments' target
+        Returns:
+            A dictionary mapping {source_nodeid: {rargname: value}}
+        """
         _vars = self._vars
         ep = self._eps[nodeid]
         lbl = ep[2]
@@ -327,10 +477,10 @@ class Xmrs(LnkMixin):
 
     def labelset(self, label):
         """
-        Return the set of nodeids for |EPs| that share a label.
+        Return the set of nodeids for predications that share *label*.
 
         Args:
-            label: The label that returned nodeids share.
+            label: the label that returned nodeids share.
         Returns:
             A set of nodeids, which may be an empty set.
         """
@@ -338,10 +488,10 @@ class Xmrs(LnkMixin):
 
     def labelset_heads(self, label):
         """
-        Return the heads of the labelset selected by `label`.
+        Return the heads of the labelset selected by *label*.
 
         Args:
-            label: The label from which to find head nodes/EPs.
+            label: the label from which to find head nodes/EPs.
         Returns:
             An iterable of nodeids.
         """
@@ -387,16 +537,16 @@ class Xmrs(LnkMixin):
 
     def subgraph(self, nodeids):
         """
-        Return an |Xmrs| object representing the subgraph containing
-        only the specified nodeids. Necessary variables are also
-        included. in order to connect any nodes that are connected in
-        the original Xmrs.
+        Return an [Xmrs] object with only the specified *nodeids*.
+
+        Necessary variables and arguments are also included in order to
+        connect any nodes that are connected in the original Xmrs.
 
         Args:
-            nodeids: The nodeids of the nodes/EPs to include in the
+            nodeids: the nodeids of the nodes/EPs to include in the
                 subgraph.
         Returns:
-            An |Xmrs| object.
+            An [Xmrs] object.
         """
         _eps, _vars = self._eps, self._vars
         _hcons, _icons = self._hcons, self._icons
@@ -442,7 +592,8 @@ class Xmrs(LnkMixin):
 
     def is_connected(self):
         """
-        Return True if the Xmrs represents a connected graph.
+        Return `True` if the [Xmrs] represents a connected graph.
+
         Subgraphs can be connected through things like arguments,
         QEQs, and label equalities.
         """
@@ -487,19 +638,9 @@ class Xmrs(LnkMixin):
 
     def is_well_formed(self):
         """
-        Return True if the Xmrs is well-formed, False otherwise.
+        Return `True` if the [Xmrs] is well-formed, `False` otherwise.
 
-        A well-formed Xmrs has the following properties (note, `node`
-        below refers to a node in the graph, but is more like an EP than
-        a DMRS Node):
-          * All nodes have an intrinsic variable
-          * Every intrinsic variable belongs one node and maybe one quantifier
-          * All nominal nodes have a quantifier
-          * All nodes have a label
-          * The graph of nodes form a net (i.e. are connected).
-            Connectivity can be established with variable arguments,
-            QEQs, or label-equality.
-          * The lo-handle for each QEQ must exist as the label of a node
+        See [Xmrs.validate]
         """
         try:
             self.validate()
@@ -508,6 +649,25 @@ class Xmrs(LnkMixin):
         return True
 
     def validate(self):
+        """
+        Check that the Xmrs is well-formed.
+
+        The [Xmrs] is analyzed and a list of problems is compiled. If
+        any problems exist, an [XmrsError] is raised with the list
+        joined as the error message. A well-formed [Xmrs] has the
+        following properties:
+
+        * All predications have an intrinsic variable
+        * Every intrinsic variable belongs one predication and maybe
+          one quantifier
+        * Every predication has no more than one quantifier
+        * All predications have a label
+        * The graph of predications form a net (i.e. are connected).
+          Connectivity can be established with variable arguments,
+          QEQs, or label-equality.
+        * The lo-handle for each QEQ must exist as the label of a
+          predication
+        """
         errors = []
         ivs, bvs = {}, {}
         _vars = self._vars
@@ -548,20 +708,20 @@ class Xmrs(LnkMixin):
 
 class Mrs(Xmrs):
     """
-    Construct an |Xmrs| using MRS components.
+    Construct an [Xmrs] using MRS components.
 
     Formally, Minimal Recursion Semantics (MRS) have a top handle, a
-    bag of |ElementaryPredications|, and a bag of |HandleConstraints|.
-    All |Arguments|, including intrinsic arguments and constant
-    arguments, are expected to be contained by the |EPs|.
+    bag of Elementary Predications, and a bag of Handle Constraints.
+    All arguments, including intrinsic arguments and constant
+    arguments, are expected to be contained by the EPs.
 
     Args:
-        top: the TOP (or maybe LTOP) variable
+        top: the TOP (or LTOP) variable
         index: the INDEX variable
         xarg: the XARG variable
-        rels: an iterable of ElementaryPredications
-        hcons: an iterable of HandleConstraints
-        icons: an iterable of IndividualConstraints
+        rels: an iterable of [ElementaryPredications]
+        hcons: an iterable of [HandleConstraints]
+        icons: an iterable of [IndividualConstraints]
         lnk: the Lnk object associating the MRS to the surface form
         surface: the surface string
         identifier: a discourse-utterance id
@@ -610,6 +770,9 @@ class Mrs(Xmrs):
         )
 
     def to_dict(self, short_pred=True, properties=True):
+        """
+        Encode the Mrs as a dictionary suitable for JSON serialization.
+        """
         def _lnk(obj): return {'from': obj.cfrom, 'to': obj.cto}
         def _ep(ep, short_pred=True):
             p = ep.pred.short_form() if short_pred else ep.pred.string
@@ -640,6 +803,9 @@ class Mrs(Xmrs):
 
     @classmethod
     def from_dict(cls, d):
+        """
+        Decode a dictionary, as from Mrs.to_dict(), into a Mrs object.
+        """
         def _lnk(o):
             return None if o is None else Lnk.charspan(o['from'], o['to'])
         def _ep(ep):
@@ -677,26 +843,27 @@ def Rmrs(top=None, index=None, xarg=None,
          eps=None, args=None, hcons=None, icons=None,
          lnk=None, surface=None, identifier=None, vars=None):
     """
-    Construct an |Xmrs| from RMRS components.
+    Construct an [Xmrs] from RMRS components.
 
     Robust Minimal Recursion Semantics (RMRS) are like MRS, but all
-    |EPs| have a nodeid ("anchor"), and |Arguments| are not contained
-    by the source |EPs|, but instead reference the nodeid of their |EP|.
+    predications have a nodeid ("anchor"), and arguments are not
+    contained by the source predications, but instead reference the
+    nodeid of their predication.
 
     Args:
         top: the TOP (or maybe LTOP) variable
         index: the INDEX variable
         xarg: the XARG variable
-        eps: an iterable of EPs
+        eps: an iterable of [EPs]
         args: a nested mapping of {nodeid: {rargname: value}}
-        hcons: an iterable of HandleConstraint objects
-        icons: an iterable of IndividualConstraint objects
-        lnk: the Lnk object associating the MRS to the surface form
+        hcons: an iterable of [HandleConstraint] objects
+        icons: an iterable of [IndividualConstraint] objects
+        lnk: the [Lnk] object associating the MRS to the surface form
         surface: the surface string
         identifier: a discourse-utterance id
         vars: a mapping of variables to a list of (property, value) pairs
     Returns:
-        An Xmrs object
+        An [Xmrs] object
 
     Example:
 
@@ -735,22 +902,22 @@ def Rmrs(top=None, index=None, xarg=None,
 
 class Dmrs(Xmrs):
     """
-    Construct an |Xmrs| using DMRS components.
+    Construct an [Xmrs] using DMRS components.
 
-    Dependency Minimal Recursion Semantics (DMRS) have a list of |Node|
-    objects and a list of |Link| objects. There are no variables or
-    handles, so these will need to be created in order to make an |Xmrs|
-    object. A |Link| from the nodeid 0 (which does not have its own
-    |Node|)
+    Dependency Minimal Recursion Semantics (DMRS) have a list of [Node]
+    objects and a list of [Link] objects. There are no variables or
+    handles, so these will need to be created in order to make an [Xmrs]
+    object. A [Link] from the nodeid 0 (which does not have its own
+    [Node]) links from [TOP].
 
     Args:
-        nodes: an iterable of Node objects
-        links: an iterable of Link objects
+        nodes: an iterable of [Node] objects
+        links: an iterable of [Link] objects
         lnk: the Lnk object associating the MRS to the surface form
         surface: the surface string
         identifier: a discourse-utterance id
     Returns:
-        An Xmrs object
+        An [Xmrs] object
 
     Example:
 
@@ -766,7 +933,7 @@ class Dmrs(Xmrs):
         if nodes is None: nodes = []
         if links is None: links = []
         qeq = HandleConstraint.qeq
-        vgen = VarGenerator()
+        vgen = _VarGenerator()
         labels = _make_labels(nodes, links, vgen)
         ivs = _make_ivs(nodes, vgen)
         top = index = xarg = None  # for now; maybe get them from kwargs?
@@ -818,6 +985,9 @@ class Dmrs(Xmrs):
         )
 
     def to_dict(self, short_pred=True, properties=True):
+        """
+        Encode the Dmrs as a dictionary suitable for JSON serialization.
+        """
         def _lnk(obj): return {'from': obj.cfrom, 'to': obj.cto}
         def _node(node, short_pred=True):
             p = node.pred.short_form() if short_pred else node.pred.string
@@ -846,6 +1016,9 @@ class Dmrs(Xmrs):
 
     @classmethod
     def from_dict(cls, d):
+        """
+        Decode a dictionary, as from Dmrs.to_dict(), into a Dmrs object.
+        """
         def _node(obj):
             return Node(
                 obj.get('nodeid'),

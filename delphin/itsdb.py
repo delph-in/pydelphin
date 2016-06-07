@@ -1,13 +1,11 @@
 """
-The `itsdb` module makes it easy to work with [incr tsdb()] profiles.
-The :py:class:`ItsdbProfile` class works with whole profiles, but it
-generally relies on the module-level functions to do its work (such
-as :py:func:`get_relations` or :py:func:`decode_row`). Queries over
-profiles can be customized through the use of
-:py:func:`filters<filter_rows>`,
-:py:func:`applicators<apply_rows>`, and
-:py:func:`selectors<select_rows>`. In addition, one can create a new
-skeleton using the :py:func:`make_skeleton` function.
+The itsdb module makes it easy to work with [incr tsdb()] profiles.
+The ItsdbProfile class works with whole profiles, but it generally
+relies on the module-level functions to do its work (such as
+get_relations() or decode_row()). Queries over profiles can be
+customized through the use of filters (see filter_rows()), applicators
+(see apply_rows()), and selectors (see select_rows()). In addition,
+one can create a new skeleton using the make_skeleton() function.
 """
 
 import os
@@ -19,7 +17,7 @@ from collections import defaultdict, namedtuple, OrderedDict
 from itertools import chain
 from contextlib import contextmanager
 
-from delphin._exceptions import ItsdbError
+from delphin.exceptions import ItsdbError
 from delphin.util import safe_int
 
 ##############################################################################
@@ -154,7 +152,7 @@ def encode_row(fields):
     Encoding involves escaping special characters for each value, then
     joining the values into a single string with the field delimiter
     ('@' by default). It does not fill in default values (see
-    :py:func:`make_row`).
+    make_row()).
 
     Args:
         fields: a list of column values
@@ -173,7 +171,7 @@ def escape(string):
         (newline) -> \\n
         \\         -> \\\\
 
-    Also see :py:func:`unescape`
+    Also see unescape()
 
     Args:
         string: the string to escape
@@ -193,7 +191,7 @@ _unescape_re = re.compile(r'(\\s|\\n|\\\\)')
 def unescape(string):
     """
     Replace [incr tsdb()] escape sequences with the regular equivalents.
-    See :py:func:`escape`.
+    See escape().
 
     Args:
         string: the escaped string
@@ -268,13 +266,13 @@ def _write_table(profile_dir, table_name, rows, fields,
 def make_row(row, fields):
     """
     Encode a mapping of column name to values into a [incr tsdb()]
-    profile line. The `fields` parameter determines what columns are
+    profile line. The *fields* parameter determines what columns are
     used, and default values are provided if a column is missing from
     the mapping.
 
     Args:
         row: a dictionary mapping column names to values
-        fields: an iterable of :py:class:`Field` objects
+        fields: an iterable of [Field] objects
     Returns:
         A [incr tsdb()]-encoded string
     """
@@ -287,7 +285,7 @@ def default_value(fieldname, datatype):
     """
     Return the default value for a column.
 
-    If the column name (e.g. `i-wf`) is defined to have an idiosyncratic
+    If the column name (e.g. *i-wf*) is defined to have an idiosyncratic
     value, that value is returned. Otherwise the default value for the
     column's datatype is returned.
 
@@ -358,8 +356,8 @@ def select_rows(cols, rows, mode='list'):
     Yield data selected from rows.
 
     It is sometimes useful to select a subset of data from a profile.
-    This function selects the data in `cols` from `rows` and yields it
-    in a form specified by `mode`. Possible values of `mode` are:
+    This function selects the data in *cols* from *rows* and yields it
+    in a form specified by *mode*. Possible values of *mode* are:
 
     ============== =================  ============================
          mode         description       example ['i-id', 'i-wf']
@@ -375,7 +373,7 @@ def select_rows(cols, rows, mode='list'):
         mode: the form yielded data should take
 
     Yields:
-        Selected data in the form specified by `mode`.
+        Selected data in the form specified by *mode*.
     """
     mode = mode.lower()
     if mode == 'list':
@@ -397,7 +395,7 @@ def match_rows(rows1, rows2, key, sort_keys=True):
     """
     Yield triples of (value, left_rows, right_rows) where `left_rows`
     and `right_rows` are lists of rows that share the same column
-    value for `key`.
+    value for *key*.
     """
     matched = OrderedDict()
     for i, rows in enumerate([rows1, rows2]):
@@ -430,7 +428,7 @@ def make_skeleton(path, relations, item_rows, gzip=False):
               already exist, as it will be created
         relations: the path to the relations file
         item_rows: the rows to use for the item file
-        gzip: if True, the item file will be compressed
+        gzip: if `True`, the item file will be compressed
     Returns:
         An ItsdbProfile containing the skeleton data (but the profile
         data will already have been written to disk).
@@ -457,13 +455,13 @@ class ItsdbProfile(object):
     """
 
     # _tables is a list of table names to consider (for indexing, writing,
-    # etc.). If None, all present in the relations file and on disk are
+    # etc.). If `None`, all present in the relations file and on disk are
     # considered. Otherwise, only those present in the list are considered.
     _tables = None
 
     def __init__(self, path, filters=None, applicators=None, index=True):
         """
-        Only the `path` parameter is required.
+        Only the *path* parameter is required.
 
         Args:
             path: The path of the directory containing the profile
@@ -477,7 +475,7 @@ class ItsdbProfile(object):
                 cell in the table. For each table, each column-function
                 pair will be applied in order. Applicators apply after
                 the filters.
-            index: If True, indices are created based on the keys of
+            index: If `True`, indices are created based on the keys of
                 each table.
         """
 
@@ -501,12 +499,12 @@ class ItsdbProfile(object):
 
     def add_filter(self, table, cols, condition):
         """
-        Add a filter. When reading `table`, rows in `table` will be
-        filtered by :py:func:`filter_rows`.
+        Add a filter. When reading *table*, rows in *table* will be
+        filtered by filter_rows().
 
         Args:
             table: The table the filter applies to.
-            cols: The columns in `table` to filter on.
+            cols: The columns in *table* to filter on.
             condition: The filter function.
         """
         if table is not None and table not in self.relations:
@@ -520,12 +518,12 @@ class ItsdbProfile(object):
 
     def add_applicator(self, table, cols, function):
         """
-        Add an applicator. When reading `table`, rows in `table` will be
-        modified by :py:func:`apply_rows`.
+        Add an applicator. When reading *table*, rows in *table* will be
+        modified by apply_rows().
 
         Args:
             table: The table to apply the function to.
-            cols: The columns in `table` to apply the function on.
+            cols: The columns in *table* to apply the function on.
             function: The applicator function.
         """
 
@@ -569,9 +567,9 @@ class ItsdbProfile(object):
 
     def read_raw_table(self, table):
         """
-        Yield rows in the [incr tsdb()] `table`. A row is a dictionary
+        Yield rows in the [incr tsdb()] *table*. A row is a dictionary
         mapping column names to values. Data from a profile is decoded
-        by :py:func:`decode_row`. No filters or applicators are used.
+        by decode_row(). No filters or applicators are used.
         """
 
         field_names = [f.name for f in self.table_relations(table)]
@@ -590,10 +588,10 @@ class ItsdbProfile(object):
 
     def read_table(self, table, key_filter=True):
         """
-        Yield rows in the [incr tsdb()] `table` that pass any defined
+        Yield rows in the [incr tsdb()] *table* that pass any defined
         filters, and with values changed by any applicators. If no
         filters or applicators are defined, the result is the same as
-        from :py:meth:`ItsdbProfile.read_raw_table`.
+        from ItsdbProfile.read_raw_table().
         """
         filters = self.filters[None] + self.filters[table]
         if key_filter:
@@ -612,8 +610,8 @@ class ItsdbProfile(object):
 
     def select(self, table, cols, mode='list', key_filter=True):
         """
-        Yield selected rows from `table`. This method just calls
-        :py:func:`select_rows` on the rows read from `table`.
+        Yield selected rows from *table*. This method just calls
+        select_rows() on the rows read from *table*.
         """
         if cols is None:
             cols = [c.name for c in self.relations[table]]
@@ -623,7 +621,7 @@ class ItsdbProfile(object):
 
     def join(self, table1, table2, key_filter=True):
         """
-        Yield rows from a table built by joining `table1` and `table2`.
+        Yield rows from a table built by joining *table1* and *table2*.
         The column names in the rows have the original table name
         prepended and separated by a colon. For example, joining tables
         'item' and 'parse' will result in column names like
@@ -655,14 +653,14 @@ class ItsdbProfile(object):
 
     def write_table(self, table, rows, append=False, gzip=False):
         """
-        Encode and write out `table` to the profile directory.
+        Encode and write out *table* to the profile directory.
 
         Args:
             table: The name of the table to write
             rows: The rows to write to the table
-            append: If True, append the encoded rows to any existing
+            append: If `True`, append the encoded rows to any existing
                 data.
-            gzip: If True, compress the resulting table with `gzip`.
+            gzip: If `True`, compress the resulting table with `gzip`.
                 The table's filename will have `.gz` appended.
         """
         _write_table(self.root,
@@ -680,14 +678,16 @@ class ItsdbProfile(object):
 
         Args:
             profile_directory: The directory of the output profile
-            relations_filename: If given, read and use the relations at
-                this path instead of the current profile's relations
+            relations_filename: If given, read and use the relations
+                at this path instead of the current profile's
+                relations
             key_filter: If True, filter the rows by keys in the index
-            append: If True, append profile data to existing tables in
-                the output profile directory
-            gzip: If True, compress tables using `gzip`. Table filenames
-                will have `.gz` appended. If False, only write out text
-                files. If None, use whatever the original file was.
+            append: If `True`, append profile data to existing tables
+                in the output profile directory
+            gzip: If `True`, compress tables using `gzip`. Table
+                filenames will have `.gz` appended. If `False`, only
+                write out text files. If `None`, use whatever the
+                original file was.
         """
         import shutil
         if relations_filename:

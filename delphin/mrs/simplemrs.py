@@ -19,7 +19,7 @@ from delphin.mrs.components import (
 )
 from delphin.mrs.config import (HANDLESORT, CONSTARG_ROLE)
 from delphin.mrs.util import rargname_sortkey
-from delphin._exceptions import (
+from delphin.exceptions import (
     XmrsDeserializationError as XDE,
     XmrsError,
     XmrsWarning
@@ -151,13 +151,13 @@ dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 ##############################################################################
 # Deserialization
 
-# The tokenizer has 3 sub-regexen:
+# The _tokenizer has 3 sub-regexen:
 #   the first is for strings (e.g. "_dog_n_rel", "\"quoted string\"")
 #   the second looks for unquoted type preds (lookahead for space or lnk)
 #   the second is for args, variables, preds, etc (e.g. ARG1, _dog_n_rel, x4)
 #   the last is for contentful punctuation (e.g. [ ] < > : # @)
 
-tokenizer = re.compile(r'("[^"\\]*(?:\\.[^"\\]*)*"'
+_tokenizer = re.compile(r'("[^"\\]*(?:\\.[^"\\]*)*"'
                        r'|_(?:[^\s<]|<(?![-0-9:#@ ]*>))*'
                        r'|[^\s:#@\[\]"<>]+'
                        r'|[:#@\[\]<>])')
@@ -165,10 +165,10 @@ tokenizer = re.compile(r'("[^"\\]*(?:\\.[^"\\]*)*"'
 
 def tokenize(string):
     """Split the SimpleMrs string into tokens."""
-    return deque(tokenizer.findall(string))
+    return deque(_tokenizer.findall(string))
 
 
-def invalid_token_error(token, expected):
+def _invalid_token_error(token, expected):
     raise XDE('Invalid token: "{}"\tExpected: "{}"'.format(token, expected))
 
 
@@ -226,7 +226,7 @@ def _read_mrs(tokens, version, errors):
                  hcons=hcons, icons=icons, vars=vars_,
                  lnk=lnk, surface=surface)
     except IndexError:
-        unexpected_termination_error()
+        _unexpected_termination_error()
     if errors != 'ignore':
         try:
             m.validate()
@@ -352,7 +352,7 @@ def _read_lnk(tokens):
     return lnk
 
 
-def unexpected_termination_error():
+def _unexpected_termination_error():
     raise XDE('Invalid MRS: Unexpected termination.')
 
 ##############################################################################
@@ -364,7 +364,7 @@ def serialize(ms, version=_default_version, pretty_print=False, color=False):
     """Serialize an MRS structure into a SimpleMRS string."""
     delim = '\n' if pretty_print else _default_mrs_delim
     output = delim.join(
-        serialize_mrs(m, version=version, pretty_print=pretty_print)
+        _serialize_mrs(m, version=version, pretty_print=pretty_print)
         for m in ms
     )
     if color:
@@ -372,7 +372,7 @@ def serialize(ms, version=_default_version, pretty_print=False, color=False):
     return output
 
 
-def serialize_mrs(m, version=_default_version, pretty_print=False):
+def _serialize_mrs(m, version=_default_version, pretty_print=False):
     # note that varprops is modified as a side-effect of the lower
     # functions
     varprops = {v: vd['props'] for v, vd in m._vars.items() if vd['props']}
@@ -380,33 +380,33 @@ def serialize_mrs(m, version=_default_version, pretty_print=False):
     if version >= 1.1:
         header_toks = []
         if m.lnk is not None and m.lnk.data != (-1, -1):  # don't do <-1:-1>
-            header_toks.append(serialize_lnk(m.lnk))
+            header_toks.append(_serialize_lnk(m.lnk))
         if m.surface is not None:
             header_toks.append('"{}"'.format(m.surface))
         if header_toks:
             toks.append(' '.join(header_toks))
     if m.top is not None:
-        toks.append(serialize_argument(
+        toks.append(_serialize_argument(
             'TOP' if version >= 1.1 else 'LTOP', m.top, varprops
         ))
     if m.index is not None:
-        toks.append(serialize_argument(
+        toks.append(_serialize_argument(
             'INDEX', m.index, varprops
         ))
     delim = ' ' if not pretty_print else '\n          '
     toks.append('RELS: < {eps} >'.format(
-        eps=delim.join(serialize_ep(ep, varprops, version=version)
+        eps=delim.join(_serialize_ep(ep, varprops, version=version)
                        for ep in m.eps())
     ))
-    toks += [serialize_hcons(hcons(m))]
+    toks += [_serialize_hcons(hcons(m))]
     icons_ = icons(m)
     if icons_:  # make unconditional for "ICONS: < >"
-        toks += [serialize_icons(icons_)]
+        toks += [_serialize_icons(icons_)]
     delim = ' ' if not pretty_print else '\n  '
     return '{} {} {}'.format('[', delim.join(toks), ']')
 
 
-def serialize_argument(rargname, value, varprops):
+def _serialize_argument(rargname, value, varprops):
     """Serialize an MRS argument into the SimpleMRS format."""
     _argument = '{rargname}: {value}{props}'
     props = ''
@@ -426,11 +426,11 @@ def serialize_argument(rargname, value, varprops):
     )
 
 
-def serialize_ep(ep, varprops, version=_default_version):
+def _serialize_ep(ep, varprops, version=_default_version):
     """Serialize an Elementary Predication into the SimpleMRS encoding."""
     # ('nodeid', 'pred', 'label', 'args', 'lnk', 'surface', 'base')
     args = ep[3]
-    arglist = ' '.join([serialize_argument(rarg, args[rarg], varprops)
+    arglist = ' '.join([_serialize_argument(rarg, args[rarg], varprops)
                         for rarg in sorted(args, key=rargname_sortkey)])
     if version < 1.1 or len(ep) < 6 or ep[5] is None:
         surface = ''
@@ -441,7 +441,7 @@ def serialize_ep(ep, varprops, version=_default_version):
     predstr = pred.string
     return '[ {pred}{lnk}{surface} LBL: {label}{s}{args} ]'.format(
         pred=predstr,
-        lnk=serialize_lnk(lnk),
+        lnk=_serialize_lnk(lnk),
         surface=surface,
         label=str(ep[2]),
         s=' ' if arglist else '',
@@ -449,7 +449,7 @@ def serialize_ep(ep, varprops, version=_default_version):
     )
 
 
-def serialize_lnk(lnk):
+def _serialize_lnk(lnk):
     """Serialize a predication lnk to surface form into the SimpleMRS
        encoding."""
     s = ""
@@ -469,7 +469,7 @@ def serialize_lnk(lnk):
     return s
 
 
-def serialize_hcons(hcons):
+def _serialize_hcons(hcons):
     """Serialize |HandleConstraints| into the SimpleMRS encoding."""
     toks = ['HCONS:', '<']
     for hc in hcons:
@@ -480,7 +480,7 @@ def serialize_hcons(hcons):
     return ' '.join(toks)
 
 
-def serialize_icons(icons):
+def _serialize_icons(icons):
     """Serialize |IndividualConstraints| into the SimpleMRS encoding."""
     toks = ['ICONS:', '<']
     for ic in icons:

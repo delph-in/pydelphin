@@ -5,7 +5,7 @@ import pytest
 from delphin.mrs.components import Pred, Node, Link
 from delphin.mrs.xmrs import Xmrs, Dmrs
 from delphin.mrs import simplemrs  # for convenience in later tests
-from delphin._exceptions import XmrsError
+from delphin.exceptions import XmrsError
 
 # simplemrs is only used for functions where large MRSs are needed and
 # constructing them manually is cumbersome. Try to avoid using it for
