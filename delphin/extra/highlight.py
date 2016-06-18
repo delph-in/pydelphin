@@ -1,4 +1,10 @@
 
+"""
+Pygments-based highlighting lexers for DELPH-IN formats.
+
+Requires: pygments
+"""
+
 import re
 from pygments.lexer import RegexLexer, include, bygroups
 from pygments.token import (

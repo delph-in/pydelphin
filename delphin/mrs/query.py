@@ -1,3 +1,6 @@
+"""
+Functions for inspecting and interpreting the structure of an Xmrs.
+"""
 
 import warnings
 from itertools import product
@@ -9,7 +12,7 @@ from delphin.mrs.config import IVARG_ROLE
 # query methods
 def select_nodeids(xmrs, iv=None, label=None, pred=None):
     """
-    Return the list of all nodeids whose respective |EP| has the
+    Return the list of all nodeids whose respective [EP] has the
     matching *iv* (intrinsic variable), *label*, or *pred* values. If
     none match, return an empty list.
     """
@@ -23,7 +26,7 @@ def select_nodeids(xmrs, iv=None, label=None, pred=None):
 
 def select_nodes(xmrs, nodeid=None, pred=None):
     """
-    Return the list of all |Nodes| that have the matching *nodeid*
+    Return the list of all [Nodes] that have the matching *nodeid*
     and/or *pred* values. If none match, return an empty list.
     """
     nodematch = lambda n: ((nodeid is None or n.nodeid == nodeid) and
@@ -33,7 +36,7 @@ def select_nodes(xmrs, nodeid=None, pred=None):
 
 def select_eps(xmrs, nodeid=None, iv=None, label=None, pred=None):
     """
-    Return the list of all |EPs| that have the matching *nodeid*,
+    Return the list of all [EPs] that have the matching *nodeid*,
     *iv*, *label*, and or *pred* values. If none match, return an
     empty list.
     """
@@ -67,7 +70,7 @@ def select_args(xmrs, nodeid=None, rargname=None, value=None):
 
 def select_links(xmrs, start=None, end=None, rargname=None, post=None):
     """
-    Return the list of all |Links| that have the matching *start*,
+    Return the list of all [Links] that have the matching *start*,
     *end*, *rargname*, and/or *post* values. If none match, return
     an empty list.
     """
@@ -81,7 +84,7 @@ def select_links(xmrs, start=None, end=None, rargname=None, post=None):
 
 def select_hcons(xmrs, hi=None, relation=None, lo=None):
     """
-    Return the list of all |HandleConstraints| that have the matching
+    Return the list of all [HandleConstraints] that have the matching
     *hi*, *relation*, and/or *lo* values. If none match, return an
     empty list.
     """
@@ -94,7 +97,7 @@ def select_hcons(xmrs, hi=None, relation=None, lo=None):
 
 def select_icons(xmrs, left=None, relation=None, right=None):
     """
-    Return the list of all |IndividualConstraints| that have the
+    Return the list of all [IndividualConstraints] that have the
     matching *left*, *relation*, and/or *right* values. If none
     match, return an empty list.
     """
@@ -110,22 +113,20 @@ def find_argument_target(xmrs, nodeid, rargname):
     Return the target of an argument (rather than just the variable).
 
     Args:
-        xmrs: The |Xmrs| object to use.
+        xmrs: The [Xmrs] object to use.
         nodeid: The nodeid of the argument.
         rargname: The role-argument name of the argument.
     Returns:
         The object that is the target of the argument. Possible values
         include:
 
-        ================== =====  =================================
-             Arg value     e.g.               Target
-        ================== =====  =================================
-        intrinsic variable x4     nodeid; of the EP with the IV
-        hole variable      h0     nodeid; the HCONS's labelset head
-        label              h1     nodeid; the label's labelset head
-        unbound variable   i3     the variable itself
-        constant           "IBM"  the constant itself
-        ================== =====  =================================
+        | Arg value          | e.g.  | Target                        |
+        | ------------------ | ----- | ----------------------------- |
+        | intrinsic variable | x4    | nodeid; of the EP with the IV |
+        | hole variable      | h0    | nodeid; HCONS's labelset head |
+        | label              | h1    | nodeid; label's labelset head |
+        | unbound variable   | i3    | the variable itself           |
+        | constant           | "IBM" | the constant itself           |
 
     Note:
         If the argument value is an intrinsic variable whose target is
@@ -160,12 +161,12 @@ def find_subgraphs_by_preds(xmrs, preds, connected=None):
     possible.
 
     Args:
-        xmrs: The |Xmrs| object to use.
-        preds: An iterable of |Preds| to include in subgraphs.
+        xmrs: The [Xmrs] object to use.
+        preds: An iterable of [Preds] to include in subgraphs.
         connected: If True, all yielded subgraphs must be connected,
             as determined by Xmrs.is_connected().
     Yields:
-        |Xmrs| objects for the found subgraphs.
+        [Xmrs] objects for the found subgraphs.
     """
     preds = list(preds)
     count = len(preds)

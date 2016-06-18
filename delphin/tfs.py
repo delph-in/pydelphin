@@ -1,4 +1,11 @@
+"""
+Basic classes for modeling Typed Feature Structures.
 
+This module defines the TypedFeatureStructure class, which models an
+attribute value matrix (AVM) with a type. It allows one to access
+features through TDL-style dot notation, or through regular dictionary
+access.
+"""
 
 class TypedFeatureStructure(object):
 

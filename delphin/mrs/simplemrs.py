@@ -1,9 +1,9 @@
 
-# SimpleMRS codec
-# Summary: This module implements serialization and deserialization of
-#          the SimpleMRS encoding of Minimal Recusion Semantics. It
-#          provides the standard Pickle API calls of load, loads, dump,
-#          and dumps.
+"""
+Serialization functions for the SimpleMRS format.
+"""
+
+
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
 from __future__ import print_function
@@ -60,10 +60,17 @@ def load(fh, single=False, version=_default_version,
     Deserialize SimpleMRSs from a file (handle or filename)
 
     Args:
-      fh: filename or file object
-      single: if True, only return the first read |Xmrs| object
+        fh: filename or file object
+        single: if `True`, only return the first read [Xmrs] object
+        strict: deprecated; a `True` value is the same as
+            `errors='strict', and a `False` value is the same as
+            `errors='warn'
+        errors: if `strict`, ill-formed MRSs raise an error; if
+            `warn`, raise a warning instead; if `ignore`, do not warn
+            or raise errors for ill-formed MRSs
     Returns:
-      a generator of Xmrs objects (unless the *single* option is True)
+        a generator of [Xmrs] objects (unless the *single* option is
+        `True`)
     """
     if isinstance(fh, str):
         s = open(fh, 'r').read()
@@ -79,10 +86,11 @@ def loads(s, single=False, version=_default_version,
     Deserialize SimpleMRS string representations
 
     Args:
-      s: a SimpleMRS string
-      single: if True, only return the first read Xmrs object
+        s: a SimpleMRS string
+        single: if `True`, only return the first read [Xmrs] object
     Returns:
-      a generator of Xmrs objects (unless the *single* option is True)
+        a generator of [Xmrs] objects (unless the *single* option is
+        `True`)
     """
     ms = deserialize(s, version=version, strict=strict, errors=errors)
     if single:
@@ -94,18 +102,18 @@ def loads(s, single=False, version=_default_version,
 def dump(fh, ms, single=False, version=_default_version,
          pretty_print=False, color=False, **kwargs):
     """
-    Serialize Xmrs objects to a SimpleMRS representation and write to a
-    file
+    Serialize [Xmrs] objects to a SimpleMRS representation and write
+    to a file
 
     Args:
-      fh: filename or file object
-      ms: an iterator of Xmrs objects to serialize (unless the
-        *single* option is True)
-      single: if True, treat ms as a single Xmrs object instead of
-        as an iterator
-      pretty_print: if True, the output is formatted to be easier to
-        read
-      color: if True, colorize the output with ANSI color codes
+        fh: filename or file object
+        ms: an iterator of [Xmrs] objects to serialize (unless the
+            *single* option is `True`)
+        single: if `True`, treat *ms* as a single [Xmrs] object
+            instead of as an iterator
+        pretty_print: if `True`, the output is formatted to be easier
+            to read
+        color: if `True`, colorize the output with ANSI color codes
     Returns:
       None
     """
@@ -121,18 +129,18 @@ def dump(fh, ms, single=False, version=_default_version,
 def dumps(ms, single=False, version=_default_version,
           pretty_print=False, color=False, **kwargs):
     """
-    Serialize an Xmrs object to a SimpleMRS representation
+    Serialize an [Xmrs] object to a SimpleMRS representation
 
     Args:
-      ms: an iterator of Xmrs objects to serialize (unless the
-        *single* option is True)
-      single: if True, treat ms as a single Xmrs object instead of
-        as an iterator
-      pretty_print: if True, the output is formatted to be easier to
-        read
-      color: if True, colorize the output with ANSI color codes
+        ms: an iterator of [Xmrs] objects to serialize (unless the
+            *single* option is `True`)
+        single: if `True`, treat *ms* as a single [Xmrs] object instead
+            of as an iterator
+        pretty_print: if `True`, the output is formatted to be easier to
+            read
+        color: if `True`, colorize the output with ANSI color codes
     Returns:
-        a SimpleMrs string representation of a corpus of Xmrs
+        a SimpleMrs string representation of a corpus of [Xmrs]
     """
     if single:
         ms = [ms]
@@ -470,7 +478,7 @@ def _serialize_lnk(lnk):
 
 
 def _serialize_hcons(hcons):
-    """Serialize |HandleConstraints| into the SimpleMRS encoding."""
+    """Serialize [HandleConstraints] into the SimpleMRS encoding."""
     toks = ['HCONS:', '<']
     for hc in hcons:
         toks.extend(hc)
@@ -481,7 +489,7 @@ def _serialize_hcons(hcons):
 
 
 def _serialize_icons(icons):
-    """Serialize |IndividualConstraints| into the SimpleMRS encoding."""
+    """Serialize [IndividualConstraints] into the SimpleMRS encoding."""
     toks = ['ICONS:', '<']
     for ic in icons:
         toks.extend(ic)

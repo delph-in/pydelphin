@@ -50,6 +50,8 @@ example:
 If pyDelphin does not support deserialization for a format provided by
 the server (e.g. LaTeX output), the original string would be returned
 (i.e. the same as via dict-access).
+
+Requires: requests (https://pypi.python.org/pypi/requests)
 """
 
 import json

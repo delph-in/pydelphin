@@ -25,11 +25,6 @@ from delphin.util import safe_int
 
 _relations_filename = 'relations'
 _field_delimiter = '@'
-_character_escapes = [
-    (_field_delimiter, '\\s'),
-    ('\n', '\\n'),
-    ('\\', '\\\\')
-]
 _default_datatype_values = {
     ':integer': '-1'
 }
@@ -141,7 +136,7 @@ def decode_row(line):
     Returns:
         A list of column values.
     """
-    fields = line.strip().split(_field_delimiter)
+    fields = line.rstrip('\n').split(_field_delimiter)
     return list(map(unescape, fields))
 
 
@@ -162,6 +157,16 @@ def encode_row(fields):
     return _field_delimiter.join(map(escape, map(str, fields)))
 
 
+_character_escapes = {
+    _field_delimiter: '\\s',
+    '\n': '\\n',
+    '\\': '\\\\'
+}
+
+def _escape(m):
+    return _character_escapes[m.group(0)]
+
+
 def escape(string):
     """
     Replace any special characters with their [incr tsdb()] escape
@@ -178,14 +183,13 @@ def escape(string):
     Returns:
         The escaped string
     """
-    for char, esc in _character_escapes:
-        string = string.replace(char, esc)
-    return string
+    return re.sub(r'(@|\n|\\)', _escape, string, re.UNICODE)
 
 
 _character_unescapes = {'\\s': _field_delimiter, '\\n': '\n', '\\\\': '\\'}
-_unescape_func = lambda m: _character_unescapes[m.group(0)]
-_unescape_re = re.compile(r'(\\s|\\n|\\\\)')
+
+def _unescape(m):
+    return _character_unescapes[m.group(0)]
 
 
 def unescape(string):
@@ -198,7 +202,7 @@ def unescape(string):
     Returns:
         The string with escape sequences replaced
     """
-    return _unescape_re.sub(_unescape_func, string, re.UNICODE)
+    return re.sub(r'(\\s|\\n|\\\\)', _unescape, string, re.UNICODE)
 
 
 @contextmanager
@@ -359,13 +363,11 @@ def select_rows(cols, rows, mode='list'):
     This function selects the data in *cols* from *rows* and yields it
     in a form specified by *mode*. Possible values of *mode* are:
 
-    ============== =================  ============================
-         mode         description       example ['i-id', 'i-wf']
-    ============== =================  ============================
-    list (default) a list of values   [10, 1]
-    dict           col to value map   {'i-id':'10','i-wf':'1'}
-    row            [incr tsdb()] row  '10@1'
-    ============== =================  ============================
+    | mode           | description       | example `['i-id', 'i-wf']` |
+    | -------------- | ----------------- | -------------------------- |
+    | list (default) | a list of values  | `[10, 1]`                  |
+    | dict           | col to value map  | `{'i-id':'10','i-wf':'1'}` |
+    | row            | [incr tsdb()] row | `'10@1'`                   |
 
     Args:
         cols: an iterable of column names to select data for
@@ -484,6 +486,9 @@ class ItsdbProfile(object):
             os.path.join(self.root, _relations_filename)
         )
 
+        if self._tables is None:
+            self._tables = list(self.relations.keys())
+
         self.filters = defaultdict(list)
         self.applicators = defaultdict(list)
         self._index = dict()
@@ -547,7 +552,7 @@ class ItsdbProfile(object):
         if tables is not None:
             tables = set(tables)
         for (keyname, table) in _primary_keys:
-            if tables is None or table in tables:
+            if table in tables:
                 ids = set()
                 try:
                     for row in self.read_table(table):

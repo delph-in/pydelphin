@@ -1,27 +1,50 @@
 
 class PyDelphinException(Exception):
-    """Base class for pyDelphin exceptions."""
+    """The base class for pyDelphin exceptions."""
     def __init__(self, *args, **kwargs):
         """Create a new PyDelphinException."""
         return super(PyDelphinException, self).__init__(*args, **kwargs)
 
 class PyDelphinWarning(Warning):
-    """Base class for pyDelphin warnings."""
+    """The base class for pyDelphin warnings."""
     def __init__(self, *args, **kwargs):
         """Create a new PyDelphinWarning."""
         return super(PyDelphinWarning, self).__init__(*args, **kwargs)
 
-class ItsdbError(PyDelphinException): pass
 
-class XmrsError(PyDelphinException): pass
-class XmrsSerializationError(XmrsError): pass
-class XmrsDeserializationError(XmrsError): pass
-class XmrsStructureError(XmrsError): pass
-class XmrsWarning(PyDelphinWarning): pass
+class ItsdbError(PyDelphinException):
+    """Raised when there is an error processing a [incr tsdb()] profile."""
+    pass
 
-class TdlError(PyDelphinException): pass
+
+class XmrsError(PyDelphinException):
+    """Raised when there is an error processing *MRS objects."""
+    pass
+
+class XmrsSerializationError(XmrsError):
+    """Raised when serializing *MRS objects fails."""
+    pass
+
+class XmrsDeserializationError(XmrsError):
+    """Raised when deserializing *MRS objects fails."""
+    pass
+
+class XmrsStructureError(XmrsError):
+    """Raised when a *MRS object is structurally ill-formed."""
+    pass
+
+class XmrsWarning(PyDelphinWarning):
+    """Warning class for *MRS processing."""
+    pass
+
+
+class TdlError(PyDelphinException):
+    """Raised when there is an error in processing TDL."""
+    pass
 
 class TdlParsingError(TdlError):
+    """Raised when parsing TDL text fails."""
+    
     def __init__(self, *args, **kwargs):
         # Python2 doesn't allow parameters like:
         #   (*args, key=val, **kwargs)

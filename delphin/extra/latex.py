@@ -1,3 +1,6 @@
+"""
+Generate LaTeX snippets for rendering DELPH-IN data.
+"""
 
 from collections import defaultdict
 

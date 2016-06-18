@@ -26,7 +26,7 @@ class Xmrs(_LnkMixin):
     Attributes:
         top: the top (i.e. LTOP) handle
         index: the semantic index
-        xarg: the externa argument
+        xarg: the external argument
         lnk: [Lnk] object associating the [Xmrs] to the surface form
         surface: the surface string
         identifier: a discourse-utterance ID (often unset)
@@ -95,7 +95,7 @@ class Xmrs(_LnkMixin):
         if icons is not None:
             self.add_icons(icons)
 
-        #: A |Lnk| object to associate the Xmrs to the surface form
+        #: A [Lnk] object to associate the Xmrs to the surface form
         self.lnk = lnk  # Lnk object (MRS-level lnk spans the whole input)
         #: The surface string
         self.surface = surface  # The surface string

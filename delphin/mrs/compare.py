@@ -17,6 +17,21 @@ from delphin.mrs.config import CONSTARG_ROLE, IVARG_ROLE
 #  throw it away when i'm done).
 
 def isomorphic(q, g, check_varprops=True):
+    """
+    Return `True` if Xmrs objects *q* and *g* are isomorphic.
+
+    Isomorphicity compares the predicates of an Xmrs, the variable
+    properties of their predications (if `check_varprops=True`),
+    constant arguments, and the argument structure between
+    predications. Node IDs and Lnk values are ignored.
+
+    Args:
+        q: the left Xmrs to compare
+        g: the right Xmrs to compare
+        check_varprops: if `True`, make sure variable properties are
+            equal for mapped predications
+    """
+
     qdg = _make_digraph(q, check_varprops)
     gdg = _make_digraph(g, check_varprops)
     def nem(qd, gd):  # node-edge-match

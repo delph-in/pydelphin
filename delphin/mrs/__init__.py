@@ -46,32 +46,30 @@ def convert(txt, src_fmt, tgt_fmt, single=True, **kwargs):
     multiple \*MRSs.
 
     Args:
-      txt: A string of semantic data.
-      src_fmt: The original representation format of txt.
-      tgt_fmt: The representation format to convert to.
-      single: If True, assume txt represents a single \*MRS, otherwise
-        read it as a corpus (or list) of \*MRSs.
-      kwargs: Any other keyword arguments to pass to the serializer
-        of the target format. Some options may include:
-        ============  ====================================
-         option        description
-        ============  ====================================
-        pretty_print  print with newlines and indentation
-        color         print with syntax highlighting
-        ============  ====================================
-
+        txt: A string of semantic data.
+        src_fmt: The original representation format of txt.
+        tgt_fmt: The representation format to convert to.
+        single: If True, assume txt represents a single \*MRS, otherwise
+            read it as a corpus (or list) of \*MRSs.
+        kwargs: Any other keyword arguments to pass to the serializer
+            of the target format. See Notes.
     Returns:
       A string in the target format.
+    Notes:
+        src_fmt and tgt_fmt may be one of the following:
 
-    Formats:
-      src_fmt and tgt_fmt may be one of the following:
-        =========  ============================
-         format     description
-        =========  ============================
-        simplemrs  The popular SimpleMRS format
-        mrx        The XML format of MRS
-        dmrx       The XML format of DMRS
-        =========  ============================
+        | format    | description                  |
+        | --------- | ---------------------------- |
+        | simplemrs | The popular SimpleMRS format |
+        | mrx       | The XML format of MRS        |
+        | dmrx      | The XML format of DMRS       |
+
+        Additional keyword arguments for the serializer may include:
+
+        | option       | description                         |
+        | ------------ | ----------------------------------- |
+        | pretty_print | print with newlines and indentation |
+        | color        | print with syntax highlighting      |
     """
     from importlib import import_module
     reader = import_module('{}.{}'.format('delphin.mrs', src_fmt.lower()))

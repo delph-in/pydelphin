@@ -1,13 +1,14 @@
 
-# SimpleDMRS codec
-# Summary: This module implements serialization and deserialization of the
-#          SimpleDMRS encoding of Distributed Minimal Recusion Semantics (DMRS). It
-#          provides standard Pickle API calls of load, loads, dump, and dumps
-#          for serializing and deserializing single SimpleDMRS instances. Further,
-#          encode_list and decode_list are provided for lists of DMRX
-#          instances, and they read and write incrementally.
-#
-# Author: Michael Wayne Goodman <goodmami@uw.edu>
+"""
+Serialization for the SimpleDMRS format.
+
+Note that this format is provided by pyDelphin and not defined
+anywhere, so it should only be used for user's convenience and not
+used as an interchange format or for other practical purposes. It was
+created with human legibility in mind (e.g. for investigating DMRSs
+at the command line, because XML (DMRX) is not easy to read).
+Deserialization is not provided.
+"""
 
 from __future__ import print_function
 
@@ -24,18 +25,18 @@ from delphin.mrs.config import EQ_POST, CVARSORT
 # Pickle-API methods
 
 
-def load(fh, single=False):
-    ms = decode(fh)
-    if single:
-        ms = next(ms)
-    return ms
+# def load(fh, single=False):
+#     ms = deserialize(fh)
+#     if single:
+#         ms = next(ms)
+#     return ms
 
 
-def loads(s, single=False, encoding='utf-8'):
-    ms = decode(BytesIO(bytes(s, encoding=encoding)))
-    if single:
-        ms = next(ms)
-    return ms
+# def loads(s, single=False, encoding='utf-8'):
+#     ms = deserialize(BytesIO(bytes(s, encoding=encoding)))
+#     if single:
+#         ms = next(ms)
+#     return ms
 
 
 def dump(fh, ms, **kwargs):
@@ -45,12 +46,12 @@ def dump(fh, ms, **kwargs):
 def dumps(ms, single=False, pretty_print=False, **kwargs):
     if single:
         ms = [ms]
-    return encode(ms, indent=2 if pretty_print else None)
+    return serialize(ms, indent=2 if pretty_print else None)
 
 # for convenience
 
-load_one = lambda fh: load(fh, single=True)
-loads_one = lambda s: loads(s, single=True)
+# load_one = lambda fh: load(fh, single=True)
+# loads_one = lambda s: loads(s, single=True)
 dump_one = lambda fh, m, **kwargs: dump(fh, m, single=True, **kwargs)
 dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 
@@ -58,55 +59,13 @@ dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 ##############################################################################
 # Decoding
 
-tokenizer = re.compile(r'("[^"\\]*(?:\\.[^"\\]*)*"'
-                       r'|[^\s:#@\[\]<>"]+'
-                       r'|[:#@\[\]<>])')
+# tokenizer = re.compile(r'("[^"\\]*(?:\\.[^"\\]*)*"'
+#                        r'|[^\s:#@\[\]<>"]+'
+#                        r'|[:#@\[\]<>])')
 
-def decode(fh):
-    """Decode a SimpleDmrs-encoded DMRS structure."""
-    # (dmrs { ... })*
-
-def decode_dmrs(elem):
-    # dmrs { NODES LINKS }
-    return Dmrs(nodes=list(map(decode_node)),
-                links=list(map(decode_link)),
-                lnk=None,
-                surface=None,
-                identifier=None)
-
-
-def decode_node(elem):
-    return Node(pred=decode_pred(elem.find('*[1]')),
-                nodeid=elem.get('nodeid'),
-                sortinfo=decode_sortinfo(elem.find('sortinfo')),
-                lnk=decode_lnk(elem),
-                surface=elem.get('surface'),
-                base=elem.get('base'),
-                carg=elem.get('carg'))
-
-
-def decode_pred(elem):
-    if elem.tag == 'gpred':
-        return Pred.grammarpred(elem.text)
-    elif elem.tag == 'realpred':
-        return Pred.realpred(elem.get('lemma'),
-                             elem.get('pos'),
-                             elem.get('sense'))
-
-
-def decode_sortinfo(elem):
-    return elem.attrib
-
-
-def decode_link(elem):
-    return Link(start=elem.get('from'),
-                end=elem.get('to'),
-                rargname=elem.find('rargname').text,
-                post=elem.find('post').text)
-
-
-def decode_lnk(elem):
-    return Lnk.charspan(elem.get('cfrom', '-1'), elem.get('cto', '-1'))
+# def deserialize(fh):
+#     """deserialize a SimpleDmrs-encoded DMRS structure."""
+#     raise NotImplementedError
 
 ##############################################################################
 ##############################################################################
@@ -119,11 +78,11 @@ _node = '{indent}{nodeid} [{pred}{lnk}{sortinfo}];'
 _sortinfo = ' {cvarsort} {properties}'
 _link = '{indent}{start}:{pre}/{post} {arrow} {end};'
 
-def encode(ms, encoding='unicode', indent=2):
+def serialize(ms, encoding='unicode', indent=2):
     delim = '\n' if indent is not None else ' '
-    return delim.join(encode_dmrs(m, indent=indent) for m in ms)
+    return delim.join(_encode_dmrs(m, indent=indent) for m in ms)
 
-def encode_dmrs(m, indent=2):
+def _encode_dmrs(m, indent=2):
     if indent is not None:
         delim = '\n'
         space = ' ' * indent

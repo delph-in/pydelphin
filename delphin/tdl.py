@@ -1,3 +1,15 @@
+"""
+Classes and functions for parsing and inspecting TDL.
+
+This module makes it easy to inspect what is written on definitions in
+Typed Description Language (TDL), but it doesn't interpret type
+hierarchies (such as by performing unification, subsumption
+calculations, or creating GLB types). That is, while it wouldn't be
+useful for creating a parser, it is useful if you want to statically
+inspect the types in a grammar and the constraints they apply.
+
+"""
+
 import re
 from collections import deque, defaultdict
 from itertools import chain
@@ -109,7 +121,7 @@ class TdlInflRule(TdlType):
 
 break_characters = r'<>!=:.#&,[];$()^/'
 
-tdl_re = re.compile(
+_tdl_re = re.compile(
     r'("[^"\\]*(?:\\.[^"\\]*)*"'  # double-quoted "strings"
     r"|'[^ \\]*(?:\\.[^ \\]*)*"  # single-quoted 'strings
     r'|[^\s{break_characters}]+'  # terms w/o break chars
@@ -122,12 +134,12 @@ tdl_re = re.compile(
 )
 
 # both ;comments and #|comments|#
-tdl_start_comment_re = re.compile(r'^\s*;|^\s*#\|')
-tdl_end_comment_re = re.compile(r'.*#\|\s*$')
+_tdl_start_comment_re = re.compile(r'^\s*;|^\s*#\|')
+_tdl_end_comment_re = re.compile(r'.*#\|\s*$')
 
 
 def tokenize(s):
-    return tdl_re.findall(s)
+    return _tdl_re.findall(s)
 
 
 def lex(stream):

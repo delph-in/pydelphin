@@ -1,3 +1,8 @@
+
+"""
+Classes and functions for working with the components of *MRS objects.
+"""
+
 import re
 import logging
 from collections import namedtuple
@@ -88,7 +93,7 @@ class Lnk(namedtuple('Lnk', ('type', 'data'))):
         Valid *types* and their associated *data* shown in the table
         below.
 
-        | *type*    | *data*              | example   |
+        | type      | data                | example   |
         | --------- | ------------------- | --------- |
         | charspan  | surface string span | (0, 5)    |
         | chartspan | chart vertex span   | (0, 5)    |
@@ -718,7 +723,7 @@ class ElementaryPredication(
 
 
 def elementarypredications(xmrs):
-    """Return the list of |ElementaryPredication| objects in *xmrs*."""
+    """Return the list of [ElementaryPredication] objects in *xmrs*."""
     return list(starmap(ElementaryPredication, xmrs.eps()))
 
 

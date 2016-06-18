@@ -1,3 +1,7 @@
+"""
+Classes and functions for path exploration on semantic graphs.
+"""
+
 #import pdb
 import re
 import warnings
