@@ -2,6 +2,8 @@
 
 ## [Unreleased][unreleased]
 
+## [v0.5.0][]
+
 ### Added
 
 * `delphin.interfaces.rest` (#66)
@@ -296,6 +298,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v0.5.0]: ../../releases/tag/v0.5.0
 [v0.4.1]: ../../releases/tag/v0.4.1
 [v0.4.0]: ../../releases/tag/v0.4.0
 [v0.3]: ../../releases/tag/v0.3
