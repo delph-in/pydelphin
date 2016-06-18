@@ -87,7 +87,7 @@ class Eds(object):
                 props = node.sortinfo
                 if props:
                     if CVARSORT in props:
-                        props['type'] = props[CVARSORT]
+                        nd['type'] = props[CVARSORT]
                         del props[CVARSORT]
                     nd['properties'] = props
             if node.carg is not None:
@@ -101,10 +101,11 @@ class Eds(object):
         top = d.get('top')
         nodes, edges = [], []
         for nid, node in d.get('nodes', {}).items():
-            props = node.get('properties')
-            if props is not None and 'type' in props:
-                props[CVARSORT] = props['type']
-                del props['type']
+            props = node.get('properties', {})
+            if 'type' in node:
+                props[CVARSORT] = node['type']
+            if not props:
+                props = None
             lnk = None
             if 'lnk' in node:
                 lnk = charspan(node['lnk']['from'], node['lnk']['to'])
@@ -164,15 +165,12 @@ def _unique_ids(eps, deps):
     return ids
 
 def _find_root(m):
-    if m.index is not None:
-        return m.nodeid(m.index)
-    else:
-        try:
-            top_hcons = m.hcon(m.top)
-            return m.labelset_heads(top_hcons.lo)[0]
-        except (KeyError, StopIteration):
-            # try to find top?
-            return None
+    try:
+        top_hcons = m.hcon(m.top)
+        return m.labelset_heads(top_hcons.lo)[0]
+    except (KeyError, StopIteration):
+        # try to find top?
+        return None
 
 
 ## Serialization
@@ -228,14 +226,21 @@ def _make_nodedata(d):
     edges = [(nid, rarg, tgt) for rarg, tgt in d[5]]
     return (node, edges)
 
-_EDS     = nt('EDS', value=_make_eds)
-_TOP     = opt(nt('TOP'), default=None)
-_FLAG    = opt(regex(r'\s*\(fragmented\)', value=Ignore))
-_NODE    = nt('NODE', value=_make_nodedata)
-_DSCN    = opt(lit('|', value=Ignore))
+_COLON   = regex(r'\s*:\s*', value=Ignore)
+_COMMA   = regex(r',\s*')
+_INT     = regex(r'-?\d+', value=int)
+_STRING  = regex(r'"[^"\\]*(?:\\.[^"\\]*)*"', value=lambda s: s[1:-1])
+_SPACE   = regex(r'\s*')
+_SPACES  = regex(r'\s+', value=Ignore)
 _SYMBOL  = regex(r'[-+\w]+')
 _PRED    = regex(r'((?!<-?\d|\("|\{|\[)\w)+',
                  value=Pred.string_or_grammar_pred)
+_EDS     = nt('EDS', value=_make_eds)
+_TOP     = opt(nt('TOP'), default=None)
+_TOPID   = opt(_SYMBOL, default=None)
+_FLAG    = opt(regex(r'\s*\(fragmented\)', value=Ignore))
+_NODE    = nt('NODE', value=_make_nodedata)
+_DSCN    = opt(lit('|', value=Ignore))
 _LNK     = opt(nt('LNK', value=lambda d: Lnk.charspan(*d)), default=None)
 _CARG    = opt(nt('CARG'), default=None)
 _PROPS   = opt(nt('PROPS', value=lambda d: d[0] + d[1]), default=None)
@@ -243,18 +248,12 @@ _EDGES   = nt('EDGES')
 _TYPE    = opt(_SYMBOL, value=lambda i: [(CVARSORT, i)], default=[])
 _AVLIST  = nt('AVLIST')
 _ATTRVAL = nt('ATTRVAL')
-_COLON   = regex(r'\s*:\s*', value=Ignore)
-_COMMA   = regex(r',\s*')
-_INT     = regex(r'-?\d+', value=int)
-_STRING  = regex(r'"[^"\\]*(?:\\.[^"\\]*)*"', value=lambda s: s[1:-1])
-_SPACE   = regex(r'\s*')
-_SPACES  = regex(r'\s+', value=Ignore)
 
 _eds_parser = Peg(
     grammar=dict(
         start=delimited(_EDS, _SPACE),
         EDS=bounded(regex(r'\{\s*'), seq(_TOP, nt('NODES')), regex(r'\s*\}')),
-        TOP=seq(_SYMBOL, _COLON, _FLAG, _SPACE, value=lambda d: d[0]),
+        TOP=seq(_TOPID, _COLON, _FLAG, _SPACE, value=lambda d: d[0]),
         NODES=delimited(_NODE, _SPACE),
         NODE=seq(_DSCN, _SYMBOL, _COLON, _PRED, _LNK, _CARG, _PROPS, _EDGES),
         LNK=bounded(lit('<'), seq(_INT, _COLON, _INT), lit('>')),
@@ -293,7 +292,7 @@ def _serialize_eds(e, properties=False, pretty_print=True, **kwargs):
         e = Eds.from_xmrs(e)
     # do something predictable for empty EDS
     if len(e.nodeids()) == 0:
-        return '{\n}' if pretty_print else '{}'
+        return '{:\n}' if pretty_print else '{:}'
 
     # determine if graph is connected
     g = {n: set() for n in e.nodeids()}
@@ -307,7 +306,7 @@ def _serialize_eds(e, properties=False, pretty_print=True, **kwargs):
     connected = ' ' if pretty_print else ''
 
     return eds.format(
-        top=e.top + ':' if e.top is not None else '',
+        top=e.top + ':' if e.top is not None else ':',
         flag='' if nidgrp == set(e.nodeids()) else ' (fragmented)',
         delim=delim,
         ed_list=delim.join(

@@ -48,6 +48,17 @@ nearly_every_dog_barked = simplemrs.loads_one('''
 '''
 )
 
+# ltop different from index
+kim_probably_sleeps = simplemrs.loads_one('''
+[ LTOP: h0
+  INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
+  RELS: < [ proper_q<0:3> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: sg IND: + ] RSTR: h5 BODY: h6 ]
+    [ named<0:3> LBL: h7 CARG: "Kim" ARG0: x3 ]
+    [ _probable_a_1<4:12> LBL: h1 ARG0: e9 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h10 ]
+    [ _sleep_v_1<13:20> LBL: h11 ARG0: e2 ARG1: x3 ] >
+  HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h11 > ]
+''')
+
 @pytest.fixture
 def eds_empty():
     return eds.Eds()
@@ -88,9 +99,25 @@ def eds_dogs_chase_Kim():
         ]
     )
 
+@pytest.fixture
+def eds_kim_probably_sleeps():
+    return eds.Eds(
+        top='e9',
+        nodes=[
+            Node('_1', Pred.stringpred('proper_q_rel')),
+            Node('x3', Pred.stringpred('named_rel'), carg='Kim'),
+            Node('e9', Pred.stringpred('_probable_a_1_rel')),
+            Node('e2', Pred.stringpred('_sleep_v_1_rel')),        
+        ],
+        edges=[
+            ('_1', 'BV', 'x3'),
+            ('e9', 'ARG1', 'e2'),
+            ('e2', 'ARG1', 'x3')
+        ]
+    )
 
 class TestEds(object):
-    def test_init(self, eds_empty, eds_it_rains, eds_dogs_chase_Kim):
+    def test_init(self, eds_empty, eds_it_rains, eds_dogs_chase_Kim, eds_kim_probably_sleeps):
         assert eds_empty.top is None
         assert len(eds_empty.nodes()) == 0
 
@@ -106,7 +133,14 @@ class TestEds(object):
         assert eds_dogs_chase_Kim.edges('e2') == {'ARG1': 'x4', 'ARG2': 'x6'}
         assert eds_dogs_chase_Kim.node('x6').carg == 'Kim'
 
-    def test_to_dict(self, eds_empty, eds_it_rains, eds_dogs_chase_Kim):
+        assert eds_kim_probably_sleeps.top == 'e9'
+        assert len(eds_kim_probably_sleeps.nodes()) == 4
+        assert eds_kim_probably_sleeps.nodeids() == ['_1', 'x3', 'e9', 'e2']
+        assert eds_kim_probably_sleeps.node('e2').pred == '"_sleep_v_1_rel"'
+        assert eds_kim_probably_sleeps.edges('e2') == {'ARG1': 'x3'}
+        assert eds_kim_probably_sleeps.node('x3').carg == 'Kim'
+
+    def test_to_dict(self, eds_empty, eds_it_rains, eds_dogs_chase_Kim, eds_kim_probably_sleeps):
         assert eds_empty.to_dict() == {'top': None, 'nodes': {}}
 
         assert eds_it_rains.to_dict() == {
@@ -117,8 +151,9 @@ class TestEds(object):
                     'lnk': {'from': 3, 'to': 9},
                     'properties': {
                         'SF': 'prop', 'TENSE': 'pres', 'MOOD': 'indicative',
-                        'PROG': '-', 'PERF': '-', 'type': 'e'
+                        'PROG': '-', 'PERF': '-'
                     },
+                    'type': 'e',
                     'edges': {}
                 }
             }
@@ -146,14 +181,33 @@ class TestEds(object):
             }
         }
 
+        assert eds_kim_probably_sleeps.to_dict() == {
+            'top': 'e9',
+            'nodes': {
+                '_1': {'label': 'proper_q', 'edges': {'BV': 'x3'}},
+                'x3': {'label': 'named', 'edges': {}, 'carg': 'Kim'},
+                'e9': {'label': '_probable_a_1', 'edges': {'ARG1': 'e2'}},
+                'e2': {'label': '_sleep_v_1', 'edges': {'ARG1': 'x3'}},
+            }
+        }
+
 
 def test_deserialize():
     e = eds.loads_one('{}')
     assert e.top is None
     assert len(e.nodes()) == 0
 
+    e = eds.loads_one('{:}')
+    assert e.top is None
+    assert len(e.nodes()) == 0
+
     e = eds.loads_one('{e2: e2:_rain_v_1<3:9>[]}')
     assert e.top == 'e2'
+    assert len(e.nodes()) == 1
+    assert e.nodes()[0].pred == '_rain_v_1_rel'
+
+    e = eds.loads_one('{: e2:_rain_v_1<3:9>[]}')
+    assert e.top is None
     assert len(e.nodes()) == 1
     assert e.nodes()[0].pred == '_rain_v_1_rel'
 
@@ -178,9 +232,9 @@ def test_deserialize():
     assert len(e.nodes()) == 4
 
 def test_serialize():
-    assert eds.dumps_one(empty, pretty_print=False) == '{}'
-    assert eds.dumps_one(empty, pretty_print=True) == '{\n}'
-    assert eds.dumps_one(empty) == '{\n}'  # default pretty-print
+    assert eds.dumps_one(empty, pretty_print=False) == '{:}'
+    assert eds.dumps_one(empty, pretty_print=True) == '{:\n}'
+    assert eds.dumps_one(empty) == '{:\n}'  # default pretty-print
 
     assert eds.dumps_one(it_rains) == (
         '{e2:\n'
@@ -204,7 +258,7 @@ def test_serialize():
     )
 
     assert eds.dumps_one(kotaenakatta) == (
-        '{e2:\n'
+        '{_1:\n'
         ' e2:_kotaeru_v_3<0:2>[]\n'
         ' _1:_neg_v<3:6>[ARG1 e2]\n'
         '}'
@@ -216,6 +270,15 @@ def test_serialize():
         ' _1:_every_q<7:12>[BV x3]\n'
         ' x3:_dog_n_1<13:16>[]\n'
         ' e2:_bark_v_1<17:24>[ARG1 x3]\n'
+        '}'
+    )
+
+    assert eds.dumps_one(kim_probably_sleeps) == (
+        '{e9:\n'
+        ' _1:proper_q<0:3>[BV x3]\n'
+        ' x3:named<0:3>("Kim")[]\n'
+        ' e9:_probable_a_1<4:12>[ARG1 e2]\n'
+        ' e2:_sleep_v_1<13:20>[ARG1 x3]\n'
         '}'
     )
 
