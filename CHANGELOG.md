@@ -6,6 +6,8 @@
 
 * `delphin.derivation.UdfNode.type` stores UDX grammar type info
 * `delphin.derivation.UdfNode.to_udx()` serializes with UDX extensions
+* `delphin.interfaces.base` general interface helper classes (e.g.
+  response classes)
 
 ### Changed
 
@@ -16,6 +18,8 @@
   entities and stores the type and head info separately
 * `delphin.derivation.Derivation.from_dict()` now consideres `type`
   and `head` attributes
+* `delphin.interfaces.ace` now returns a response object (like the
+  RESTful interface) instead of just a dict
 
 ### Deprecated
 

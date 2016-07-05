@@ -18,6 +18,55 @@ import logging
 import os
 from subprocess import (check_call, CalledProcessError, Popen, PIPE, STDOUT)
 
+import warnings
+warnings.warn(
+    'Responses from the ACE interface will use a response class '
+    '(like delphin.interfaces.rest) in future releases and may not '
+    'be entirely compatible with the current format.',
+    FutureWarning
+)
+
+from delphin.interfaces.base import ParseResponse, ParseResult
+
+class _AceResult(ParseResult):
+    """
+    This is a stopgap response object until the old behavior can be
+    removed (maybe v0.6.0).
+    """
+    def __getitem__(self, key):
+        key = {
+            'mrs': 'MRS',
+            'derivation': 'DERIV',
+        }.get(key, key)
+        return ParseResult.__getitem__(self, key)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return ParseResult.get(key, default)
+
+
+class _AceResponse(ParseResponse):
+    """
+    This is a stopgap response object until the old behavior can be
+    removed (maybe v0.6.0).
+    """
+    _result_factory = _AceResult
+    def __getitem__(self, key):
+        key = {
+            'input': 'INPUT',
+            'results': 'RESULTS',
+        }.get(key, key)
+        return ParseResponse.__getitem__(self, key)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return ParseResponse.get(key, default)
+
+
 class AceProcess(object):
     """
     The base class for interfacing ACE.
@@ -110,14 +159,14 @@ class AceParser(AceProcess):
     """
 
     def receive(self):
-        response = {
+        response = _AceResponse({
             'INPUT': None,
             'NOTES': [],
             'WARNINGS': [],
             'ERRORS': [],
             'SENT': None,
             'RESULTS': []
-        }
+        })
 
         blank = 0
 
@@ -153,14 +202,14 @@ class AceGenerator(AceProcess):
     _cmdargs = ['-e']
 
     def receive(self):
-        response = {
+        response = _AceResponse({
             'INPUT': None,
             'NOTES': [],
             'WARNINGS': [],
             'ERRORS': [],
             'SENT': None,
             'RESULTS': []
-        }
+        })
         results = []
 
         stdout = self._p.stdout
