@@ -58,14 +58,19 @@ used to read the serialized derivation into a Python object.
 
 """
 
-
+import warnings
 import re
 from collections import namedtuple
 
 _terminal_fields = ('form', 'tokens')
 _token_fields = ('id', 'tfs')
 _nonterminal_fields = ('id', 'entity', 'score', 'start', 'end', 'daughters')
-_all_fields = tuple(set(_terminal_fields).union(_nonterminal_fields))
+_udx_fields = ('head', 'type')
+_all_fields = tuple(
+    set(_terminal_fields)
+    .union(_nonterminal_fields)
+    .union(_udx_fields)
+)
 
 class _UdfNodeBase(object):
     """
@@ -76,9 +81,9 @@ class _UdfNodeBase(object):
 
     # for some reason != is not the opposite of __eq__ by default...
     def __ne__(self, other):
-        ne = self.__eq__(other)
-        if ne is NotImplemented: return ne  # pass this one along
-        return not ne
+        eq = self.__eq__(other)
+        if eq is NotImplemented: return eq  # pass this one along
+        return not eq
 
     def is_root(self):
         """
@@ -96,6 +101,12 @@ class _UdfNodeBase(object):
         """
         return _to_udf(self, indent, 1)
 
+    def to_udx(self, indent=1):
+        """
+        Encode the node and its descendants in the UDF export format.
+        """
+        return _to_udf(self, indent, 1, udx=True)
+
     def to_dict(self, fields=_all_fields):
         """
         Encode the node as a dictionary suitable for JSON serialization.
@@ -109,18 +120,24 @@ class _UdfNodeBase(object):
         return _to_dict(self, fields)
 
 
-def _to_udf(obj, indent, level):
+def _to_udf(obj, indent, level, udx=False):
     delim = ' ' if indent is None else '\n' + ' ' * indent * level
     if isinstance(obj, UdfNode):
-        dtrs = [_to_udf(dtr, indent, level+1) for dtr in obj.daughters]
+        entity = obj.entity
+        if udx:
+            if obj._head:
+                entity = '^' + entity
+            if obj.type:
+                entity = '{}@{}'.format(entity, obj.type)
+        dtrs = [_to_udf(dtr, indent, level+1, udx) for dtr in obj.daughters]
         dtrs = delim.join([''] + dtrs)  # empty first item to force indent
         if obj.id is None:
-            return '({}{})'.format(obj.entity, dtrs)
+            return '({}{})'.format(entity, dtrs)
         else:
             # :g for score makes -1.0 look like -1
             return '({} {} {:g} {} {}{})'.format(
                 obj.id,
-                obj.entity,
+                entity,
                 obj.score,
                 obj.start,
                 obj.end,
@@ -143,6 +160,8 @@ def _to_dict(obj, fields):
             if 'score' in fields: d['score'] = obj.score
             if 'start' in fields: d['start'] = obj.start
             if 'end' in fields: d['end'] = obj.end
+            if 'type' in fields and obj.type: d['type'] = obj.type
+            if 'head' in fields and obj._head: d['head'] = obj._head
         dtrs = obj.daughters
         if dtrs:
             # terminals should always be single daughters
@@ -194,17 +213,20 @@ class UdfToken(namedtuple('UdfToken', _token_fields)):
         return self.tfs == other.tfs
 
 
-class UdfTerminal(namedtuple('UdfTerminal', _terminal_fields), _UdfNodeBase):
+class UdfTerminal(_UdfNodeBase, namedtuple('UdfTerminal', _terminal_fields)):
     """
     Terminal nodes in the Unified Derivation Format. The *form*
     field is always set, but *tokens* may be `None`.
     See: http://moin.delph-in.net/ItsdbDerivations
     """
 
-    def __new__(cls, form, tokens=None):
+    def __new__(cls, form, tokens=None, parent=None):
         if tokens is None:
             tokens = []
-        return super(UdfTerminal, cls).__new__(cls, form, tokens)
+        t = super(UdfTerminal, cls).__new__(cls, form, tokens)
+        # internal bookkeeping
+        t._parent = parent
+        return t
 
     def __repr__(self):
         return '<UdfTerminal object ({}) at {}>'.format(self.form, id(self))
@@ -223,7 +245,7 @@ class UdfTerminal(namedtuple('UdfTerminal', _terminal_fields), _UdfNodeBase):
         return True
 
 
-class UdfNode(namedtuple('UdfNode', _nonterminal_fields), _UdfNodeBase):
+class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
     """
     Normal (non-leaf) nodes in the Unified Derivation Format. Root nodes
     are just UdfNodes whose *id*, by convention, is `None`. The
@@ -235,7 +257,8 @@ class UdfNode(namedtuple('UdfNode', _nonterminal_fields), _UdfNodeBase):
     """
 
     def __new__(cls, id, entity,
-                score=None, start=None, end=None, daughters=None):
+                score=None, start=None, end=None, daughters=None,
+                head=None, type=None, parent=None):
         # numeric fields can be underspecified as -1 if not a root
         if id is not None:
             id = int(id)
@@ -247,12 +270,19 @@ class UdfNode(namedtuple('UdfNode', _nonterminal_fields), _UdfNodeBase):
         # make sure daughters are not roots (is this check unnecessary?)
         if any(dtr.is_root() for dtr in daughters):
             raise ValueError('Daughter nodes cannot be roots.')
-        return super(UdfNode, cls).__new__(
+        node = super(UdfNode, cls).__new__(
             cls, id, entity, score, start, end, daughters
         )
+        # internal bookkeeping
+        node._parent = parent
+        node._head = head
+        node.type = type
+        return node
 
     def __repr__(self):
-        return '<UdfNode object ({}) at {}>'.format(self.entity, id(self))
+        return '<UdfNode object ({}, {}, {}, {}, {}) at {}>'.format(
+            self.id, self.entity, self.score, self.start, self.end, id(self)
+        )
 
     def __eq__(self, other):
         """
@@ -263,6 +293,10 @@ class UdfNode(namedtuple('UdfNode', _nonterminal_fields), _UdfNodeBase):
             return NotImplemented
         # Check attributes
         if self.entity != other.entity:
+            return False
+        if self.type != other.type:
+            return False
+        if self.is_head() != other.is_head():
             return False
         if self.start != other.start or self.end != other.end:
             return False
@@ -277,12 +311,17 @@ class UdfNode(namedtuple('UdfNode', _nonterminal_fields), _UdfNodeBase):
 
     def is_head(self):
         """
-        Return True if the node is a head, otherwise False. If the
-        derivation is in the export (UDX) format, head entities will be
-        prefixed with a caret (`^`). Note that in regular UDF, this
-        function is meaningless.
+        Return `True` if the node is a head (is marked as a head in
+        the UDX format or has no siblings), `False` if the node is
+        known to not be a head (has a sibling that is a head), or
+        otherwise return `None`.
         """
-        return self.entity.startswith('^')
+        if (self._head or self.is_root() or
+                len(getattr(self._parent, 'daughters', [None])) == 1):
+            return True
+        elif any(dtr._head for dtr in self._parent.daughters):
+            return False
+        return None
 
     def basic_entity(self):
         """
@@ -291,7 +330,8 @@ class UdfNode(namedtuple('UdfNode', _nonterminal_fields), _UdfNodeBase):
         preterminal nodes, joined by an at-sign (`@`). In regular UDF or
         non-preterminal nodes, this will just return the entity string.
         """
-        return self.entity.split('@', 1)[0]
+        warnings.warn('Deprecated; try UdfNode.entity', DeprecationWarning)
+        return self.entity
 
     def lexical_type(self):
         """
@@ -300,10 +340,8 @@ class UdfNode(namedtuple('UdfNode', _nonterminal_fields), _UdfNodeBase):
         joined by an at-sign (`@`). In regular UDF or non-preterminal
         nodes, this will return None.
         """
-        toks = self.entity.split('@', 1)
-        if len(toks) == 2:
-            return toks[-1]
-        return None
+        warnings.warn('Deprecated; try UdfNode.type', DeprecationWarning)
+        return self.type
 
 class Derivation(UdfNode):
     """
@@ -337,7 +375,8 @@ class Derivation(UdfNode):
         )
 
     def __init__(self, id, entity,
-                 score=None, start=None, end=None, daughters=None):
+                 score=None, start=None, end=None, daughters=None,
+                 head=None, type=None, parent=None):
         # Note: Attribute assignment is done in UdfNode.__new__(), so
         #       this only checks the arguments.
         # If id is None, it is a root, and score, start, and end must
@@ -388,13 +427,23 @@ class Derivation(UdfNode):
                     # ignore LKB-style start/end data if it exists on gd
                     term = UdfTerminal(
                         _unquote(gd['form']),
-                        tokens=_udf_tokens(gd.get('tokens'))
+                        tokens=_udf_tokens(gd.get('tokens')),
+                        parent=stack[-1] if stack else None
                     )
                     stack[-1].daughters.append(term)
                 elif match.group('id'):
                     gd = match.groupdict()
-                    udf = UdfNode(gd['id'], gd['entity'], gd['score'],
-                                  gd['start'], gd['end'])
+                    head = None
+                    entity, _, type = gd['entity'].partition('@')
+                    if entity[0] == '^':
+                        entity = entity[1:]
+                        head = True
+                    if type == '':
+                        type = None
+                    udf = UdfNode(gd['id'], entity, gd['score'],
+                                  gd['start'], gd['end'],
+                                  head=head, type=type,
+                                  parent=stack[-1] if stack else None)
                     stack.append(udf)
                 elif match.group('root'):
                     udf = UdfNode(None, match.group('root'))
@@ -404,7 +453,7 @@ class Derivation(UdfNode):
         if stack or deriv is None:
             raise ValueError('Invalid derivation; possibly unbalanced '
                              'parentheses: %s' % s)
-        return cls(*deriv)
+        return cls(*deriv, head=deriv._head, type=deriv.type)
 
     @classmethod
     def from_dict(cls, d):
@@ -438,7 +487,9 @@ def _from_dict(d):
             score=d.get('score'),
             start=d.get('start'),
             end=d.get('end'),
-            daughters=[_from_dict(dtr) for dtr in d['daughters']]
+            daughters=[_from_dict(dtr) for dtr in d['daughters']],
+            head=d.get('head'),
+            type=d.get('type')
         )
     elif 'form' in d:
         return UdfNode(
@@ -451,5 +502,7 @@ def _from_dict(d):
                 form=d['form'],
                 tokens=[UdfToken(t['id'], t['tfs'])
                         for t in d.get('tokens', [])]
-            )]
+            )],
+            head=d.get('head'),
+            type=d.get('type')
         )

@@ -2,6 +2,26 @@
 
 ## [Unreleased][unreleased]
 
+### Added
+
+* `delphin.derivation.UdfNode.type` stores UDX grammar type info
+* `delphin.derivation.UdfNode.to_udx()` serializes with UDX extensions
+
+### Changed
+
+* `delphin.derivation.UdfNode.is_head()` now considers siblings
+* `delphin.derivation.UdfNode.entity` returns only the entity (e.g.
+  for UDX), not the type or head info
+* `delphin.derivation.Derivation.from_string()` decomposes UDX
+  entities and stores the type and head info separately
+* `delphin.derivation.Derivation.from_dict()` now consideres `type`
+  and `head` attributes
+
+### Deprecated
+
+* `delphin.derivation.UdfNode.basic_entity()` (use UdfNode.entity)
+* `delphin.derivation.UdfNode.lexical_type()` (use UdfNode.type)
+
 ## [v0.5.0][]
 
 ### Added
