@@ -92,6 +92,6 @@ setup(
     #         'fine=...'
     #     ]
     # }
-    tests_require=['pytest'],
+    tests_require=['pytest>=2.8.0'],
     cmdclass={'test':PyTest, 'coverage':PyTestCoverage}
 )
