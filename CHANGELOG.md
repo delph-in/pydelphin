@@ -8,6 +8,7 @@
 * `delphin.derivation.UdfNode.to_udx()` serializes with UDX extensions
 * `delphin.interfaces.base` general interface helper classes (e.g.
   response classes)
+* `delphin.tokens` encodes/decodes YY token lattices
 
 ### Changed
 

@@ -150,6 +150,56 @@ class TestYYTokenLattice(object):
             0, ["null"], [(".", 1.0000)]
         )
 
+    def test_from_list(self):
+        tl = YY.from_list(
+            [{'id':1, 'start': 0, 'end': 1, 'form': "dog"}]
+        )
+        assert tl.tokens == [YyToken(1, 0, 1, form="dog")]
+
+        tl = YY.from_list(
+            [
+                {'id': 1, 'start': 0, 'end': 1, 'from': 0, 'to': 4,
+                 'paths': [1], 'form': "dogs", 'surface': "Dogs",
+                 #'ipos': 0, 'lrules': ["null"],
+                 'tags': ["NN"], 'probabilities': [1.0]
+                },
+                {'id': 1, 'start': 0, 'end': 1, 'from': 5, 'to': 9,
+                 'paths': [1], 'form': "bark",
+                 #'ipos': 0, 'lrules': ["null"],
+                 'tags': ["VBZ"], 'probabilities': [1.0]
+                }
+            ]
+        )
+        assert tl.tokens == [
+            YyToken(1, 0, 1, Lnk.charspan(0,4), [1], "dogs", "Dogs",
+                    ipos=0, lrules=["null"], pos=[("NN", 1.0)]),
+            YyToken(1, 0, 1, Lnk.charspan(5,9), [1], "bark",
+                    ipos=0, lrules=["null"], pos=[("VBZ", 1.0)])
+        ]
+
+    def test_to_list(self):
+        tl = YY([YyToken(1, 0, 1, form="dog")])
+        assert tl.to_list() == [{'id':1, 'start': 0, 'end': 1, 'form': "dog"}]
+
+        tl = YY([
+            YyToken(1, 0, 1, Lnk.charspan(0,4), [1], "dogs", "Dogs",
+                    ipos=0, lrules=["null"], pos=[("NN", 1.0)]),
+            YyToken(2, 1, 2, Lnk.charspan(5,9), [1], "bark",
+                    ipos=0, lrules=["null"], pos=[("VBZ", 1.0)])
+        ])
+        assert tl.to_list() == [
+            {'id': 1, 'start': 0, 'end': 1, 'from': 0, 'to': 4,
+             'form': "dogs", 'surface': "Dogs",
+             #'ipos': 0, 'lrules': ["null"],
+             'tags': ["NN"], 'probabilities': [1.0]
+            },
+            {'id': 2, 'start': 1, 'end': 2, 'from': 5, 'to': 9,
+             'form': "bark",
+             #'ipos': 0, 'lrules': ["null"],
+             'tags': ["VBZ"], 'probabilities': [1.0]
+            }
+        ]   
+
     def test_str(self):
         assert str(YY.from_string(token_v1_basic).tokens[0]) == token_v1_basic
         assert str(YY.from_string(token_v2).tokens[0]) == token_v2

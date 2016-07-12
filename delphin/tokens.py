@@ -74,7 +74,7 @@ class YyToken(_yy_token):
             d['start'],
             d['end'],
             Lnk.charspan(d['from'], d['to']) if 'from' in d else None,
-            d.get('paths'),
+            d.get('paths', []),
             d['form'],
             d.get('surface'),
             # ipos=
@@ -96,6 +96,8 @@ class YyToken(_yy_token):
             cfrom, cto = self.lnk.data
             d['from'] = cfrom
             d['to'] = cto
+        if len(self.paths) > 1:
+            d['paths'] = self.paths
         if self.surface is not None:
             d['surface'] = self.surface
         # if self.ipos != 0:
@@ -143,6 +145,9 @@ class YyTokenLattice(object):
 
     @classmethod
     def from_string(cls, s):
+        """
+        Decode from the YY token lattice format.
+        """
         def _qstrip(s):
             return s[1:-1]  # remove assumed quote characters
         tokens = []
@@ -169,6 +174,19 @@ class YyTokenLattice(object):
                 )
             )
         return cls(tokens)
+
+    @classmethod
+    def from_list(cls, toks):
+        """
+        Decode from a list as from YyTokenLattice.to_list().
+        """
+        return cls(list(map(YyToken.from_dict, toks)))
+
+    def to_list(self):
+        """
+        Encode the token lattice as a list suitable for JSON serialization.
+        """
+        return [t.to_dict() for t in self.tokens]
 
     def __str__(self):
         return ' '.join(map(str, self.tokens))
