@@ -14,8 +14,8 @@ _yy_token = namedtuple(
         'paths',    # path membership
         'form',     # surface token
         'surface',  # original token (optional; only if `form` was modified)
-        'ipos',     # length of `lrules`? always 0?
-        'lrules',   # something about lexical rules; always "null"?
+        'ipos',     # relative index of sub-token to which lrules apply
+        'lrules',   # list of morphological rules applied, "null" if None
         'pos'       # pairs of (POS, prob)
     )
 )
@@ -37,7 +37,7 @@ class YyToken(_yy_token):
         pos: pairs of (POS, prob)
     """
     def __new__(cls, id, start, end,
-                lnk=None, paths=(), form=None, surface=None,
+                lnk=None, paths=(1,), form=None, surface=None,
                 ipos=0, lrules=("null",), pos=()):
         if form is None:
             raise TypeError('Missing required keyword argument \'form\'.')
@@ -74,9 +74,9 @@ class YyToken(_yy_token):
             d['start'],
             d['end'],
             Lnk.charspan(d['from'], d['to']) if 'from' in d else None,
-            d.get('paths', []),
-            d['form'],
-            d.get('surface'),
+            # d.get('paths', [1]),
+            form=d['form'],
+            surface=d.get('surface'),
             # ipos=
             # lrules=
             pos=zip(d.get('tags', []), d.get('probabilities', []))
@@ -96,13 +96,11 @@ class YyToken(_yy_token):
             cfrom, cto = self.lnk.data
             d['from'] = cfrom
             d['to'] = cto
-        if len(self.paths) > 1:
-            d['paths'] = self.paths
+        # d['paths'] = self.paths
         if self.surface is not None:
             d['surface'] = self.surface
-        # if self.ipos != 0:
-        #     d['ipos'] = self.ipos
-        #     d['lrules'] = self.lrules
+        # d['ipos'] = self.ipos
+        # d['lrules'] = self.lrules
         if self.pos:
             d['tags'] = [ps[0] for ps in self.pos]
             d['probabilities'] = [ps[1] for ps in self.pos]
@@ -190,3 +188,12 @@ class YyTokenLattice(object):
 
     def __str__(self):
         return ' '.join(map(str, self.tokens))
+
+    def __eq__(self, other):
+        print(self.tokens)
+        print(other.tokens)
+        if (isinstance(other, YyTokenLattice) and
+                len(self.tokens) == len(other.tokens) and
+                all(t1==t2 for t1, t2 in zip(self.tokens, other.tokens))):
+            return True
+        return False

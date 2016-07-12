@@ -8,7 +8,7 @@ token_v1_basic = '(1, 0, 1, 1, "dog", 0, "null")'
 token_v1_surface = '(1, 0, 1, 1, "dog" "Dog", 0, "null")'
 token_v1_pos = '(1, 0, 1, 1, "dog", 0, "null", "NN" 0.8 "VV" 0.2000)'
 token_v1_surface_pos = '(1, 0, 1, 1, "dog" "Dog", 0, "null", "NN" 1.0000)'
-token_v1_lrules = '(1, 0, 1, 1, "dog", 2, "lrule1" "lrule2")'
+token_v1_lrules = '(1, 0, 1, 1, "dog", 0, "lrule1" "lrule2")'
 token_v2 = '(1, 0, 1, <1:3>, 1, "dog" "Dog", 0, "null", "NN" 1.0000)'
 
 tokenstring = (
@@ -36,7 +36,7 @@ def check_token(t, id, start, end, lnk, paths, form, surf, ipos, lrules, pos):
     assert t.pos == pos
 
 
-class YYToken(object):
+class TestYYToken(object):
     def test_init(self):
         with pytest.raises(TypeError):
             YyToken()
@@ -52,32 +52,34 @@ class YYToken(object):
             YyToken(1, 0, 1, Lnk.charspan(0,1), [1], surface=".",
                     ipos=0, lrules=["null"], pos=[(".", 1.0)])
         t = YyToken(1, 0, 1, form="dog")
-        check_token(t, 1, 0, 1, None, [], "dog", None, 0, ["null"], [])
+        check_token(t, 1, 0, 1, None, [1], "dog", None, 0, ["null"], [])
         t = YyToken(1, 0, 1, Lnk.charspan(0,1), [1], "dog", "Dog",
                     ipos=0, lrules=["null"], pos=[("NN", 1.0)])
         check_token(t, 1, 0, 1, Lnk.charspan(0,1), [1], "dog", "Dog",
                     0, ["null"], [("NN", 1.0)])
 
-    def from_dict(self):
+    def test_from_dict(self):
         t = YyToken.from_dict({'id':1, 'start': 0, 'end': 1, 'form': "dog"})
-        check_token(t, 1, 0, 1, None, [], "dog", None, 0, ["null"], [])
+        check_token(t, 1, 0, 1, None, [1], "dog", None, 0, ["null"], [])
         t = YyToken.from_dict({
-            'id': 1, 'start': 0, 'end': 1, 'lnk':Lnk.charspan(0,1),
-            'paths': [1], 'form': "dog", 'surface': "Dog",
+            'id': 1, 'start': 0, 'end': 1, 'from': 0, 'to': 1,
+            #'paths': [1],
+            'form': "dog", 'surface': "Dog",
             #'ipos': 0, 'lrules': ["null"],
             'tags': ["NN"], 'probabilities': [1.0]
         })
         check_token(t, 1, 0, 1, Lnk.charspan(0,1), [1], "dog", "Dog",
                     0, ["null"], [("NN", 1.0)])
 
-    def to_dict(self):
+    def test_to_dict(self):
         t = YyToken(1, 0, 1, form="dog")
         assert t.to_dict() == {'id':1, 'start': 0, 'end': 1, 'form': "dog"}
         t = YyToken(1, 0, 1, Lnk.charspan(0,1), [1], "dog", "Dog",
                     ipos=0, lrules=["null"], pos=[("NN", 1.0)])
         assert t.to_dict() == {
-            'id': 1, 'start': 0, 'end': 1, 'lnk':Lnk.charspan(0,1),
-            'paths': [1], 'form': "dog", 'surface': "Dog",
+            'id': 1, 'start': 0, 'end': 1, 'from': 0, 'to': 1,
+            #'paths': [1],
+            'form': "dog", 'surface': "Dog",
             #'ipos': 0, 'lrules': ["null"],
             'tags': ["NN"], 'probabilities': [1.0]
         }
@@ -97,7 +99,7 @@ class TestYYTokenLattice(object):
         check_token(t, 1, 0, 1, None, [1], "dog", "Dog", 0, ["null"],
                     [("NN", 1.0)])
         t = YY.from_string(token_v1_lrules).tokens[0]
-        check_token(t, 1, 0, 1, None, [1], "dog", None, 2,
+        check_token(t, 1, 0, 1, None, [1], "dog", None, 0,
                     ["lrule1", "lrule2"], [])
         t = YY.from_string(token_v2).tokens[0]
         check_token(t, 1, 0, 1, Lnk.charspan(1,3), [1], "dog", "Dog",
