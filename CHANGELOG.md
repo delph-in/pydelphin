@@ -9,6 +9,7 @@
 * `delphin.interfaces.base` general interface helper classes (e.g.
   response classes)
 * `delphin.tokens` encodes/decodes YY token lattices
+* Support for retrieving tokens objects from REST client.
 
 ### Changed
 
@@ -19,8 +20,14 @@
   entities and stores the type and head info separately
 * `delphin.derivation.Derivation.from_dict()` now consideres `type`
   and `head` attributes
+* `delphin.derivation.UdfNode` normalizes entity case for comparison
 * `delphin.interfaces.ace` now returns a response object (like the
   RESTful interface) instead of just a dict
+
+### Fixed
+
+* `delphin.derivation.UdfNode` is_head() now works for JSON-encoded
+  derivations.
 
 ### Deprecated
 

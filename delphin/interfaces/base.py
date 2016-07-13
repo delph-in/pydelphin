@@ -1,5 +1,8 @@
 
+from collections import Sequence
+
 from delphin.derivation import Derivation
+from delphin.tokens import YyTokenLattice
 from delphin.mrs import (
     Mrs,
     Dmrs,
@@ -90,3 +93,22 @@ class ParseResponse(dict):
     def result(self, i):
         """Return a ParseResult object for the *i*th result."""
         return self._result_factory(self.get('results', [])[i])
+
+    def tokens(self, tokenset='internal'):
+        """
+        Deserialize and return a YyTokenLattice object for the
+        initial or internal token set, if provided, from the YY
+        format or the JSON-formatted data; otherwise return the
+        original string.
+
+        Args:
+            tokenset: either `initial` or `internal` (default: `internal`)
+        """
+        toks = self.get('tokens', {}).get(tokenset)
+        if toks is not None:
+            if isinstance(toks, stringtypes):
+                toks = YyTokenLattice.from_string(toks)
+            elif isinstance(toks, Sequence):
+                toks = YyTokenLattice.from_list(toks)
+        return toks
+

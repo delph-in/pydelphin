@@ -67,6 +67,28 @@ from delphin.interfaces.base import ParseResponse
 
 default_erg_server = 'http://erg.delph-in.net/rest/0.9/'
 
+
+class _RestResponse(ParseResponse):
+    """
+    This is a interim response object until the server returns a
+    'tokens' key.
+    """
+    def __getitem__(self, key):
+        if key == 'tokens' and ('initial' in self or 'internal' in self):
+            d = {}
+            if 'initial' in self: d['initial'] = self['initial']
+            if 'internal' in self: d['internal'] = self['internal']
+            return d
+        else:
+            return ParseResponse.__getitem__(self, key)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return ParseResponse.get(key, default)
+
+
 class DelphinRestClient(object):
     """
     A class for managing requests to a DELPH-IN web API server.
@@ -100,7 +122,7 @@ class DelphinRestClient(object):
         url = urljoin(self.server, 'parse')
         r = requests.get(url, params=params, headers=hdrs)
         if r.status_code == 200:
-            return ParseResponse(r.json())
+            return _RestResponse(r.json())
         else:
             r.raise_for_status()
 
