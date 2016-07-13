@@ -292,7 +292,7 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
         if not isinstance(other, UdfNode):
             return NotImplemented
         # Check attributes
-        if self.entity != other.entity:
+        if self.entity.lower() != other.entity.lower():
             return False
         if self.type != other.type:
             return False
@@ -479,30 +479,39 @@ def _udf_tokens(tokenstring):
             tokens.append(UdfToken(tid, _unquote(tfs)))
     return tokens
 
-def _from_dict(d):
+def _from_dict(d, parent=None):
     if 'daughters' in d:
-        return UdfNode(
+        n = UdfNode(
             d.get('id'),
             d['entity'],
             score=d.get('score'),
             start=d.get('start'),
             end=d.get('end'),
-            daughters=[_from_dict(dtr) for dtr in d['daughters']],
             head=d.get('head'),
-            type=d.get('type')
+            type=d.get('type'),
+            parent=parent
         )
+        n.daughters.extend(
+            _from_dict(dtr, parent=n) for dtr in d['daughters']
+        )
+        return n
     elif 'form' in d:
-        return UdfNode(
+        n = UdfNode(
             d.get('id'),
             d['entity'],
             score=d.get('score'),
             start=d.get('start'),
             end=d.get('end'),
-            daughters=[UdfTerminal(
+            head=d.get('head'),
+            type=d.get('type'),
+            parent=parent
+        )
+        n.daughters.append(
+            UdfTerminal(
                 form=d['form'],
                 tokens=[UdfToken(t['id'], t['tfs'])
-                        for t in d.get('tokens', [])]
-            )],
-            head=d.get('head'),
-            type=d.get('type')
+                        for t in d.get('tokens', [])],
+                parent=n
+            )
         )
+        return n
