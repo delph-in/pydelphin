@@ -6,10 +6,13 @@
 
 * `delphin.derivation.UdfNode.type` stores UDX grammar type info
 * `delphin.derivation.UdfNode.to_udx()` serializes with UDX extensions
+* `delphin.derivation.UdfNode.to_dict()` now allows an optional
+  `labels` parameter for embedding short labels
 * `delphin.interfaces.base` general interface helper classes (e.g.
   response classes)
 * `delphin.tokens` encodes/decodes YY token lattices
-* Support for retrieving tokens objects from REST client.
+* Support for retrieving tokens and labeled trees from REST client.
+* `delphin.util.SExpr` S-Expression parser
 
 ### Changed
 
@@ -23,6 +26,8 @@
 * `delphin.derivation.UdfNode` normalizes entity case for comparison
 * `delphin.interfaces.ace` now returns a response object (like the
   RESTful interface) instead of just a dict
+* ACE interface also supports the `--tsdb-stdout` and
+  `--report-labels` options for future versions of ACE.
 
 ### Fixed
 

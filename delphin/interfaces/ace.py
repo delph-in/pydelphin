@@ -16,7 +16,15 @@ Requires: ACE (http://sweaglesw.org/linguistics/ace/)
 
 import logging
 import os
-from subprocess import (check_call, CalledProcessError, Popen, PIPE, STDOUT)
+import re
+from subprocess import (
+    check_call,
+    check_output,
+    CalledProcessError,
+    Popen,
+    PIPE,
+    STDOUT
+)
 
 import warnings
 warnings.warn(
@@ -27,16 +35,18 @@ warnings.warn(
 )
 
 from delphin.interfaces.base import ParseResponse, ParseResult
+from delphin.util import SExpr, basestring
 
 class _AceResult(ParseResult):
     """
-    This is a stopgap response object until the old behavior can be
+    This is a interim response object until the old behavior can be
     removed (maybe v0.6.0).
     """
     def __getitem__(self, key):
         key = {
             'mrs': 'MRS',
             'derivation': 'DERIV',
+            'surface': 'SENT',
         }.get(key, key)
         return ParseResult.__getitem__(self, key)
 
@@ -44,12 +54,12 @@ class _AceResult(ParseResult):
         try:
             return self[key]
         except KeyError:
-            return ParseResult.get(key, default)
+            return ParseResult.get(self, key, default)
 
 
 class _AceResponse(ParseResponse):
     """
-    This is a stopgap response object until the old behavior can be
+    This is a interim response object until the old behavior can be
     removed (maybe v0.6.0).
     """
     _result_factory = _AceResult
@@ -79,7 +89,8 @@ class AceProcess(object):
 
     _cmdargs = []
 
-    def __init__(self, grm, cmdargs=None, executable=None, env=None, **kwargs):
+    def __init__(self, grm, cmdargs=None, executable=None, env=None,
+                 tsdbinfo=True, **kwargs):
         """
         Args:
             grm: the path to the compiled grammar file
@@ -97,6 +108,9 @@ class AceProcess(object):
         self.cmdargs = cmdargs or []
         self.executable = executable or 'ace'
         self.env = env or os.environ
+        self.ace_version = _ace_version(self.executable)
+        if tsdbinfo and self.ace_version >= (0, 9, 24):
+            self.cmdargs.extend(['--tsdb-stdout', '--report-labels'])
         self._open()
 
     def _open(self):
@@ -159,39 +173,11 @@ class AceParser(AceProcess):
     """
 
     def receive(self):
-        response = _AceResponse({
-            'INPUT': None,
-            'NOTES': [],
-            'WARNINGS': [],
-            'ERRORS': [],
-            'SENT': None,
-            'RESULTS': []
-        })
-
-        blank = 0
-
-        stdout = self._p.stdout
-        line = stdout.readline().rstrip()
-        while True:
-            if line.strip() == '':
-                blank += 1
-                if blank >= 2:
-                    break
-            elif line.startswith('SENT: ') or line.startswith('SKIP: '):
-                response['SENT'] = line.split(': ', 1)[1]
-            elif (line.startswith('NOTE:') or
-                  line.startswith('WARNING') or
-                  line.startswith('ERROR')):
-                level, message = line.split(': ', 1)
-                response['%sS' % level].append(message)
-            else:
-                mrs, deriv = line.split(' ; ')
-                response['RESULTS'].append({
-                    'MRS': mrs.strip(),
-                    'DERIV': deriv.strip()
-                })
-            line = stdout.readline().rstrip()
-        return response
+        if '--tsdb-stdout' in self.cmdargs:
+            receive =  _tsdb_stdout_parse
+        else:
+            receive = _stdout_parse
+        return receive(self._p.stdout)
 
 
 class AceGenerator(AceProcess):
@@ -202,31 +188,11 @@ class AceGenerator(AceProcess):
     _cmdargs = ['-e']
 
     def receive(self):
-        response = _AceResponse({
-            'INPUT': None,
-            'NOTES': [],
-            'WARNINGS': [],
-            'ERRORS': [],
-            'SENT': None,
-            'RESULTS': []
-        })
-        results = []
-
-        stdout = self._p.stdout
-        line = stdout.readline().rstrip()
-        while not line.startswith('NOTE: '):
-            if line.startswith('WARNING') or line.startswith('ERROR'):
-                level, message = line.split(': ', 1)
-                response['%sS' % level] = message
-            else:
-                results.append({'SENT': line})
-            line = stdout.readline().rstrip()
-        # sometimes error messages aren't prefixed with ERROR
-        if line.endswith('[0 results]') and len(results) > 0:
-            response['ERRORS'] = '\n'.join(d['SENT'] for d in results)
-            results = []
-        response['RESULTS'] = results
-        return response
+        if '--tsdb-stdout' in self.cmdargs:
+            receive =  _tsdb_stdout_realization
+        else:
+            receive = _stdout_realization
+        return receive(self._p.stdout)
 
 
 def compile(cfg_path, out_path, log=None):
@@ -306,3 +272,138 @@ def generate(grm, datum, **kwargs):
             AceGenerator
     """
     return next(generate_from_iterable(grm, [datum], **kwargs))
+
+
+def _ace_version(executable):
+    version = (0, 9, 0)  # initial public release
+    try:
+        out = check_output([executable, '-V'], universal_newlines=True)
+        version = re.search(r'ACE version ([.0-9]+)', out).group(1)
+        version = tuple(map(int, version.split('.')))
+    except (CalledProcessError, OSError):
+        logging.error('Failed to get ACE version number.')
+        raise
+    return version
+
+def _stdout_parse(stdout):
+    response = _AceResponse({
+        'INPUT': None,
+        'NOTES': [],
+        'WARNINGS': [],
+        'ERRORS': [],
+        'SENT': None,
+        'RESULTS': []
+    })
+
+    blank = 0
+
+    line = stdout.readline().rstrip()
+    while True:
+        if line.strip() == '':
+            blank += 1
+            if blank >= 2:
+                break
+        elif line.startswith('SENT: ') or line.startswith('SKIP: '):
+            response['SENT'] = line.split(': ', 1)[1]
+        elif (line.startswith('NOTE:') or
+              line.startswith('WARNING') or
+              line.startswith('ERROR')):
+            level, message = line.split(': ', 1)
+            response['%sS' % level].append(message)
+        else:
+            mrs, deriv = line.split(' ; ')
+            response['RESULTS'].append({
+                'MRS': mrs.strip(),
+                'DERIV': deriv.strip()
+            })
+        line = stdout.readline().rstrip()
+    return response
+
+
+def _stdout_realization(stdout):
+    response = _AceResponse({
+        'INPUT': None,
+        'NOTES': [],
+        'WARNINGS': [],
+        'ERRORS': [],
+        'SENT': None,
+        'RESULTS': []
+    })
+    results = []
+
+    line = stdout.readline().rstrip()
+    while not line.startswith('NOTE: '):
+        if line.startswith('WARNING') or line.startswith('ERROR'):
+            level, message = line.split(': ', 1)
+            response['%sS' % level] = message
+        else:
+            results.append({'SENT': line})
+        line = stdout.readline().rstrip()
+    # sometimes error messages aren't prefixed with ERROR
+    if line.endswith('[0 results]') and len(results) > 0:
+        response['ERRORS'] = '\n'.join(d['SENT'] for d in results)
+        results = []
+    response['RESULTS'] = results
+    return response
+
+def _tsdb_stdout_parse(stdout):
+    response = _tsdb_stdout(stdout)
+    # two blank lines
+    assert stdout.readline().strip() == ''
+    assert stdout.readline().strip() == ''
+    return response
+
+def _tsdb_stdout_realization(stdout):
+    response = _tsdb_stdout(stdout)
+    # final NOTE line
+    note = stdout.readline()
+    assert note.startswith('NOTE:')
+    response['NOTES'].append(note.split(':', 1)[1])
+    return response    
+
+def _tsdb_stdout(stdout):
+    response = _AceResponse({
+        'INPUT': None,
+        'NOTES': [],
+        'WARNINGS': [],
+        'ERRORS': [],
+        'SENT': None,
+        'RESULTS': []
+    })
+
+    line = stdout.readline().rstrip()
+    while (line.startswith('NOTE:') or
+           line.startswith('WARNING') or
+           line.startswith('ERROR')):
+        level, message = line.split(': ', 1)
+        response['%sS' % level].append(message)
+        line = stdout.readline().rstrip()
+    while line:
+        expr = SExpr.parse(line)
+        line = expr.remainder
+        assert len(expr.data) == 2
+        key, val = expr.data
+        if key == ':p-input':
+            response.setdefault('tokens', {})['initial'] = val.strip()
+        elif key == ':p-tokens':
+            response.setdefault('tokens', {})['internal'] = val.strip()
+        elif key == ':results':
+            for result in val:
+                res = {}
+                for reskey, resval in result:
+                    if reskey == ':derivation':
+                        res['DERIV'] = resval.strip()
+                    elif reskey == ':mrs':
+                        res['MRS'] = resval.strip()
+                    elif reskey == ':surface':
+                        res['SENT'] = resval.strip()
+                    elif isinstance(resval, basestring):
+                        res[reskey[1:]] = resval.strip()
+                    else:
+                        res[reskey[1:]] = resval
+                response['RESULTS'].append(res)
+        elif isinstance(val, basestring):
+            response[key[1:]] = val.strip()
+        else:
+            response[key[1:]] = val
+    return response
