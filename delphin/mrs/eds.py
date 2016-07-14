@@ -24,7 +24,10 @@ from delphin.lib.pegre import (
     delimited,
     bounded,
     Ignore,
-    Peg
+    Peg,
+    Spacing,
+    Integer,
+    DQString
 )
 
 class Eds(object):
@@ -228,9 +231,6 @@ def _make_nodedata(d):
 
 _COLON   = regex(r'\s*:\s*', value=Ignore)
 _COMMA   = regex(r',\s*')
-_INT     = regex(r'-?\d+', value=int)
-_STRING  = regex(r'"[^"\\]*(?:\\.[^"\\]*)*"', value=lambda s: s[1:-1])
-_SPACE   = regex(r'\s*')
 _SPACES  = regex(r'\s+', value=Ignore)
 _SYMBOL  = regex(r'[-+\w]+')
 _PRED    = regex(r'((?!<-?\d|\("|\{|\[)\w)+',
@@ -251,13 +251,13 @@ _ATTRVAL = nt('ATTRVAL')
 
 _eds_parser = Peg(
     grammar=dict(
-        start=delimited(_EDS, _SPACE),
+        start=delimited(_EDS, Spacing),
         EDS=bounded(regex(r'\{\s*'), seq(_TOP, nt('NODES')), regex(r'\s*\}')),
-        TOP=seq(_TOPID, _COLON, _FLAG, _SPACE, value=lambda d: d[0]),
-        NODES=delimited(_NODE, _SPACE),
+        TOP=seq(_TOPID, _COLON, _FLAG, Spacing, value=lambda d: d[0]),
+        NODES=delimited(_NODE, Spacing),
         NODE=seq(_DSCN, _SYMBOL, _COLON, _PRED, _LNK, _CARG, _PROPS, _EDGES),
-        LNK=bounded(lit('<'), seq(_INT, _COLON, _INT), lit('>')),
-        CARG=bounded(lit('('), _STRING, lit(')')),
+        LNK=bounded(lit('<'), seq(Integer, _COLON, Integer), lit('>')),
+        CARG=bounded(lit('('), DQString, lit(')')),
         PROPS=bounded(lit('{'), seq(_TYPE, _SPACES, _AVLIST), lit('}')),
         EDGES=bounded(lit('['), _AVLIST, lit(']')),
         AVLIST=delimited(_ATTRVAL, _COMMA),
@@ -266,7 +266,7 @@ _eds_parser = Peg(
 )
 
 def deserialize(s):
-    for e in _eds_parser.parse(s):
+    for e in _eds_parser.parse(s).data:
         yield e
 
 eds = '{{{top}{flag}{delim}{ed_list}{enddelim}}}'

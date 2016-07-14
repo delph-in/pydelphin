@@ -9,6 +9,7 @@ from delphin.mrs import (
     simplemrs,
     eds,
 )
+from delphin.util import SExpr
 
 try:
     stringtypes = (str, unicode)  # Python 2
@@ -38,6 +39,28 @@ class ParseResult(dict):
             elif isinstance(drv, stringtypes):
                 drv = Derivation.from_string(drv)
         return drv
+
+    def tree(self):
+        """
+        Deserialize and return a labeled syntax tree. The tree data
+        may be a standalone datum, or embedded in the derivation.
+        """
+        tree = self.get('tree')
+        if isinstance(tree, stringtypes):
+            tree = SExpr.parse(tree).data
+        elif tree is None:
+            drv = self.get('derivation')
+            if isinstance(drv, dict) and 'label' in drv:
+                def _extract_tree(d):
+                    t = [d.get('label', '')]
+                    if 'tokens' in d:
+                        t.append([d.get('form', '')])
+                    else:
+                        for dtr in d.get('daughters', []):
+                            t.append(_extract_tree(dtr))
+                    return t
+                tree = _extract_tree(drv)
+        return tree
 
     def mrs(self):
         """

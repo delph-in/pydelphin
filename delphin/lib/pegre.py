@@ -1,7 +1,7 @@
 
 import re
 from functools import wraps
-from collections import Sequence
+from collections import namedtuple
 
 __all__ = [
     'Ignore',
@@ -19,6 +19,8 @@ __all__ = [
     'delimited',
     'Peg',
 ]
+
+PegreResult = namedtuple('PegreResult', ('remainder', 'data', 'span'))
 
 class PegreError(Exception):
     def __init__(self, message, position):
@@ -51,9 +53,9 @@ def valuemap(f):
                 result = _f(*args, **kwargs)
                 s, obj, span = result
                 if callable(val):
-                    return (s, val(obj), span)
+                    return PegreResult(s, val(obj), span)
                 else:
-                    return (s, val, span)
+                    return PegreResult(s, val, span)
             return valued_f
         else:
             return f(*args, **kwargs)
@@ -66,9 +68,9 @@ def literal(x):
     """
     xlen = len(x)
     msg = 'Expected: "{}"'.format(x)
-    def match_literal(s, grm, pos):
+    def match_literal(s, grm=None, pos=0):
         if s[:xlen] == x:
-            return (s[xlen:], x, (pos, pos+xlen))
+            return PegreResult(s[xlen:], x, (pos, pos+xlen))
         raise PegreError(msg, pos)
     return match_literal
 
@@ -82,11 +84,12 @@ def regex(r):
     else:
         p = r
     msg = 'Expected to match: {}'.format(p.pattern)
-    def match_regex(s, grm, pos):
+    def match_regex(s, grm=None, pos=0):
         m = p.match(s)
         if m is not None:
             start, end = m.span()
-            return (s[m.end():], m.group(), (pos+start, pos+end))
+            data = m.groupdict() if p.groupindex else m.group()
+            return PegreResult(s[m.end():], data, (pos+start, pos+end))
         raise PegreError(msg, pos)
     return match_regex
 
@@ -95,7 +98,8 @@ def nonterminal(n):
     """
     Create a PEG function to match a nonterminal.
     """
-    def match_nonterminal(s, grm, pos):
+    def match_nonterminal(s, grm=None, pos=0):
+        if grm is None: grm = {}
         expr = grm[n]
         return expr(s, grm, pos)
     return match_nonterminal
@@ -105,10 +109,13 @@ def and_next(e):
     """
     Create a PEG function for positive lookahead.
     """
-    def match_and_next(s, grm, pos):
-        if e(s, grm, pos):
-            return (s, Ignore, (pos, pos))
-        raise PegreError(msg, pos)
+    def match_and_next(s, grm=None, pos=0):
+        try:
+            e(s, grm, pos)
+        except PegreError as ex:
+            raise PegreError('Positive lookahead failed', pos)
+        else:
+            return PegreResult(s, Ignore, (pos, pos))
     return match_and_next
 
 @valuemap
@@ -116,10 +123,13 @@ def not_next(e):
     """
     Create a PEG function for negative lookahead.
     """
-    def match_not_next(s, grm, pos):
-        if not e(s, grm, pos):
-            return (s, Ignore, (pos, pos))
-        raise PegreError(msg, pos)
+    def match_not_next(s, grm=None, pos=0):
+        try:
+            e(s, grm, pos)
+        except PegreError as ex:
+            return PegreResult(s, Ignore, (pos, pos))
+        else:
+            raise PegreError('Negative lookahead failed', pos)
     return match_not_next
 
 @valuemap
@@ -127,7 +137,7 @@ def sequence(*es):
     """
     Create a PEG function to match a sequence.
     """
-    def match_sequence(s, grm, pos):
+    def match_sequence(s, grm=None, pos=0):
         data = []
         start = pos
         for e in es:
@@ -135,7 +145,7 @@ def sequence(*es):
             pos = span[1]
             if obj is not Ignore:
                 data.append(obj)
-        return (s, data, (start, pos))
+        return PegreResult(s, data, (start, pos))
     return match_sequence
 
 @valuemap
@@ -144,7 +154,7 @@ def choice(*es):
     Create a PEG function to match an ordered choice.
     """
     msg = 'Expected one of: {}'.format(', '.join(map(repr, es)))
-    def match_choice(s, grm, pos):
+    def match_choice(s, grm=None, pos=0):
         errs = []
         for e in es:
             try:
@@ -160,11 +170,11 @@ def optional(e, default=Ignore):
     """
     Create a PEG function to optionally match an expression.
     """
-    def match_optional(s, grm, pos):
+    def match_optional(s, grm=None, pos=0):
         try:
             return e(s, grm, pos)
         except PegreError:
-            return (s, default, (pos, pos))
+            return PegreResult(s, default, (pos, pos))
     return match_optional
 
 @valuemap
@@ -179,14 +189,14 @@ def zero_or_more(e, delimiter=None):
     """
     if delimiter is None:
         delimiter = lambda s, grm, pos: (s, Ignore, (pos, pos))
-    def match_zero_or_more(s, grm, pos):
+    def match_zero_or_more(s, grm=None, pos=0):
         start = pos
         try:
             s, obj, span = e(s, grm, pos)
             pos = span[1]
             data = [] if obj is Ignore else [obj]
         except PegreError:
-            return (s, [], (pos, pos))
+            return PegreResult(s, [], (pos, pos))
         try:
             while True:
                 s, obj, span = delimiter(s, grm, pos)
@@ -199,7 +209,7 @@ def zero_or_more(e, delimiter=None):
                     data.append(obj)
         except PegreError:
             pass
-        return (s, data, (start, pos))
+        return PegreResult(s, data, (start, pos))
     return match_zero_or_more
 
 @valuemap
@@ -215,7 +225,7 @@ def one_or_more(e, delimiter=None):
     if delimiter is None:
         delimiter = lambda s, grm, pos: (s, Ignore, (pos, pos))
     msg = 'Expected one or more of: {}'.format(repr(e))
-    def match_one_or_more(s, grm, pos):
+    def match_one_or_more(s, grm=None, pos=0):
         start = pos
         s, obj, span = e(s, grm, pos)
         pos = span[1]
@@ -232,7 +242,7 @@ def one_or_more(e, delimiter=None):
                     data.append(obj)
         except PegreError:
             pass
-        return (s, data, (start, pos))
+        return PegreResult(s, data, (start, pos))
     return match_one_or_more
 
 @valuemap
@@ -252,6 +262,16 @@ class Peg(object):
         self.start = start
         self.grammar = grammar
 
-    def parse(self, s):
-        result = self.grammar[self.start](s, self.grammar, 0)
-        return result[1]
+    def parse(self, s, start=None):
+        if start is None: start = self.start
+        result = self.grammar[start](s, self.grammar, 0)
+        return result
+
+# common definitions
+Spacing  = regex(r'\s*')
+Integer  = regex(r'-?\d+', value=int)
+Float    = regex(r'-?(0|[1-9]\d*)(\.\d+[eE][-+]?|\.|[eE][-+]?)\d+',
+                 value=float)
+DQString = regex(r'"[^"\\]*(?:\\.[^"\\]*)*"', value=lambda s: s[1:-1])
+SQString = regex(r"'[^'\\]*(?:\\.[^'\\]*)*'", value=lambda s: s[1:-1])
+

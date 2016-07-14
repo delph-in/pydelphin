@@ -60,7 +60,7 @@ used to read the serialized derivation into a Python object.
 
 import warnings
 import re
-from collections import namedtuple
+from collections import namedtuple, Sequence
 
 _terminal_fields = ('form', 'tokens')
 _token_fields = ('id', 'tfs')
@@ -107,17 +107,29 @@ class _UdfNodeBase(object):
         """
         return _to_udf(self, indent, 1, udx=True)
 
-    def to_dict(self, fields=_all_fields):
+    def to_dict(self, fields=_all_fields, labels=None):
         """
         Encode the node as a dictionary suitable for JSON serialization.
+
+        Args:
+            fields: if given, this is a whitelist of fields to include
+                on nodes (`daughters` and `form` are always shown)
+            labels: optional label annotations to embed in the
+                derivation dict; the value is a list of lists matching
+                the structure of the derivation (e.g., 
+                `["S" ["NP" ["NNS" ["Dogs"]]] ["VP" ["VBZ" ["bark"]]]]`)
         """
         fields = set(fields)
         diff = fields.difference(_all_fields)
+        if isinstance(labels, Sequence):
+            labels = _map_labels(self, labels)
+        elif labels is None:
+            labels = {}
         if diff:
             raise ValueError(
                 'Invalid field(s): {}'.format(', '.join(diff))
             )
-        return _to_dict(self, fields)
+        return _to_dict(self, fields, labels)
 
 
 def _to_udf(obj, indent, level, udx=False):
@@ -151,7 +163,23 @@ def _to_udf(obj, indent, level, udx=False):
         raise TypeError('Invalid node: {}'.format(str(obj)))
 
 
-def _to_dict(obj, fields):
+def _map_labels(drv, labels):
+    m = {}
+    if not labels:
+        return m
+    if labels[0]:
+        m[drv.id] = labels[0]
+    subds = getattr(drv, 'daughters', getattr(drv, 'tokens', []))
+    sublbls = labels[1:]
+    if (sublbls and len(subds) != len(sublbls)):
+        raise ValueError('Labels do not match derivation structure.')
+    for d, lbls in zip(subds, sublbls):
+        if hasattr(d, 'id'):
+            m.update(_map_labels(d, lbls))
+    return m
+
+
+def _to_dict(obj, fields, labels):
     d = {}
     if isinstance(obj, UdfNode):
         if 'entity' in fields: d['entity'] = obj.entity
@@ -167,9 +195,12 @@ def _to_dict(obj, fields):
             # terminals should always be single daughters
             if len(dtrs) == 1 and isinstance(dtrs[0], UdfTerminal):
                 # merge terminal daughter info into current node
-                d.update(_to_dict(dtrs[0], fields))
+                d.update(_to_dict(dtrs[0], fields, labels))
             else:
-                d['daughters'] = [_to_dict(dtr, fields) for dtr in dtrs]
+                d['daughters'] = [
+                    _to_dict(dtr, fields, labels) for dtr in dtrs
+                ]
+        if obj.id in labels: d['label'] = labels[obj.id]
     elif isinstance(obj, UdfTerminal):
         d['form'] = obj.form
         # d['from'] = min(t.tfs['+FROM'] for t in obj.tokens)
