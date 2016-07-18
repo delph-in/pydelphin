@@ -12,6 +12,7 @@ from collections import deque, defaultdict
 import re
 from warnings import warn
 
+from delphin.util import stringtypes
 from delphin.mrs import Xmrs, Mrs
 from delphin.mrs.components import (
     ElementaryPredication, Pred, Lnk, HandleConstraint, IndividualConstraint,
@@ -72,7 +73,7 @@ def load(fh, single=False, version=_default_version,
         a generator of [Xmrs] objects (unless the *single* option is
         `True`)
     """
-    if isinstance(fh, str):
+    if isinstance(fh, stringtypes):
         s = open(fh, 'r').read()
     else:
         s = fh.read()

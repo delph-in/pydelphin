@@ -3,6 +3,7 @@ from __future__ import print_function
 
 from itertools import count
 
+from delphin.util import stringtypes
 from delphin.mrs.xmrs import Xmrs, _bfs
 from delphin.mrs.components import (
     var_sort,
@@ -179,7 +180,7 @@ def _find_root(m):
 ## Serialization
 
 def load(fh, single=False):
-    if isinstance(fh, str):
+    if isinstance(fh, stringtypes):
         s = open(fh, 'r').read()
     else:
         s = fh.read()

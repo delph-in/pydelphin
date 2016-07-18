@@ -5,11 +5,7 @@ Classes and functions for working with the components of *MRS objects.
 
 import re
 import logging
-from collections import namedtuple
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    from collections import MutableMapping  # Python2
+from collections import namedtuple, MutableMapping
 from itertools import starmap
 from functools import total_ordering
 

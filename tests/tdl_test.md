@@ -152,8 +152,8 @@ doctest for both Python 2 and 3, I define the following function:
 
 ```python
 >>> from io import StringIO, BytesIO
->>> from delphin.lib.six import PY3
->>> file_from_string = StringIO if PY3 else BytesIO
+>>> from sys import version_info
+>>> file_from_string = StringIO if version_info > (3,) else BytesIO
 
 ```
 

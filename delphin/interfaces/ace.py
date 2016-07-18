@@ -35,7 +35,7 @@ warnings.warn(
 )
 
 from delphin.interfaces.base import ParseResponse, ParseResult
-from delphin.util import SExpr, basestring
+from delphin.util import SExpr, stringtypes
 
 class _AceResult(ParseResult):
     """
@@ -397,12 +397,12 @@ def _tsdb_stdout(stdout):
                         res['MRS'] = resval.strip()
                     elif reskey == ':surface':
                         res['SENT'] = resval.strip()
-                    elif isinstance(resval, basestring):
+                    elif isinstance(resval, stringtypes):
                         res[reskey[1:]] = resval.strip()
                     else:
                         res[reskey[1:]] = resval
                 response['RESULTS'].append(res)
-        elif isinstance(val, basestring):
+        elif isinstance(val, stringtypes):
             response[key[1:]] = val.strip()
         else:
             response[key[1:]] = val

@@ -3,6 +3,11 @@ import re
 from functools import wraps
 from collections import namedtuple
 
+try:
+    stringtypes = (str, unicode)
+except NameError:
+    stringtypes = (str,)
+
 __all__ = [
     'Ignore',
     'literal',
@@ -79,7 +84,7 @@ def regex(r):
     """
     Create a PEG function to match a regular expression.
     """
-    if isinstance(r, str):
+    if isinstance(r, stringtypes):
         p = re.compile(r)
     else:
         p = r

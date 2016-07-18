@@ -14,7 +14,6 @@ import re
 from collections import deque, defaultdict
 from itertools import chain
 
-from delphin.lib.six import raise_from
 from delphin.exceptions import TdlError, TdlParsingError
 from delphin.tfs import TypedFeatureStructure
 
@@ -229,10 +228,18 @@ def parse_typedef(tokens):
         t = TdlType(identifier, tdldef, coreferences=corefs)
     except AssertionError as ex:
         msg = 'Remaining tokens: {}'.format(list(tokens))
-        raise_from(TdlParsingError(msg, identifier=identifier), ex)
+        #   previously used six library:
+        # raise_from(TdlParsingError(msg, identifier=identifier), ex)
+        #   use the following when Python2.7 support is dropped
+        # raise TdlParsingError(msg, identifier=identifier) from ex
+        raise TdlParsingError(msg, identifier=identifier)
     except StopIteration as ex:
         msg = 'Unexpected termination.'
-        raise_from(TdlParsingError(msg, identifier=identifier or '?'), ex)
+        #   previously used six library:
+        # raise_from(TdlParsingError(msg, identifier=identifier or '?'), ex)
+        #   use the following when Python2.7 support is dropped
+        # raise TdlParsingError(msg, identifier=identifier or '?') from ex
+        raise TdlParsingError(msg, identifier=identifier or '?')
     return t
 
 

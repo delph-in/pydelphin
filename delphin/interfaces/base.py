@@ -9,12 +9,7 @@ from delphin.mrs import (
     simplemrs,
     eds,
 )
-from delphin.util import SExpr
-
-try:
-    stringtypes = (str, unicode)  # Python 2
-except NameError:
-    stringtypes = (str,)  # Python 3
+from delphin.util import SExpr, stringtypes
 
 class ParseResult(dict):
     """

@@ -34,6 +34,11 @@
 * `delphin.derivation.UdfNode` is_head() now works for JSON-encoded
   derivations.
 
+### Removed
+
+* `delphin.lib.six` was barely used, so is removed (and relevant
+  Python 2 compatibility measures were made more consistent)
+
 ### Deprecated
 
 * `delphin.derivation.UdfNode.basic_entity()` (use UdfNode.entity)

@@ -1,8 +1,8 @@
 
 try:
-    basestring
+    stringtypes = (str, unicode)  # Python 2
 except NameError:
-    basestring = str
+    stringtypes = (str,)  # Python 3
 
 def safe_int(x):
     try:
