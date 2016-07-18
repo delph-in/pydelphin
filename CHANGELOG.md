@@ -2,6 +2,13 @@
 
 ## [Unreleased][unreleased]
 
+## [v0.5.1][]
+
+This minor release adds support for getting more parse information
+from ACE (via the ACE 0.9.24's `--tsdb-stdout`), updates derivation
+objects so UDX fields (e.g. `type`) can appear on all nonterminals,
+and adds support for YY token lattices.
+
 ### Added
 
 * `delphin.derivation.UdfNode.type` stores UDX grammar type info
@@ -340,6 +347,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v0.5.1]: ../../releases/tag/v0.5.1
 [v0.5.0]: ../../releases/tag/v0.5.0
 [v0.4.1]: ../../releases/tag/v0.4.1
 [v0.4.0]: ../../releases/tag/v0.4.0

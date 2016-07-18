@@ -42,7 +42,7 @@ Here's a brief example of using the `itsdb` library:
 
 ```python
 >>> from delphin import itsdb
->>> prof = itsdb.ItsdbProfile('/home/goodmami/logon/dfki/jacy/tsdb/gold/mrs')
+>>> prof = itsdb.ItsdbProfile('~/logon/dfki/jacy/tsdb/gold/mrs')
 >>> for row in prof.read_table('item'):
 ...     print(row.get('i-input'))
 雨 が 降っ た ．
@@ -81,7 +81,7 @@ Here is TDL introspection:
 
 ```python
 >>> from delphin import tdl
->>> f = open('/home/goodmami/logon/lingo/erg/fundamentals.tdl', 'r')
+>>> f = open('~/logon/lingo/erg/fundamentals.tdl', 'r')
 >>> types = {t.identifier: t for t in tdl.parse(f)}
 >>> types['basic_word'].supertypes
 ['word_or_infl_rule', 'word_or_punct_rule']
@@ -98,11 +98,17 @@ And here's how to compile, parse, and generate with the ACE wrapper:
 >>> from delphin.interfaces import ace
 >>> ace.compile('../jacy/ace/config.tdl', 'jacy.dat')
 [...]
->>> ace.parse('jacy.dat', '犬 が 吠える')
-{'SENT': '犬 が 吠える', 'NOTES': ['1 readings, added 183 / 54 edges to chart (22 fully instantiated, 26 actives used, 11 passives used)\tRAM: 730k'], 'WARNINGS': [], 'RESULTS': [{'DERIV': '(267 utterance_rule-decl-finite 4.367251 0 3 (266 head_subj_rule 2.906826 0 3 (263 hf-complement-rule -0.956762 0 2 (262 quantify-n-rule 0.215732 0 1 (10 inu-noun 0.049650 0 1 ("犬" 7 "token [ +FORM \\"犬\\" +FROM \\"0\\" +TO \\"1\\" +ID diff-list [ LIST list LAST list ] +POS pos [ +TAGS null +PRBS null ] +CLASS non_ne [ +INITIAL luk ] +TRAIT token_trait +PRED predsort +CARG \\"犬\\" ]"))) (17 ga 0.150269 1 2 ("が" 8 "token [ +FORM \\"が\\" +FROM \\"2\\" +TO \\"3\\" +ID diff-list [ LIST list LAST list ] +POS pos [ +TAGS null +PRBS null ] +CLASS non_ne [ +INITIAL luk ] +TRAIT token_trait +PRED predsort +CARG \\"が\\" ]"))) (265 unary-vstem-vend-rule 3.336552 2 3 (264 ru-lexeme-infl-rule 2.257695 2 3 (18 hoeru_1 0.000000 2 3 ("吠える" 9 "token [ +FORM \\"吠える\\" +FROM \\"4\\" +TO \\"7\\" +ID diff-list [ LIST list LAST list ] +POS pos [ +TAGS null +PRBS null ] +CLASS non_ne [ +INITIAL luk ] +TRAIT token_trait +PRED predsort +CARG \\"吠える\\" ]"))))))', 'MRS': '[ LTOP: h0 INDEX: e2 [ e TENSE: pres MOOD: indicative PROG: - PERF: - ASPECT: default_aspect PASS: - SF: prop ] RELS: < [ udef_q_rel<0:1> LBL: h4 ARG0: x3 [ x PERS: 3 ] RSTR: h5 BODY: h6 ]  [ "_inu_n_rel"<0:1> LBL: h7 ARG0: x3 ]  [ "_hoeru_v_1_rel"<4:7> LBL: h1 ARG0: e2 ARG1: x3 ] > HCONS: < h0 qeq h1 h5 qeq h7 > ]'}], 'ERRORS': []}
->>> res1 = ace.parse('jacy.dat', '犬 が 吠える')['RESULTS'][0]['MRS']
->>> ace.generate('jacy.dat', res1)
-{'WARNING': None, 'ERROR': None, 'SENT': None, 'NOTE': None, 'RESULTS': ['犬 が 吠える']}
+>>> response = ace.parse('jacy.dat', '犬 が 吠える')
+>>> len(response.results())
+1
+>>> response.result(0).keys()
+dict_keys(['DERIV', 'MRS'])
+>>> response.result(0)['MRS']
+'[ LTOP: h0 INDEX: e2 [ e TENSE: pres MOOD: indicative PROG: - PERF: - ASPECT: default_aspect PASS: - SF: prop ] RELS: < [ udef_q_rel<0:1> LBL: h4 ARG0: x3 [ x PERS: 3 ] RSTR: h5 BODY: h6 ]  [ "_inu_n_rel"<0:1> LBL: h7 ARG0: x3 ]  [ "_hoeru_v_1_rel"<4:7> LBL: h1 ARG0: e2 ARG1: x3 ] > HCONS: < h0 qeq h1 h5 qeq h7 > ]'
+>>> response.result(0).mrs()
+<Xmrs object (udef inu hoeru) at 140352613240112>
+>>> ace.generate('jacy.dat', response.result(0)['MRS']).results()
+[ParseResult({'SENT': '犬 が 吠える'})]
 ```
 
 
@@ -141,6 +147,7 @@ The following packages/modules are available:
 - `mrs`: Minimal Recursion Semantics
 - `tdl`: Type-Description Language
 - `tfs`: Typed-Feature Structures
+- `tokens`: Token lattices
 - `extra.highlight`: [Pygments](http://pygments.org/)-based syntax
   highlighting (currently just for TDL and SimpleMRS)
 - `extra.latex`: Formatting for LaTeX (just DMRS)
