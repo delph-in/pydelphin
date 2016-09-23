@@ -1,3 +1,6 @@
+
+import warnings
+
 import pytest
 
 from delphin.derivation import (
@@ -280,6 +283,7 @@ class TestDerivation():
         assert node.daughters[1].type == 'b-type'
 
     def test_basic_entity(self):
+        warnings.simplefilter('always')
         # this works for both UDX and standard UDF
         a = D.from_string('(root (1 some-thing -1 -1 -1'
                           '  (2 a-thing -1 -1 -1 ("a"))'
@@ -300,6 +304,7 @@ class TestDerivation():
             assert node.daughters[1].basic_entity() == 'b-thing'
 
     def test_lexical_type(self):
+        warnings.simplefilter('always')
         # NOTE: this returns None for standard UDF or non-preterminals
         a = D.from_string('(root (1 some-thing -1 -1 -1'
                           '  (2 a-thing -1 -1 -1 ("a"))'
