@@ -47,59 +47,73 @@ def dmrs_tikz_dependency(xs):
     def link_label(link):
         return '{}/{}'.format(link.rargname or '', link.post)
 
-    def label_side(link):
-        if ((link.post == H_POST and link.rargname == RSTR_ROLE)
-                or link.post == EQ_POST):
-            return 'edge below'
-        return 'edge above'
+    def label_edge(link):
+        if link.post == H_POST and link.rargname == RSTR_ROLE:
+            return 'rstr'
+        elif link.post == EQ_POST:
+            return 'eq'
+        else:
+            return 'arg'
 
     if isinstance(xs, Xmrs):
         xs = [xs]
 
     slots = defaultdict(set)  # from/(+-)to; + for above, - for below
-    lines = [
-        '\\documentclass{standalone}',
-        '\\usepackage{tikz-dependency}',
-        '\\begin{document}'
-    ]
+    lines = """\\documentclass{standalone}
+\\usepackage{tikz-dependency}
+%%%
+%%% style for dmrs graph
+%%%
+\\depstyle{dmrs}{label style={above, scale=.8, opacity=0, text opacity=1},
+  edge unit distance=1.5ex}
+%%% set text opacity=0 to hide text, opacity = 0 to hide box
+\\depstyle{root}{edge unit distance=3ex, label style={opacity=1}}
+\\depstyle{arg}{edge above}
+\\depstyle{rstr}{edge below, dotted, label style={text opacity=1}}
+\\depstyle{eq}{edge below, label style={text opacity=1}}
+\\depstyle{icons}{edge below, dashed}
+\\providecommand{\\spred}{} %% may be defined in mrs.sty
+\\renewcommand{\\spred}[1]{\\mbox{\\textsf{#1}}}
+%%%
+\\begin{document}""".split("\n")
+    
     for x in xs:
-        lines.append(
-            '\\begin{dependency}['
-            'text only label,'
-            'label style={above,font=\\footnotesize},'
-            'edge unit distance=2ex'
-            ']'
-        )
+        lines.append("\\begin{dependency}[dmrs]")
         ns = nodes(x)
         ls = links(x)
-        predlist = [_latex_escape(n.pred.short_form()) for n in ns]
-        lines.extend([
-            '  \\begin{deptext}[column sep=10pt]',
-            '    {} \\\\'.format(' \\& '.join(predlist)),
-            '  \\end{deptext}'
-        ])
+        ### predicates
+        lines.append("  \\begin{deptext}[column sep=10pt]")
+        for i, n in enumerate(ns):
+            if i < len(ns) -1:
+                sep = "\\&"
+            else:
+                sep = "\\\\"
+            lines.append("    \\spred{{{}}} {}     % node {}".format(_latex_escape(n.pred.short_form()),
+                                                                  sep, i+1))
+        lines.append("  \\end{deptext}")
         nodeidx = {n.nodeid: i+1 for i, n in enumerate(ns)}
+        ### links
         for link in links(x):
             if link.start == 0:
                 lines.append(
-                    '  \\deproot[edge unit distance=2ex]{{{}}}{{{}}}'.format(
+                    '  \\deproot[root]{{{}}}{{{}}}'.format(
                         nodeidx[link.end],
                         'TOP'  # _latex_escape('/' + link.post)
                     )
                 )
             else:
-                side = label_side(link)
-                opts = [side]
-                slot = link.end * -1 if side.endswith('below') else link.end
-                if slot in slots[link.start]:
-                    opts.append('edge unit distance=4ex')
-                slots[link.start].add(slot)
+                # slot = link.end * -1 if side.endswith('below') else link.end
+                # if slot in slots[link.start]:
+                #     opts.append('edge unit distance=4ex')
+                # slots[link.start].add(slot)
                 lines.append('  \\depedge[{}]{{{}}}{{{}}}{{{}}}'.format(
-                    ','.join(opts),
+                    label_edge(link),
                     nodeidx[link.start],
                     nodeidx[link.end],
                     _latex_escape(link_label(link))
                 ))
-        lines.append('\\end{dependency}')
+        ### placeholder for icons
+        lines.append('%  \\depedge[icons]{f}{t}{focus}')
+        lines.append('\\end{dependency}\n')
     lines.append('\\end{document}')
     return '\n'.join(lines)
