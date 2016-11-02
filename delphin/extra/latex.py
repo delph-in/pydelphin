@@ -65,8 +65,9 @@ def dmrs_tikz_dependency(xs):
 %%%
 %%% style for dmrs graph
 %%%
-\\depstyle{dmrs}{label style={above, scale=.9, opacity=0, text opacity=1},
-  edge unit distance=1.5ex}
+\\depstyle{dmrs}{edge unit distance=1.5ex, 
+  label style={above, scale=.9, opacity=0, text opacity=1},
+  baseline={([yshift=-0.7\\baselineskip]current bounding box.north)}}
 %%% set text opacity=0 to hide text, opacity = 0 to hide box
 \\depstyle{root}{edge unit distance=3ex, label style={opacity=1}}
 \\depstyle{arg}{edge above}
