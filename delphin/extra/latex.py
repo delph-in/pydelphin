@@ -61,10 +61,11 @@ def dmrs_tikz_dependency(xs):
     slots = defaultdict(set)  # from/(+-)to; + for above, - for below
     lines = """\\documentclass{standalone}
 \\usepackage{tikz-dependency}
+\\usepackage{relsize}
 %%%
 %%% style for dmrs graph
 %%%
-\\depstyle{dmrs}{label style={above, scale=.8, opacity=0, text opacity=1},
+\\depstyle{dmrs}{label style={above, scale=.9, opacity=0, text opacity=1},
   edge unit distance=1.5ex}
 %%% set text opacity=0 to hide text, opacity = 0 to hide box
 \\depstyle{root}{edge unit distance=3ex, label style={opacity=1}}
@@ -74,6 +75,8 @@ def dmrs_tikz_dependency(xs):
 \\depstyle{icons}{edge below, dashed}
 \\providecommand{\\spred}{} %% may be defined in mrs.sty
 \\renewcommand{\\spred}[1]{\\mbox{\\textsf{#1}}}
+\\providecommand{\\srl}{} %% may be defined in mrs.sty
+\\renewcommand{\\srl}[1]{\\mbox{\\textsf{\\smaller #1}}}
 %%%
 \\begin{document}""".split("\n")
     
@@ -98,7 +101,7 @@ def dmrs_tikz_dependency(xs):
                 lines.append(
                     '  \\deproot[root]{{{}}}{{{}}}'.format(
                         nodeidx[link.end],
-                        'TOP'  # _latex_escape('/' + link.post)
+                        '\\srl{TOP}'  # _latex_escape('/' + link.post)
                     )
                 )
             else:
@@ -106,7 +109,7 @@ def dmrs_tikz_dependency(xs):
                 # if slot in slots[link.start]:
                 #     opts.append('edge unit distance=4ex')
                 # slots[link.start].add(slot)
-                lines.append('  \\depedge[{}]{{{}}}{{{}}}{{{}}}'.format(
+                lines.append('  \\depedge[{}]{{{}}}{{{}}}{{\\srl{{{}}}}}'.format(
                     label_edge(link),
                     nodeidx[link.start],
                     nodeidx[link.end],
