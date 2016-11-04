@@ -935,7 +935,9 @@ class Dmrs(Xmrs):
         qeq = HandleConstraint.qeq
         vgen = _VarGenerator()
         labels = _make_labels(nodes, links, vgen)
-        ivs = _make_ivs(nodes, vgen)
+        qs = set(l.start for l in links
+                 if (l.rargname or '').upper() == RSTR_ROLE)
+        ivs = _make_ivs(nodes, vgen, qs)
         top = index = xarg = None  # for now; maybe get them from kwargs?
         # initialize args with ARG0 for intrinsic variables
         args = {nid: {IVARG_ROLE: iv} for nid, iv in ivs.items()}
@@ -988,13 +990,14 @@ class Dmrs(Xmrs):
         """
         Encode the Dmrs as a dictionary suitable for JSON serialization.
         """
+        qs = set(self.nodeids(quantifier=True))
         def _lnk(obj): return {'from': obj.cfrom, 'to': obj.cto}
         def _node(node, short_pred=True):
             p = node.pred.short_form() if short_pred else node.pred.string
             d = dict(nodeid=node.nodeid, predicate=p)
             if node.lnk is not None: d['lnk'] = _lnk(node)
             if properties and node.sortinfo:
-                if not node.is_quantifier():
+                if node.nodeid not in qs:
                     d['sortinfo'] = node.sortinfo
             if node.surface is not None: d['surface'] = node.surface
             if node.base is not None: d['base'] = node.base
@@ -1062,12 +1065,12 @@ def _make_labels(nodes, links, vgen):
                 seen.add(conj_nid)
     return labels
 
-def _make_ivs(nodes, vgen):
+def _make_ivs(nodes, vgen, qs):
     ivs = {}
     for node in nodes:
         # quantifiers share their IV with the quantifiee. It will be
         # selected later during argument construction
-        if not node.is_quantifier():
+        if node.nodeid not in qs:
             props = dict((key, val) for key, val in node.sortinfo.items()
                          if key != CVARSORT)
             ivs[node.nodeid] = vgen.new(node.cvarsort, props)[0]

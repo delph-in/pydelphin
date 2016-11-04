@@ -254,7 +254,6 @@ def links(xmrs):
     _eps = xmrs._eps
     _hcons = xmrs._hcons
     _vars = xmrs._vars
-    _pred = xmrs.pred
 
     lsh = xmrs.labelset_heads
     lblheads = {v: lsh(v) for v, vd in _vars.items() if 'LBL' in vd['refs']}
@@ -272,7 +271,7 @@ def links(xmrs):
     for src, srclbl, role, val, vd in prelinks:
         if IVARG_ROLE in vd['refs']:
             tgtnids = [n for n in vd['refs'][IVARG_ROLE]
-                       if not _pred(n).is_quantifier()]
+                       if not _eps[n].is_quantifier()]
             if len(tgtnids) == 0:
                 continue  # maybe some bad MRS with a lonely quantifier
             tgt = tgtnids[0]  # what do we do if len > 1?
