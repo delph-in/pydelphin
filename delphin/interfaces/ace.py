@@ -26,6 +26,9 @@ from subprocess import (
     STDOUT
 )
 
+import locale; locale.setlocale(locale.LC_ALL, '')
+encoding = locale.getpreferredencoding(False)
+
 import warnings
 warnings.warn(
     'Responses from the ACE interface will use a response class '
@@ -120,7 +123,7 @@ class AceProcess(object):
             stdout=PIPE,
             stderr=STDOUT,
             env=self.env,
-            universal_newlines=True
+            universal_newlines=False  # See _readlines() docstring
         )
 
     def __enter__(self):
@@ -134,7 +137,7 @@ class AceProcess(object):
         """
         Send *datum* (e.g. a sentence or MRS) to ACE.
         """
-        self._p.stdin.write(datum.rstrip() + '\n')
+        self._p.stdin.write((datum.rstrip() + '\n').encode('utf-8'))
         self._p.stdin.flush()
 
     def receive(self):
@@ -177,7 +180,7 @@ class AceParser(AceProcess):
             receive =  _tsdb_stdout_parse
         else:
             receive = _stdout_parse
-        return receive(self._p.stdout)
+        return receive(_readlines(self._p.stdout))
 
 
 class AceGenerator(AceProcess):
@@ -192,7 +195,7 @@ class AceGenerator(AceProcess):
             receive =  _tsdb_stdout_realization
         else:
             receive = _stdout_realization
-        return receive(self._p.stdout)
+        return receive(_readlines(self._p.stdout))
 
 
 def compile(cfg_path, out_path, log=None):
@@ -285,7 +288,7 @@ def _ace_version(executable):
         raise
     return version
 
-def _stdout_parse(stdout):
+def _stdout_parse(line_iter):
     response = _AceResponse({
         'INPUT': None,
         'NOTES': [],
@@ -297,7 +300,7 @@ def _stdout_parse(stdout):
 
     blank = 0
 
-    line = stdout.readline().rstrip()
+    line = next(line_iter)
     while True:
         if line.strip() == '':
             blank += 1
@@ -305,9 +308,9 @@ def _stdout_parse(stdout):
                 break
         elif line.startswith('SENT: ') or line.startswith('SKIP: '):
             response['SENT'] = line.split(': ', 1)[1]
-        elif (line.startswith('NOTE:') or
-              line.startswith('WARNING') or
-              line.startswith('ERROR')):
+        elif (line.startswith('NOTE: ') or
+              line.startswith('WARNING: ') or
+              line.startswith('ERROR: ')):
             level, message = line.split(': ', 1)
             response['%sS' % level].append(message)
         else:
@@ -316,11 +319,11 @@ def _stdout_parse(stdout):
                 'MRS': mrs.strip(),
                 'DERIV': deriv.strip()
             })
-        line = stdout.readline().rstrip()
+        line = next(line_iter)
     return response
 
 
-def _stdout_realization(stdout):
+def _stdout_realization(line_iter):
     response = _AceResponse({
         'INPUT': None,
         'NOTES': [],
@@ -331,14 +334,15 @@ def _stdout_realization(stdout):
     })
     results = []
 
-    line = stdout.readline().rstrip()
+    line = next(line_iter)
     while not line.startswith('NOTE: '):
-        if line.startswith('WARNING') or line.startswith('ERROR'):
+        if line.startswith('WARNING: ') or line.startswith('ERROR: '):
             level, message = line.split(': ', 1)
             response['%sS' % level] = message
         else:
             results.append({'SENT': line})
-        line = stdout.readline().rstrip()
+        line = next(line_iter)
+    response['NOTES'].append(line.split(': ', 1)[1])
     # sometimes error messages aren't prefixed with ERROR
     if line.endswith('[0 results]') and len(results) > 0:
         response['ERRORS'] = '\n'.join(d['SENT'] for d in results)
@@ -346,22 +350,22 @@ def _stdout_realization(stdout):
     response['RESULTS'] = results
     return response
 
-def _tsdb_stdout_parse(stdout):
-    response = _tsdb_stdout(stdout)
+def _tsdb_stdout_parse(line_iter):
+    response = _tsdb_stdout(line_iter)
     # two blank lines
-    assert stdout.readline().strip() == ''
-    assert stdout.readline().strip() == ''
+    assert next(line_iter).strip() == ''
+    assert next(line_iter).strip() == ''
     return response
 
-def _tsdb_stdout_realization(stdout):
-    response = _tsdb_stdout(stdout)
+def _tsdb_stdout_realization(line_iter):
+    response = _tsdb_stdout(line_iter)
     # final NOTE line
-    note = stdout.readline()
-    assert note.startswith('NOTE:')
-    response['NOTES'].append(note.split(':', 1)[1])
+    note = next(line_iter)
+    assert note.startswith('NOTE: ')
+    response['NOTES'].append(note.split(': ', 1)[1])
     return response    
 
-def _tsdb_stdout(stdout):
+def _tsdb_stdout(line_iter):
     response = _AceResponse({
         'INPUT': None,
         'NOTES': [],
@@ -371,13 +375,13 @@ def _tsdb_stdout(stdout):
         'RESULTS': []
     })
 
-    line = stdout.readline().rstrip()
-    while (line.startswith('NOTE:') or
-           line.startswith('WARNING') or
-           line.startswith('ERROR')):
+    line = next(line_iter)
+    while (line.startswith('NOTE: ') or
+           line.startswith('WARNING: ') or
+           line.startswith('ERROR: ')):
         level, message = line.split(': ', 1)
         response['%sS' % level].append(message)
-        line = stdout.readline().rstrip()
+        line = next(line_iter)
     while line:
         expr = SExpr.parse(line)
         line = expr.remainder
@@ -407,3 +411,31 @@ def _tsdb_stdout(stdout):
         else:
             response[key[1:]] = val
     return response
+
+def _readlines(stream):
+    """
+    When ACE's stdout and stderr streams are interleaved, error messages
+    can appear in the middle of, e.g., UTF-8 sequences. When decoding
+    fails, remove the message (as best as possible), attach the next
+    line, and try again.
+    """
+    msg_re = re.compile(b'(NOTE|WARNING|ERROR):.*$')
+    b = stream.readline()
+    while True:
+        try:
+            s = b.decode(encoding)
+        except UnicodeDecodeError:
+            m = msg_re.search(b)
+            if m:
+                yield b[m.start():].decode(encoding).rstrip()
+                b = b[:m.start()]
+                b2 = stream.readline()
+                m = msg_re.match(b2)
+                while m:
+                    yield b2.decode(encoding).rstrip()
+                b += b2
+            else:
+                raise
+        else:
+            yield s.rstrip()
+            b = stream.readline()

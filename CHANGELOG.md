@@ -2,6 +2,17 @@
 
 ## [Unreleased][unreleased]
 
+### Changed
+
+* `delphin.extra.latex` has nicer looking DMRS output
+* Quantifiers are detected more consistently for, e.g., DMRS conversion;
+  this mostly resolves #84
+
+### Fixed
+
+* `delphin.interfaces.ace` now detects interleaved stderr messages when
+  there are errors decoding or parsing S-Expressions (fixes #86)
+
 ## [v0.5.1][]
 
 This minor release adds support for getting more parse information
