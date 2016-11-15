@@ -13,7 +13,8 @@ from delphin.exceptions import (XmrsError, XmrsStructureError)
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
     UNKNOWNSORT, HANDLESORT, CVARSORT, QUANTIFIER_POS,
-    EQ_POST, HEQ_POST, NEQ_POST, H_POST
+    EQ_POST, HEQ_POST, NEQ_POST, H_POST,
+    BARE_EQ_ROLE
 )
 
 # The classes below are generally just namedtuples with extra methods.
@@ -298,7 +299,7 @@ def links(xmrs):
         if len(heads) > 1:
             first = heads[0]
             for other in heads[1:]:
-                links.append(Link(first, other, None, post=EQ_POST))
+                links.append(Link(other, first, BARE_EQ_ROLE, EQ_POST))
         # If not, something like this is more explicit
         # lblset = self.labelset(lbl)
         # sg = g.subgraph(lblset)

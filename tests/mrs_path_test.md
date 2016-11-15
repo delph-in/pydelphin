@@ -307,7 +307,9 @@ _the_q_rel:RSTR/H>"_dog_n_1_rel"
 "_bark_v_1_rel":ARG1/NEQ>
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
 "_dog_n_1_rel"
-"_nearly_x_deg_rel"
+"_nearly_x_deg_rel":MOD/EQ>
+"_nearly_x_deg_rel":MOD/EQ>_all_q_rel:RSTR/H>
+"_nearly_x_deg_rel":MOD/EQ>_all_q_rel:RSTR/H>"_dog_n_1_rel"
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
 _all_q_rel:RSTR/H>
@@ -326,9 +328,9 @@ _all_q_rel:RSTR/H>"_dog_n_1_rel"
 "_bark_v_1_rel":ARG1/NEQ>
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
 "_dog_n_1_rel"
-"_nearly_x_deg_rel"
-"_nearly_x_deg_rel":/EQ:_all_q_rel:RSTR/H>
-"_nearly_x_deg_rel":/EQ:_all_q_rel:RSTR/H>"_dog_n_1_rel"
+"_nearly_x_deg_rel":MOD/EQ>
+"_nearly_x_deg_rel":MOD/EQ>_all_q_rel:RSTR/H>
+"_nearly_x_deg_rel":MOD/EQ>_all_q_rel:RSTR/H>"_dog_n_1_rel"
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
 _all_q_rel:RSTR/H>
@@ -338,31 +340,21 @@ _all_q_rel:RSTR/H>"_dog_n_1_rel"
 ...     print(path)
 "_bark_v_1_rel":ARG1/NEQ>
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
 "_dog_n_1_rel"
-"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
-"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
 "_tail_n_1_rel"
-"_wag_v_1_rel":ARG1/NEQ>
-"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+"_wag_v_1_rel"(:ARG1/NEQ> & :MOD/EQ>"_dog_n_1_rel")
+"_wag_v_1_rel"(:ARG1/NEQ> & :MOD/EQ>)
+"_wag_v_1_rel"(:ARG1/NEQ>"_tail_n_1_rel" & :MOD/EQ>"_dog_n_1_rel")
+"_wag_v_1_rel"(:ARG1/NEQ>"_tail_n_1_rel" & :MOD/EQ>)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
 _the_q_rel:RSTR/H>
 _the_q_rel:RSTR/H>"_dog_n_1_rel"
-_the_q_rel:RSTR/H>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
-_the_q_rel:RSTR/H>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
 def_explicit_q_rel:RSTR/H>
 def_explicit_q_rel:RSTR/H>"_tail_n_1_rel"
 poss_rel(:ARG1/NEQ> & :ARG2/EQ>"_dog_n_1_rel")
-poss_rel(:ARG1/NEQ> & :ARG2/EQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-poss_rel(:ARG1/NEQ> & :ARG2/EQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 poss_rel(:ARG1/NEQ> & :ARG2/EQ>)
 poss_rel(:ARG1/NEQ>"_tail_n_1_rel" & :ARG2/EQ>"_dog_n_1_rel")
-poss_rel(:ARG1/NEQ>"_tail_n_1_rel" & :ARG2/EQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-poss_rel(:ARG1/NEQ>"_tail_n_1_rel" & :ARG2/EQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 poss_rel(:ARG1/NEQ>"_tail_n_1_rel" & :ARG2/EQ>)
 
 ```
@@ -436,20 +428,68 @@ _the_q_rel
 ...     print(path)
 "_bark_v_1_rel":ARG1/NEQ>
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<RSTR/H:_the_q_rel
 "_dog_n_1_rel"
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
 "_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
 "_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
 "_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>
+"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 "_dog_n_1_rel"<RSTR/H:_the_q_rel
 "_tail_n_1_rel"
 "_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
@@ -458,12 +498,36 @@ _the_q_rel
 "_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<RSTR/H:_the_q_rel
 _the_q_rel
 def_explicit_q_rel
@@ -485,68 +549,68 @@ many many paths:
 ...     print(path)
 "_bark_v_1_rel":ARG1/NEQ>
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<RSTR/H:_the_q_rel
 "_dog_n_1_rel"
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 "_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
-"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
-"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
-"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
 "_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
 "_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
 "_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>
+"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 "_dog_n_1_rel"<RSTR/H:_the_q_rel
 "_tail_n_1_rel"
 "_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
@@ -555,36 +619,36 @@ many many paths:
 "_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel":/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"<RSTR/H:_the_q_rel
 _the_q_rel
 def_explicit_q_rel
@@ -605,25 +669,25 @@ Using the `BALANCED` flag can cut down some of the variants:
 ...     print(path)
 "_bark_v_1_rel":ARG1/NEQ>
 "_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
 "_dog_n_1_rel"
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
 "_tail_n_1_rel"
 "_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 "_wag_v_1_rel":ARG1/NEQ>
@@ -631,15 +695,15 @@ Using the `BALANCED` flag can cut down some of the variants:
 "_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>
 TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel")
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel)
-TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel & :/EQ:"_wag_v_1_rel":ARG1/NEQ>)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ> & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel" & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ> & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel" & <RSTR/H:_the_q_rel)
+TOP:/H>"_bark_v_1_rel":ARG1/NEQ>"_dog_n_1_rel"(<ARG2/EQ:poss_rel:ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <MOD/EQ:"_wag_v_1_rel":ARG1/NEQ>"_tail_n_1_rel"<RSTR/H:def_explicit_q_rel & <RSTR/H:_the_q_rel)
 _the_q_rel
 def_explicit_q_rel
 poss_rel:ARG1/NEQ>

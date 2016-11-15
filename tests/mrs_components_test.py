@@ -15,7 +15,7 @@ from delphin.mrs.xmrs import Xmrs
 from delphin.mrs.config import (
     CVARSORT, IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST, NIL_POST,
-    LTOP_NODEID, FIRST_NODEID
+    LTOP_NODEID, FIRST_NODEID, BARE_EQ_ROLE
 )
 
 
@@ -265,10 +265,10 @@ def test_links():
     assert sorted(links(x5)) == [
         (0, 10006, None, 'H'),
         (10000, 10001, 'RSTR', 'H'),
-        (10001, 10005, None, 'EQ'),
         (10002, 10004, 'RSTR', 'H'),
         (10003, 10001, 'ARG2', 'EQ'),
         (10003, 10004, 'ARG1', 'NEQ'),
+        (10005, 10001, BARE_EQ_ROLE, 'EQ'),
         (10005, 10004, 'ARG1', 'NEQ'),
         (10006, 10001, 'ARG1', 'NEQ')
     ]
@@ -280,8 +280,8 @@ def test_links():
         (10002, 10001, 'L-INDEX', 'NEQ'),
         (10002, 10003, 'R-HNDL', 'HEQ'),
         (10002, 10003, 'R-INDEX', 'NEQ'),
+        (10002, 10004, BARE_EQ_ROLE, 'EQ'),
         (10003, 10004, 'ARG1', 'NEQ'),
-        (10004, 10002, None, 'EQ'),
         (10005, 10004, 'ARG1', 'NEQ')
     ]
 

@@ -24,6 +24,7 @@ accomplishes the same thing).
 * `delphin.extra.latex` has nicer looking DMRS output
 * Quantifiers are detected more consistently for, e.g., DMRS conversion;
   this mostly resolves #84
+* DMRS `/EQ` links are now `MOD/EQ` and fix a direction (resolves #87)
 
 ### Fixed
 
