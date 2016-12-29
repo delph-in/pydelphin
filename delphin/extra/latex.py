@@ -75,6 +75,8 @@ def dmrs_tikz_dependency(xs):
 \\depstyle{rstr}{edge below, dotted, label style={text opacity=1}}
 \\depstyle{eq}{edge below, label style={text opacity=1}}
 \\depstyle{icons}{edge below, dashed}
+\\providecommand{\\named}{}  
+\\renewcommand{\\named}{named}
 
 %%% styles for predicates and roles (from mrs.sty)
 \\providecommand{\\spred}{} 
@@ -85,16 +87,21 @@ def dmrs_tikz_dependency(xs):
 
 \\begin{document}""".split("\n")
     
-    for x in xs:
+    for ix, x in enumerate(xs):
+        lines.append("%%%\n%%% {}\n%%%".format(ix+1)) 
         lines.append("\\begin{dependency}[dmrs]")
         ns = nodes(x)
         ### predicates
         lines.append("  \\begin{deptext}[column sep=10pt]")
         for i, n in enumerate(ns):
             sep = "\\&"  if  (i < len(ns) - 1) else  "\\\\"
+            pred = _latex_escape(n.pred.short_form())
+            pred = "\\named{}" if pred == 'named' else pred
+            if n.carg is not None:
+                print(n.carg.strip('"'))
+                pred += "\\smaller ({})".format(n.carg.strip('"'))
             lines.append("    \\spred{{{}}} {}     % node {}".format(
-                _latex_escape(n.pred.short_form()), sep, i+1))
-
+                pred, sep, i+1))
         lines.append("  \\end{deptext}")
         nodeidx = {n.nodeid: i+1 for i, n in enumerate(ns)}
         ### links
