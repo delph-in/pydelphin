@@ -2,8 +2,25 @@
 
 ## [Unreleased][unreleased]
 
+This release replaces the top-level `pyDelphin` and `mrs.py` scripts with
+`delphin.sh` (when installed, a `delphin` command is made available that
+accomplishes the same thing).
+
+### Added
+
+* `delphin.sh` top-level script (replaces the former `pyDelphin` and `mrs.py`)
+* `delphin.main` module for script usage
+* `mrs-json` and `dmrs-json` codecs for the `convert` script command
+  (currently only for Python 3, however)
+* Skeleton creation from sentence lists in the `mkprof` script command
+
 ### Changed
 
+* Filters and applicators in the `select`, `mkprof`, and `compare`
+  script commands now have the form `table:col=expr` instead of taking
+  two arguments
+* The `mkprof` script command produces skeletons by default, to mimic
+  [art](http://sweaglesw.org/linguistics/libtsdb/art)'s `mkprof` tool.
 * `delphin.extra.latex` has nicer looking DMRS output
 * Quantifiers are detected more consistently for, e.g., DMRS conversion;
   this mostly resolves #84
@@ -12,6 +29,11 @@
 
 * `delphin.interfaces.ace` now detects interleaved stderr messages when
   there are errors decoding or parsing S-Expressions (fixes #86)
+
+### Removed
+
+* `pyDelphin` top-level script (see `delphin.sh`)
+* `mrs.py` top-level script (see `delphin.sh`)
 
 ## [v0.5.1][]
 

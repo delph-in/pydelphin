@@ -1,0 +1,385 @@
+#!/usr/bin/env python3
+
+USAGE = """
+pyDelphin command
+
+Usage:
+  delphin (--help|--version)
+  delphin <command> [<args>...]
+
+Commands:
+  convert               convert MRS representations
+  select                select data from [incr tsdb()] profiles
+  mkprof                create [incr tsdb()] profiles
+  compare               compare two [incr tsdb()] profiles
+
+Options:
+  -h, --help            print usage and exit
+  -V, --version         print the version and exit
+"""
+
+CONVERT_USAGE = """
+Usage:
+  delphin convert [PATH] [--from=FMT] [--to=FMT]
+                  [--pretty-print|--indent=N]
+                  [--color=WHEN] [-v...|-q]
+
+Arguments:
+  PATH                  path to a file containing representations to convert,
+                        or a profile directory from which result:mrs will be
+                        selected; if not given, <stdin> is read as though it
+                        were a file.
+
+Options:
+  -h, --help            print usage and exit
+  -v, --verbose         increase verbosity
+  -q, --quiet           don't print to stdout/stderr
+  -f FMT, --from FMT    original representation [default: simplemrs]
+  -t FMT, --to FMT      target representation [default: simplemrs]
+  --pretty-print        format in a more human-readable way
+  --indent N            format with explicit indent N (implies --pretty-print)
+  --color WHEN          (auto|always|never) use ANSI color [default: auto]
+"""
+
+SELECT_USAGE = """
+Usage:
+  delphin select DATASPEC PROFILE [--join=TABLES]
+                 [--apply=APL]... [--filter=CND]... [-v...|-q]
+
+Arguments:
+  DATASPEC              table:col[@col...] data specifier (e.g. item:i-input)
+  PROFILE               path to the profile directory to select data from
+
+Options:
+  -h, --help            print usage and exit
+  -v, --verbose         increase verbosity
+  -q, --quiet           don't print to stdout/stderr
+  -j TBLS, --join TBLS  join two tables with a shared key (e.g. parse,result);
+                        dataspecs require table (e.g. parse:i-id@result:mrs)
+  -a APL, --apply APL   apply an expression to rows/cols in the profile;
+                        APL is a string like 'table:col=expression'
+  -f CND, --filter CND  keep rows satisfying a condition; CND is a
+                        string like 'table:col=expression'
+"""
+
+MKPROF_USAGE = """
+Usage:
+  delphin mkprof DEST --source PROFILE [--apply=APL]... [--filter=CND]...
+                      [--relations=FILE] [--full] [--gzip] [-v...|-q]
+  delphin mkprof DEST --relations=FILE [--input TXT] [--gzip] [-v...|-q]
+
+Item data for the mkprof command may come from a source profile (via
+--source), a text file (via --input), or from <stdin>. In the latter two
+cases, each line is a sentence ('*' in the first column indicates an
+ungrammatical sentence), the --relations option is required, and only
+the i-id, i-input, and i-wf fields will be filled with a meaningful
+value. By default, mkprof produces skeletons, but --full may be used
+(with --source) to write all tables.
+
+Arguments:
+  DEST                  directory for the destination (output) profile
+
+Options:
+  -h, --help            print usage and exit
+  -v, --verbose         increase verbosity
+  -q, --quiet           don't print to stdout/stderr
+  -i TXT, --input TXT   file of test sentences (* sents are ungrammatical)
+  -s PROFILE, --source PROFILE
+                        path to a profile directory
+  --full                write all tables (must be used with --source)
+  -r FILE, --relations FILE
+                        relations file to use for destination profile
+  -a APL, --apply APL   apply an expression to rows/cols in the profile;
+                        APL is a string like 'table:col=expression'
+  -f CND, --filter CND  keep rows satisfying a condition; CND is a
+                        string like 'table:col=expression'
+  -z, --gzip            compress table files with gzip
+"""
+
+COMPARE_USAGE = """
+Usage:
+  delphin compare PROFILE GOLD [--apply=APL]... [--filter=CND]... [-v...|-q]
+
+Arguments:
+  PROFILE               path to the current profile directory
+  GOLD                  path to the gold profile directory
+
+Options:
+  -h, --help            print usage and exit
+  -v, --verbose         increase verbosity
+  -q, --quiet           don't print to stdout/stderr
+  -a APL, --apply APL   apply an expression to rows/cols in the profile;
+                        APL is a string like 'table:col=expression'
+  -f CND, --filter CND  keep rows satisfying a condition; CND is a
+                        string like 'table:col=expression'
+"""
+
+import sys
+import os
+import logging
+import json
+
+from docopt import docopt
+
+from delphin.__about__ import __version__
+from delphin.mrs import xmrs
+from delphin import itsdb
+
+
+def main():
+    args = docopt(
+        USAGE,
+        version='pyDelphin {}'.format(__version__),
+        options_first=True
+    )
+
+    cmd = args['<command>']
+    try:
+        command, usage = {
+            'convert': (convert, CONVERT_USAGE),
+            'select': (select, SELECT_USAGE),
+            'mkprof': (mkprof, MKPROF_USAGE),
+            'compare': (compare, COMPARE_USAGE),
+        }[cmd]
+    except KeyError:
+        sys.exit('{} is not a valid command. See `delphin --help`'.format(cmd))
+
+    args = docopt(usage, [cmd] + args['<args>'])
+
+    # global init
+    if args.get('--quiet', False):
+        args['--verbose'] = 0
+        sys.stdout.close()
+        sys.stdout = open(os.devnull, 'w')
+
+    logging.basicConfig(level=50 - ((args['--verbose'] + 2) * 10))
+
+    command(args)
+
+
+def convert(args):
+    """
+    Convert between various MRS codecs or to export formats.
+    """
+    from delphin.mrs import (
+        simplemrs,
+        mrx,
+        dmrx,
+        eds,
+        simpledmrs
+    )
+    from delphin.extra import latex
+    codecs = dict([
+        ('simplemrs', simplemrs),
+        ('mrx', mrx),
+        ('dmrx', dmrx),
+        ('eds', eds),
+        ('mrs-json', _mrs_json()),
+        ('dmrs-json', _dmrs_json())
+    ])
+    exporters = dict([
+        ('simpledmrs', simpledmrs.dumps),
+        ('dmrs-tikz', latex.dmrs_tikz_dependency)
+    ])
+    # arg validation
+    if args['--from'] not in codecs:
+        sys.exit('Source format must be one of: {}'
+                 .format(', '.join(sorted(codecs))))
+    if args['--to'] not in set(codecs).union(exporters):
+        sys.exit('Target format must be one of: {}'
+                 .format(', '.join(sorted(exporters))))
+    args['--color'] = (
+        args['--color'] == 'always' or
+        (args['--color'] == 'auto' and sys.stdout.isatty())
+    )
+
+    # read
+    srcfmt = codecs[args['--from']]
+    if args['PATH'] is not None:
+        if os.path.isdir(args['PATH']):
+            p = itsdb.ItsdbProfile(args['PATH'])
+            xs = [srcfmt.loads_one(r[0]) for r in p.select('result', ['mrs'])]
+        else:
+            xs = srcfmt.load(open(args['PATH'], 'r'))
+    else:
+        xs = srcfmt.loads(sys.stdin.read())
+
+    # write
+    output = ''
+    if args['--to'] in codecs:
+        output = codecs[args['--to']].dumps(
+            xs,
+            pretty_print=args['--pretty-print'],
+            color=args['--color']
+        )
+    elif args['--to'] in exporters:
+        output = exporters[args['--to']](xs)
+    print(output)
+
+
+def select(args):
+    """
+    Select data from [incr tsdb()] profiles.
+    """
+    in_profile = _prepare_input_profile(args['PROFILE'],
+                                        filters=args['--filter'],
+                                        applicators=args['--apply'])
+    if args['--join']:
+        tbl1, tbl2 = map(str.strip, args['--join'].split(','))
+        rows = in_profile.join(tbl1, tbl2, key_filter=True)
+        # Adding : is just for robustness. We need something like
+        # :table:col@table@col, but may have gotten table:col@table@col
+        if not args['DATASPEC'].startswith(':'):
+            args['DATASPEC'] = ':' + args['DATASPEC']
+        table, cols = itsdb.get_data_specifier(args['DATASPEC'])
+    else:
+        table, cols = itsdb.get_data_specifier(args['DATASPEC'])
+        rows = in_profile.read_table(table, key_filter=True)
+    for row in itsdb.select_rows(cols, rows, mode='row'):
+        print(row)
+
+
+def mkprof(args):
+    """
+    Create [incr tsdb()] profiles or skeletons.
+    """
+    outdir = args['DEST']
+    if args['--source']:  # input is profile
+        p = _prepare_input_profile(args['--source'],
+                                   filters=args['--filter'],
+                                   applicators=args['--apply'])
+        relations = args['--relations'] or os.path.join(p.root, 'relations')
+    else:  # input is stdin or txt file
+        p = None
+        relations = args['--relations']
+
+    if not os.path.isfile(relations):
+        sys.exit('Invalid relations file: {}'.format(relations))
+
+    if args['--full']:
+        _prepare_output_directory(outdir)
+        p.write_profile(outdir, relations_filename=relations, key_filter=True,
+                        gzip=args['--gzip'])
+    else:
+        if p is not None:
+            rows = p.read_table('item')
+        elif args['--input'] is not None:
+            rows = _lines_to_rows(open(args['--input']))
+        else:
+            rows = _lines_to_rows(sys.stdin)
+        itsdb.make_skeleton(outdir, relations, rows, gzip=args['--gzip'])
+
+    # summarize what was done
+    prof = itsdb.ItsdbProfile(outdir, index=False)
+    relations = prof.relations
+    tblsort = lambda t: (t[1] not in set(['item', 'item-set', 'fold']), t[0])
+    tables = [tbl for i, tbl in sorted(enumerate(relations), key=tblsort)]
+    for filename in ['relations'] + tables:
+        f = os.path.join(outdir, filename)
+        if os.path.isfile(f):
+            stat = os.stat(f)
+            print('{:<6} bytes\t{}'.format(stat.st_size, filename))
+
+
+def compare(args):
+    """
+    Compare two [incr tsdb()] profiles.
+    """
+    from delphin.mrs import simplemrs, compare as mrs_compare
+    template = '{id}\t<{left},{shared},{right}>'
+    if args['--verbose'] >= 1:
+        template += '\t{string}'
+
+    test_profile = _prepare_input_profile(args['PROFILE'],
+                                          filters=args['--filter'],
+                                          applicators=args['--apply'])
+    gold_profile = _prepare_input_profile(args['GOLD'])
+
+    i_inputs = dict((row['parse:parse-id'], row['item:i-input'])
+                    for row in test_profile.join('item', 'parse'))
+    
+    matched_rows = itsdb.match_rows(
+        test_profile.read_table('result'),
+        gold_profile.read_table('result'),
+        'parse-id'
+    )
+    for (key, testrows, goldrows) in matched_rows:
+        (test_unique, shared, gold_unique) = mrs_compare.compare_bags(
+            [simplemrs.loads_one(row['mrs']) for row in testrows],
+            [simplemrs.loads_one(row['mrs']) for row in goldrows]
+        )
+        print(template.format(
+            id=key,
+            string=i_inputs[key],
+            left=test_unique,
+            shared=shared,
+            right=gold_unique
+        ))
+
+
+## Helper definitions
+
+# simulate json codecs for MRS and DMRS
+
+class _mrs_json(object):
+    CLS = xmrs.Mrs
+    def getlist(self, o):
+        if isinstance(o, dict):
+            return [o]
+        else:
+            return o
+    def load(self, f):
+        return [self.CLS.from_dict(d) for d in self.getlist(json.load(f))]
+    def loads(self, s):
+        return [self.CLS.from_dict(d) for d in self.getlist(json.loads(s))]
+    def loads_one(self, s):
+        return self.CLS.from_dict(json.loads(s))
+    def dumps(self, xs, pretty_print=False, indent=None, **kwargs):
+        if pretty_print and indent is None:
+            indent = 2
+        return json.dumps([self.CLS.to_dict(x) for x in xs], indent=indent)
+
+class _dmrs_json(_mrs_json):
+    CLS = xmrs.Dmrs
+
+
+# working with directories and profiles
+
+def _prepare_input_profile(path, filters=None, applicators=None):
+    flts = [_make_itsdb_action(*f.split('=', 1)) for f in (filters or [])]
+    apls = [_make_itsdb_action(*f.split('=', 1)) for f in (applicators or [])]
+    index = len(flts) > 0
+    prof = itsdb.ItsdbProfile(path,
+                              filters=flts,
+                              applicators=apls,
+                              index=index)
+    return prof
+
+
+def _make_itsdb_action(data_specifier, function):
+    table, cols = itsdb.get_data_specifier(data_specifier)
+    function = eval('lambda row, x:{}'.format(function))
+    return (table, cols, function)
+
+
+def _prepare_output_directory(path):
+    try:
+        os.makedirs(path, exist_ok=True)
+    except PermissionError:
+        sys.exit('Permission denied to create output directory: {}'
+                 .format(path))
+    if not os.access(path, os.R_OK|os.W_OK):
+        sys.exit('Cannot write to output directory: {}'
+                 .format(path))
+
+
+def _lines_to_rows(lines):
+    for i, line in enumerate(lines):
+        i_id = i * 10
+        i_wf = 0 if line.startswith('*') else 1
+        i_input = line[1:].strip() if line.startswith('*') else line.strip()
+        yield {'i-id': i_id, 'i-wf': i_wf, 'i-input': i_input}
+
+
+if __name__ == '__main__':
+    main()

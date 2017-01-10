@@ -85,13 +85,14 @@ setup(
     install_requires=[
         'networkx',
         'requests',
-        'Pygments'
+        'Pygments',
+        'docopt >=0.6.0'
     ],
-    # entry_points={
-    #     'console_scripts': [
-    #         'fine=...'
-    #     ]
-    # }
+    entry_points={
+        'console_scripts': [
+            'delphin=delphin.main:main'
+        ]
+    },
     tests_require=['pytest>=2.8.0'],
     cmdclass={'test':PyTest, 'coverage':PyTestCoverage}
 )
