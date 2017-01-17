@@ -143,10 +143,12 @@ def dumps(ms, single=False, version=_default_version,
     Returns:
         a SimpleMrs string representation of a corpus of [Xmrs]
     """
+    if not pretty_print and kwargs.get('indent'):
+        pretty_print = True
     if single:
         ms = [ms]
     return serialize(ms, version=version,
-                     pretty_print=pretty_print, color=color, **kwargs)
+                     pretty_print=pretty_print, color=color)
 
 
 # for convenience

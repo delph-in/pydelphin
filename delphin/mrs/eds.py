@@ -201,6 +201,8 @@ def dump(fh, ms, single=False, properties=False, pretty_print=True, **kwargs):
           file=fh)
 
 def dumps(ms, single=False, properties=False, pretty_print=True, **kwargs):
+    if not pretty_print and kwargs.get('indent'):
+        pretty_print = True
     if single:
         ms = [ms]
     return serialize(

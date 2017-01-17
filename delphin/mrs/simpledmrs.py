@@ -44,9 +44,11 @@ def dump(fh, ms, **kwargs):
 
 
 def dumps(ms, single=False, pretty_print=False, **kwargs):
+    if pretty_print and 'indent' not in kwargs:
+        kwargs['indent'] = 2
     if single:
         ms = [ms]
-    return serialize(ms, indent=2 if pretty_print else None)
+    return serialize(ms, indent=kwargs.get('indent'))
 
 # for convenience
 

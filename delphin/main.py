@@ -170,52 +170,57 @@ def convert(args):
     )
     from delphin.extra import latex
     codecs = dict([
-        ('simplemrs', simplemrs),
-        ('mrx', mrx),
-        ('dmrx', dmrx),
-        ('eds', eds),
-        ('mrs-json', _mrs_json()),
-        ('dmrs-json', _dmrs_json())
+        ('simplemrs', (simplemrs.loads, simplemrs.dumps)),
+        ('mrx', (mrx.loads, mrx.dumps)),
+        ('dmrx', (dmrx.loads, dmrx.dumps)),
+        ('eds', (eds.loads, eds.dumps)),
+        ('mrs-json', (_mrs_json.loads, _mrs_json.dumps)),
+        ('dmrs-json', (_dmrs_json.loads, _dmrs_json.dumps)),
+        ('simpledmrs', (None, simpledmrs.dumps)),
+        ('dmrs-tikz', (None, latex.dmrs_tikz_dependency))
     ])
-    exporters = dict([
-        ('simpledmrs', simpledmrs.dumps),
-        ('dmrs-tikz', latex.dmrs_tikz_dependency)
-    ])
+    decoders = set(k for k, cd in codecs.items() if cd[0])
+    encoders = set(k for k, cd in codecs.items() if cd[1])
     # arg validation
-    if args['--from'] not in codecs:
+    if args['--from'] not in decoders:
         sys.exit('Source format must be one of: {}'
-                 .format(', '.join(sorted(codecs))))
-    if args['--to'] not in set(codecs).union(exporters):
-        sys.exit('Target format must be one of: {}'
-                 .format(', '.join(sorted(exporters))))
+                 .format(', '.join(sorted(decoders))))
+    if args['--to'] not in encoders:
+        sys.exit('Source format must be one of: {}'
+                 .format(', '.join(sorted(encoders))))
     args['--color'] = (
         args['--color'] == 'always' or
         (args['--color'] == 'auto' and sys.stdout.isatty())
     )
+    if args['--indent']:
+        args['--pretty-print'] = True
+        if args['--indent'].isdigit():
+            args['--indent'] = int(args['--indent'])
 
     # read
-    srcfmt = codecs[args['--from']]
+    loads = codecs[args['--from']][0]
     if args['PATH'] is not None:
         if os.path.isdir(args['PATH']):
             p = itsdb.ItsdbProfile(args['PATH'])
-            xs = [srcfmt.loads_one(r[0]) for r in p.select('result', ['mrs'])]
+            xs = [loads(r[0])[0] for r in p.select('result', ['mrs'])]
         else:
-            xs = srcfmt.load(open(args['PATH'], 'r'))
+            xs = loads(open(args['PATH'], 'r').read())
     else:
-        xs = srcfmt.loads(sys.stdin.read())
+        xs = loads(sys.stdin.read())
 
     # write
-    output = ''
-    if args['--to'] in codecs:
-        output = codecs[args['--to']].dumps(
-            xs,
-            pretty_print=args['--pretty-print'],
-            color=args['--color']
+    dumps = codecs[args['--to']][1]
+    kwargs = {}
+    if args['--color']: kwargs['color'] = args['--color']
+    if args['--pretty-print']: kwargs['pretty_print'] = args['--pretty-print']
+    if args['--indent']: kwargs['indent'] = args['--indent']
+    try:
+        print(dumps(xs, **kwargs))
+    except TypeError:
+        sys.exit(
+            'One or more parameters to {} are not supported: {}'
+            .format(args['--to'], ', '.join(kwargs))
         )
-    elif args['--to'] in exporters:
-        output = exporters[args['--to']](xs)
-    print(output)
-
 
 def select(args):
     """
@@ -321,7 +326,7 @@ def compare(args):
 
 # simulate json codecs for MRS and DMRS
 
-class _mrs_json(object):
+class _MRS_JSON(object):
     CLS = xmrs.Mrs
     def getlist(self, o):
         if isinstance(o, dict):
@@ -332,16 +337,18 @@ class _mrs_json(object):
         return [self.CLS.from_dict(d) for d in self.getlist(json.load(f))]
     def loads(self, s):
         return [self.CLS.from_dict(d) for d in self.getlist(json.loads(s))]
-    def loads_one(self, s):
-        return self.CLS.from_dict(json.loads(s))
     def dumps(self, xs, pretty_print=False, indent=None, **kwargs):
         if pretty_print and indent is None:
             indent = 2
         return json.dumps([self.CLS.to_dict(x) for x in xs], indent=indent)
 
-class _dmrs_json(_mrs_json):
+
+class _DMRS_JSON(_MRS_JSON):
     CLS = xmrs.Dmrs
 
+
+_mrs_json = _MRS_JSON()
+_dmrs_json = _DMRS_JSON()
 
 # working with directories and profiles
 

@@ -38,7 +38,7 @@ def _latex_escape(s):
         s = s.replace(c, r)
     return s
 
-def dmrs_tikz_dependency(xs):
+def dmrs_tikz_dependency(xs, **kwargs):
     """
     Return a LaTeX document with each Xmrs in *xs* rendered as DMRSs.
 
