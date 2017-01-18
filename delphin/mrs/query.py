@@ -7,7 +7,6 @@ from itertools import product
 
 from delphin.mrs.components import nodes, links, var_id
 from delphin.mrs.util import rargname_sortkey
-from delphin.mrs.config import IVARG_ROLE
 
 # query methods
 def select_nodeids(xmrs, iv=None, label=None, pred=None):
@@ -190,19 +189,19 @@ def find_subgraphs_by_preds(xmrs, preds, connected=None):
 #             if 'iv' in vd or 'LBL' in vd['refs'] or 'hcons' in vd]
 
 def intrinsic_variable(xmrs, nid):
-    return xmrs.args(nid).get(IVARG_ROLE, None)
+    return xmrs.ep(nid).intrinsic_variable
 
 def intrinsic_variables(xmrs):
     ivs = set(
-        ep[3][IVARG_ROLE] for ep in xmrs.eps()
-        if not ep[1].is_quantifier() and IVARG_ROLE in ep[3]
+        ep.intrinsic_variable for ep in xmrs.eps()
+        if not ep.is_quantifier() and ep.intrinsic_variable is not None
     )
     return sorted(ivs, key=var_id)
 
 def bound_variables(xmrs):
     bvs = set(
-        ep[3][IVARG_ROLE] for ep in xmrs.eps()
-        if ep[1].is_quantifier() and IVARG_ROLE in ep[3]
+        ep.intrinsic_variable for ep in xmrs.eps()
+        if ep.is_quantifier() and ep.intrinsic_variable is not None
     )
     return sorted(bvs, key=var_id)
 

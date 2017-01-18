@@ -450,6 +450,7 @@ class TestPred():
 
 
     def test_is_quantifier(self):
+        # NOTE: deprecated
         assert spred('"_the_q_rel"').is_quantifier() == True
         assert spred('_udef_q_rel').is_quantifier() == True
         # how do we do this one?

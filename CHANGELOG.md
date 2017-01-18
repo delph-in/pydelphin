@@ -2,10 +2,11 @@
 
 ## [Unreleased][unreleased]
 
-This release replaces the top-level `pyDelphin` and `mrs.py` scripts with
-`delphin.sh` (when installed, a `delphin` command is made available that
-accomplishes the same thing). It also introduces the PENMAN codec for
-DMRS and EDS.
+This release replaces the top-level `pyDelphin` and `mrs.py` scripts
+with `delphin.sh` (when installed, a `delphin` command is made available
+that accomplishes the same thing). The PENMAN codec is introduced for
+DMRS and EDS. Various bugs and inconsistencies in MRS components are
+fixed or the functionality is deprecated.
 
 ### Added
 
@@ -47,6 +48,18 @@ DMRS and EDS.
 
 * `pyDelphin` top-level script (see `delphin.sh`)
 * `mrs.py` top-level script (see `delphin.sh`)
+* @total_ordering decorator on `delphin.mrs.components.Node` and
+  `delphin.mrs.components.ElementaryPredication`, which provided
+  comparisons for `__gt__`, `__ge__`, and `__le__` (`__lt__` was
+  defined), is removed, but it didn't do much anyway because
+  `__eq__` was not also defined on these classes.
+
+### Deprecated
+
+* `delphin.mrs.components.Pred.is_quantifier()`
+* `delphin.mrs.components.Node.is_quantifier()`
+* `delphin.mrs.components.Node.__lt__()`
+* `delphin.mrs.components.ElementaryPredication.__lt__()`
 
 ## [v0.5.1][]
 

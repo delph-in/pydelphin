@@ -5,9 +5,9 @@ Classes and functions for working with the components of *MRS objects.
 
 import re
 import logging
+import warnings
 from collections import namedtuple, MutableMapping
 from itertools import starmap
-from functools import total_ordering
 
 from delphin.exceptions import (XmrsError, XmrsStructureError)
 from .config import (
@@ -469,7 +469,13 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
     def is_quantifier(self):
         """
         Return `True` if the predicate has a quantifier part-of-speech.
+
+        *Deprecated since v0.6.0*
         """
+        warnings.warn(
+            'Deprecated; try checking xmrs.nodeids(quantifier=True)',
+            DeprecationWarning
+        )
         return self.pos == QUANTIFIER_POS
 
 
@@ -530,7 +536,6 @@ def normalize_pred_string(predstr):
     return '_'.join(tokens)
 
 
-@total_ordering
 class Node(
     namedtuple('Node', ('nodeid', 'pred', 'sortinfo',
                         'lnk', 'surface', 'base', 'carg')),
@@ -587,13 +592,15 @@ class Node(
     #             self.carg == other.carg)
 
     def __lt__(self, other):
-        x1 = (self.cfrom, self.cto, -self.is_quantifier(), self.pred.lemma)
+        warnings.warn("Deprecated", DeprecationWarning)
+        x1 = (self.cfrom, self.cto, self.pred.pos != QUANTIFIER_POS,
+              self.pred.lemma)
         try:
-            x2 = (other.cfrom, other.cto, -other.is_quantifier(),
+            x2 = (other.cfrom, other.cto, other.pred.pos != QUANTIFIER_POS,
                   other.pred.lemma)
             return x1 < x2
         except AttributeError:
-            return False  # comparing Node to non-Node means Node is greater?
+            return NotImplemented
 
     @property
     def cvarsort(self):
@@ -616,7 +623,13 @@ class Node(
     def is_quantifier(self):
         """
         Return `True` if the Node's [Pred] appears to be a quantifier.
+
+        *Deprecated since v0.6.0*
         """
+        warnings.warn(
+            'Deprecated; try checking xmrs.nodeids(quantifier=True)',
+            DeprecationWarning
+        )
         return self.pred.is_quantifier()
 
 
@@ -638,7 +651,6 @@ def nodes(xmrs):
     return nodes
 
 
-@total_ordering
 class ElementaryPredication(
     namedtuple('ElementaryPredication',
                ('nodeid', 'pred', 'label', 'args', 'lnk', 'surface', 'base')),
@@ -682,13 +694,14 @@ class ElementaryPredication(
         )
 
     def __lt__(self, other):
+        warnings.warn("Deprecated", DeprecationWarning)
         x1 = (self.cfrom, self.cto, -self.is_quantifier(), self.pred.lemma)
         try:
             x2 = (other.cfrom, other.cto, -other.is_quantifier(),
                   other.pred.lemma)
             return x1 < x2
         except AttributeError:
-            return False  # comparing EP to non-EP means EP is greater?
+            return NotImplemented
 
     # these properties are specific to the EP's qualities
 
