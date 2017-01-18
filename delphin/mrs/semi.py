@@ -1,21 +1,16 @@
 
+"""
+Semantic Interfaces (SEM-I) describe the inventory of semantic
+components in a grammar, include variables, properties, roles, and
+predicates. This information can be used for validating semantic
+structures or for filling out missing information in incomplete
+representations.
+"""
+
+
 import re
 from os.path import dirname, join as pjoin
 from collections import namedtuple
-
-from delphin.lib.pegre import (
-    literal as lit,
-    regex,
-    nonterminal as nt,
-    sequence as seq,
-    zero_or_more,
-    optional as opt,
-    delimited,
-    bounded,
-    Ignore,
-    Peg,
-    Spacing,
-)
 
 _SEMI_SECTIONS = (
     'variables',
@@ -143,6 +138,15 @@ class Predicate(namedtuple('Predicate',
 # }
 
 def load(fn):
+    """
+    Read the SEM-I beginning at the filename *fn* and return the SemI.
+
+    Args:
+        fn: the filename of the top file for the SEM-I. Note: this must
+            be a filename and not a file-like object.
+    Returns:
+        The SemI defined by *fn*
+    """
     data = _load_file(fn)
     return SemI(**data)
 
@@ -267,11 +271,29 @@ def _read_file(fn, basedir):
     return data
 
 class SemI(object):
+    """
+    A semantic interface.
+
+    SEM-Is describe the semantic inventory for a grammar. These include
+    the variable types, valid properties for variables, valid roles
+    for predications, and a lexicon of predicates with associated roles.
+    """
     def __init__(self,
                  variables=None,
                  properties=None,
                  roles=None,
                  predicates=None):
+        """
+        Initialize a new SEM-I instance.
+
+        Args:
+            variables: a mapping of (var, Variable)
+            properties: a mapping of (prop, Property)
+            roles: a mapping of (role, Role)
+            predicates: a mapping of (pred, Predicate)
+        Returns:
+            a new SEM-I instance            
+        """
         self.variables = dict(variables) if variables is not None else {}
         self.properties = dict(properties) if properties is not None else {}
         self.roles = dict(roles) if roles is not None else {}
@@ -279,6 +301,9 @@ class SemI(object):
 
     @classmethod
     def from_dict(cls, d):
+        """
+        Instantiate a SemI from a dictionary representation.
+        """
         read = lambda cls: (lambda pair: (pair[0], cls.from_dict(pair[1])))
         return cls(
             variables=map(read(Variable), d.get('variables', {}).items()),
@@ -288,6 +313,9 @@ class SemI(object):
         )
 
     def to_dict(self):
+        """
+        Return a dictionary representation of the SemI.
+        """
         make = lambda pair: (pair[0], pair[1].to_dict())
         return dict(
             variables=dict(make(v) for v in self.variables.items()),

@@ -1,4 +1,11 @@
 
+"""
+Variable property mappings (VPMs) convert grammar-internal variables
+(e.g. `event5`) to the grammar-external form (e.g. `e5`), and also map
+variable properties (e.g. `PNG: 1pl` might map to `PERS: 1` and
+`NUM: pl`). See http://moin.delph-in.net/RmrsVpm for more information.
+"""
+
 import re
 
 from delphin.mrs.components import sort_vid_split
@@ -9,7 +16,25 @@ _SUBSUME_OPS = set(['<>', '<<', '>>'])
 _EQUAL_OPS = set(['==', '<=', '=>'])
 
 
-def load(fh, semi=None):
+def load(source, semi=None):
+    """
+    Read a variable-property mapping from *source* and return the VPM.
+
+    Args:
+        source: a filename or file-like object containing the VPM
+            definitions
+        semi: a [SemI] instance; if provided, it is passed to the VPM
+            constructor
+    Returns:
+        a VPM instance
+    """
+    if hasattr(source, 'read'):
+        return _load(source, semi)
+    else:
+        with open(source, 'r') as fh:
+            return _load(fh, semi)
+
+def _load(fh, semi):
     typemap = []
     propmap = []
     curmap = typemap
@@ -40,15 +65,47 @@ def load(fh, semi=None):
 
         raise ValueError('Invalid line in VPM file: {}'.format(line))
 
-    return Vpm(typemap, propmap, semi)
+    return VPM(typemap, propmap, semi)
 
-class Vpm(object):
+class VPM(object):
+    """
+    A variable-property mapping.
+
+    This class contains the rules for mapping variable properties from
+    the grammar-internal definitions to grammar-external ones, and back
+    again.
+    """
     def __init__(self, typemap, propmap, semi=None):
+        """
+        Initialize a new variable-property mapping instance.
+
+        Args:
+            typemap: an iterable of (src, OP, tgt) iterables
+            propmap: an iterable of (featset, valmap) tuples, where
+                featmap is a tuple of two lists: (source_features,
+                target_features); and valmap is a list of value tuples:
+                (source_values, OP, target_values)
+            semi: if provided, the [SemI] object is used for more
+                sophisticated value comparisons
+        Returns:
+            A new VPM instance
+        """
         self._typemap = typemap  # [(src, OP, tgt)]
         self._propmap = propmap  # [((srcfs, tgtfs), [(srcvs, OP, tgtvs)])]
         self._semi = semi
 
     def apply(self, var, props, reverse=False):
+        """
+        Apply the VPM to variable *var* and properties *props*.
+
+        Args:
+            var: a variable
+            props: a dictionary mapping properties to values
+            reverse: if True, apply the rules in reverse (e.g. from
+                grammar-external to grammar-internal forms)
+        Returns:
+            a tuple (v, p) of the mapped variable and properties
+        """
         vs, vid = sort_vid_split(var)
         if reverse:
             # variable type mapping is disabled in reverse

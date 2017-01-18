@@ -5,7 +5,9 @@
 This release replaces the top-level `pyDelphin` and `mrs.py` scripts
 with `delphin.sh` (when installed, a `delphin` command is made available
 that accomplishes the same thing). The PENMAN codec is introduced for
-DMRS and EDS. Various bugs and inconsistencies in MRS components are
+DMRS and EDS. SEM-I and VPM modules are added with tests, but proper
+subsumption comparisons aren't available until type hierarchies are also
+added. Finally, various bugs and inconsistencies in MRS components are
 fixed or the functionality is deprecated.
 
 ### Added
@@ -24,6 +26,8 @@ fixed or the functionality is deprecated.
 * `delphin.mrs.eds.Eds.from_triples()`
 * `delphin.mrs.penman` module for PENMAN serialization of DMRS and EDS
   (resolves #85)
+* `delphin.vpm` and tests
+* `delphin.semi` and tests
 
 ### Changed
 
