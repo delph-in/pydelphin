@@ -76,10 +76,14 @@ def test_get_relations(empty_profile):
     ]
 
 def test_get_data_specifier():
-    assert itsdb.get_data_specifier('item') == ('item', None)
-    assert itsdb.get_data_specifier('item:i-input') == ('item', ['i-input'])
-    assert itsdb.get_data_specifier('item:i-id@i-input') == ('item', ['i-id', 'i-input'])
-    assert itsdb.get_data_specifier(':i-id') == (None, ['i-id'])
+    dataspec = itsdb.get_data_specifier
+    assert dataspec('item') == ('item', None)
+    assert dataspec('item:i-input') == ('item', ['i-input'])
+    assert dataspec('item:i-id@i-input') == ('item', ['i-id', 'i-input'])
+    assert dataspec(':i-id') == (None, ['i-id'])
+    # for joined tables
+    assert dataspec('tmp:item:i-id@output:o-surface') == ('tmp', ['item:i-id', 'output:o-surface'])
+    assert dataspec(':item:i-id@output:o-surface') == (None, ['item:i-id', 'output:o-surface'])
 
 def test_escape():
     assert itsdb.escape('') == ''
@@ -111,23 +115,43 @@ def test_encode_row():
     assert itsdb.encode_row(['one', '', 'three']) == 'one@@three'
     assert itsdb.encode_row(['one@', '\\two\nabc']) == 'one\\s@\\\\two\\nabc'
 
-def test_make_row():
-    pass
+def test_make_row(empty_profile):
+    r = itsdb.get_relations(os.path.join(empty_profile, 'relations'))
+    assert itsdb.make_row({'i-input': 'one', 'i-id': 100}, r['item']) == '100@one'
+    assert itsdb.make_row({'i-id': 100, 'mrs': '[RELS: < > HCONS: < >]'}, r['item']) == '100@'
 
 def test_default_value():
-    pass
+    assert itsdb.default_value('foo', ':string') == ''
+    assert itsdb.default_value('foo', '') == ''
+    assert itsdb.default_value('foo', ':integer') == '-1'
+    assert itsdb.default_value('i-wf', ':integer') == '1'
 
 def test_filter_rows():
-    pass
+    assert list(itsdb.filter_rows([(['i-id'], lambda row, x: x=='10')], [{'i-id': '10'}, {'i-id': '20'}])) == [{'i-id': '10'}]
+    assert list(itsdb.filter_rows([(['i-input'], lambda row, x: len(x) > 2)], [{'i-id': '10'}, {'i-id': '20'}])) == [{'i-id': '10'}, {'i-id': '20'}]
+    assert list(itsdb.filter_rows([(['i-input'], lambda row, x: len(x) > 2)], [{'i-id': '10', 'i-input': 'a'}, {'i-id': '20', 'i-input': 'abc'}])) == [{'i-id': '20', 'i-input': 'abc'}]
 
 def test_apply_rows():
-    pass
+    assert list(itsdb.apply_rows([(['i-id'], lambda row, x: str(int(x)+10))], [{'i-id': '10'}, {'i-id': '20'}])) == [{'i-id': '20'}, {'i-id': '30'}]
+    # the following inserts any col that didn't already exist. Is this desired?
+    # assert list(itsdb.apply_rows([(['i-input'], lambda row, x: x.replace(' ', ''))], [{'i-id': '10'}, {'i-id': '20'}])) == [{'i-id': '10'}, {'i-id': '20'}]
+    assert list(itsdb.apply_rows([(['i-input'], lambda row, x: x.replace(' ', ''))], [{'i-id': '10', 'i-input': 'a'}, {'i-id': '20', 'i-input': 'a b  c'}])) == [{'i-id': '10', 'i-input': 'a'}, {'i-id': '20', 'i-input': 'abc'}]
 
-def test_select_rows():
-    pass
+def test_select_rows(single_item_profile):
+    p = itsdb.ItsdbProfile(single_item_profile)
+    # assert list(itsdb.select_rows(None, p.read_table('item'))) == [['0', 'The dog barks.']]
+    assert list(itsdb.select_rows(['i-id', 'i-input'], p.read_table('item'))) == [['0', 'The dog barks.']]
+    assert list(itsdb.select_rows(['item:i-id', 'parse:parse-id'], p.join('item', 'parse'))) == [['0', '0']]
 
 def test_match_rows():
-    pass
+    assert list(itsdb.match_rows(
+        [{'i-id': '10', 'i-input': 'a'}, {'i-id': '20', 'i-input': 'b'}],
+        [{'i-id': '20', 'i-input': 'c'}, {'i-id': '30', 'i-input': 'd'}],
+        'i-id')) == [
+            ('10', [{'i-id': '10', 'i-input': 'a'}], []),
+            ('20', [{'i-id': '20', 'i-input': 'b'}], [{'i-id': '20', 'i-input': 'c'}]),
+            ('30', [], [{'i-id': '30', 'i-input': 'd'}])
+        ]
 
 def test_make_skeleton():
     pass
