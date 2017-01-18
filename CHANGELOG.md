@@ -42,6 +42,7 @@ fixed or the functionality is deprecated.
 * DMRS `/EQ` links are now `MOD/EQ` and fix a direction (resolves #87)
 * All *MRS serializers/exporters take **kwargs (though many ignore them)
   so that a common API can be used for, e.g., *MRS conversion.
+* Strip quotes on reading CARGs, add them when writing (fixes #75)
 
 ### Fixed
 

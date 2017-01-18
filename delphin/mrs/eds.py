@@ -334,7 +334,7 @@ def deserialize(s):
 
 eds = '{{{top}{flag}{delim}{ed_list}{enddelim}}}'
 ed =  '{membership}{id}:{pred}{lnk}{carg}{props}[{dep_list}]'
-carg = '({constant})'
+carg = '("{constant}")'
 proplist = '{{{varsort}{proplist}}}'
 dep = '{argname} {value}'
 

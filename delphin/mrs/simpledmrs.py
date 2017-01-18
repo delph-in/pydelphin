@@ -17,7 +17,7 @@ from io import BytesIO
 import re
 from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
 from delphin.mrs.components import (nodes, links)
-from delphin.mrs.config import EQ_POST, CVARSORT
+from delphin.mrs.config import EQ_POST, CVARSORT, CONSTARG_ROLE
 
 
 ##############################################################################
@@ -76,7 +76,7 @@ dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 _graphtype = 'dmrs'
 _graph = '{graphtype} {graphid}{{{dmrsproperties}{nodes}{links}}}'
 _dmrsproperties = ''
-_node = '{indent}{nodeid} [{pred}{lnk}{sortinfo}];'
+_node = '{indent}{nodeid} [{pred}{lnk}{carg}{sortinfo}];'
 _sortinfo = ' {cvarsort} {properties}'
 _link = '{indent}{start}:{pre}/{post} {arrow} {end};'
 
@@ -98,6 +98,7 @@ def _encode_dmrs(m, indent=2):
             nodeid=n.nodeid,
             pred=n.pred.string,
             lnk='' if n.lnk is None else str(n.lnk),
+            carg='' if n.carg is None else '("{}")'.format(n.carg),
             sortinfo=(
                 '' if not n.sortinfo else
                 _sortinfo.format(

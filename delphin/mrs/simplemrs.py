@@ -298,7 +298,10 @@ def _read_ep(tokens, nid, vars_):
         role = tokens.popleft().upper()
         _read_literals(tokens, ':')
         val = tokens.popleft()
-        if _var_re.match(val) is not None and role.upper() != CARG:
+        if role.upper() == CARG:
+            if val and (val[0], val[-1]) == ('"', '"'):
+                val = val[1:-1]
+        elif _var_re.match(val) is not None:
             props = _read_props(tokens)
             if val not in vars_:
                 vars_[val] = []
@@ -420,6 +423,8 @@ def _serialize_mrs(m, version=_default_version, pretty_print=False):
 def _serialize_argument(rargname, value, varprops):
     """Serialize an MRS argument into the SimpleMRS format."""
     _argument = '{rargname}: {value}{props}'
+    if rargname == CONSTARG_ROLE:
+        value = '"{}"'.format(value)
     props = ''
     if value in varprops:
         props = ' [ {} ]'.format(

@@ -253,7 +253,7 @@ True
 >>> ep.intrinsic_variable
 'x3'
 >>> ep.args['CARG']
-'"Abrams"'
+'Abrams'
 >>> ep = EP(*m.eps()[2])
 >>> ep.pred  # doctest: +ELLIPSIS
 <Pred object "_sleep_v_1_rel" ...>
