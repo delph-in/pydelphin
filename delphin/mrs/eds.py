@@ -88,11 +88,10 @@ class Eds(object):
             if node.lnk is not None:
                 nd['lnk'] = {'from': node.cfrom, 'to': node.cto}
             if properties:
-                props = node.sortinfo
+                if node.cvarsort is not None:
+                    nd['type'] = node.cvarsort
+                props = node.properties
                 if props:
-                    if CVARSORT in props:
-                        nd['type'] = props[CVARSORT]
-                        del props[CVARSORT]
                     nd['properties'] = props
             if node.carg is not None:
                 nd['carg'] = node.carg
@@ -128,6 +127,67 @@ class Eds(object):
             )
         nodes.sort(key=lambda n: (n.cfrom, -n.cto))
         return cls(top, nodes=nodes, edges=edges)
+
+    def to_triples(self, short_pred=True, properties=True):
+        node_triples, edge_triples = [], []
+        # sort nodeids just so top var is first
+        nodes = sorted(self.nodes(), key=lambda n: n.nodeid != self.top)
+        for node in nodes:
+            nid = node.nodeid
+            pred = node.pred.short_form() if short_pred else node.pred.string
+            node_triples.append((nid, 'predicate', pred))
+            if node.lnk:
+                node_triples.append((nid, 'lnk', '"{}"'.format(str(node.lnk))))
+            if node.carg:
+                node_triples.append((nid, 'carg', '"{}"'.format(node.carg)))
+            if properties:
+                if node.cvarsort is not None:
+                    node_triples.append((nid, 'type', props[CVARSORT]))
+                props = node.properties
+                node_triples.extend((nid, p, v) for p, v in props.items())
+            edge_triples.extend(
+                (nid, rargname, tgt)
+                for rargname, tgt in sorted(
+                    self.edges(nid).items(),
+                    key=lambda x: rargname_sortkey(x[0])
+                )
+            )
+        return node_triples + edge_triples
+
+    @classmethod
+    def from_triples(cls, triples):
+        lnk, surface, identifier = None, None, None
+        nids, nd, edges = [], {}, []
+        for src, rel, tgt in triples:
+            if src not in nd:
+                nids.append(src)
+                nd[src] = {'pred': None, 'lnk': None, 'carg': None, 'si': []}
+            if rel == 'predicate':
+                nd[src]['pred'] = Pred.string_or_grammar_pred(tgt)
+            elif rel == 'lnk':
+                cfrom, cto = tgt.strip('"<>').split(':')
+                nd[src]['lnk'] = Lnk.charspan(int(cfrom), int(cto))
+            elif rel == 'carg':
+                if (tgt[0], tgt[-1]) == ('"', '"'):
+                    tgt = tgt[1:-1]
+                nd[src]['carg'] = tgt
+            elif rel == 'type':
+                nd[src]['si'].append((CVARSORT, tgt))
+            elif rel.islower():
+                nd[src]['si'].append((rel, tgt))
+            else:
+                edges.append((src, rel, tgt))
+        nodes = [
+            Node(
+                nodeid=nid,
+                pred=nd[nid]['pred'],
+                sortinfo=nd[nid]['si'],
+                lnk=nd[nid]['lnk'],
+                carg=nd[nid]['carg']
+            ) for nid in nids
+        ]
+        top = nids[0] if nids else None
+        return cls(top=top, nodes=nodes, edges=edges)
 
 
 def _find_dependencies(m, eps):

@@ -14,7 +14,7 @@ from .components import (
 )
 from .config import (
     HANDLESORT, UNKNOWNSORT, LTOP_NODEID, FIRST_NODEID,
-    IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
+    IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE, BARE_EQ_ROLE,
     EQ_POST, HEQ_POST, H_POST, NIL_POST, CVARSORT
 )
 
@@ -101,6 +101,15 @@ class Xmrs(_LnkMixin):
         self.surface = surface  # The surface string
         #: A discourse-utterance id
         self.identifier = identifier  # Associates an utterance with the RMRS
+
+    @classmethod
+    def from_xmrs(cls, xmrs):
+        """
+        Facilitate conversion among subclasses.
+        """
+        x = cls()
+        x.__dict__.update(xmrs.__dict__)
+        return x
 
     def add_eps(self, eps):
         """
@@ -196,7 +205,9 @@ class Xmrs(_LnkMixin):
             stringform = '"{}"'.format(self.surface)
         else:
             stringform = ' '.join(ep[1].lemma for ep in self.eps())
-        return '<Xmrs object ({}) at {}>'.format(stringform, id(self))
+        return '<{} object ({}) at {}>'.format(
+            self.__class__.__name__, stringform, id(self)
+        )
 
     def __contains__(self, obj):
         return obj in self._eps or obj in self._vars
@@ -837,7 +848,7 @@ class Mrs(Xmrs):
             identifier=d.get('identifier'),
             vars=variables
         )
-
+    
 
 def Rmrs(top=None, index=None, xarg=None,
          eps=None, args=None, hcons=None, icons=None,
@@ -954,7 +965,7 @@ class Dmrs(Xmrs):
                 if l.post == H_POST or l.post == NIL_POST:
                     hcons += [qeq(labels[LTOP_NODEID], labels[l.end])]
             else:
-                if not l.rargname or l.rargname.upper() == 'NIL':
+                if not l.rargname or l.rargname.upper() == BARE_EQ_ROLE:
                     continue  # don't make an argument for bare EQ links
                 if l.post == H_POST:
                     hole = vgen.new(HANDLESORT)[0]
@@ -1043,6 +1054,79 @@ class Dmrs(Xmrs):
             lnk=_lnk(d.get('lnk')),
             surface=d.get('surface'),
             identifier=d.get('identifier')
+        )
+
+    def to_triples(self, short_pred=True, properties=True):
+        """
+        Encode the Dmrs as triples suitable for PENMAN serialization.
+        """
+        ts = []
+        qs = set(self.nodeids(quantifier=True))
+        for n in nodes(self):
+            pred = n.pred.short_form() if short_pred else n.pred.string
+            ts.append((n.nodeid, 'predicate', pred))
+            if n.lnk is not None:
+                ts.append((n.nodeid, 'lnk', '"{}"'.format(str(n.lnk))))
+            if n.carg is not None:
+                ts.append((n.nodeid, 'carg', '"{}"'.format(n.carg)))
+            if properties and n.nodeid not in qs:
+                for key, value in n.sortinfo.items():
+                    ts.append((n.nodeid, key.lower(), value))
+
+        for l in links(self):
+            if l.start == LTOP_NODEID:
+                ts.append((l.start, 'top', l.end))
+            else:
+                relation = '{}-{}'.format(l.rargname.upper(), l.post)
+                ts.append((l.start, relation, l.end))
+        return ts
+
+    @classmethod
+    def from_triples(cls, triples):
+        """
+        Decode triples, as from Dmrs.to_triples(), into a Dmrs object.
+        """
+        top = lnk = surface = identifier = None
+        nids, nd, edges = [], {}, []
+        for src, rel, tgt in triples:
+            src, tgt = str(src), str(tgt)  # hack for int-converted src/tgt
+            if src not in nd:
+                top=src
+                nids.append(src)
+                nd[src] = {'pred': None, 'lnk': None, 'carg': None, 'si': []}
+            if rel == 'predicate':
+                nd[src]['pred'] = Pred.string_or_grammar_pred(tgt)
+            elif rel == 'lnk':
+                cfrom, cto = tgt.strip('"<>').split(':')
+                nd[src]['lnk'] = Lnk.charspan(int(cfrom), int(cto))
+            elif rel == 'carg':
+                if (tgt[0], tgt[-1]) == ('"', '"'):
+                    tgt = tgt[1:-1]
+                nd[src]['carg'] = tgt
+            elif rel.islower():
+                nd[src]['si'].append((rel, tgt))
+            else:
+                rargname, post = rel.split('-', 1)
+                edges.append((src, tgt, rargname, post))
+        nidmap = dict((nid, FIRST_NODEID + i) for i, nid in enumerate(nids))
+        nodes = [
+            Node(
+                nodeid=nidmap[nid],
+                pred=nd[nid]['pred'],
+                sortinfo=nd[nid]['si'],
+                lnk=nd[nid]['lnk'],
+                carg=nd[nid]['carg']
+            ) for i, nid in enumerate(nids)
+        ]
+        links = [Link(nidmap[s], nidmap[t], r, p) for s, t, r, p in edges]
+        if top:
+            links.append(Link(LTOP_NODEID, nidmap[top], None, H_POST))
+        return cls(
+            nodes=nodes,
+            links=links,
+            lnk=lnk,
+            surface=surface,
+            identifier=identifier
         )
 
 def _make_labels(nodes, links, vgen):

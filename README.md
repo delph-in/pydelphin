@@ -123,6 +123,8 @@ requirements include:
     REST client
   - [Pygments](http://pygments.org/) for TDL and SimpleMRS syntax
     highlighting
+  - [Penman](https://github.com/goodmami/penman) for PENMAN
+    serialization of DMRS and EDS
   - [tikz-dependency](https://www.ctan.org/pkg/tikz-dependency), while
     not a Python requirement, is needed for compiling LaTeX documents
     using exported DMRSs

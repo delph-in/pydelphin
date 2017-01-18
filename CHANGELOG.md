@@ -4,15 +4,25 @@
 
 This release replaces the top-level `pyDelphin` and `mrs.py` scripts with
 `delphin.sh` (when installed, a `delphin` command is made available that
-accomplishes the same thing).
+accomplishes the same thing). It also introduces the PENMAN codec for
+DMRS and EDS.
 
 ### Added
 
-* `delphin.sh` top-level script (replaces the former `pyDelphin` and `mrs.py`)
+* `delphin.sh` top-level script (replaces the former `pyDelphin` and
+  `mrs.py`)
 * `delphin.main` module for script usage
-* `mrs-json` and `dmrs-json` codecs for the `convert` script command
-  (currently only for Python 3, however)
+* `mrs-json`, `dmrs-json`, and `eds-json` codecs for the `convert`
+  script command
+* `dmrs-penman` and `eds-penman` codecs for the `convert` script command
 * Skeleton creation from sentence lists in the `mkprof` script command
+* `delphin.mrs.xmrs.Xmrs.from_xmrs()` (meant to be used by subclasses)
+* `delphin.mrs.xmrs.Dmrs.to_triples()`
+* `delphin.mrs.xmrs.Dmrs.to_triples()`
+* `delphin.mrs.eds.Eds.to_triples()`
+* `delphin.mrs.eds.Eds.from_triples()`
+* `delphin.mrs.penman` module for PENMAN serialization of DMRS and EDS
+  (resolves #85)
 
 ### Changed
 
@@ -25,6 +35,8 @@ accomplishes the same thing).
 * Quantifiers are detected more consistently for, e.g., DMRS conversion;
   this mostly resolves #84
 * DMRS `/EQ` links are now `MOD/EQ` and fix a direction (resolves #87)
+* All *MRS serializers/exporters take **kwargs (though many ignore them)
+  so that a common API can be used for, e.g., *MRS conversion.
 
 ### Fixed
 

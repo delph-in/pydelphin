@@ -118,11 +118,12 @@ import sys
 import os
 import logging
 import json
+from functools import partial
 
 from docopt import docopt
 
 from delphin.__about__ import __version__
-from delphin.mrs import xmrs
+from delphin.mrs import xmrs, eds
 from delphin import itsdb
 
 
@@ -166,7 +167,8 @@ def convert(args):
         mrx,
         dmrx,
         eds,
-        simpledmrs
+        simpledmrs,
+        penman
     )
     from delphin.extra import latex
     codecs = dict([
@@ -176,11 +178,17 @@ def convert(args):
         ('eds', (eds.loads, eds.dumps)),
         ('mrs-json', (_mrs_json.loads, _mrs_json.dumps)),
         ('dmrs-json', (_dmrs_json.loads, _dmrs_json.dumps)),
+        ('eds-json', (_eds_json.loads, _eds_json.dumps)),
+        ('dmrs-penman', (partial(penman.loads, model=xmrs.Dmrs),
+                         partial(penman.dumps, model=xmrs.Dmrs))),
+        ('eds-penman', (partial(penman.loads, model=eds.Eds),
+                         partial(penman.dumps, model=eds.Eds))),
         ('simpledmrs', (None, simpledmrs.dumps)),
         ('dmrs-tikz', (None, latex.dmrs_tikz_dependency))
     ])
     decoders = set(k for k, cd in codecs.items() if cd[0])
     encoders = set(k for k, cd in codecs.items() if cd[1])
+
     # arg validation
     if args['--from'] not in decoders:
         sys.exit('Source format must be one of: {}'
@@ -188,6 +196,8 @@ def convert(args):
     if args['--to'] not in encoders:
         sys.exit('Source format must be one of: {}'
                  .format(', '.join(sorted(encoders))))
+    if args['--from'].startswith('eds') and not args['--to'].startswith('eds'):
+        sys.exit('Conversion from EDS to non-EDS currently not supported.')
     args['--color'] = (
         args['--color'] == 'always' or
         (args['--color'] == 'auto' and sys.stdout.isatty())
@@ -340,15 +350,23 @@ class _MRS_JSON(object):
     def dumps(self, xs, pretty_print=False, indent=None, **kwargs):
         if pretty_print and indent is None:
             indent = 2
-        return json.dumps([self.CLS.to_dict(x) for x in xs], indent=indent)
-
+        return json.dumps(
+            [self.CLS.to_dict(
+                x if isinstance(x, self.CLS) else self.CLS.from_xmrs(x)
+             ) for x in xs],
+            indent=indent
+        )
 
 class _DMRS_JSON(_MRS_JSON):
     CLS = xmrs.Dmrs
 
+class _EDS_JSON(_MRS_JSON):
+    CLS = eds.Eds
+
 
 _mrs_json = _MRS_JSON()
 _dmrs_json = _DMRS_JSON()
+_eds_json = _EDS_JSON()
 
 # working with directories and profiles
 
