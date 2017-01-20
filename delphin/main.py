@@ -212,7 +212,8 @@ def convert(args):
     if args['PATH'] is not None:
         if os.path.isdir(args['PATH']):
             p = itsdb.ItsdbProfile(args['PATH'])
-            xs = [loads(r[0])[0] for r in p.select('result', ['mrs'])]
+            xs = [next(iter(loads(r[0])), None)
+                  for r in p.select('result', ['mrs'])]
         else:
             xs = loads(open(args['PATH'], 'r').read())
     else:
