@@ -2,6 +2,8 @@
 
 ## [Unreleased][unreleased]
 
+## [v0.6.0][]
+
 This release replaces the top-level `pyDelphin` and `mrs.py` scripts
 with `delphin.sh` (when installed, a `delphin` command is made available
 that accomplishes the same thing). The PENMAN codec is introduced for
@@ -48,6 +50,7 @@ fixed or the functionality is deprecated.
 
 * `delphin.interfaces.ace` now detects interleaved stderr messages when
   there are errors decoding or parsing S-Expressions (fixes #86)
+* Custom test runner in `setup.py`; now just call `tox`
 
 ### Removed
 
@@ -411,6 +414,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v0.6.0]: ../../releases/tag/v0.6.0
 [v0.5.1]: ../../releases/tag/v0.5.1
 [v0.5.0]: ../../releases/tag/v0.5.0
 [v0.4.1]: ../../releases/tag/v0.4.1

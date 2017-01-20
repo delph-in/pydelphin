@@ -3,10 +3,10 @@
 # the warehouse project:
 #   https://github.com/pypa/warehouse/blob/master/warehouse/__about__.py
 
-__version__ = '0.6.0-beta'
+__version__ = '0.6.0'
 __version_info__ = __version__.replace('.', ' ').replace('-', ' ').split()
 
-__title__ = 'pyDelphin'
+__title__ = 'PyDelphin'
 __summary__ = 'Libraries and scripts for DELPH-IN data'
 __uri__ = 'https://github.com/delph-in/pydelphin'
 

@@ -1,91 +1,99 @@
 # How to contribute
 
-Basic idea: Fork and submit pull requests!
+The easiest way to contribute to PyDelphin is to try it out and enter
+bug reports and feature requests. If you're contributing code, fork
+the repository and make pull requests to the `develop` branch.
 
-Please use the [issue tracker][issues], as it creates documentation
-for the bugs and features.
+## Filing issues
+
+File issues here: https://github.com/delph-in/pydelphin/issues
+
+Please use the issue tracker for:
+
+* bug reports
+* feature requests
+* documentation requests
+* PyDelphin questions
+
+For bug requests, please provide the following, if possible:
+
+* a minimal working example
+* version of PyDelphin (and relevant dependencies)
+
+  ```python
+  >>> from delphin.__about__ import __version__
+  >>> __version__
+  '0.6.0'
+  ```
+* Python version (e.g. 2.7, 3.3, etc.)
+
+For feature requests, please provide a use case for the feature.
+
+## Submitting code
+
+Please follow these guidelines for code and repository changes:
+
+* [PEP8](https://www.python.org/dev/peps/pep-0008/) style guidelines
+* [Git-Flow](http://nvie.com/posts/a-successful-git-branching-model/)
+  branching model
+* [Semantic Versioning](http://semver.org/)
+* PyDelphin is object-oriented in many cases, but avoid unnecessary
+  classes when standard Python data structures are sufficient
+* In implementing DELPH-IN formalisms and formats, aim first to be
+  correct and complete (according to documentation at
+  http://moin.delph-in.net/; if a wiki doesn't exist, it's a good idea
+  to make one), and secondly convenient. Avoid adding features that
+  aren't part of the spec and would have limited utility.
+* PyDelphin is a library, not an application, so application code
+  belongs in separate repositories. See [gTest][] and [bottlenose][] for
+  examples of applications utilizing PyDelphin.
+* API documentation is generated from the code and uses docstrings, so
+  provide descriptive docstrings for all modules, classs, methods, and
+  functions. Follow [Google-style docstrings][] and use [Markdown][] for
+  formatting.
+
+### Testing
 
 Always run the unit tests before committing.
 
     tox
 
 [Tox](https://testrun.org/tox/latest/) must be installed, along with
-Python versions 2.7, 3.3, 3.4, and 3.5. For basic unit testing, you
-may instead run:
+Python versions 2.7, 3.3, 3.4, and 3.5. It creates a virtual environment
+in order to run the tests, which helps avoid missing dependencies. For
+basic unit testing, you may install [pytest](http://pytest.org/) and
+run:
 
-    ./setup.py test
+    py.test
 
 But be sure to test against all versions with `tox` prior to committing.
 
-If you're contributing an untested bug fix or new code, try to ensure full test
-coverage. Coverage can be computed like this:
+### Test Coverage
 
-    ./setup.py coverage
+Compute test coverage by installing
+[pytest-cov](https://github.com/pytest-dev/pytest-cov) and running:
 
-Note that the codebase doesn't yet have full test coverage. Contributions of
-unit tests are very welcome!
+    py.test --cov-report=html --cov=delphin
 
-#### Module Layout
+Note that the codebase doesn't yet have full test coverage.
+Contributions of unit tests are very welcome!
 
-Please follow this general layout (note that the following listing is not
-exhaustive):
+## Generating API Documentation
 
-```bash
-delphin/
-├── mrs/  # Significant modules related to MRS represenations
-│   ├── xmrs.py  # primary pyDelphin structure for MRS representations
-│   ├── simplemrs.py  # reading/writing the SimpleMrs format
-│   └── (other MRS-specific modules go here)
-├── interfaces/  # Code that interacts with external software
-│   ├── ace.py
-│   └── (other interfaces go here)
-├── extra/  # Non-critical code, like syntax highlighters
-│   ├── highlight.py
-│   └── (other extras go here)
-├── lib/  # 3rd party modules (only when necessary!)
-│   └── six.py  # for Python 2/3 compatibility
-├── derivation.py  # derivation trees
-├── itsdb.py  # [incr tsdb()] profiles
-├── tdl.py  # TDL code
-├── tfs.py  # Basic typed feature structures
-└── (other small modules can go here)
+[CartogrAPI][] and [RenderDown][] are used to generate the wiki
+documentation. Ensure both are downloaded, with dependencies
+satified, and on PYTHONPATH. PyDelphin's dependencies should also be
+accessible from PYTHONPATH. Then clone the wiki repository:
 
-```
+    git clone https://github.com/delph-in/pydelphin.wiki.git
 
-New packages for DELPH-IN representations (e.g., alongside `mrs/`) can be added,
-but they should first exist as simple modules. Then, if there is a need, they
-can be promoted to a package (with `__init__.py` scripts to help maintain
-import compatibility).
+And run RenderDown on the Home.mako file:
 
-#### Version Compatibility
+    python3 renderdown.py -o pydelphin.wiki/ pydelphin.wiki/Home.mako
 
-PyDelphin currently maintains compatibility with Python 2.7 and 3.3+.
-Versions prior to 2.6 and 3.0--3.2 are not targeted. Testing with
-`tox` will run the unit tests against these versions, so make sure
-you have the old versions installed.
+This will overwrite the `.md` files in the wiki directory. Commit and
+push the changes to update the documentation.
 
-#### Branching
-
-See here: http://nvie.com/posts/a-successful-git-branching-model/
-
-Basically, each new changeset (e.g. features or bug fixes) should have
-its own branch. Changeset branches (except critical bug fixes) get
-merged to the `develop` branch, and `develop` gets merged back to
-`master` when a new release is ready.
-
-#### Code Style and Paradigms
-
-Please follow [PEP8](https://www.python.org/dev/peps/pep-0008/) unless there's
-a good reason not to. Also try to follow the conventions exemplified in the
-existing code.
-
-I try to make pyDelphin more functional than object-oriented, but there's
-nothing wrong with adding a new class. If all you need is a container for data,
-though, consider a [namedtuple][] or even basic Python data structures (they are
-often more efficient). Also try to avoid adding extraneous fields to data
-structures, and instead keep them minimal.
-
-[namedtuple]: https://docs.python.org/3/library/collections.html#collections.namedtuple
 
 # Release Checklist
 
@@ -106,7 +114,14 @@ Do the following tasks prior to releasing on GitHub and PyPI.
 - [ ] Create a source distribution: `setup.py sdist`
 - [ ] Build a wheel distribution: `setup.py bdist_wheel --universal`
 - [ ] Upload to PyPI: `twine upload dist/*`
+- [ ] Update documentation (see above)
 - [ ] Announce
 
 [issues]: https://github.com/delph-in/pydelphin/issues
 [milestones]: https://github.com/delph-in/pydelphin/milestones
+[gTest]: https://github.com/goodmami/gtest
+[bottlenose]: https://github.com/delph-in/bottlenose
+[CartogrAPI]: https://github.com/goodmami/cartograpi
+[RenderDown]: https://github.com/goodmami/renderdown
+[Google-style docstrings]: https://google.github.io/styleguide/pyguide.html?showone=Comments#Comments
+[Markdown]: https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet

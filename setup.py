@@ -3,37 +3,9 @@
 import sys
 import os
 from setuptools import setup
-from setuptools.command.test import test as TestCommand
-
-class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
-
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.pytest_args = ['--doctest-glob=tests/*.md']
-
-    def finalize_options(self):
-        TestCommand.finalize_options(self)
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        #import here, cause outside the eggs aren't loaded
-        import pytest
-        errno = pytest.main(self.pytest_args)
-        sys.exit(errno)
-
-class PyTestCoverage(PyTest):
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.pytest_args = [
-            '--doctest-glob=tests/*.md',
-            '--cov=delphin',
-            '--cov-report=html'
-        ]
 
 long_description = '''\
-pyDelphin provides a suite of libraries for modeling Minimal Recursion
+PyDelphin provides a suite of libraries for modeling Minimal Recursion
 Semantics (MRS; including DMRS), derivation trees, and [incr tsdb()]
 profiles; introspection tools for Type Description Language (TDL),
 which is used to define HPSG grammars; a Python wrapper for the ACE
@@ -73,7 +45,7 @@ setup(
         'Topic :: Text Processing :: Linguistic',
         'Topic :: Utilities'
     ],
-    keywords='nlp semantics hpsg delph-in',
+    keywords='nlp semantics hpsg delph-in linguistics',
     packages=[
         'delphin',
         'delphin.lib',
@@ -94,6 +66,4 @@ setup(
             'delphin=delphin.main:main'
         ]
     },
-    tests_require=['pytest>=2.8.0'],
-    cmdclass={'test':PyTest, 'coverage':PyTestCoverage}
 )

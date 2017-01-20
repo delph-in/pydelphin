@@ -1,16 +1,16 @@
-# pyDelphin <br/> Python libraries for DELPH-IN
+# PyDelphin <br/> Python libraries for DELPH-IN
 
 | Branch | Status |
 | ------ | ------ |
 | [master](https://github.com/delph-in/pydelphin/tree/master)  | [![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=master)](https://travis-ci.org/delph-in/pydelphin) |
 | [develop](https://github.com/delph-in/pydelphin/tree/develop) | [![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=develop)](https://travis-ci.org/delph-in/pydelphin) |
 
-> NOTE for previous pyDelphin users: Recent versions of pyDelphin may
+> NOTE for previous PyDelphin users: Recent versions of PyDelphin may
 > have backwards-incompatible changes with prior versions. Please
 > [file an issue](https://github.com/delph-in/pydelphin/issues) if you
 > have trouble upgrading.
 
-pyDelphin is a set of Python libraries for the
+PyDelphin is a set of Python libraries for the
 processing of [DELPH-IN](http://delph-in.net) data. It doesn't aim to
 do heavy tasks like parsing or treebanking, but rather to provide Python
 modules for loading a variety of DELPH-IN formats, such as [[incr
@@ -18,7 +18,7 @@ tsdb()]](http://www.delph-in.net/itsdb/) profiles or [Minimal Recursion
 Semantics](http://moin.delph-in.net/RmrsTop) representations. These
 modules offer a programmatic interface to the data to enable developers
 or researchers to boostrap their own tools without having to re-invent
-the wheel. pyDelphin also provides a [front-end tool][] for
+the wheel. PyDelphin also provides a [front-end tool][] for
 accomplishing some tasks such as refreshing [incr tsdb()] profiles to a new
 schema, creating sub-profiles, or converting between MRS representations
 (SimpleMRS, MRS XML, DMRS, etc.).
@@ -114,9 +114,10 @@ dict_keys(['DERIV', 'MRS'])
 
 ## Installation and Requirements
 
-pyDelphin is developed for [Python 3](http://python.org/download/)
+PyDelphin is developed for [Python 3](http://python.org/download/)
 (3.3+), but it has also been tested to work with Python 2.7. Optional
 requirements include:
+  - [docopt](http://docopt.org/) for script usage
   - [NetworkX](http://networkx.github.io/) for MRS isomorphism
     checking
   - [requests](http://requests.readthedocs.io/en/master/) for the
@@ -129,9 +130,9 @@ requirements include:
     not a Python requirement, is needed for compiling LaTeX documents
     using exported DMRSs
 
-pyDelphin itself does not need to be installed to be used. You can
+PyDelphin itself does not need to be installed to be used. You can
 [adjust `PYTHONPATH`](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH)
-to include the pyDelphin directory.
+to include the PyDelphin directory.
 
 If you would rather install it, however, it is available on
 [PyPI](https://pypi.python.org/pypi/pyDelphin):
