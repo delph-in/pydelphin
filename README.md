@@ -32,9 +32,10 @@ schema, creating sub-profiles, or converting between MRS representations
 
 #### Documentation
 
-API documentation is developing on the
+Documentation is developing on the
 [wiki](https://github.com/delph-in/pydelphin/wiki). Help is
-appreciated!
+appreciated! See [here](https://github.com/delph-in/pydelphin/blob/master/CONTRIBUTING.md#generating-api-documentation)
+for instructions.
 
 #### Usage Examples
 
@@ -165,6 +166,7 @@ The following packages/modules are available:
 - [T.J. Trimble](https://github.com/dantiston/) (packaging, derivations, ACE)
 - [Guy Emerson](https://github.com/guyemerson/) (MRS)
 - [Alex Kuhnle](https://github.com/AlexKuhnle/) (MRS, ACE)
+- [Francis Bond](https://github.com/fcbond/) (LaTeX export)
 
 ## Related Software
 
@@ -185,3 +187,4 @@ The following packages/modules are available:
 * Also see (may have overlap with the above):
   - http://moin.delph-in.net/ToolsTop
   - http://moin.delph-in.net/DelphinApplications
+

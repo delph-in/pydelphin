@@ -78,7 +78,15 @@ Compute test coverage by installing
 Note that the codebase doesn't yet have full test coverage.
 Contributions of unit tests are very welcome!
 
-## Generating API Documentation
+## API Documentation
+
+API documentation is generated from the code itself, so follow these
+guidelines:
+
+* Modules, classes, methods, and functions with a leading underscore
+  (`_`) in the name are considered *not* part of the public API, and
+  will be ignored.
+* Use docstrings to document the code.
 
 [CartogrAPI][] and [RenderDown][] are used to generate the wiki
 documentation. Ensure both are downloaded, with dependencies
