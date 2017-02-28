@@ -454,6 +454,21 @@ def make_skeleton(path, relations, item_rows, gzip=False):
 class ItsdbProfile(object):
     """
     A [incr tsdb()] profile, analyzed and ready for reading or writing.
+
+    Args:
+        path: The path of the directory containing the profile
+        filters: A list of tuples [(table, cols, condition)] such
+            that only rows in table where condition(row, row[col])
+            evaluates to a non-false value are returned; filters are
+            tested in order for a table.
+        applicators: A list of tuples [(table, cols, function)]
+            which will be used when reading rows from a table---the
+            function will be applied to the contents of the column
+            cell in the table. For each table, each column-function
+            pair will be applied in order. Applicators apply after
+            the filters.
+        index: If `True`, indices are created based on the keys of
+            each table.
     """
 
     # _tables is a list of table names to consider (for indexing, writing,
@@ -462,25 +477,6 @@ class ItsdbProfile(object):
     _tables = None
 
     def __init__(self, path, filters=None, applicators=None, index=True):
-        """
-        Only the *path* parameter is required.
-
-        Args:
-            path: The path of the directory containing the profile
-            filters: A list of tuples [(table, cols, condition)] such
-                that only rows in table where condition(row, row[col])
-                evaluates to a non-false value are returned; filters are
-                tested in order for a table.
-            applicators: A list of tuples [(table, cols, function)]
-                which will be used when reading rows from a table---the
-                function will be applied to the contents of the column
-                cell in the table. For each table, each column-function
-                pair will be applied in order. Applicators apply after
-                the filters.
-            index: If `True`, indices are created based on the keys of
-                each table.
-        """
-
         self.root = path
         self.relations = get_relations(
             os.path.join(self.root, _relations_filename)
@@ -729,6 +725,8 @@ class ItsdbProfile(object):
 class ItsdbSkeleton(ItsdbProfile):
     """
     A [incr tsdb()] skeleton, analyzed and ready for reading or writing.
+
+    See [ItsdbProfile] for initialization parameters.
     """
 
     _tables = ['item']

@@ -2,17 +2,59 @@
 """
 An interface for the ACE parser/generator.
 
-Classes exist for managing interactive communication with an open ACE
-process, such as AceParser for parsing sentences, and AceGenerator for
-realizing sentences from Xmrs objects. In addition, there are
-functions that can be used for one-off jobs, where the ACE process is
-killed after the data are processed. The parse() and
-parse_from_iterable() functions open and close an AceParser instance,
-while generate() and generate_from_iterable() open and close an
-AceGenerator instance.
+This module provides classes and functions for managing interactive
+communication with an open ACE process.
+
+The [AceParser] and [AceGenerator] classes are used for parsing and
+generating with ACE. Both are subclasses of [AceProcess], which connects
+to ACE in the background, and sends it data via its stdin and receives
+responses via its stdout. Responses from ACE are interpreted so the data
+is more accessible in Python.
+
+:warning: *Instantiating [AceParser] or [AceGenerator] opens ACE in a
+subprocess, so take care to [close](#AceProcess-close) the process when
+finished (or, alternatively, instantiate the class in a context
+manager).*
+
+Interpreted responses are stored in a dictionary-like [ParseResponse]
+object. When queried like a dictionary, these objects return the raw
+response strings. When queried via its methods, the PyDelphin models of
+the data are returned. The response objects may contain a number of
+[ParseResult] objects. These objects similarly provide raw-string
+access via dictionary keys and PyDelphin-model access via methods. Here
+is an example of parsing a sentence with [AceParser]:
+
+    >>> with AceParser('erg-1214-x86-64-0.9.24.dat') as parser:
+    ...     response = parser.interact('Cats sleep.')
+    ...     print(response.result(0)['mrs'])
+    ...     print(response.result(0).mrs())
+    ... 
+    [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ] RELS: < [ udef_q<0:4> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: pl IND: + ] RSTR: h5 BODY: h6 ]  [ _cat_n_1<0:4> LBL: h7 ARG0: x3 ]  [ _sleep_v_1<5:11> LBL: h1 ARG0: e2 ARG1: x3 ] > HCONS: < h0 qeq h1 h5 qeq h7 > ]
+    <Xmrs object (udef cat sleep) at 139880862399696>
+
+Several functions exist for non-interactive communication with ACE:
+[parse()] and [parse_from_iterable()] open and close an AceParser
+instance; and [generate()] and [generate_from_iterable()] open and
+close an [AceGenerator] instance. Note that these functions open a new
+ACE subprocess every time they are called, so if you have many items to
+process, it is more efficient to use [parse_from_iterable()] or
+[generate_from_iterable()] than the single-item versions.
 
 Requires: ACE (http://sweaglesw.org/linguistics/ace/)
+
+[AceProcess]: #AceProcess
+[AceParser]: #AceParser
+[AceGenerator]: #AceGenerator
+[parse()]: #parse
+[parse_from_iterable()]: #parse_from_iterable
+[generate()]: #generate
+[generate_from_iterable()]: #generate_from_iterable
+[ParseResponse]: delphin.interfaces.base#ParseResponse
+[ParseResult]: delphin.interfaces.base#ParseResult
 """
+
+# TODO: non-blocking io: http://stackoverflow.com/a/4896288/1441112
+
 
 import logging
 import os
@@ -88,23 +130,22 @@ class AceProcess(object):
     interpret the response returned via AceProcess.receive().
     Subclasses override receive() to interpret the task-specific
     response formats.
+
+    Args:
+        grm: the path to the compiled grammar file
+        cmdargs (list): a list of command-line arguments for ACE;
+            note that arguments and their values should be
+            separate entries, e.g. ['-n', '5']
+        executable: the path to the ACE binary; if `None`, ACE is
+            assumed to be callable via `ace`
+        env (dict): environment variables to pass to the ACE
+            subprocess
     """
 
     _cmdargs = []
 
     def __init__(self, grm, cmdargs=None, executable=None, env=None,
                  tsdbinfo=True, **kwargs):
-        """
-        Args:
-            grm: the path to the compiled grammar file
-            cmdargs (list): a list of command-line arguments for ACE;
-                note that arguments and their values should be
-                separate entries, e.g. ['-n', '5']
-            executable: the path to the ACE binary; if `None`, ACE is
-                assumed to be callable via `ace`
-            env (dict): environment variables to pass to the ACE
-                subprocess
-        """
         if not os.path.isfile(grm):
             raise ValueError("Grammar file %s does not exist." % grm)
         self.grm = grm
@@ -173,6 +214,8 @@ class AceProcess(object):
 class AceParser(AceProcess):
     """
     A class for managing parse requests with ACE.
+
+    See [AceProcess] for initialization parameters.
     """
 
     def receive(self):
@@ -186,6 +229,8 @@ class AceParser(AceProcess):
 class AceGenerator(AceProcess):
     """
     A class for managing realization requests with ACE.
+
+    See [AceProcess] for initialization parameters.
     """
 
     _cmdargs = ['-e']
@@ -363,7 +408,7 @@ def _tsdb_stdout_realization(line_iter):
     note = next(line_iter)
     assert note.startswith('NOTE: ')
     response['NOTES'].append(note.split(': ', 1)[1])
-    return response    
+    return response
 
 def _tsdb_stdout(line_iter):
     response = _AceResponse({
