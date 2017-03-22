@@ -2,6 +2,27 @@
 
 ## [Unreleased][unreleased]
 
+### Added
+
+* `delphin.interfaces.ace.AceTransferer` - due to a limitation with ACE,
+  only the regular (non-tsdb) mode is allowed in transfer
+* `delphin.interfaces.ace.transfer()`
+* `delphin.interfaces.ace.transfer_from_iterable()`
+
+### Changed
+
+* `delphin.interfaces.ace` no longer captures stderr
+* `delphin.interfaces.ace` attempts to restart a process that closed
+  unexpectedly
+
+### Removed
+### Fixed
+
+* `delphin.interfaces.ace` ignores stderr, which effectively fixes #86
+* `delphin.interfaces.ace` joins content lines in tsdb mode---fixes #95
+
+### Deprecated
+
 ## [v0.6.0][]
 
 This release replaces the top-level `pyDelphin` and `mrs.py` scripts
