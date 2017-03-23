@@ -20,6 +20,8 @@
 
 * `delphin.interfaces.ace` ignores stderr, which effectively fixes #86
 * `delphin.interfaces.ace` joins content lines in tsdb mode---fixes #95
+* Write empty tables for `delphin mkprof` command unless `--skeleton` is
+  used (fixes #96)
 
 ### Deprecated
 
