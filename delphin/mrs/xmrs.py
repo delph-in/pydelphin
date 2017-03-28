@@ -227,6 +227,9 @@ class Xmrs(_LnkMixin):
         a, b = sorted(self.icons()), sorted(other.icons())
         if len(a) != len(b) or any(ic1 != ic2 for ic1, ic2 in zip(a, b)):
             return False
+        for v in self.variables():
+            if self.properties(v) != other.properties(v):
+                return False
         return True
 
     @property
@@ -832,7 +835,7 @@ class Mrs(Xmrs):
                  for c in d.get('constraints', []) if 'high' in c]
         icons = [(c['high'], c['relation'], c['low'])
                  for c in d.get('constraints', []) if 'left' in c]
-        variables = {var: {k:v for k, v in data.items() if k != 'type'}
+        variables = {var: list(data.get('properties', {}).items())
                      for var, data in d.get('variables', {}).items()}
         return cls(
             top=d.get('top'),

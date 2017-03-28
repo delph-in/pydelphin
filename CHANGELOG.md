@@ -22,6 +22,8 @@
 * `delphin.interfaces.ace` joins content lines in tsdb mode---fixes #95
 * Write empty tables for `delphin mkprof` command unless `--skeleton` is
   used (fixes #96)
+* `delphin.mrs.xmrs.Xmrs` equality test now checks variable properties
+* `delphin.mrs.xmrs.Mrs.from_dict()` correctly reads variable properties (#98)
 
 ### Deprecated
 
