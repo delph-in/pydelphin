@@ -176,7 +176,7 @@ The following packages/modules are available:
   - ACE: http://sweaglesw.org/linguistics/ace/
   - agree: http://moin.delph-in.net/AgreeTop
 * Grammar profiling, testing, and analysis
-  - [incr tsdb()]: http://www.delph-in.net/itsdb/
+  - \[incr tsdb()\]: http://www.delph-in.net/itsdb/
   - gDelta: https://github.com/ned2/gdelta
   - Typediff: https://github.com/ned2/typediff
   - gTest: https://github.com/goodmami/gtest

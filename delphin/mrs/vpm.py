@@ -74,21 +74,20 @@ class VPM(object):
     This class contains the rules for mapping variable properties from
     the grammar-internal definitions to grammar-external ones, and back
     again.
+
+    Args:
+        typemap: an iterable of (src, OP, tgt) iterables
+        propmap: an iterable of (featset, valmap) tuples, where
+            featmap is a tuple of two lists: (source_features,
+            target_features); and valmap is a list of value tuples:
+            (source_values, OP, target_values)
+        semi: if provided, the [SemI] object is used for more
+            sophisticated value comparisons
     """
+
     def __init__(self, typemap, propmap, semi=None):
         """
         Initialize a new variable-property mapping instance.
-
-        Args:
-            typemap: an iterable of (src, OP, tgt) iterables
-            propmap: an iterable of (featset, valmap) tuples, where
-                featmap is a tuple of two lists: (source_features,
-                target_features); and valmap is a list of value tuples:
-                (source_values, OP, target_values)
-            semi: if provided, the [SemI] object is used for more
-                sophisticated value comparisons
-        Returns:
-            A new VPM instance
         """
         self._typemap = typemap  # [(src, OP, tgt)]
         self._propmap = propmap  # [((srcfs, tgtfs), [(srcvs, OP, tgtvs)])]

@@ -120,11 +120,16 @@ class TestMrs():
                  'arguments': {'ARG0': 'e2'}}
             ],
             'constraints': [],
-            'variables': {'h1': {'type': 'h'}, 'e2': {'type': 'e'}}
+            'variables': {
+                'h1': {'type': 'h'},
+                'e2': {'type': 'e',
+                       'properties': {'SF': 'prop', 'TENSE': 'pres'}}
+            }
         })
         m2 = Mrs(
             rels=[
                 EP(FIRST_NODEID, sp('"_rain_v_1_rel"'), 'h1', {'ARG0': 'e2'})
-            ]
+            ],
+            vars={'e2': {'SF': 'prop', 'TENSE': 'pres'}}
         )
         assert m1 == m2

@@ -34,6 +34,8 @@ def test_SExpr():
     assert SExpr.parse('("\\"a\\"" \\" "\\(\\)\\;\\[\\]")').data == [
         '"a"', '"', '\\(\\)\\;\\[\\]'
     ]
+    # other kinds of whitespace
+    assert SExpr.parse('(\ta\n.\n\n  b)').data == ('a', 'b')
 
 
 # unescape_string is disabled in delphin.util

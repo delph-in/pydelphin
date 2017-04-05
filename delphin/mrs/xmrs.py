@@ -23,6 +23,35 @@ class Xmrs(_LnkMixin):
     """
     Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
 
+    Args:
+        top: the TOP (or maybe LTOP) variable
+        index: the INDEX variable
+        xarg: the XARG variable
+        eps: an iterable of EPs (see above)
+        hcons: an iterable of HCONS (see above)
+        icons: an iterable of ICONS (see above)
+        vars: a mapping of variable to a list of property-value pairs
+        lnk: the Lnk object associating the Xmrs to the surface form
+        surface: the surface string
+        identifier: a discourse-utterance id
+
+    Xmrs can be instantiated directly, but it may be more
+    convenient to use the `Mrs()`, `Rmrs()`, or `Dmrs()`
+    constructor functions.
+
+    Variables are simply strings, but must be of the proper form
+    in order to be recognized as variables and not constants. The
+    form is basically a sequence of non-integers followed by a
+    sequence of integers, but see `delphin.mrs.components.var_re`
+    for the regular expression used to determine a match.
+
+    The *eps* argument is an iterable of tuples representing
+    ElementaryPredications. These can be objects of the
+    ElementaryPredication class itself, or an equivalent tuple.
+    The same goes for *hcons* and *icons* with the
+    HandleConstraint and IndividualConstraint classes,
+    respectively.
+
     Attributes:
         top: the top (i.e. LTOP) handle
         index: the semantic index
@@ -35,37 +64,6 @@ class Xmrs(_LnkMixin):
     def __init__(self, top=None, index=None, xarg=None,
                  eps=None, hcons=None, icons=None, vars=None,
                  lnk=None, surface=None, identifier=None):
-        """
-        Xmrs can be instantiated directly, but it may be more
-        convenient to use the `Mrs()`, `Rmrs()`, or `Dmrs()`
-        constructor functions.
-
-        Variables are simply strings, but must be of the proper form
-        in order to be recognized as variables and not constants. The
-        form is basically a sequence of non-integers followed by a
-        sequence of integers, but see `delphin.mrs.components.var_re`
-        for the regular expression used to determine a match.
-
-        The *eps* argument is an iterable of tuples representing
-        ElementaryPredications. These can be objects of the
-        ElementaryPredication class itself, or an equivalent tuple.
-        The same goes for *hcons* and *icons* with the
-        HandleConstraint and IndividualConstraint classes,
-        respectively.
-
-        Args:
-            top: the TOP (or maybe LTOP) variable
-            index: the INDEX variable
-            xarg: the XARG variable
-            eps: an iterable of EPs (see above)
-            hcons: an iterable of HCONS (see above)
-            icons: an iterable of ICONS (see above)
-            vars: a mapping of variable to a list of property-value pairs
-            lnk: the Lnk object associating the Xmrs to the surface form
-            surface: the surface string
-            identifier: a discourse-utterance id
-
-        """
         self.top = top
         self.index = index
         self.xarg = xarg
@@ -229,6 +227,9 @@ class Xmrs(_LnkMixin):
         a, b = sorted(self.icons()), sorted(other.icons())
         if len(a) != len(b) or any(ic1 != ic2 for ic1, ic2 in zip(a, b)):
             return False
+        for v in self.variables():
+            if self.properties(v) != other.properties(v):
+                return False
         return True
 
     @property
@@ -834,7 +835,7 @@ class Mrs(Xmrs):
                  for c in d.get('constraints', []) if 'high' in c]
         icons = [(c['high'], c['relation'], c['low'])
                  for c in d.get('constraints', []) if 'left' in c]
-        variables = {var: {k:v for k, v in data.items() if k != 'type'}
+        variables = {var: list(data.get('properties', {}).items())
                      for var, data in d.get('variables', {}).items()}
         return cls(
             top=d.get('top'),

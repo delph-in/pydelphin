@@ -65,16 +65,21 @@ Options:
 MKPROF_USAGE = """
 Usage:
   delphin mkprof DEST --source PROFILE [--apply=APL]... [--filter=CND]...
-                      [--relations=FILE] [--full] [--gzip] [-v...|-q]
-  delphin mkprof DEST --relations=FILE [--input TXT] [--gzip] [-v...|-q]
+                      [--relations=FILE] [--full|--skeleton] [--gzip]
+                      [-v...|-q]
+  delphin mkprof DEST --relations=FILE [--input TXT] [--skeleton] [--gzip]
+                      [-v...|-q]
 
-Item data for the mkprof command may come from a source profile (via
---source), a text file (via --input), or from <stdin>. In the latter two
-cases, each line is a sentence ('*' in the first column indicates an
-ungrammatical sentence), the --relations option is required, and only
-the i-id, i-input, and i-wf fields will be filled with a meaningful
-value. By default, mkprof produces skeletons, but --full may be used
-(with --source) to write all tables.
+Item data for the mkprof command may come from a --source profile, a
+text --input file, or from <stdin>. In the latter two cases, each line
+is a sentence ('*' in the first column indicates an ungrammatical
+sentence), the --relations option is required, and only the i-id,
+i-input, and i-wf fields will be filled with a meaningful value. By
+default, mkprof produces skeletons like the `mkprof` utility of `art`,
+where the 'item' and 'relations' files are non-empty but all other
+tables exist as empty files. The --full option, with --source, will copy
+a full profile, while the --skeleton option will only write the 'item'
+and 'relations' files.
 
 Arguments:
   DEST                  directory for the destination (output) profile
@@ -84,11 +89,12 @@ Options:
   -v, --verbose         increase verbosity
   -q, --quiet           don't print to stdout/stderr
   -i TXT, --input TXT   file of test sentences (* sents are ungrammatical)
+  -r FILE, --relations FILE
+                        relations file to use for destination profile
   -s PROFILE, --source PROFILE
                         path to a profile directory
   --full                write all tables (must be used with --source)
-  -r FILE, --relations FILE
-                        relations file to use for destination profile
+  --skeleton            write only 'item' and 'relations' files
   -a APL, --apply APL   apply an expression to rows/cols in the profile;
                         APL is a string like 'table:col=expression'
   -f CND, --filter CND  keep rows satisfying a condition; CND is a
@@ -283,7 +289,11 @@ def mkprof(args):
             rows = _lines_to_rows(open(args['--input']))
         else:
             rows = _lines_to_rows(sys.stdin)
-        itsdb.make_skeleton(outdir, relations, rows, gzip=args['--gzip'])
+        p = itsdb.make_skeleton(outdir, relations, rows, gzip=args['--gzip'])
+        # unless a skeleton was requested, make empty files for other tables
+        if not args['--skeleton']:
+            for tbl in p.relations:
+                p.write_table(tbl, [])
 
     # summarize what was done
     prof = itsdb.ItsdbProfile(outdir, index=False)

@@ -277,23 +277,18 @@ class SemI(object):
     SEM-Is describe the semantic inventory for a grammar. These include
     the variable types, valid properties for variables, valid roles
     for predications, and a lexicon of predicates with associated roles.
+
+    Args:
+        variables: a mapping of (var, Variable)
+        properties: a mapping of (prop, Property)
+        roles: a mapping of (role, Role)
+        predicates: a mapping of (pred, Predicate)
     """
     def __init__(self,
                  variables=None,
                  properties=None,
                  roles=None,
                  predicates=None):
-        """
-        Initialize a new SEM-I instance.
-
-        Args:
-            variables: a mapping of (var, Variable)
-            properties: a mapping of (prop, Property)
-            roles: a mapping of (role, Role)
-            predicates: a mapping of (pred, Predicate)
-        Returns:
-            a new SEM-I instance            
-        """
         self.variables = dict(variables) if variables is not None else {}
         self.properties = dict(properties) if properties is not None else {}
         self.roles = dict(roles) if roles is not None else {}

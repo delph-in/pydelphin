@@ -1,17 +1,61 @@
 
 """
-An interface for the ACE parser/generator.
+An interface for the ACE processor.
 
-Classes exist for managing interactive communication with an open ACE
-process, such as AceParser for parsing sentences, and AceGenerator for
-realizing sentences from Xmrs objects. In addition, there are
-functions that can be used for one-off jobs, where the ACE process is
-killed after the data are processed. The parse() and
-parse_from_iterable() functions open and close an AceParser instance,
-while generate() and generate_from_iterable() open and close an
-AceGenerator instance.
+This module provides classes and functions for managing interactive
+communication with an open ACE process.
+
+The [AceParser], [AceTransferer], and [AceGenerator] classes are used
+for parsing, transferring, and generating with ACE. All are subclasses
+of [AceProcess], which connects to ACE in the background, sends it data
+via its stdin, and receives responses via its stdout. Responses from ACE
+are interpreted so the data is more accessible in Python.
+
+:warning: *Instantiating [AceParser], [AceTransferer], or [AceGenerator]
+opens ACE in a subprocess, so take care to [close](#AceProcess-close)
+the process when finished (or, alternatively, instantiate the class in a
+context manager).*
+
+Interpreted responses are stored in a dictionary-like [ParseResponse]
+object. When queried like a dictionary, these objects return the raw
+response strings. When queried via its methods, the PyDelphin models of
+the data are returned. The response objects may contain a number of
+[ParseResult] objects. These objects similarly provide raw-string
+access via dictionary keys and PyDelphin-model access via methods. Here
+is an example of parsing a sentence with [AceParser]:
+
+    >>> with AceParser('erg-1214-x86-64-0.9.24.dat') as parser:
+    ...     response = parser.interact('Cats sleep.')
+    ...     print(response.result(0)['mrs'])
+    ...     print(response.result(0).mrs())
+    ... 
+    [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ] RELS: < [ udef_q<0:4> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: pl IND: + ] RSTR: h5 BODY: h6 ]  [ _cat_n_1<0:4> LBL: h7 ARG0: x3 ]  [ _sleep_v_1<5:11> LBL: h1 ARG0: e2 ARG1: x3 ] > HCONS: < h0 qeq h1 h5 qeq h7 > ]
+    <Xmrs object (udef cat sleep) at 139880862399696>
+
+Functions exist for non-interactive communication with ACE: [parse()]
+and [parse_from_iterable()] open and close an AceParser instance;
+[transfer()] and [transfer_from_iterable()] open and close an
+AceTransferer instance; and [generate()] and [generate_from_iterable()]
+open and close an [AceGenerator] instance. Note that these functions
+open a new ACE subprocess every time they are called, so if you have
+many items to process, it is more efficient to use
+[parse_from_iterable()], [transfer_from_iterable()], or
+[generate_from_iterable()] than the single-item versions.
 
 Requires: ACE (http://sweaglesw.org/linguistics/ace/)
+
+[AceProcess]: #AceProcess
+[AceParser]: #AceParser
+[AceTransferer]: #AceTransferer
+[AceGenerator]: #AceGenerator
+[parse()]: #parse
+[parse_from_iterable()]: #parse_from_iterable
+[transfer()]: #transfer
+[transfer_from_iterable()]: #transfer_from_iterable
+[generate()]: #generate
+[generate_from_iterable()]: #generate_from_iterable
+[ParseResponse]: delphin.interfaces.base#ParseResponse
+[ParseResult]: delphin.interfaces.base#ParseResult
 """
 
 import logging
@@ -22,20 +66,11 @@ from subprocess import (
     check_output,
     CalledProcessError,
     Popen,
-    PIPE,
-    STDOUT
+    PIPE
 )
 
 import locale; locale.setlocale(locale.LC_ALL, '')
 encoding = locale.getpreferredencoding(False)
-
-import warnings
-warnings.warn(
-    'Responses from the ACE interface will use a response class '
-    '(like delphin.interfaces.rest) in future releases and may not '
-    'be entirely compatible with the current format.',
-    FutureWarning
-)
 
 from delphin.interfaces.base import ParseResponse, ParseResult
 from delphin.util import SExpr, stringtypes
@@ -43,7 +78,7 @@ from delphin.util import SExpr, stringtypes
 class _AceResult(ParseResult):
     """
     This is a interim response object until the old behavior can be
-    removed (maybe v0.6.0).
+    removed (maybe v0.7.0).
     """
     def __getitem__(self, key):
         key = {
@@ -63,7 +98,7 @@ class _AceResult(ParseResult):
 class _AceResponse(ParseResponse):
     """
     This is a interim response object until the old behavior can be
-    removed (maybe v0.6.0).
+    removed (maybe v0.7.0).
     """
     _result_factory = _AceResult
     def __getitem__(self, key):
@@ -77,7 +112,7 @@ class _AceResponse(ParseResponse):
         try:
             return self[key]
         except KeyError:
-            return ParseResponse.get(key, default)
+            return ParseResponse.get(self, key, default)
 
 
 class AceProcess(object):
@@ -88,23 +123,25 @@ class AceProcess(object):
     interpret the response returned via AceProcess.receive().
     Subclasses override receive() to interpret the task-specific
     response formats.
+
+    Args:
+        grm: the path to the compiled grammar file
+        cmdargs (list): a list of command-line arguments for ACE;
+            note that arguments and their values should be
+            separate entries, e.g. ['-n', '5']
+        executable: the path to the ACE binary; if `None`, ACE is
+            assumed to be callable via `ace`
+        env (dict): environment variables to pass to the ACE
+            subprocess
+        tsdbinfo: if True and ACE is compatible, gather additional
+            information from ACE's --tsdb-stdout option
     """
 
     _cmdargs = []
+    _termini = []
 
     def __init__(self, grm, cmdargs=None, executable=None, env=None,
                  tsdbinfo=True, **kwargs):
-        """
-        Args:
-            grm: the path to the compiled grammar file
-            cmdargs (list): a list of command-line arguments for ACE;
-                note that arguments and their values should be
-                separate entries, e.g. ['-n', '5']
-            executable: the path to the ACE binary; if `None`, ACE is
-                assumed to be callable via `ace`
-            env (dict): environment variables to pass to the ACE
-                subprocess
-        """
         if not os.path.isfile(grm):
             raise ValueError("Grammar file %s does not exist." % grm)
         self.grm = grm
@@ -114,6 +151,9 @@ class AceProcess(object):
         self.ace_version = _ace_version(self.executable)
         if tsdbinfo and self.ace_version >= (0, 9, 24):
             self.cmdargs.extend(['--tsdb-stdout', '--report-labels'])
+            self.receive = self._tsdb_receive
+        else:
+            self.receive = self._default_receive
         self._open()
 
     def _open(self):
@@ -121,9 +161,9 @@ class AceProcess(object):
             [self.executable, '-g', self.grm] + self._cmdargs + self.cmdargs,
             stdin=PIPE,
             stdout=PIPE,
-            stderr=STDOUT,
+            # stderr=self._stderr,
             env=self.env,
-            universal_newlines=False  # See _readlines() docstring
+            universal_newlines=True
         )
 
     def __enter__(self):
@@ -133,12 +173,46 @@ class AceProcess(object):
         self.close()
         return False  # don't try to handle any exceptions
 
+    def _result_lines(self, termini=None):
+        poll = self._p.poll
+        next_line = self._p.stdout.readline
+
+        if termini is None:
+            termini = self._termini
+        i, end = 0, len(termini)
+        cur_terminus = termini[i]
+        
+        lines = []
+        while i < end:
+            s = next_line()
+            if s == '' and poll() != None:
+                logging.info(
+                    'Process closed unexpectedly; attempting to reopen'
+                )
+                self.close()
+                self._open()
+                break
+            else:
+                lines.append(s.rstrip())
+                if cur_terminus.search(s):
+                    i += 1
+        return [line for line in lines if line != '']
+
     def send(self, datum):
         """
         Send *datum* (e.g. a sentence or MRS) to ACE.
         """
-        self._p.stdin.write((datum.rstrip() + '\n').encode('utf-8'))
-        self._p.stdin.flush()
+        try:
+            self._p.stdin.write((datum.rstrip() + '\n'))
+            self._p.stdin.flush()
+        except (IOError, OSError):  # ValueError if file was closed manually
+            logging.info(
+                'Attempted to write to a closed process; attempting to reopen'
+            )
+            self._open()
+            self._p.stdin.write((datum.rstrip() + '\n'))
+            self._p.stdin.flush()
+
 
     def receive(self):
         """
@@ -148,7 +222,17 @@ class AceProcess(object):
             Reading beyond the last line of stdout from ACE can cause
             the process to hang while it waits for the next line.
         """
-        return self._p.stdout
+        raise NotImplementedError()
+
+    def _default_receive(self):
+        raise NotImplementedError()
+
+    def _tsdb_receive(self):
+        lines = self._result_lines()
+        response, lines = _make_response(lines)
+        line = ' '.join(lines)  # ACE 0.9.24 on Mac puts superfluous newlines
+        response = _tsdb_response(response, line)
+        return response
 
     def interact(self, datum):
         """
@@ -173,29 +257,91 @@ class AceProcess(object):
 class AceParser(AceProcess):
     """
     A class for managing parse requests with ACE.
+
+    See [AceProcess] for initialization parameters.
     """
 
-    def receive(self):
-        if '--tsdb-stdout' in self.cmdargs:
-            receive =  _tsdb_stdout_parse
-        else:
-            receive = _stdout_parse
-        return receive(_readlines(self._p.stdout))
+    _termini = [re.compile(r'^$'), re.compile(r'^$')]
+
+    def _default_receive(self):
+        lines = self._result_lines()
+        response, lines = _make_response(lines)
+        response['RESULTS'] = [
+            dict(zip(('MRS', 'DERIV'), map(str.strip, line.split(' ; '))))
+            for line in lines
+        ]
+        return response        
+
+
+class AceTransferer(AceProcess):
+    """
+    A class for managing transfer requests with ACE.
+
+    See [AceProcess] for initialization parameters.
+    """
+
+    _termini = [re.compile(r'^$')]
+
+    def __init__(self, grm, cmdargs=None, executable=None, env=None,
+                 tsdbinfo=False, **kwargs):
+        # disallow --tsdb-stdout
+        if tsdbinfo == True:
+            raise ValueError(
+                'tsdbinfo=True is not available for AceTransferer'
+            )
+        if '--tsdb-stdout' in (cmdargs or []):
+            cmdargs.remove('--tsdb-stdout')
+        AceProcess.__init__(
+            self, grm, cmdargs=cmdargs, executable=executable, env=env,
+            tsdbinfo=False, **kwargs
+        )
+
+    def _default_receive(self):
+        lines = self._result_lines()
+        response, lines = _make_response(lines)
+        response['RESULTS'] = [{'MRS': line.strip()} for line in lines]
+        return response        
 
 
 class AceGenerator(AceProcess):
     """
     A class for managing realization requests with ACE.
+
+    See [AceProcess] for initialization parameters.
     """
 
-    _cmdargs = ['-e']
+    _cmdargs = ['-e', '--tsdb-notes']
+    _termini = [re.compile(r'NOTE: tsdb parse: ')]
 
-    def receive(self):
-        if '--tsdb-stdout' in self.cmdargs:
-            receive =  _tsdb_stdout_realization
-        else:
-            receive = _stdout_realization
-        return receive(_readlines(self._p.stdout))
+    def _default_receive(self):
+        show_tree = '--show-realization-trees' in self.cmdargs
+        show_mrs = '--show-realization-mrses' in self.cmdargs
+
+        lines = self._result_lines()
+        response, lines = _make_response(lines)
+
+        i, numlines = 0, len(lines)
+        results = []
+        while i < numlines:
+            result = {'SENT': lines[i].strip()}
+            i += 1
+            if show_tree and lines[i].startswith('DTREE = '):
+                result['DERIV'] = lines[i][8:].strip()
+                i += 1
+            if show_mrs and lines[i].startswith('MRS = '):
+                result['MRS'] = lines[i][6:].strip()
+                i += 1
+            results.append(result)
+        response['RESULTS'] = results
+        return response
+
+    def _tsdb_receive(self):
+        # with --tsdb-stdout, the notes line is not printed
+        lines = self._result_lines(termini=[re.compile(r'\(:results \.')])
+        response, lines = _make_response(lines)
+        line = ' '.join(lines)  # ACE 0.9.24 on Mac puts superfluous newlines
+        response = _tsdb_response(response, line)
+        return response        
 
 
 def compile(cfg_path, out_path, log=None):
@@ -239,7 +385,7 @@ def parse_from_iterable(grm, data, **kwargs):
 
 def parse(grm, datum, **kwargs):
     """
-    Parse *datum* with ACE using *grm*.
+    Parse sentence *datum* with ACE using *grm*.
 
     Args:
         grm: the path to the grammar image
@@ -249,13 +395,41 @@ def parse(grm, datum, **kwargs):
     return next(parse_from_iterable(grm, [datum], **kwargs))
 
 
-def generate_from_iterable(grm, data, **kwargs):
+def transfer_from_iterable(grm, data, **kwargs):
     """
-    Generate from each Xmrs in *data* with ACE using *grm*.
+    Transfer from each MRS in *data* with ACE using *grm*.
 
     Args:
         grm: the path to the grammar image
-        data (iterable): the Xmrs objects to generate from
+        data (iterable): the SimpleMRS strings to transfer from
+        kwargs: additional keyword arguments to pass to the
+            AceTransferer
+    """
+    with AceTransferer(grm, **kwargs) as transferer:
+        for datum in data:
+            yield transferer.interact(datum)
+
+
+def transfer(grm, datum, **kwargs):
+    """
+    Transfer from the MRS *datum* with ACE using *grm*.
+
+    Args:
+        grm: the path to the grammar image
+        datum: the SimpleMRS string to transfer from
+        kwargs: additional keyword arguments to pass to the
+            AceTransferer
+    """
+    return next(transfer_from_iterable(grm, [datum], **kwargs))
+
+
+def generate_from_iterable(grm, data, **kwargs):
+    """
+    Generate from each MRS in *data* with ACE using *grm*.
+
+    Args:
+        grm: the path to the grammar image
+        data (iterable): the SimpleMRS strings to generate from
         kwargs: additional keyword arguments to pass to the
             AceGenerator
     """
@@ -266,11 +440,11 @@ def generate_from_iterable(grm, data, **kwargs):
 
 def generate(grm, datum, **kwargs):
     """
-    Generate from the Xmrs *datum* with ACE using *grm*.
+    Generate from the MRS *datum* with ACE using *grm*.
 
     Args:
         grm: the path to the grammar image
-        datum: the Xmrs object to generate from
+        datum: the SimpleMRS string to generate from
         kwargs: additional keyword arguments to pass to the
             AceGenerator
     """
@@ -288,7 +462,8 @@ def _ace_version(executable):
         raise
     return version
 
-def _stdout_parse(line_iter):
+
+def _make_response(lines):
     response = _AceResponse({
         'INPUT': None,
         'NOTES': [],
@@ -297,95 +472,28 @@ def _stdout_parse(line_iter):
         'SENT': None,
         'RESULTS': []
     })
-
-    blank = 0
-
-    line = next(line_iter)
-    while True:
-        if line.strip() == '':
-            blank += 1
-            if blank >= 2:
-                break
+    content_lines = []
+    for line in lines:
+        if line.startswith('NOTE: '):
+            response['NOTES'].append(line[6:])
+        elif line.startswith('WARNING: '):
+            response['WARNINGS'].append(line[9:])
+        elif line.startswith('ERROR: '):
+            response['ERRORS'].append(line[7:])
         elif line.startswith('SENT: ') or line.startswith('SKIP: '):
-            response['SENT'] = line.split(': ', 1)[1]
-        elif (line.startswith('NOTE: ') or
-              line.startswith('WARNING: ') or
-              line.startswith('ERROR: ')):
-            level, message = line.split(': ', 1)
-            response['%sS' % level].append(message)
+            response['SENT'] = line[6:]
         else:
-            mrs, deriv = line.split(' ; ')
-            response['RESULTS'].append({
-                'MRS': mrs.strip(),
-                'DERIV': deriv.strip()
-            })
-        line = next(line_iter)
-    return response
+            content_lines.append(line)
+    return response, content_lines
 
 
-def _stdout_realization(line_iter):
-    response = _AceResponse({
-        'INPUT': None,
-        'NOTES': [],
-        'WARNINGS': [],
-        'ERRORS': [],
-        'SENT': None,
-        'RESULTS': []
-    })
-    results = []
-
-    line = next(line_iter)
-    while not line.startswith('NOTE: '):
-        if line.startswith('WARNING: ') or line.startswith('ERROR: '):
-            level, message = line.split(': ', 1)
-            response['%sS' % level] = message
-        else:
-            results.append({'SENT': line})
-        line = next(line_iter)
-    response['NOTES'].append(line.split(': ', 1)[1])
-    # sometimes error messages aren't prefixed with ERROR
-    if line.endswith('[0 results]') and len(results) > 0:
-        response['ERRORS'] = '\n'.join(d['SENT'] for d in results)
-        results = []
-    response['RESULTS'] = results
-    return response
-
-def _tsdb_stdout_parse(line_iter):
-    response = _tsdb_stdout(line_iter)
-    # two blank lines
-    assert next(line_iter).strip() == ''
-    assert next(line_iter).strip() == ''
-    return response
-
-def _tsdb_stdout_realization(line_iter):
-    response = _tsdb_stdout(line_iter)
-    # final NOTE line
-    note = next(line_iter)
-    assert note.startswith('NOTE: ')
-    response['NOTES'].append(note.split(': ', 1)[1])
-    return response    
-
-def _tsdb_stdout(line_iter):
-    response = _AceResponse({
-        'INPUT': None,
-        'NOTES': [],
-        'WARNINGS': [],
-        'ERRORS': [],
-        'SENT': None,
-        'RESULTS': []
-    })
-
-    line = next(line_iter)
-    while (line.startswith('NOTE: ') or
-           line.startswith('WARNING: ') or
-           line.startswith('ERROR: ')):
-        level, message = line.split(': ', 1)
-        response['%sS' % level].append(message)
-        line = next(line_iter)
+def _tsdb_response(response, line):
     while line:
         expr = SExpr.parse(line)
         line = expr.remainder
-        assert len(expr.data) == 2
+        if len(expr.data) != 2:
+            logging.error('Malformed output from ACE: {}'.format(line))
+            break
         key, val = expr.data
         if key == ':p-input':
             response.setdefault('tokens', {})['initial'] = val.strip()
@@ -411,31 +519,3 @@ def _tsdb_stdout(line_iter):
         else:
             response[key[1:]] = val
     return response
-
-def _readlines(stream):
-    """
-    When ACE's stdout and stderr streams are interleaved, error messages
-    can appear in the middle of, e.g., UTF-8 sequences. When decoding
-    fails, remove the message (as best as possible), attach the next
-    line, and try again.
-    """
-    msg_re = re.compile(b'(NOTE|WARNING|ERROR):.*$')
-    b = stream.readline()
-    while True:
-        try:
-            s = b.decode(encoding)
-        except UnicodeDecodeError:
-            m = msg_re.search(b)
-            if m:
-                yield b[m.start():].decode(encoding).rstrip()
-                b = b[:m.start()]
-                b2 = stream.readline()
-                m = msg_re.match(b2)
-                while m:
-                    yield b2.decode(encoding).rstrip()
-                b += b2
-            else:
-                raise
-        else:
-            yield s.rstrip()
-            b = stream.readline()
