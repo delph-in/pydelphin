@@ -3,6 +3,19 @@
 ## [Unreleased][unreleased]
 
 ### Added
+### Changed
+### Removed
+### Fixed
+### Deprecated
+
+## [v0.6.1][]
+
+This minor release fixes a number of bugs with the ACE interface and a
+number of small bugs that came up during testing. While a minor release,
+one new (minor) feature is added: an AceTransferer and associated
+functions.
+
+### Added
 
 * `delphin.interfaces.ace.AceTransferer` - due to a limitation with ACE,
   only the regular (non-tsdb) mode is allowed in transfer
@@ -15,7 +28,6 @@
 * `delphin.interfaces.ace` attempts to restart a process that closed
   unexpectedly
 
-### Removed
 ### Fixed
 
 * `delphin.interfaces.ace` ignores stderr, which effectively fixes #86
@@ -24,8 +36,9 @@
   used (fixes #96)
 * `delphin.mrs.xmrs.Xmrs` equality test now checks variable properties
 * `delphin.mrs.xmrs.Mrs.from_dict()` correctly reads variable properties (#98)
-
-### Deprecated
+* `delphin.interfaces.ace._AceResponse.get()` now backs off to ParseResponse
+  on KeyError
+* `delphin.mrs.simplemrs` fix error message on unexpected token
 
 ## [v0.6.0][]
 
@@ -439,6 +452,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v0.6.1]: ../../releases/tag/v0.6.1
 [v0.6.0]: ../../releases/tag/v0.6.0
 [v0.5.1]: ../../releases/tag/v0.5.1
 [v0.5.0]: ../../releases/tag/v0.5.0

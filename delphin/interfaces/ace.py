@@ -112,7 +112,7 @@ class _AceResponse(ParseResponse):
         try:
             return self[key]
         except KeyError:
-            return ParseResponse.get(key, default)
+            return ParseResponse.get(self, key, default)
 
 
 class AceProcess(object):

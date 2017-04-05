@@ -201,7 +201,7 @@ def _read_literals(tokens, *toks):
         token = tokens.popleft()
         if token != tok:
             raise XDE(
-                'Expected \'{}\': {}'.format(tok, ' '.join([tok] + list(tokens)))
+                'Expected \'{}\': {}'.format(tok, ' '.join(list(tokens)))
             )
 
 
