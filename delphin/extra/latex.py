@@ -33,7 +33,7 @@ def _latex_escape(s):
     # _character_unescapes = {'\\s': _field_delimiter, '\\n': '\n', '\\\\':     '\\'}
     # _unescape_func = lambda m: _character_unescapes[m.group(0)]
     # _unescape_re = re.compile(r'(\\s|\\n|\\\\)')
-    # _unescape_re.sub(_unescape_func, string, re.UNICODE)
+    # _unescape_re.sub(_unescape_func, string, flags=re.UNICODE)
     for c, r in _LATEX_CHARMAP:
         s = s.replace(c, r)
     return s

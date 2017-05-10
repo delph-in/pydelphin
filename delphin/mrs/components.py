@@ -464,7 +464,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
             '_cat_n_1'
         """
         s = self.string.strip('"').lstrip("'")
-        return re.sub(r'(.*)_rel$', r'\1', s, re.U|re.I)
+        return re.sub(r'(.*)_rel$', r'\1', s, flags=re.U|re.I)
 
     def is_quantifier(self):
         """

@@ -164,7 +164,7 @@ _character_escapes = {
 }
 
 def _escape(m):
-    return _character_escapes[m.group(0)]
+    return _character_escapes[m.group(1)]
 
 
 def escape(string):
@@ -183,13 +183,13 @@ def escape(string):
     Returns:
         The escaped string
     """
-    return re.sub(r'(@|\n|\\)', _escape, string, re.UNICODE)
+    return re.sub(r'(@|\n|\\)', _escape, string, flags=re.UNICODE)
 
 
 _character_unescapes = {'\\s': _field_delimiter, '\\n': '\n', '\\\\': '\\'}
 
 def _unescape(m):
-    return _character_unescapes[m.group(0)]
+    return _character_unescapes[m.group(1)]
 
 
 def unescape(string):
@@ -202,7 +202,7 @@ def unescape(string):
     Returns:
         The string with escape sequences replaced
     """
-    return re.sub(r'(\\s|\\n|\\\\)', _unescape, string, re.UNICODE)
+    return re.sub(r'(\\s|\\n|\\\\)', _unescape, string, flags=re.UNICODE)
 
 
 @contextmanager

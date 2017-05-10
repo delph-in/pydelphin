@@ -182,7 +182,7 @@ def _read_file(fn, basedir):
                 section = name
             continue
 
-        match = re.match(r'include:\s*(?P<filename>.+)$', line, re.U)
+        match = re.match(r'include:\s*(?P<filename>.+)$', line, flags=re.U)
         if match is not None:
             include_fn = pjoin(basedir, match.group('filename').rstrip())
             include_data = _read_file(include_fn, dirname(include_fn))

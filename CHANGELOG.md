@@ -6,6 +6,9 @@
 ### Changed
 ### Removed
 ### Fixed
+
+* Properly call `re.sub()` so the flags don't become the count (#108)
+
 ### Deprecated
 
 ## [v0.6.1][]
