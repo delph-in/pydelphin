@@ -296,6 +296,11 @@ def mkprof(args):
                 p.write_table(tbl, [])
 
     # summarize what was done
+    if sys.stdout.isatty():
+        _red = lambda s: '\x1b[1;31m{}\x1b[0m'.format(s)
+    else:
+        _red = lambda s: s
+    fmt = '{:>8} bytes\t{}'
     prof = itsdb.ItsdbProfile(outdir, index=False)
     relations = prof.relations
     tblsort = lambda t: (t[1] not in set(['item', 'item-set', 'fold']), t[0])
@@ -304,7 +309,10 @@ def mkprof(args):
         f = os.path.join(outdir, filename)
         if os.path.isfile(f):
             stat = os.stat(f)
-            print('{:<6} bytes\t{}'.format(stat.st_size, filename))
+            print(fmt.format(stat.st_size, filename))
+        elif os.path.isfile(f + '.gz'):
+            stat = os.stat(f + '.gz')
+            print(fmt.format(stat.st_size, _red(filename + '.gz')))
 
 
 def compare(args):
