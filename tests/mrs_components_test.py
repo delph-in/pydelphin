@@ -448,7 +448,6 @@ class TestPred():
         assert spred('_dog_n_1_rel') == spred('_Dog_N_1_rel')
         assert spred('_dog_n_1_rel') == spred('_dog_n_1')
 
-
     def test_is_quantifier(self):
         # NOTE: deprecated
         assert spred('"_the_q_rel"').is_quantifier() == True
@@ -460,6 +459,14 @@ class TestPred():
         assert spred('"_the_q"').is_quantifier() == True
         assert spred('_q_n_letter_rel').is_quantifier() == False
 
+    def test_hash(self):
+        s = set([spred('"_the_q_rel"')])
+        assert spred('"_the_q_rel"') in s
+        assert spred('_the_q_rel') in s
+        assert spred('_the_q') in s
+        assert spred('the_q_rel') not in s
+        s.add(spred('_the_q_rel'))
+        assert len(s) == 1
 
 
 def test_split_pred_string():

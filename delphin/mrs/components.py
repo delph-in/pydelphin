@@ -361,12 +361,14 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
     predicates always begin with an underscore (ignoring possible
     quotes), and are often defined as strings in a lexicon.
 
-    In pyDelphin, Preds are equivalent if they have the same lemma,
+    In PyDelphin, Preds are equivalent if they have the same lemma,
     pos, and sense, and are both abstract or both surface preds.
     Other factors are ignored for comparison, such as their being
     string-, grammar-, or real-preds, whether they are quoted or not,
     whether they end with `_rel` or not, or differences in
-    capitalization.
+    capitalization. Hashed Pred objects (e.g., in a dict or set) also
+    use the normalized form. However, unlike with equality comparisons,
+    Pred-formatted strings are not treated as equivalent in a hash.
 
     Args:
         type: the type of predicate; valid values are
@@ -421,7 +423,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
         return '<Pred object {} at {}>'.format(self.string, id(self))
 
     def __hash__(self):
-        return hash(self.string)
+        return hash(self.short_form())
 
     @classmethod
     def stringpred(cls, predstr):

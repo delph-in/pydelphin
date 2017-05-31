@@ -8,6 +8,9 @@
 * `delphin.itsdb.ItsdbProfile.size()` (#112)
 
 ### Changed
+
+* Hash on the normalized form of Preds. (#107)
+
 ### Removed
 ### Fixed
 
