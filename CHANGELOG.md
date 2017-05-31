@@ -3,11 +3,16 @@
 ## [Unreleased][unreleased]
 
 ### Added
+
+* `delphin.itsdb.ItsdbProfile.exists()` (#112)
+* `delphin.itsdb.ItsdbProfile.size()` (#112)
+
 ### Changed
 ### Removed
 ### Fixed
 
 * Properly call `re.sub()` so the flags don't become the count (#108)
+* Include file size of gzipped tables in summary of `delphin mkprof` (#110)
 
 ### Deprecated
 

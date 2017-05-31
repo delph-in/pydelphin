@@ -205,33 +205,43 @@ def unescape(string):
     return re.sub(r'(\\s|\\n|\\\\)', _unescape, string, flags=re.UNICODE)
 
 
+def _table_filename(tbl_filename):
+    if tbl_filename.endswith('.gz'):
+        gzfn = tbl_filename
+        txfn = tbl_filename[:-3]
+    else:
+        txfn = tbl_filename
+        gzfn = tbl_filename + '.gz'
+    
+    if os.path.exists(txfn):
+        if (os.path.exists(gzfn) and
+                os.stat(gzfn).st_mtime > os.stat(txfn).st_mtime):
+            tbl_filename = gzfn
+        else:
+            tbl_filename = txfn
+    elif os.path.exists(gzfn):
+        tbl_filename = gzfn
+    else:
+        raise ItsdbError(
+            'Table does not exist at {}(.gz)'
+            .format(tbl_filename)
+        )
+    
+    return tbl_filename
+
+
 @contextmanager
 def _open_table(tbl_filename):
-    if tbl_filename.endswith('.gz'):
-        gz_filename = tbl_filename
-        tbl_filename = tbl_filename[:-3]
-    else:
-        gz_filename = tbl_filename + '.gz'
-
-    if os.path.exists(tbl_filename) and os.path.exists(gz_filename):
-        logging.warning(
-            'Both gzipped and plaintext files were found; attempting to '
-            'use the plaintext one.'
-        )
-    if os.path.exists(tbl_filename):
-        with open(tbl_filename) as f:
-            yield f
-    elif os.path.exists(gz_filename):
+    path = _table_filename(tbl_filename)
+    if path.endswith('.gz'):
         # text mode only from py3.3; until then use TextIOWrapper
         with TextIOWrapper(
                 BufferedReader(gzopen(tbl_filename + '.gz', mode='r'))
              ) as f:
             yield f
     else:
-        raise ItsdbError(
-            'Table does not exist at {}(.gz)'
-            .format(tbl_filename)
-        )
+        with open(tbl_filename) as f:
+            yield f
 
 
 def _write_table(profile_dir, table_name, rows, fields,
@@ -483,7 +493,7 @@ class ItsdbProfile(object):
         )
 
         if self._tables is None:
-            self._tables = list(self.relations.keys())
+            self._tables = list(self.relations)
 
         self.filters = defaultdict(list)
         self.applicators = defaultdict(list)
@@ -720,6 +730,48 @@ class ItsdbProfile(object):
                              append=append, gzip=_gzip)
             elif os.path.exists(fn) or os.path.exists(fn + '.gz'):
                 logging.info('Ignoring "{}" table.'.format(table))
+
+    def exists(self, table=None):
+        """
+        Return True if the profile or a table exist.
+
+        If *table* is `None`, this function returns True if the root
+        directory exists and contains a valid relations file. If *table*
+        is given, the function returns True if the table exists as a
+        file (even if empty). Otherwise it returns False.
+        """
+        if not os.path.isdir(self.root):
+            return False
+        if not os.path.isfile(os.path.join(self.root, _relations_filename)):
+            return False
+        if table is not None:
+            try:
+                _table_filename(os.path.join(self.root, table))
+            except ItsdbError:
+                return False
+        return True
+
+    def size(self, table=None):
+        """
+        Return the size, in bytes, of the profile or *table*.
+
+        If *table* is `None`, this function returns the size of the
+        whole profile (i.e. the sum of the table sizes). Otherwise, it
+        returns the size of *table*.
+
+        Note: if the file is gzipped, it returns the compressed size.
+        """
+        size = 0
+        if table is None:
+            for table in self.relations:
+                size += self.size(table)
+        else:
+            try:
+                fn = _table_filename(os.path.join(self.root, table))
+                size += os.stat(fn).st_size
+            except ItsdbError:
+                pass
+        return size
 
 
 class ItsdbSkeleton(ItsdbProfile):

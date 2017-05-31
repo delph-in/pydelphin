@@ -303,8 +303,7 @@ def mkprof(args):
     fmt = '{:>8} bytes\t{}'
     prof = itsdb.ItsdbProfile(outdir, index=False)
     relations = prof.relations
-    tblsort = lambda t: (t[1] not in set(['item', 'item-set', 'fold']), t[0])
-    tables = [tbl for i, tbl in sorted(enumerate(relations), key=tblsort)]
+    tables = [tbl for i, tbl in sorted(enumerate(relations))]
     for filename in ['relations'] + tables:
         f = os.path.join(outdir, filename)
         if os.path.isfile(f):
