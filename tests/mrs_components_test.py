@@ -464,6 +464,7 @@ class TestPred():
         assert spred('"_the_q_rel"') in s
         assert spred('_the_q_rel') in s
         assert spred('_the_q') in s
+        assert spred('_The_q_rel') in s
         assert spred('the_q_rel') not in s
         s.add(spred('_the_q_rel'))
         assert len(s) == 1
@@ -471,6 +472,8 @@ class TestPred():
 
 def test_split_pred_string():
     sps = split_pred_string
+    # normalized
+    assert sps('dog_n_1') == ('dog', 'n', '1', None)
     # with rel
     assert sps('pron_rel') == ('pron', None, None, 'rel')
     # with pos
@@ -499,18 +502,23 @@ def test_is_valid_pred_string():
     assert ivps('_24/7_a_1_rel')
     assert ivps('_a+bit_q_rel')
     assert ivps('_A$_n_1_rel')
+    assert ivps('coord')
+    assert ivps('_dog_n_1')
+    assert ivps('_dog_n')
     # invalid
-    assert not ivps('coord')
-    assert not ivps('coord_relation')
+    assert not ivps('_dog_rel')
+    assert not ivps('_dog_1_rel')
     assert not ivps('_only_child_n_1_rel')
 
 
 def test_normalize_pred_string():
     nps = normalize_pred_string
-    assert nps('pron') == 'pron_rel'
-    assert nps('"udef_q_rel"') == 'udef_q_rel'
-    assert nps('\'udef_q_rel') == 'udef_q_rel'
-    assert nps('_dog_n_1_rel') == '_dog_n_1_rel'
+    assert nps('pron_rel') == 'pron'
+    assert nps('pron_rel_rel') == 'pron_rel'  # i hope nobody does this
+    assert nps('"udef_q_rel"') == 'udef_q'
+    assert nps('\'udef_q_rel') == 'udef_q'
+    assert nps('_dog_n_1_rel') == '_dog_n_1'
+    assert nps('_DELPH-IN_n_1') == '_delph-in_n_1'
 
 class TestNode():
     def test_construct(self):

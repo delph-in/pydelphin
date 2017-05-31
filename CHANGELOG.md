@@ -16,6 +16,8 @@
 
 * Properly call `re.sub()` so the flags don't become the count (#108)
 * Include file size of gzipped tables in summary of `delphin mkprof` (#110)
+* `normalize_pred_string()` now strips `_rel` (#111) and lowercases
+* `is_valid_pred_string()` no longer requires `_rel` (#111)
 
 ### Deprecated
 

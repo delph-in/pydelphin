@@ -465,8 +465,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
             >>> p.short_form()
             '_cat_n_1'
         """
-        s = self.string.strip('"').lstrip("'")
-        return re.sub(r'(.*)_rel$', r'\1', s, flags=re.U|re.I)
+        return normalize_pred_string(self.string)
 
     def is_quantifier(self):
         """
@@ -518,24 +517,23 @@ def is_valid_pred_string(predstr):
     Pred, `False` otherwise.
     """
     predstr = predstr.strip('"').lstrip("'")
-    if not predstr.endswith('_rel'):
-        return False
     # this is a stricter regex than in Pred, but doesn't check POS
-    return re.match(r'_?((?:[^_\\]|\\.)+_){1,3}rel', predstr) is not None
+    return re.match(
+        r'_([^ _\\]|\\.)+_[a-z](_([^ _\\]|\\.)+)?(_rel)?$'
+        r'|[^_]([^ \\]|\\.)+(_rel)?$',
+        predstr
+    ) is not None
 
 
 def normalize_pred_string(predstr):
     """
-    Make pred strings more consistent by removing quotes and using
-    the _rel suffix.
+    Make pred strings more consistent by removing quotes and the _rel
+    suffix, and by lowercasing them.
     """
-    tokens = []
+    tokens = [t for t in split_pred_string(predstr)[:3] if t is not None]
     if predstr.lstrip('\'"')[:1] == '_':
-        tokens.append('')
-    tokens.extend(t for t in split_pred_string(predstr) if t is not None)
-    if not tokens[-1] == 'rel':
-        tokens.append('rel')
-    return '_'.join(tokens)
+        tokens = [''] + tokens
+    return '_'.join(tokens).lower()
 
 
 class Node(
