@@ -4,7 +4,8 @@ python:
   - "3.3"
   - "3.4"
   - "3.5"
-script: "python setup.py test"
 before_install:
   - pip install --upgrade pytest
+install: "python setup.py -q install"
+script: py.test
 
