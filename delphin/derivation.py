@@ -374,6 +374,32 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
         warnings.warn('Deprecated; try UdfNode.type', DeprecationWarning)
         return self.type
 
+    # Convenience methods
+
+    def preterminals(self):
+        """
+        Return the list of preterminals (i.e. lexical grammar-entities).
+        """
+        nodes = []
+        for dtr in self.daughters:
+            if isinstance(dtr, UdfTerminal):
+                nodes.append(self)
+            else:
+                nodes.extend(dtr.preterminals())
+        return nodes
+
+    def terminals(self):
+        """
+        Return the list of terminals (i.e. lexical units).
+        """
+        nodes = []
+        for dtr in self.daughters:
+            if isinstance(dtr, UdfTerminal):
+                nodes.append(dtr)
+            else:
+                nodes.extend(dtr.terminals())
+        return nodes
+
 class Derivation(UdfNode):
     """
     A class for reading, writing, and storing derivation trees. Objects

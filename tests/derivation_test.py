@@ -323,6 +323,38 @@ class TestDerivation():
             assert node.daughters[0].lexical_type() == 'a-type_le'
             assert node.daughters[1].lexical_type() == 'b-type_le'
 
+    def test_preterminals(self):
+        a = D.from_string('(root (1 some-thing -1 -1 -1'
+                          '  (2 a-thing -1 -1 -1 ("a"))'
+                          '  (3 b-thing -1 -1 -1 ("b"))))')
+        assert [t.id for t in a.preterminals()] == [2, 3]
+        a = D.from_string('(root'
+            ' (1 some-thing@some-type 0.4 0 5'
+            '  (2 a-lex@a-type 0.8 0 1'
+            '   ("a b"'
+            '    3 "token [ +FORM \\"a\\" ]"'
+            '    4 "token [ +FORM \\"b\\" ]"))'
+            '  (5 b-lex@b-type 0.9 1 2'
+            '   ("b"'
+            '    6 "token [ +FORM \\"b\\" ]"))))')
+        assert [t.id for t in a.preterminals()] == [2, 5]
+
+    def test_terminals(self):
+        a = D.from_string('(root (1 some-thing -1 -1 -1'
+                          '  (2 a-thing -1 -1 -1 ("a"))'
+                          '  (3 b-thing -1 -1 -1 ("b"))))')
+        assert [t.form for t in a.terminals()] == ['a', 'b']
+        a = D.from_string('(root'
+            ' (1 some-thing@some-type 0.4 0 5'
+            '  (2 a-lex@a-type 0.8 0 1'
+            '   ("a b"'
+            '    3 "token [ +FORM \\"a\\" ]"'
+            '    4 "token [ +FORM \\"b\\" ]"))'
+            '  (5 b-lex@b-type 0.9 1 2'
+            '   ("b"'
+            '    6 "token [ +FORM \\"b\\" ]"))))')
+        assert [t.form for t in a.terminals()] == ['a b', 'b']
+
     def test_to_udf(self):
         s = '(1 some-thing -1 -1 -1 ("token"))'
         assert D.from_string(s).to_udf(indent=None) == s
