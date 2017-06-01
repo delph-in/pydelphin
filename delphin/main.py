@@ -64,7 +64,8 @@ Options:
 
 MKPROF_USAGE = """
 Usage:
-  delphin mkprof DEST --source PROFILE [--apply=APL]... [--filter=CND]...
+  delphin mkprof DEST (--source PROFILE | --in-place)
+                      [--apply=APL]... [--filter=CND]...
                       [--relations=FILE] [--full|--skeleton] [--gzip]
                       [-v...|-q]
   delphin mkprof DEST --relations=FILE [--input TXT] [--skeleton] [--gzip]
@@ -93,6 +94,7 @@ Options:
                         relations file to use for destination profile
   -s PROFILE, --source PROFILE
                         path to a profile directory
+  --in-place            use DEST as the --source
   --full                write all tables (must be used with --source)
   --skeleton            write only 'item' and 'relations' files
   -a APL, --apply APL   apply an expression to rows/cols in the profile;
@@ -266,6 +268,10 @@ def mkprof(args):
     Create [incr tsdb()] profiles or skeletons.
     """
     outdir = args['DEST']
+    if args['--in-place']:
+        if args['--skeleton']:
+            sys.exit('Creating a skeleton with --in-place is not allowed.')
+        args['--source'] = args['DEST']
     if args['--source']:  # input is profile
         p = _prepare_input_profile(args['--source'],
                                    filters=args['--filter'],

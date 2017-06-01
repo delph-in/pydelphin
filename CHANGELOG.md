@@ -6,6 +6,7 @@
 
 * `delphin.itsdb.ItsdbProfile.exists()` (#112)
 * `delphin.itsdb.ItsdbProfile.size()` (#112)
+* `--in-place` option to the `delphin mkprof` command (#109)
 
 ### Changed
 

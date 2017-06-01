@@ -8,6 +8,8 @@ customized through the use of filters (see filter_rows()), applicators
 one can create a new skeleton using the make_skeleton() function.
 """
 
+from __future__ import print_function
+
 import os
 import re
 from gzip import open as gzopen
@@ -700,36 +702,39 @@ class ItsdbProfile(object):
                 write out text files. If `None`, use whatever the
                 original file was.
         """
-        import shutil
         if relations_filename:
+            src_rels = os.path.abspath(relations_filename)
             relations = get_relations(relations_filename)
         else:
-            relations_filename = os.path.join(self.root, _relations_filename)
+            src_rels = os.path.abspath(os.path.join(self.root,
+                                                    _relations_filename))
             relations = self.relations
-        shutil.copyfile(relations_filename,
-                        os.path.join(profile_directory, _relations_filename))
+        
+        tgt_rels = os.path.abspath(os.path.join(profile_directory,
+                                                _relations_filename))
+        if not (os.path.isfile(tgt_rels) and src_rels == tgt_rels):
+            with open(tgt_rels, 'w') as rel_fh:
+                print(open(src_rels).read(), file=rel_fh)
+
         tables = self._tables
         if tables is not None:
             tables = set(tables)
         for table, fields in relations.items():
-            fn = os.path.join(self.root, table)
-            if tables is None or table in tables:
-                if os.path.exists(fn):
-                    pass
-                elif os.path.exists(fn + '.gz'):
-                    fn += '.gz'
-                else:
-                    logging.warning(
-                        'Could not write "{}"; table doesn\'t exist.'
-                        .format(table)
-                    )
-                    continue
+            if tables is not None and table not in tables:
+                continue
+            try:
+                fn = _table_filename(os.path.join(self.root, table))
                 _gzip = gzip if gzip is not None else fn.endswith('.gz')
-                rows = self.read_table(table, key_filter=key_filter)
+                rows = list(self.read_table(table, key_filter=key_filter))
                 _write_table(profile_directory, table, rows, fields,
                              append=append, gzip=_gzip)
-            elif os.path.exists(fn) or os.path.exists(fn + '.gz'):
-                logging.info('Ignoring "{}" table.'.format(table))
+            except ItsdbError:
+                logging.warning(
+                    'Could not write "{}"; table doesn\'t exist.'.format(table)
+                )
+                continue
+
+        self._cleanup(gzip=gzip)
 
     def exists(self, table=None):
         """
@@ -773,6 +778,19 @@ class ItsdbProfile(object):
                 pass
         return size
 
+    def _cleanup(self, gzip=None):
+        for table in self.relations:
+            txfn = os.path.join(self.root, table)
+            gzfn = os.path.join(self.root, table + '.gz')
+            if os.path.isfile(txfn) and os.path.isfile(gzfn):
+                if gzip is True:
+                    os.remove(txfn)
+                elif gzip is False:
+                    os.remove(gzfn)
+                elif os.stat(txfn).st_mtime < os.stat(gzfn).st_mtime:
+                    os.remove(txfn)
+                else:
+                    os.remove(gzfn)
 
 class ItsdbSkeleton(ItsdbProfile):
     """
