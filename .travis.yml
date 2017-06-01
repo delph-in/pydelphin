@@ -5,7 +5,7 @@ python:
   - "3.4"
   - "3.5"
 install:
-  - pip install -q setuptools<36.0.0 pytest>=2.8.0
+  - pip install -q 'setuptools<36.0.0,>=36.0.1' 'pytest>=2.8.0'
   - python setup.py -q install
 script: py.test --doctest-glob=tests/*.md
 
