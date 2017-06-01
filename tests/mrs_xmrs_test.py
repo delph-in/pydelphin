@@ -64,6 +64,7 @@ class TestXmrs():
         x = Xmrs()
         with pytest.raises(XmrsError):
             x.add_hcons([('h0')])  # only hi
+        with pytest.raises(XmrsError):
             x.add_hcons([('h0', 'qeq')])  # only hi and relation
         # hi, relation, and lo (the minimum, but probably max, too)
         x.add_hcons([('h0', 'qeq', 'h1')])
@@ -82,6 +83,7 @@ class TestXmrs():
         x = Xmrs()
         with pytest.raises(XmrsError):
             x.add_icons([('x0')])  # only left
+        with pytest.raises(XmrsError):
             x.add_icons([('x0', 'topic')])  # only left and relation
         # hi, relation, and lo (the minimum, but probably max, too)
         x.add_icons([('x0', 'topic', 'x1')])
@@ -227,7 +229,9 @@ class TestXmrs():
         assert set(ics) == {('e2', 'topic', 'e5'), ('e2', 'focus', 'x4')}
         with pytest.raises(KeyError):
             assert len(x.icons(left='e5')) == 0
+        with pytest.raises(KeyError):
             assert len(x.icons(left='x4')) == 0
+        with pytest.raises(KeyError):
             assert len(x.icons(left='x9')) == 0
         assert len(x.icons(left='x7')) == 1
 
@@ -466,7 +470,7 @@ class TestXmrs():
         assert 10000 not in x
         assert 0 not in x
         assert None not in x
-        x = read('[ TOP: h0 ]')
+        x = Xmrs(top='h0')
         assert 'h0' in x
         assert 10000 not in x
         assert 0 not in x
@@ -484,7 +488,9 @@ class TestXmrs():
         # empty Xmrs objects cannot be checked for connectedness
         with pytest.raises(XmrsError):
             Xmrs().is_connected()
+        with pytest.raises(XmrsError):
             Xmrs(top='h0').is_connected()
+        with pytest.raises(XmrsError):
             Xmrs(hcons=[('h0', 'qeq', 'h1')]).is_connected()
         # just a pred is fine (even without ARG0)
         x = Xmrs(eps=[(10, Pred.stringpred('_v_v_rel'), 'h1', {})])
