@@ -32,7 +32,7 @@ schema, creating sub-profiles, or converting between MRS representations
 
 #### Documentation
 
-Documentation is developing on the
+Documentation is available on the
 [wiki](https://github.com/delph-in/pydelphin/wiki). Help is
 appreciated! See [here](https://github.com/delph-in/pydelphin/blob/master/CONTRIBUTING.md#generating-api-documentation)
 for instructions.

@@ -3,6 +3,15 @@
 ## [Unreleased][unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+
+
+## [v0.6.2][]
+
+### Added
 
 * `delphin.itsdb.ItsdbProfile.exists()` (#112)
 * `delphin.itsdb.ItsdbProfile.size()` (#112)
@@ -14,7 +23,6 @@
 
 * Hash on the normalized form of Preds. (#107)
 
-### Removed
 ### Fixed
 
 * Properly call `re.sub()` so the flags don't become the count (#108)
@@ -22,7 +30,6 @@
 * `normalize_pred_string()` now strips `_rel` (#111) and lowercases
 * `is_valid_pred_string()` no longer requires `_rel` (#111)
 
-### Deprecated
 
 ## [v0.6.1][]
 
@@ -468,6 +475,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v0.6.2]: ../../releases/tag/v0.6.2
 [v0.6.1]: ../../releases/tag/v0.6.1
 [v0.6.0]: ../../releases/tag/v0.6.0
 [v0.5.1]: ../../releases/tag/v0.5.1

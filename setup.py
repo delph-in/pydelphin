@@ -55,7 +55,7 @@ setup(
         'delphin.codecs'
     ],
     install_requires=[
-        'penman >=0.5.0',
+        'penman >=0.6.1',
         'networkx',
         'requests',
         'Pygments',
