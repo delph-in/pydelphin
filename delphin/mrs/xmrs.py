@@ -1083,7 +1083,7 @@ class Dmrs(Xmrs):
         return ts
 
     @classmethod
-    def from_triples(cls, triples):
+    def from_triples(cls, triples, remap_nodeids=True):
         """
         Decode triples, as from Dmrs.to_triples(), into a Dmrs object.
         """
@@ -1109,7 +1109,10 @@ class Dmrs(Xmrs):
             else:
                 rargname, post = rel.split('-', 1)
                 edges.append((src, tgt, rargname, post))
-        nidmap = dict((nid, FIRST_NODEID + i) for i, nid in enumerate(nids))
+        if remap_nodeids:
+            nidmap = dict((nid, FIRST_NODEID+i) for i, nid in enumerate(nids))
+        else:
+            nidmap = dict((nid, nid) for nid in nids)
         nodes = [
             Node(
                 nodeid=nidmap[nid],

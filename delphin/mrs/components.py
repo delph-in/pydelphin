@@ -233,7 +233,7 @@ class Link(namedtuple('Link', ('start', 'end', 'rargname', 'post'))):
     """
     def __new__(cls, start, end, rargname, post):
         return super(Link, cls).__new__(
-            cls, int(start), int(end), rargname, post
+            cls, start, end, rargname, post
         )
 
     def __repr__(self):
@@ -667,7 +667,7 @@ class ElementaryPredication(
     required.
 
     Args:
-        nodeid: an int nodeid
+        nodeid: a nodeid
         pred: The Pred of the EP
         label: label handle
         args: a mapping of role-argument names to values
@@ -681,7 +681,7 @@ class ElementaryPredication(
         if args is None:
             args = {}
         if nodeid is not None:
-            nodeid = int(nodeid)
+            nodeid = nodeid
         # else:
         #     args = dict((a.rargname, a) for a in args)
         return super(ElementaryPredication, cls).__new__(
