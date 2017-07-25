@@ -31,7 +31,7 @@ class Xmrs(_LnkMixin):
         hcons: an iterable of HCONS (see above)
         icons: an iterable of ICONS (see above)
         vars: a mapping of variable to a list of property-value pairs
-        lnk: the Lnk object associating the Xmrs to the surface form
+        lnk: the [Lnk] object associating the Xmrs to the surface form
         surface: the surface string
         identifier: a discourse-utterance id
 
@@ -307,17 +307,17 @@ class Xmrs(_LnkMixin):
 
     def hcons(self):
         """
-        Return the [ICONS] with left variable *left*, or all [ICONS].
-
-        Args:
-            left: the left variable of the [ICONS] to return; if `None`,
-                return all [ICONS]
+        Return the list of [HCONS].
         """
         return list(self._hcons.values())
 
     def icons(self, left=None):
         """
-        Return the list of all variables.
+        Return the [ICONS] with left variable *left*, or all [ICONS].
+
+        Args:
+            left: the left variable of the [ICONS] to return; if `None`,
+                return all [ICONS]
         """
         if left is not None:
             return self._icons[left]
@@ -326,13 +326,7 @@ class Xmrs(_LnkMixin):
 
     def variables(self):
         """
-        Return a dictionary of variable properties for *var_or_nodeid*.
-
-        Args:
-            var_or_nodeid: if a variable, return the properties
-                associated with the variable; if a nodeid, return the
-                properties associated with the intrinsic variable of the
-                predication given by the nodeid
+        Return the list of all variables.
         """
         return list(self._vars)
 
@@ -340,7 +334,13 @@ class Xmrs(_LnkMixin):
 
     def properties(self, var_or_nodeid, as_list=False):
         """
-        Return the [Pred] object for the predications given by *nodeid*.
+        Return a dictionary of variable properties for *var_or_nodeid*.
+
+        Args:
+            var_or_nodeid: if a variable, return the properties
+                associated with the variable; if a nodeid, return the
+                properties associated with the intrinsic variable of the
+                predication given by the nodeid
         """
         props = []
         if var_or_nodeid in self._vars:
@@ -356,11 +356,7 @@ class Xmrs(_LnkMixin):
 
     def pred(self, nodeid):
         """
-        Return the [Pred] objects for *nodeids*, or all [Preds].
-
-        Args:
-            nodeids: an iterable of nodeids of predications to return
-                [Preds] from; if `None`, return all [Preds]
+        Return the [Pred] object for the predications given by *nodeid*.
         """
         return self._eps[nodeid][1]
 
