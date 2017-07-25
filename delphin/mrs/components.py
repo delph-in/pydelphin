@@ -307,7 +307,15 @@ def links(xmrs):
         # head = self.labelset_head(lbl)
         # for n in ns:
         #     links.append(Link(head, n, post=EQ_POST))
-    return sorted(links)#, key=lambda link: (link.start, link.end))
+    def _int(x):
+        try:
+            return int(x)
+        except ValueError:
+            return 0
+    return sorted(
+        links,
+        key=lambda link: (_int(link.start), _int(link.end), link.rargname)
+    )
 
 
 class HandleConstraint(

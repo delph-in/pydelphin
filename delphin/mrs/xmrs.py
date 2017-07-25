@@ -7,6 +7,7 @@ from collections import (defaultdict, deque)
 from itertools import chain
 
 from delphin.exceptions import (XmrsError, XmrsStructureError)
+from delphin.util import safe_int
 from .components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
     Lnk, _LnkMixin, var_re, var_sort, _VarGenerator,
@@ -957,10 +958,10 @@ class Dmrs(Xmrs):
             # constructed, so I will assume that H_POST or NIL_POST
             # assumes a QEQ. Label equality would have been captured by
             # _make_labels() earlier.
-            if l.start == LTOP_NODEID:
-                top = labels[LTOP_NODEID]
+            if safe_int(l.start) == LTOP_NODEID:
+                top = labels[l.start]
                 if l.post == H_POST or l.post == NIL_POST:
-                    hcons += [qeq(labels[LTOP_NODEID], labels[l.end])]
+                    hcons += [qeq(labels[l.start], labels[l.end])]
             else:
                 if not l.rargname or l.rargname.upper() == BARE_EQ_ROLE:
                     continue  # don't make an argument for bare EQ links
@@ -1071,7 +1072,7 @@ class Dmrs(Xmrs):
                     ts.append((n.nodeid, key.lower(), value))
 
         for l in links(self):
-            if l.start == LTOP_NODEID:
+            if safe_int(l.start) == LTOP_NODEID:
                 ts.append((l.start, 'top', l.end))
             else:
                 relation = '{}-{}'.format(l.rargname.upper(), l.post)
@@ -1133,9 +1134,9 @@ def _make_labels(nodes, links, vgen):
     eq_edges = defaultdict(set)
     nids = [node.nodeid for node in nodes]
     for l in links:
-        if l.start == LTOP_NODEID:
+        if safe_int(l.start) == LTOP_NODEID:
             vgen.vid = 0  # start at h0 for TOP
-            nids = [LTOP_NODEID] + nids
+            nids = [l.start] + nids
         if l.post == EQ_POST:
             eq_edges[l.start].add(l.end)
             eq_edges[l.end].add(l.start)

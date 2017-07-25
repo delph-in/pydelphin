@@ -13,6 +13,11 @@
 * Nodeids in Xmrs structures are no longer constrained to be integers
 
 ### Fixed
+
+* Corrected docstrings that had been misplaced in delphin.mrs.xmrs for
+  over a year (#116)
+* Non-integer nodeids no longer break sorting and construction
+
 ### Removed
 ### Deprecated
 
