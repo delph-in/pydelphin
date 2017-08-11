@@ -344,21 +344,26 @@ class AceGenerator(AceProcess):
         return response        
 
 
-def compile(cfg_path, out_path, log=None):
+def compile(cfg_path, out_path, executable=None, env=None, log=None):
     """
     Use ACE to compile a grammar.
 
     Args:
         cfg_path: the path to the ACE config file
         out_path: the path where the compiled grammar will be written
+        executable: the path to the ACE binary; if `None`, ACE is
+            assumed to be callable via `ace`
+        env (dict): environment variables to pass to the ACE
+            subprocess
         log: if given, the path where ACE's stdout and stderr compile
             messages will be written
     """
     #debug('Compiling grammar at {}'.format(abspath(cfg_path)), log)
     try:
         check_call(
-            ['ace', '-g', cfg_path, '-G', out_path],
-            stdout=log, stderr=log, close_fds=True
+            [(executable or 'ace'), '-g', cfg_path, '-G', out_path],
+            stdout=log, stderr=log, close_fds=True,
+            env=(env or os.environ)
         )
     except (CalledProcessError, OSError):
         logging.error(

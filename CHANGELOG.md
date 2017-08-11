@@ -4,6 +4,8 @@
 
 ### Added
 
+* `delphin.interface.ace.compile()` can take `executable` and `env`
+  parameters, similar to `ace.parse()`, etc. (#119)
 * `remap_nodeids` parameter to `Dmrs.from_triples()`, which defaults to `True`,
   indicates whether the nodeids used in the triples should be coerced into
   standard DMRS integer ids
