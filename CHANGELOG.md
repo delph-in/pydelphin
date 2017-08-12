@@ -9,6 +9,7 @@
 * `remap_nodeids` parameter to `Dmrs.from_triples()`, which defaults to `True`,
   indicates whether the nodeids used in the triples should be coerced into
   standard DMRS integer ids
+* `--select` option to `convert` command for non-standard profile schemata
 
 ### Changed
 

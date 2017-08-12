@@ -21,8 +21,8 @@ Options:
 CONVERT_USAGE = """
 Usage:
   delphin convert [PATH] [--from=FMT] [--to=FMT]
-                  [--pretty-print|--indent=N]
-                  [--color=WHEN] [-v...|-q]
+                  [--pretty-print|--indent=N] [--color=WHEN]
+                  [--select=DATASPEC] [-v...|-q]
 
 Arguments:
   PATH                  path to a file containing representations to convert,
@@ -39,6 +39,8 @@ Options:
   --pretty-print        format in a more human-readable way
   --indent N            format with explicit indent N (implies --pretty-print)
   --color WHEN          (auto|always|never) use ANSI color [default: auto]
+  --select DATASPEC     table:col data specifier [default: result:mrs];
+                        ignored if PATH does not point to a profile directory
 """
 
 SELECT_USAGE = """
@@ -138,7 +140,7 @@ from delphin import itsdb
 def main():
     args = docopt(
         USAGE,
-        version='pyDelphin {}'.format(__version__),
+        version='PyDelphin {}'.format(__version__),
         options_first=True
     )
 
@@ -214,6 +216,11 @@ def convert(args):
         args['--pretty-print'] = True
         if args['--indent'].isdigit():
             args['--indent'] = int(args['--indent'])
+    sel_table, sel_col = itsdb.get_data_specifier(args['--select'])
+    if len(sel_col) != 1:
+        sys.exit(
+            'Exactly 1 column must be given in --select (e.g., result:mrs)'
+        )
 
     # read
     loads = codecs[args['--from']][0]
@@ -221,7 +228,7 @@ def convert(args):
         if os.path.isdir(args['PATH']):
             p = itsdb.ItsdbProfile(args['PATH'])
             xs = [next(iter(loads(r[0])), None)
-                  for r in p.select('result', ['mrs'])]
+                  for r in p.select(sel_table, sel_col)]
         else:
             xs = loads(open(args['PATH'], 'r').read())
     else:
