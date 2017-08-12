@@ -100,7 +100,7 @@ def loads(s, single=False, version=_default_version,
         return ms
 
 
-def dump(fh, ms, single=False, version=_default_version,
+def dump(fh, ms, single=False, version=_default_version, properties=True,
          pretty_print=False, color=False, **kwargs):
     """
     Serialize [Xmrs] objects to a SimpleMRS representation and write
@@ -112,6 +112,7 @@ def dump(fh, ms, single=False, version=_default_version,
             *single* option is `True`)
         single: if `True`, treat *ms* as a single [Xmrs] object
             instead of as an iterator
+        properties: if False, suppress variable properties
         pretty_print: if `True`, the output is formatted to be easier
             to read
         color: if `True`, colorize the output with ANSI color codes
@@ -121,13 +122,14 @@ def dump(fh, ms, single=False, version=_default_version,
     print(dumps(ms,
                 single=single,
                 version=version,
+                properties=properties,
                 pretty_print=pretty_print,
                 color=color,
                 **kwargs),
           file=fh)
 
 
-def dumps(ms, single=False, version=_default_version,
+def dumps(ms, single=False, version=_default_version, properties=True,
           pretty_print=False, color=False, **kwargs):
     """
     Serialize an [Xmrs] object to a SimpleMRS representation
@@ -137,6 +139,7 @@ def dumps(ms, single=False, version=_default_version,
             *single* option is `True`)
         single: if `True`, treat *ms* as a single [Xmrs] object instead
             of as an iterator
+        properties: if False, suppress variable properties
         pretty_print: if `True`, the output is formatted to be easier to
             read
         color: if `True`, colorize the output with ANSI color codes
@@ -147,7 +150,7 @@ def dumps(ms, single=False, version=_default_version,
         pretty_print = True
     if single:
         ms = [ms]
-    return serialize(ms, version=version,
+    return serialize(ms, version=version, properties=properties,
                      pretty_print=pretty_print, color=color)
 
 
@@ -374,11 +377,13 @@ def _unexpected_termination_error():
 # Encoding
 
 
-def serialize(ms, version=_default_version, pretty_print=False, color=False):
+def serialize(ms, version=_default_version, properties=True,
+              pretty_print=False, color=False):
     """Serialize an MRS structure into a SimpleMRS string."""
     delim = '\n' if pretty_print else _default_mrs_delim
     output = delim.join(
-        _serialize_mrs(m, version=version, pretty_print=pretty_print)
+        _serialize_mrs(m, properties=properties,
+                       version=version, pretty_print=pretty_print)
         for m in ms
     )
     if color:
@@ -386,10 +391,13 @@ def serialize(ms, version=_default_version, pretty_print=False, color=False):
     return output
 
 
-def _serialize_mrs(m, version=_default_version, pretty_print=False):
+def _serialize_mrs(m, properties, version=_default_version, pretty_print=False):
     # note that varprops is modified as a side-effect of the lower
     # functions
-    varprops = {v: vd['props'] for v, vd in m._vars.items() if vd['props']}
+    if properties:
+        varprops = {v: d['props'] for v, d in m._vars.items() if d['props']}
+    else:
+        varprops = {}
     toks = []
     if version >= 1.1:
         header_toks = []

@@ -43,12 +43,12 @@ def dump(fh, ms, **kwargs):
     print(dumps(ms, **kwargs), file=fh)
 
 
-def dumps(ms, single=False, pretty_print=False, **kwargs):
+def dumps(ms, single=False, properties=True, pretty_print=False, **kwargs):
     if pretty_print and 'indent' not in kwargs:
         kwargs['indent'] = 2
     if single:
         ms = [ms]
-    return serialize(ms, indent=kwargs.get('indent'))
+    return serialize(ms, properties=properties, indent=kwargs.get('indent'))
 
 # for convenience
 
@@ -80,11 +80,11 @@ _node = '{indent}{nodeid} [{pred}{lnk}{carg}{sortinfo}];'
 _sortinfo = ' {cvarsort} {properties}'
 _link = '{indent}{start}:{pre}/{post} {arrow} {end};'
 
-def serialize(ms, encoding='unicode', indent=2):
+def serialize(ms, properties=True, encoding='unicode', indent=2):
     delim = '\n' if indent is not None else ' '
-    return delim.join(_encode_dmrs(m, indent=indent) for m in ms)
+    return delim.join(_encode_dmrs(m, properties, indent=indent) for m in ms)
 
-def _encode_dmrs(m, indent=2):
+def _encode_dmrs(m, properties, indent=2):
     if indent is not None:
         delim = '\n'
         space = ' ' * indent
@@ -100,7 +100,7 @@ def _encode_dmrs(m, indent=2):
             lnk='' if n.lnk is None else str(n.lnk),
             carg='' if n.carg is None else '("{}")'.format(n.carg),
             sortinfo=(
-                '' if not n.sortinfo else
+                '' if not (properties and n.sortinfo) else
                 _sortinfo.format(
                     cvarsort=n.cvarsort,
                     properties=' '.join('{}={}'.format(k, v)

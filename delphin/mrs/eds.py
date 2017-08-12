@@ -142,7 +142,7 @@ class Eds(object):
                 node_triples.append((nid, 'carg', '"{}"'.format(node.carg)))
             if properties:
                 if node.cvarsort is not None:
-                    node_triples.append((nid, 'type', props[CVARSORT]))
+                    node_triples.append((nid, 'type', node.cvarsort))
                 props = node.properties
                 node_triples.extend((nid, p, v) for p, v in props.items())
             edge_triples.extend(

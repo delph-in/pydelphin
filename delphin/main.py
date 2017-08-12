@@ -20,7 +20,7 @@ Options:
 
 CONVERT_USAGE = """
 Usage:
-  delphin convert [PATH] [--from=FMT] [--to=FMT]
+  delphin convert [PATH] [--from=FMT] [--to=FMT] [--no-properties]
                   [--pretty-print|--indent=N] [--color=WHEN]
                   [--select=DATASPEC] [-v...|-q]
 
@@ -36,6 +36,7 @@ Options:
   -q, --quiet           don't print to stdout/stderr
   -f FMT, --from FMT    original representation [default: simplemrs]
   -t FMT, --to FMT      target representation [default: simplemrs]
+  --no-properties       suppress morphosemantic properties
   --pretty-print        format in a more human-readable way
   --indent N            format with explicit indent N (implies --pretty-print)
   --color WHEN          (auto|always|never) use ANSI color [default: auto]
@@ -240,6 +241,7 @@ def convert(args):
     if args['--color']: kwargs['color'] = args['--color']
     if args['--pretty-print']: kwargs['pretty_print'] = args['--pretty-print']
     if args['--indent']: kwargs['indent'] = args['--indent']
+    kwargs['properties'] = not args['--no-properties']
     try:
         print(dumps(xs, **kwargs))
     except TypeError:
@@ -383,12 +385,14 @@ class _MRS_JSON(object):
         return [self.CLS.from_dict(d) for d in self.getlist(json.load(f))]
     def loads(self, s):
         return [self.CLS.from_dict(d) for d in self.getlist(json.loads(s))]
-    def dumps(self, xs, pretty_print=False, indent=None, **kwargs):
+    def dumps(self, xs, properties=True,
+              pretty_print=False, indent=None, **kwargs):
         if pretty_print and indent is None:
             indent = 2
         return json.dumps(
             [self.CLS.to_dict(
-                x if isinstance(x, self.CLS) else self.CLS.from_xmrs(x)
+                (x if isinstance(x, self.CLS) else self.CLS.from_xmrs(x)),
+                properties=properties
              ) for x in xs],
             indent=indent
         )

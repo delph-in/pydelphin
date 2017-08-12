@@ -45,12 +45,12 @@ def dump(fh, ms, **kwargs):
     print(dumps(ms, **kwargs), file=fh)
 
 
-def dumps(ms, single=False, pretty_print=False, **kwargs):
+def dumps(ms, single=False, properties=True, pretty_print=False, **kwargs):
     if not pretty_print and kwargs.get('indent'):
         pretty_print = True
     if single:
         ms = [ms]
-    return serialize(ms, pretty_print=pretty_print)
+    return serialize(ms, properties=properties, pretty_print=pretty_print)
 
 # for convenience
 
@@ -160,13 +160,11 @@ def _decode_lnk(elem):
 ##############################################################################
 # Encoding
 
-_strict = False
 
-
-def serialize(ms, strict=False, encoding='unicode', pretty_print=False):
+def serialize(ms, properties=True, encoding='unicode', pretty_print=False):
     e = etree.Element('dmrs-list')
     for m in ms:
-        e.append(_encode_dmrs(m, strict=strict))
+        e.append(_encode_dmrs(m, properties))
     # for now, pretty_print=True is the same as pretty_print='LKB'
     if pretty_print in ('LKB', 'lkb', 'Lkb', True):
         lkb_pprint_re = re.compile(r'(<dmrs[^>]+>|</node>|</link>|</dmrs>)')
@@ -177,28 +175,22 @@ def serialize(ms, strict=False, encoding='unicode', pretty_print=False):
     return etree_tostring(e, encoding=encoding)
 
 
-def _encode_dmrs(m, strict=False):
-    _strict = strict
+def _encode_dmrs(m, properties):
     attributes = OrderedDict([('cfrom', str(m.cfrom)),
                               ('cto', str(m.cto))])
     if m.surface is not None:
         attributes['surface'] = m.surface
     if m.identifier is not None:
         attributes['ident'] = m.identifier
-    # if not _strict and m.index is not None:
-    #     # index corresponds to a variable, so link it to a nodeid
-    #     index_nodeid = m.get_nodeid(m.index)
-    #     if index_nodeid is not None:
-    #         attributes['index'] = str(index_nodeid)
     e = etree.Element('dmrs', attrib=attributes)
     for node in nodes(m):
-        e.append(_encode_node(node))
+        e.append(_encode_node(node, properties))
     for link in links(m):
         e.append(_encode_link(link))
     return e
 
 
-def _encode_node(node):
+def _encode_node(node, properties):
     attributes = OrderedDict([('nodeid', str(node.nodeid)),
                               ('cfrom', str(node.cfrom)),
                               ('cto', str(node.cto))])
@@ -210,7 +202,7 @@ def _encode_node(node):
         attributes['carg'] = node.carg
     e = etree.Element('node', attrib=attributes)
     e.append(_encode_pred(node.pred))
-    e.append(_encode_sortinfo(node))
+    e.append(_encode_sortinfo(node, properties))
     return e
 
 
@@ -230,17 +222,14 @@ def _encode_pred(pred):
     return e
 
 
-def _encode_sortinfo(node):
+def _encode_sortinfo(node, properties):
     attributes = OrderedDict()
     # return empty <sortinfo/> for quantifiers
     if node.pred.pos == QUANTIFIER_POS:
         return etree.Element('sortinfo')  # return empty <sortinfo/>
-    if node.sortinfo:
-        if not _strict:
-            for k, v in node.sortinfo.items():
-                attributes[k.lower()] = str(v)
-        else:
-            pass  # TODO add strict sortinfo
+    if properties and node.sortinfo:
+        for k, v in node.sortinfo.items():
+            attributes[k.lower()] = str(v)
     e = etree.Element('sortinfo', attrib=attributes or {})
     return e
 

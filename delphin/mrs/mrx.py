@@ -48,12 +48,14 @@ def dump(fh, ms, **kwargs):
     print(dumps(ms, **kwargs), file=fh)
 
 
-def dumps(ms, single=False, encoding='unicode', pretty_print=False, **kwargs):
+def dumps(ms, single=False, properties=True,
+          encoding='unicode', pretty_print=False, **kwargs):
     if not pretty_print and kwargs.get('indent'):
         pretty_print = True
     if single:
         ms = [ms]
-    return serialize(ms, encoding=encoding, pretty_print=pretty_print)
+    return serialize(ms, properties=properties,
+                     encoding=encoding, pretty_print=pretty_print)
 
 # for convenience
 
@@ -222,10 +224,10 @@ def _decode_lnk(cfrom, cto):
 # Encoding
 
 
-def serialize(ms, encoding='unicode', pretty_print=False):
+def serialize(ms, properties=True, encoding='unicode', pretty_print=False):
     e = etree.Element('mrs-list')
     for m in ms:
-        e.append(_encode_mrs(m))
+        e.append(_encode_mrs(m, properties))
     if pretty_print:
         import re
         pprint_re = re.compile(r'(<mrs[^-]|</mrs>|</mrs-list>'
@@ -236,8 +238,11 @@ def serialize(ms, encoding='unicode', pretty_print=False):
     return etree_tostring(e, encoding=encoding)
 
 
-def _encode_mrs(m):
-    varprops = {v: vd['props'] for v, vd in m._vars.items() if vd['props']}
+def _encode_mrs(m, properties):
+    if properties:
+        varprops = {v: d['props'] for v, d in m._vars.items() if d['props']}
+    else:
+        varprops = {}
     attributes = {'cfrom': str(m.cfrom), 'cto': str(m.cto)}
     if m.surface is not None:
         attributes['surface'] = m.surface

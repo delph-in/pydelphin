@@ -10,6 +10,11 @@
   indicates whether the nodeids used in the triples should be coerced into
   standard DMRS integer ids
 * `--select` option to `convert` command for non-standard profile schemata
+* Ensure the `properties=True|False` parameter existed for dump() and
+  dumps() for all MRS codecs; default value may differ (#114)
+* Add `--no-properties` option to delphin convert command; default is
+  to always print properties (which may be different from the API
+  function default) (#114)
 
 ### Changed
 
@@ -23,6 +28,7 @@
 * Corrected docstrings that had been misplaced in delphin.mrs.xmrs for
   over a year (#116)
 * Non-integer nodeids no longer break sorting and construction
+* Fix a bug in EDS getting CVARSORT when properties are printed
 
 ### Removed
 ### Deprecated
