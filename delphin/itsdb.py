@@ -30,8 +30,10 @@ _field_delimiter = '@'
 _default_datatype_values = {
     ':integer': '-1'
 }
-_default_field_values = {
-    'i-wf': '1'
+tsdb_coded_attributes = {
+    'i-wf': '1',
+    'i-difficulty': '1',
+    'polarity': '-1'
 }
 _primary_keys = [
     ["i-id", "item"],
@@ -42,6 +44,15 @@ _primary_keys = [
     ["parse-id", "parse"],
     ["e-id", "edge"],
     ["f-id", "fold"]
+]
+tsdb_core_files = [
+    "item",
+    "analysis",
+    "phenomenon",
+    "parameter",
+    "set",
+    "item-phenomenon",
+    "item-set"
 ]
 
 ##############################################################################
@@ -311,8 +322,8 @@ def default_value(fieldname, datatype):
     Returns:
         The default value for the column.
     """
-    if fieldname in _default_field_values:
-        return _default_field_values[fieldname]
+    if fieldname in tsdb_coded_attributes:
+        return tsdb_coded_attributes[fieldname]
     else:
         return _default_datatype_values.get(datatype, '')
 
@@ -799,4 +810,4 @@ class ItsdbSkeleton(ItsdbProfile):
     See [ItsdbProfile] for initialization parameters.
     """
 
-    _tables = ['item']
+    _tables = tsdb_core_files

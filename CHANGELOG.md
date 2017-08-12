@@ -13,6 +13,9 @@
 ### Changed
 
 * Nodeids in Xmrs structures are no longer constrained to be integers
+* `delphin.itsdb` now has public-facing `tsdb_core_files` and
+  `tsdb_coded_attributes` variables
+* `mkprof` command includes any non-empty core files in skeletons
 
 ### Fixed
 

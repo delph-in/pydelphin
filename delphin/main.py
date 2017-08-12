@@ -79,8 +79,8 @@ i-input, and i-wf fields will be filled with a meaningful value. By
 default, mkprof produces skeletons like the `mkprof` utility of `art`,
 where the 'item' and 'relations' files are non-empty but all other
 tables exist as empty files. The --full option, with --source, will copy
-a full profile, while the --skeleton option will only write the 'item'
-and 'relations' files.
+a full profile, while the --skeleton option will only write the
+tsdb-core files (e.g., 'item') and 'relations' file.
 
 Arguments:
   DEST                  directory for the destination (output) profile
@@ -96,7 +96,7 @@ Options:
                         path to a profile directory
   --in-place            use DEST as the --source
   --full                write all tables (must be used with --source)
-  --skeleton            write only 'item' and 'relations' files
+  --skeleton            write only tsdb-core files for skeletons
   -a APL, --apply APL   apply an expression to rows/cols in the profile;
                         APL is a string like 'table:col=expression'
   -f CND, --filter CND  keep rows satisfying a condition; CND is a
@@ -289,17 +289,22 @@ def mkprof(args):
         p.write_profile(outdir, relations_filename=relations, key_filter=True,
                         gzip=args['--gzip'])
     else:
+        rows = []
+        if p is None:
+            if args['--input'] is not None:
+                rows = _lines_to_rows(open(args['--input']))
+            else:
+                rows = _lines_to_rows(sys.stdin)
+        o = itsdb.make_skeleton(outdir, relations, rows, gzip=args['--gzip'])
         if p is not None:
-            rows = p.read_table('item')
-        elif args['--input'] is not None:
-            rows = _lines_to_rows(open(args['--input']))
-        else:
-            rows = _lines_to_rows(sys.stdin)
-        p = itsdb.make_skeleton(outdir, relations, rows, gzip=args['--gzip'])
+            for table in itsdb.tsdb_core_files:
+                if p.size(table) > 0:
+                    o.write_table(table, p.read_table(table))
         # unless a skeleton was requested, make empty files for other tables
         if not args['--skeleton']:
-            for tbl in p.relations:
-                p.write_table(tbl, [])
+            for table in p.relations:
+                if o.size(table) == 0:
+                    o.write_table(table, [])
 
     # summarize what was done
     if sys.stdout.isatty():
