@@ -22,6 +22,7 @@
 * `delphin.itsdb` now has public-facing `tsdb_core_files` and
   `tsdb_coded_attributes` variables
 * `mkprof` command includes any non-empty core files in skeletons
+* SimpleMRS codec now instantiates with the Mrs class instead of Xmrs (#103)
 
 ### Fixed
 

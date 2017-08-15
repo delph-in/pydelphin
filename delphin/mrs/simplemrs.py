@@ -13,7 +13,7 @@ import re
 from warnings import warn
 
 from delphin.util import stringtypes
-from delphin.mrs import Xmrs, Mrs
+from delphin.mrs import Mrs
 from delphin.mrs.components import (
     ElementaryPredication, Pred, Lnk, HandleConstraint, IndividualConstraint,
     sort_vid_split, var_sort, var_re, hcons, icons
@@ -234,11 +234,11 @@ def _read_mrs(tokens, version, errors):
         icons = _read_cons(tokens, 'ICONS', vars_)
         _read_literals(tokens, ']')
         # at this point, we could uniquify proplists in vars_, but most
-        # likely it isn't necessary, and might night harm things if we
+        # likely it isn't necessary, and might harm things if we
         # leave potential dupes in there. let's see how it plays out.
-        m = Xmrs(top=top, index=idx, eps=rels,
-                 hcons=hcons, icons=icons, vars=vars_,
-                 lnk=lnk, surface=surface)
+        m = Mrs(top=top, index=idx, rels=rels,
+                hcons=hcons, icons=icons,
+                lnk=lnk, surface=surface, vars=vars_)
     except IndexError:
         _unexpected_termination_error()
     if errors != 'ignore':
@@ -311,7 +311,7 @@ def _read_ep(tokens, nid, vars_):
             vars_[val].extend(props)
         args[role] = val
     tokens.popleft()  # ]
-    return (nid, pred, label, args, lnk, surface)
+    return ElementaryPredication(nid, pred, label, args, lnk, surface)
 
 
 def _read_cons(tokens, constype, vars_):

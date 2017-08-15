@@ -68,10 +68,6 @@ dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 ##############################################################################
 # Decoding
 
-# it's not ideal to have this here, but anyway make sure it is reset
-# for each decoding. It's used to unify variables
-_vars = {}
-
 
 def deserialize(fh):
     """Deserialize an MRX-encoded MRS structure."""

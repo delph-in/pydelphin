@@ -150,9 +150,9 @@ Multiple MRSs can be parsed with `simplemrs.loads()`:
 ... RELS: < [ "_snow_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
 ... HCONS: < h0 qeq h1 > ]''')
 >>> next(mrs_gen)  # doctest: +ELLIPSIS
-<Xmrs object (rain) at ...>
+<Mrs object (rain) at ...>
 >>> next(mrs_gen)  # doctest: +ELLIPSIS
-<Xmrs object (snow) at ...>
+<Mrs object (snow) at ...>
 
 ```
 
