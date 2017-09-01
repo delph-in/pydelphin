@@ -311,7 +311,7 @@ def mkprof(args):
                     o.write_table(table, p.read_table(table))
         # unless a skeleton was requested, make empty files for other tables
         if not args['--skeleton']:
-            for table in p.relations:
+            for table in o.relations:
                 if o.size(table) == 0:
                     o.write_table(table, [])
 
