@@ -6,15 +6,18 @@
 
 * `delphin.interface.ace.compile()` can take `executable` and `env`
   parameters, similar to `ace.parse()`, etc. (#119)
-* `remap_nodeids` parameter to `Dmrs.from_triples()`, which defaults to `True`,
-  indicates whether the nodeids used in the triples should be coerced into
-  standard DMRS integer ids
+* `remap_nodeids` parameter to `Dmrs.from_triples()`, which defaults to
+  `True`, indicates whether the nodeids used in the triples should be coerced
+  into standard DMRS integer ids
 * `--select` option to `convert` command for non-standard profile schemata
 * Ensure the `properties=True|False` parameter existed for dump() and
   dumps() for all MRS codecs; default value may differ (#114)
 * Add `--no-properties` option to delphin convert command; default is
   to always print properties (which may be different from the API
   function default) (#114)
+* `delphin.itsdb.Relations` class for encoding/decoding relations files,
+  which now also work on strings instead of actual files (#99)
+
 
 ### Changed
 
@@ -26,6 +29,10 @@
 * SimpleMRS no longer breaks at non-breaking spaces in predicates (#128)
 * Remove docopt dependency for command-line interfaces (#137)
 * Move imports of dependencies to avoid unnecessary ImportErrors (#100)
+* `delphin.itsdb.Field` the `other` list attribute is now just the
+  boolean `partial` since there's no other use of it
+* Add a few more patterns to `.gitignore`
+* Remove unnecessary line in `delphin.main.mkprof()`
 
 ### Fixed
 
@@ -138,8 +145,8 @@ fixed or the functionality is deprecated.
 * Quantifiers are detected more consistently for, e.g., DMRS conversion;
   this mostly resolves #84
 * DMRS `/EQ` links are now `MOD/EQ` and fix a direction (resolves #87)
-* All *MRS serializers/exporters take **kwargs (though many ignore them)
-  so that a common API can be used for, e.g., *MRS conversion.
+* All \*MRS serializers/exporters take \*\*kwargs (though many ignore
+  them) so that a common API can be used for, e.g., \*MRS conversion.
 * Strip quotes on reading CARGs, add them when writing (fixes #75)
 
 ### Fixed

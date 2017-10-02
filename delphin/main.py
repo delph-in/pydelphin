@@ -187,8 +187,7 @@ def mkprof(args):
     fmt = '{:>8} bytes\t{}'
     prof = itsdb.ItsdbProfile(outdir, index=False)
     relations = prof.relations
-    tables = [tbl for i, tbl in sorted(enumerate(relations))]
-    for filename in ['relations'] + tables:
+    for filename in ['relations'] + list(relations.tables):
         f = os.path.join(outdir, filename)
         if os.path.isfile(f):
             stat = os.stat(f)

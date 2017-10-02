@@ -55,62 +55,131 @@ tsdb_core_files = [
     "item-set"
 ]
 
+#############################################################################
+# Relations files
+
+class Field(
+        namedtuple('Field', 'name datatype key partial comment'.split())):
+    '''
+    A tuple describing a column in an [incr tsdb()] profile.
+
+    Args:
+        name: the column name
+        datatype: e.g. ":string" or ":integer"
+        key: True if the column is a key in the database
+        partial: True if the column is a partial key
+        comment: a description of the column
+    '''
+    def __new__(cls, name, datatype, key=False, partial=False, comment=None):
+        return super(Field, cls).__new__(
+            cls, name, datatype, key, partial, comment
+        )
+
+    def __str__(self):
+        parts = [self.name, self.datatype]
+        if self.key:
+            parts += [':key']
+        if self.partial:
+            parts += [':partial']
+        s = '  ' + ' '.join(parts)
+        if self.comment:
+            s = '{}# {}'.format(s.ljust(40), self.comment)
+        return s
+
+
+class Relations(object):
+    """
+    A "relations file" is a [incr tsdb()] database schema.
+    """
+    def __init__(self, tables):
+        self.tables = tuple(t[0] for t in tables)
+        self._data = dict(tables)
+
+    @classmethod
+    def from_file(cls, source):
+        if hasattr(source, 'read'):
+            relations = cls.from_string(source.read())
+        else:
+            with open(source) as f:
+                relations = cls.from_string(f.read())
+        return relations
+
+    @classmethod
+    def from_string(cls, s):
+        tables = []
+        seen = set()
+        current_table = None
+        lines = list(reversed(s.splitlines()))  # to pop() in right order
+        while lines:
+            line = lines.pop().strip()
+            table_m = re.match(r'^(?P<table>\w.+):$', line)
+            field_m = re.match(r'\s*(?P<name>\S+)'
+                               r'(\s+(?P<attrs>[^#]+))?'
+                               r'(\s*#\s*(?P<comment>.*)$)?',
+                               line)
+            if table_m is not None:
+                table_name = table_m.group('table')
+                if table_name in seen:
+                    raise ItsdbError(
+                        'Table {} already defined.'.format(table_name)
+                    )
+                current_table = (table_name, [])
+                tables.append(current_table)
+                seen.add(table_name)
+            elif field_m is not None and current_table is not None:
+                name = field_m.group('name')
+                attrs = field_m.group('attrs').split()
+                datatype = attrs.pop(0)
+                key = ':key' in attrs
+                partial = ':partial' in attrs
+                comment = field_m.group('comment')
+                current_table[1].append(
+                    Field(name, datatype, key, partial, comment)
+                )
+            elif line != '':
+                raise ItsdbError('Invalid line: ' + line)
+        return cls(tables)
+
+    def __getitem__(self, key):
+        fields = self._data[key]
+        return list(fields)
+
+    def __iter__(self):
+        return iter(self.tables)
+
+    def __len__(self):
+        return len(self.tables)
+
+    def __str__(self):
+        return '\n\n'.join(
+            '{tablename}:\n{fields}'.format(
+                tablename=tablename,
+                fields='\n'.join(str(f) for f in self[tablename])
+            )
+            for tablename in self
+        )
+
+    def items(self):
+        return [(table, self[table]) for table in self]
+
+
 ##############################################################################
 # Non-class (i.e. static) functions
-
-Field = namedtuple('Field', ['name', 'datatype', 'key', 'other', 'comment'])
-'''
-A tuple describing a column in an [incr tsdb()] profile.
-
-Args:
-    name: the column name
-    datatype: e.g. ":string" or ":integer"
-    key: True if the column is a key in the database
-    other: any other non-datatype, non-key attributes (like ":partial")
-    comment: a description of the column
-'''
 
 
 def get_relations(path):
     """
-    Parse the relations file and return a dictionary describing the database
-    structure.
+    Parse the relations file and return a Relations object that
+    describes the database structure.
+
+    **Note**: for backward-compatibility only; use Relations.from_file()
 
     Args:
         path: The path of the relations file.
     Returns:
         A dictionary mapping a table name to a list of Field tuples.
     """
-
-    relations = OrderedDict()
-    table_re = re.compile(r'^(?P<table>\w.+):$')
-    field_re = re.compile(r'\s*(?P<name>\S+)'
-                          r'(\s+(?P<props>[^#]+))?'
-                          r'(\s*#\s*(?P<comment>.*)$)?')
-    f = open(path)
-    current_table = None
-    for line in f:
-        table_match = table_re.search(line)
-        field_match = field_re.search(line)
-        if table_match is not None:
-            current_table = table_match.group('table')
-            if current_table not in relations:
-                relations[current_table] = list()
-        elif current_table is not None and field_match is not None:
-            name = field_match.group('name')
-            props = field_match.group('props').split()
-            comment = field_match.group('comment')
-            key = False
-            if len(props) > 0:
-                datatype = props.pop(0)
-            if ':key' in props:
-                key = True
-                props.remove(':key')
-            relations[current_table].append(
-                Field(name, datatype, key, props, comment)
-            )
-    f.close()
-    return relations
+    return Relations.from_file(path)
 
 
 data_specifier_re = re.compile(r'(?P<table>[^:]+)?(:(?P<cols>.+))?$')
@@ -464,6 +533,7 @@ def make_skeleton(path, relations, item_rows, gzip=False):
         os.makedirs(path)
     except OSError:
         raise ItsdbError('Path already exists: {}.'.format(path))
+
     import shutil
     shutil.copyfile(relations, os.path.join(path, _relations_filename))
     prof = ItsdbProfile(path, index=False)

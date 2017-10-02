@@ -8,5 +8,6 @@ PyDelphin.egg-info/
 # Ignore the compiled python files
 *.pyc
 __pycache__/
+PyDelphin.egg-info/
 # Ignore auto-saves
 *~

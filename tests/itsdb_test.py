@@ -52,27 +52,51 @@ def single_item_profile():
     return d
 
 def test_Field():
-    f = itsdb.Field('x', ':y', True, [':other'], 'a comment')
+    f = itsdb.Field('x', ':y', True, False, 'a comment')
     assert f.name == 'x'
     assert f.datatype == ':y'
     assert f.key is True
-    assert f.other == [':other']
+    assert f.partial == False
     assert f.comment == 'a comment'
+
+def test_Relations():
+    f = itsdb.Field
+    r = itsdb.Relations([
+        ('item', [f('i-id', ':integer', True, False, ''),
+                  f('i-input', ':string', False, False, '')]),
+        ('parse', [f('parse-id', ':integer', True, False, 'unique parse identifier'),
+                   f('i-id', ':integer', True, False, 'item parsed')])
+    ])
+    assert len(r) == 2
+    assert 'item' in r
+    assert 'parse' in r
+    assert len(r['item']) == 2
+    assert len(r['parse']) == 2
+    assert r['item'][0].name == 'i-id'
+    assert str(r) == (
+        'item:\n'
+        '  i-id :integer :key\n'
+        '  i-input :string\n'
+        '\n'
+        'parse:\n'
+        '  parse-id :integer :key                # unique parse identifier\n'
+        '  i-id :integer :key                    # item parsed'
+    )
 
 def test_get_relations(empty_profile):
     r = itsdb.get_relations(os.path.join(empty_profile, 'relations'))
     assert r['item'] == [
-        itsdb.Field('i-id', ':integer', True, [], None),
-        itsdb.Field('i-input', ':string', False, [], None)
+        itsdb.Field('i-id', ':integer', True, False, None),
+        itsdb.Field('i-input', ':string', False, False, None)
     ]
     assert r['parse'] == [
-        itsdb.Field('parse-id', ':integer', True, [], 'unique parse identifier'),
-        itsdb.Field('i-id', ':integer', True, [], 'item parsed')
+        itsdb.Field('parse-id', ':integer', True, False, 'unique parse identifier'),
+        itsdb.Field('i-id', ':integer', True, False, 'item parsed')
     ]
     assert r['result'] == [
-        itsdb.Field('parse-id', ':integer', True, [], 'parse for this result'),
-        itsdb.Field('result-id', ':integer', False, [], 'result identifier'),
-        itsdb.Field('mrs', ':string', False, [], 'MRS for this reading')
+        itsdb.Field('parse-id', ':integer', True, False, 'parse for this result'),
+        itsdb.Field('result-id', ':integer', False, False, 'result identifier'),
+        itsdb.Field('mrs', ':string', False, False, 'MRS for this reading')
     ]
 
 def test_get_data_specifier():
