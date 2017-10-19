@@ -20,7 +20,7 @@ from itertools import chain
 from contextlib import contextmanager
 
 from delphin.exceptions import ItsdbError
-from delphin.util import safe_int
+from delphin.util import safe_int, stringtypes
 
 ##############################################################################
 # Module variables
@@ -91,9 +91,18 @@ class Relations(object):
     """
     A "relations file" is a [incr tsdb()] database schema.
     """
+
+    class TableRelations(tuple):
+        def __init__(self, fields):
+            self._index = dict(
+                (f.name, i) for i, f in enumerate(fields)
+            )
+        def index(self, fieldname):
+            return self._index[fieldname]
+
     def __init__(self, tables):
         self.tables = tuple(t[0] for t in tables)
-        self._data = dict(tables)
+        self._data = dict((t[0], self.TableRelations(t[1])) for t in tables)
 
     @classmethod
     def from_file(cls, source):
@@ -141,8 +150,7 @@ class Relations(object):
         return cls(tables)
 
     def __getitem__(self, key):
-        fields = self._data[key]
-        return list(fields)
+        return self._data[key]
 
     def __iter__(self):
         return iter(self.tables)
@@ -200,26 +208,58 @@ def get_data_specifier(string):
     table = match.group('table')
     if table is not None:
         table = table.strip()
-    cols = match.group('cols')
-    if cols is not None:
-        cols = list(map(str.strip, cols.split('@')))
+    cols = _split_cols(match.group('cols'))
     return (table, cols)
 
 
-def decode_row(line):
+def _split_cols(colstring):
+    if not colstring:
+        return []
+
+    colstring = colstring.lstrip(':')
+    if ':' in colstring:  # e.g., 'table:col'
+        raise ItsdbError(
+            'table not allowed in column specifier: {}'.format(colstring)
+        )
+    else:
+        return list(map(str.strip, colstring.split('@')))
+
+
+def decode_row(line, fields=None):
     """
     Decode a raw line from a profile into a list of column values.
 
-    Decoding involves splitting the line by the field delimiter ('@' by
-    default) and unescaping special characters.
+    Decoding involves splitting the line by the field delimiter ('@'
+    by default) and unescaping special characters. If *fields* is
+    given, cast the values into the datatype given by their respective
+    Field object.
 
     Args:
         line: a raw line from a [incr tsdb()] profile.
+        fields: a list or TableRelations object of Fields for the row
     Returns:
         A list of column values.
     """
-    fields = line.rstrip('\n').split(_field_delimiter)
-    return list(map(unescape, fields))
+    cols = line.rstrip('\n').split(_field_delimiter)
+    cols = list(map(unescape, cols))
+    if fields is not None:
+        if len(cols) != len(fields):
+            raise ItsdbError(
+                'Wrong number of fields in {} at line {}: {} != {}'
+                .format(tablename, i, len(data), num_fields)
+            )
+        for i in range(len(cols)):
+            col = cols[i]
+            if col:
+                field = fields[i]
+                dt = field.datatype
+                if dt == ':integer':
+                    col = int(col)
+                elif dt == ':float':
+                    col = float(col)
+                # other casts? date?
+            cols[i] = col
+    return cols
 
 
 def encode_row(fields):
@@ -336,6 +376,7 @@ def _write_table(profile_dir, table_name, rows, fields,
         gzip = False
     else:
         rows = chain([first_row], rows)
+
     if gzip and append:
         logging.warning('Appending to a gzip file may result in '
                         'inefficient compression.')
@@ -529,20 +570,134 @@ def make_skeleton(path, relations, item_rows, gzip=False):
     Raises:
         ItsdbError if the destination directory could not be created.
     """
-    try:
-        os.makedirs(path)
-    except OSError:
-        raise ItsdbError('Path already exists: {}.'.format(path))
+    skel = TestSuite(relations=relations)
+    skel.write({'item':item_rows}, path=path, gzip=gzip)
 
-    import shutil
-    shutil.copyfile(relations, os.path.join(path, _relations_filename))
-    prof = ItsdbProfile(path, index=False)
-    prof.write_table('item', item_rows, gzip=gzip)
-    return prof
+    # try:
+    #     os.makedirs(path)
+    # except OSError:
+    #     raise ItsdbError('Path already exists: {}.'.format(path))
+
+    # import shutil
+    # shutil.copyfile(relations, os.path.join(path, _relations_filename))
+    # prof = ItsdbProfile(path, index=False)
+    # prof.write_table('item', item_rows, gzip=gzip)
+    # return prof
 
 
 ##############################################################################
 # Profile class
+
+class Record(list):
+    def __init__(self, fields, iterable=None):
+        self.fields = fields
+        list.__init__(self, iterable)
+
+    def __getitem__(self, index):
+        if not isinstance(index, int):
+            index = self.fields.index(index)
+        return list.__getitem__(self, index)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+
+class Table(list):
+    def __init__(self, name, fields, iterable=None):
+        self.name = name
+        self.fields = fields
+
+        list.__init__(self)
+        if iterable is not None:
+            self.extend(iterable)
+
+    def select(self, cols, mode='list'):
+        if isinstance(cols, stringtypes):
+            cols = _split_cols(cols)
+        if not cols:
+            cols = [f.name for f in self.fields]
+        return select_rows(cols, self, mode=mode)
+
+class TestSuite(object):
+    def __init__(self, path=None, relations=None):
+        self._path = path
+
+        if isinstance(relations, Relations):
+            self.relations = relations
+        elif relations is None and path is not None:
+            relations = os.path.join(self._path, _relations_filename)
+            self.relations = Relations.from_file(relations)
+        elif isinstance(relations, stringtypes):
+            self.relations = Relations.from_file(relations)
+        else:
+            raise ItsdbError(
+                'Either the relations parameter must be provided or '
+                'path must point to a directory with a relations file.'
+            )
+
+        self._data = dict((t, None) for t in self.relations)
+
+        if self._path is not None:
+            self.reload()
+
+    def __getitem__(self, tablename):
+        tablerels = self.relations[tablename]
+        # if the table is None it is invalidated; reload it
+        if self._data[tablename] is None:
+            self._reload_table(tablename)
+        return self._data[tablename]
+
+    def reload(self):
+        for tablename in self.relations:
+            self._reload_table(tablename)
+
+    def _reload_table(self, tablename):
+        fields = self.relations[tablename]
+        num_fields = len(fields)
+        tablepath = os.path.join(self._path, tablename)
+        self._data[tablename] = table = Table(tablename, fields)
+        with _open_table(tablepath) as tbl:
+            for i, line in enumerate(tbl):
+                data = decode_row(line, fields)
+                table.append(Record(fields, data))
+
+    def select(self, arg, cols=None, mode='list'):
+        if cols is None:
+            table, cols = get_data_specifier(arg)
+        else:
+            table = arg
+        if cols is None:
+            cols = [f.name for f in self.relations[table]]
+        return select_rows(cols, self[table], mode=mode)
+
+    def write(self, tables=None, path=None, append=False, gzip=None):
+        if path is None:
+            path = self._path
+        if tables is None:
+            tables = self._data
+
+        # prepare destination
+        if not os.path.exists(path):
+            os.makedirs(path)
+        # raise error if path != self._path?
+        if not os.path.isfile(os.path.join(path, _relations_filename)):
+            with open(os.path.join(path, _relations_filename), 'w') as fh:
+                print(str(self.relations), file=fh)
+
+        for table, data in tables.items():
+            if data is None:
+                data = self[table]
+            _write_table(
+                path,
+                table,
+                data,
+                self.relations[table],
+                gzip=gzip
+            )
+
 
 class ItsdbProfile(object):
     """
@@ -569,11 +724,17 @@ class ItsdbProfile(object):
     # considered. Otherwise, only those present in the list are considered.
     _tables = None
 
-    def __init__(self, path, filters=None, applicators=None, index=True):
+    def __init__(self, path, relations=None,
+                 filters=None, applicators=None, index=True):
         self.root = path
-        self.relations = get_relations(
-            os.path.join(self.root, _relations_filename)
-        )
+
+        # somewhat backwards-compatible resolution of relations file
+        if isinstance(relations, dict):
+            self.relations = relations
+        else:
+            if relations is None:
+                relations = os.path.join(self.root, _relations_filename)
+            self.relations = Relations.from_file(relations)
 
         if self._tables is None:
             self._tables = list(self.relations)
