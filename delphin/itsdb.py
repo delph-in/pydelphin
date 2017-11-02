@@ -19,6 +19,8 @@ from collections import defaultdict, namedtuple, OrderedDict
 from itertools import chain
 from contextlib import contextmanager
 
+import pandas as pd
+
 from delphin.exceptions import ItsdbError
 from delphin.util import safe_int, stringtypes
 
@@ -148,6 +150,9 @@ class Relations(object):
             elif line != '':
                 raise ItsdbError('Invalid line: ' + line)
         return cls(tables)
+
+    def __contains__(self, key):
+        return key in self._data
 
     def __getitem__(self, key):
         return self._data[key]
@@ -334,7 +339,7 @@ def _table_filename(tbl_filename):
     else:
         txfn = tbl_filename
         gzfn = tbl_filename + '.gz'
-    
+
     if os.path.exists(txfn):
         if (os.path.exists(gzfn) and
                 os.stat(gzfn).st_mtime > os.stat(txfn).st_mtime):
@@ -348,7 +353,7 @@ def _table_filename(tbl_filename):
             'Table does not exist at {}(.gz)'
             .format(tbl_filename)
         )
-    
+
     return tbl_filename
 
 
@@ -605,14 +610,47 @@ class Record(list):
             return default
 
 
-class Table(list):
-    def __init__(self, name, fields, iterable=None):
+class Table(object):
+    def __init__(self, name, fields, records=None):
         self.name = name
         self.fields = fields
+        columns = [f.name for f in fields]
+        if records is not None and isinstance(records, pd.DataFrame):
+            records = records.values
+        self._df = pd.DataFrame(records, columns=columns)
 
-        list.__init__(self)
-        if iterable is not None:
-            self.extend(iterable)
+    @classmethod
+    def from_file(cls, path, name=None, fields=None, gzip=None):
+        path = _table_filename(path)  # do early in case file not found
+
+        if name is None:
+            name = os.path.basename(path).rpartition('.gz')[0]
+
+        if fields is None:
+            rpath = os.path.join(os.path.dirname(path), _relations_filename)
+            if not os.path.exists(rpath):
+                raise ItsdbError(
+                    'No fields are specified and a relations file could '
+                    'not be found.'
+                )
+            rels = Relations.from_file(rpath)
+            if name not in rels:
+                raise ItsdbError(
+                    'Table \'{}\' not found in the relations.'.format(name)
+                )
+            # successfully inferred the relations for the table
+            fields = rels[name]
+
+        records = None
+        # pd.read_table() fails on an empty file
+        if os.stat(path).st_size > 0:
+            # todo: use gzip parameter
+            records = pd.read_table(
+                path,
+                sep='@',
+                na_values=(-1,'')
+            )
+        return cls(name, fields, records)
 
     def select(self, cols, mode='list'):
         if isinstance(cols, stringtypes):
@@ -656,13 +694,12 @@ class TestSuite(object):
 
     def _reload_table(self, tablename):
         fields = self.relations[tablename]
-        num_fields = len(fields)
         tablepath = os.path.join(self._path, tablename)
-        self._data[tablename] = table = Table(tablename, fields)
-        with _open_table(tablepath) as tbl:
-            for i, line in enumerate(tbl):
-                data = decode_row(line, fields)
-                table.append(Record(fields, data))
+        if os.path.exists(tablepath) or os.path.exists(tablepath + '.gz'):
+            table = Table.from_file(tablepath, name=tablename, fields=fields)
+        else:
+            table = Table(name=tablename, fields=fields)
+        self._data[tablename] = table
 
     def select(self, arg, cols=None, mode='list'):
         if cols is None:
@@ -951,7 +988,7 @@ class ItsdbProfile(object):
             src_rels = os.path.abspath(os.path.join(self.root,
                                                     _relations_filename))
             relations = self.relations
-        
+
         tgt_rels = os.path.abspath(os.path.join(profile_directory,
                                                 _relations_filename))
         if not (os.path.isfile(tgt_rels) and src_rels == tgt_rels):
