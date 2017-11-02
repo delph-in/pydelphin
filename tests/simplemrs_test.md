@@ -80,6 +80,21 @@ Lnk values can take 4 forms in SimpleMRS:
 
 ```
 
+### Predicates
+
+Predicates stay together as a single token, even those with
+non-breaking spaces:
+
+```python
+>>> list(simplemrs.tokenize('_dog_n_1_rel'))
+['_dog_n_1_rel']
+>>> list(simplemrs.tokenize('_<]1/JJ_u_unknown'))
+['_<]1/JJ_u_unknown']
+>>> len(list(simplemrs.tokenize(u'_nb\xa0space_n_1_rel')))
+1
+
+```
+
 ### Full MRSs
 
 "It rains"---very simple structure.

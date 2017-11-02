@@ -172,8 +172,8 @@ dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 #   the last is for contentful punctuation (e.g. [ ] < > : # @)
 
 _tokenizer = re.compile(r'("[^"\\]*(?:\\.[^"\\]*)*"'
-                       r'|_(?:[^\s<]|<(?![-0-9:#@ ]*>))*'
-                       r'|[^\s:#@\[\]"<>]+'
+                       r'|_(?:[^ \n<]|<(?![-0-9:#@ ]*>))*'
+                       r'|[^ \n:#@\[\]"<>]+'
                        r'|[:#@\[\]<>])')
 
 
