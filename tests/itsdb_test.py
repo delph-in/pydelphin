@@ -83,21 +83,22 @@ def test_Relations():
         '  i-id :integer :key                    # item parsed'
     )
 
+
 def test_get_relations(empty_profile):
     r = itsdb.get_relations(os.path.join(empty_profile, 'relations'))
-    assert r['item'] == [
+    assert r['item'] == (
         itsdb.Field('i-id', ':integer', True, False, None),
         itsdb.Field('i-input', ':string', False, False, None)
-    ]
-    assert r['parse'] == [
+    )
+    assert r['parse'] == (
         itsdb.Field('parse-id', ':integer', True, False, 'unique parse identifier'),
         itsdb.Field('i-id', ':integer', True, False, 'item parsed')
-    ]
-    assert r['result'] == [
+    )
+    assert r['result'] == (
         itsdb.Field('parse-id', ':integer', True, False, 'parse for this result'),
         itsdb.Field('result-id', ':integer', False, False, 'result identifier'),
         itsdb.Field('mrs', ':string', False, False, 'MRS for this reading')
-    ]
+    )
 
 def test_get_data_specifier():
     dataspec = itsdb.get_data_specifier
