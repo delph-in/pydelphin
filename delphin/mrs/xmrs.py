@@ -1084,12 +1084,17 @@ class Dmrs(Xmrs):
         """
         Decode triples, as from Dmrs.to_triples(), into a Dmrs object.
         """
+        top_nid = str(LTOP_NODEID)
         top = lnk = surface = identifier = None
         nids, nd, edges = [], {}, []
         for src, rel, tgt in triples:
             src, tgt = str(src), str(tgt)  # hack for int-converted src/tgt
-            if src not in nd:
-                top=src
+            if src == top_nid and rel == 'top':
+                top = tgt
+                continue
+            elif src not in nd:
+                if top is None:
+                    top=src
                 nids.append(src)
                 nd[src] = {'pred': None, 'lnk': None, 'carg': None, 'si': []}
             if rel == 'predicate':
@@ -1104,7 +1109,7 @@ class Dmrs(Xmrs):
             elif rel.islower():
                 nd[src]['si'].append((rel, tgt))
             else:
-                rargname, post = rel.split('-', 1)
+                rargname, post = rel.rsplit('-', 1)
                 edges.append((src, tgt, rargname, post))
         if remap_nodeids:
             nidmap = dict((nid, FIRST_NODEID+i) for i, nid in enumerate(nids))

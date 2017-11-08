@@ -87,3 +87,64 @@ class TestDmrs():
         d2 = Dmrs(nodes=[Node(10, sp('"_rain_v_1_rel"'))],
                   links=[Link(0, 10, None, 'H')])
         assert d1 == d2
+
+    def test_to_triples(self):
+        assert Dmrs().to_triples() == []
+
+        x = Dmrs(nodes=[Node(10, sp('"_rain_v_1_rel"'))])
+        assert x.to_triples() == [
+            (10, 'predicate', '_rain_v_1'),
+            (10, 'cvarsort', 'u')
+        ]
+
+        x = Dmrs(
+            nodes=[Node(10, sp('"_rain_v_1_rel"'), {'cvarsort': 'e'})],
+            links=[Link(0, 10, None, 'H')]
+        )
+        assert x.to_triples() == [
+            (10, 'predicate', '_rain_v_1'),
+            (10, 'cvarsort', 'e'),
+            (0, 'top', 10)
+        ]
+        assert x.to_triples(properties=False) == [
+            (10, 'predicate', '_rain_v_1'),
+            (0, 'top', 10)
+        ]
+
+    def test_from_triples(self):
+        assert Dmrs.from_triples([]) == Dmrs()
+
+        d1 = Dmrs.from_triples([
+            (10, 'predicate', '_rain_v_1'),
+            (0, 'top', 10)
+        ])
+        # by default nodeids get remapped from 10000
+        d2 = Dmrs(nodes=[Node(10000, sp('"_rain_v_1_rel"'))],
+                  links=[Link(0, 10000, None, 'H')])
+        assert d1 == d2
+        d1 = Dmrs.from_triples([
+            (10, 'predicate', '_rain_v_1'),
+
+        ])
+        assert d1 == d2
+
+        d1 = Dmrs.from_triples([
+            (10, 'predicate', '_rain_v_1'),
+            (20, 'predicate', '_or_c'),
+            (30, 'predicate', '_snow_v_1'),
+            (0, 'top', 20),
+            (20, 'L-INDEX-NEQ', 10),
+            (20, 'L-HNDL-HEQ', 10),
+            (20, 'R-INDEX-NEQ', 30),
+            (20, 'R-HNDL-HEQ', 30)
+        ])
+        d2 = Dmrs(nodes=[Node(10000, sp('"_rain_v_1_rel"')),
+                         Node(10001, sp('_or_c_rel')),
+                         Node(10002, sp('"_snow_v_1_rel"'))],
+                  links=[Link(0, 10001, None, 'H'),
+                         Link(10001, 10000, 'L-INDEX', 'NEQ'),
+                         Link(10001, 10000, 'L-HNDL', 'HEQ'),
+                         Link(10001, 10002, 'R-INDEX', 'NEQ'),
+                         Link(10001, 10002, 'R-HNDL', 'HEQ')])
+        assert d1 == d2
+
