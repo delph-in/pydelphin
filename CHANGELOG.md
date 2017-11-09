@@ -17,6 +17,11 @@
   function default) (#114)
 * `delphin.itsdb.Relations` class for encoding/decoding relations files,
   which now also work on strings instead of actual files (#99)
+* `delphin.itsdb.Record`, `delphin.itsdb.Table`, and
+  `delphin.itsdb.TestSuite` for modeling [incr tsdb()] substructures (#89)
+* `delphin.itsdb.join()` does inner and left joins (#101)
+* `delphin.itsdb.Field.default_value()` replaces
+  `delphin.itsdb.default_value()`
 
 
 ### Changed
@@ -50,6 +55,14 @@
 ### Removed
 ### Deprecated
 
+* `delphin.itsdb.get_relations()` - use `delphin.itsdb.Relations.from_file()`
+* `delphin.itsdb.default_value()` - use `delphin.itsdb.Field.default_value()`
+* `delphin.itsdb.make_skeleton()` - build a `TestSuite` and write the core
+  tables (this will be made more convenient later)
+* `delphin.itsdb.filter_rows()`
+* `delphin.itsdb.apply_rows()`
+* `delphin.itsdb.ItsdbProfile` - use `delphin.itsdb.TestSuite`
+* `delphin.itsdb.ItsdbSkeleton` - use `delphin.itsdb.TestSuite`
 
 ## [v0.6.2][]
 

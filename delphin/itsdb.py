@@ -19,8 +19,6 @@ from collections import defaultdict, namedtuple, OrderedDict
 from itertools import chain
 from contextlib import contextmanager
 
-import pandas as pd
-
 from delphin.exceptions import ItsdbError
 from delphin.util import safe_int, stringtypes
 
@@ -101,9 +99,9 @@ class Relations(object):
     A "relations file" is a [incr tsdb()] database schema.
     """
 
-    class TableRelations(tuple):
+    class Relation(tuple):
         def __new__(cls, name, fields):
-            tr = super(Relations.TableRelations, cls).__new__(cls, fields)
+            tr = super(Relations.Relation, cls).__new__(cls, fields)
             tr.name = name
             tr._index = dict(
                 (f.name, i) for i, f in enumerate(fields)
@@ -119,7 +117,7 @@ class Relations(object):
 
     def __init__(self, tables):
         self.tables = tuple(t[0] for t in tables)
-        self._data = dict((t[0], self.TableRelations(*t)) for t in tables)
+        self._data = dict((t[0], self.Relation(*t)) for t in tables)
 
     @classmethod
     def from_file(cls, source):
@@ -195,15 +193,10 @@ class Relations(object):
 # Test items and test suites
 
 class Record(list):
-    def __init__(self, fields, iterable=None):
+    def __init__(self, fields, iterable):
         self.fields = fields
-        if iterable is None:
-            iterable = [None] * len(fields)
-        iterable = [
-            f.default_value() if pd.isnull(v) else v
-            for f, v in zip(fields, iterable)
-        ]
-        list.__init__(self, iterable)
+        cols = list(iterable)
+        list.__init__(self, cols)
 
     def __repr__(self):
         return "<{} '{}' {}>".format(
@@ -227,21 +220,23 @@ class Record(list):
             return default
 
 
-class Table(object):
+class Table(list):
     def __init__(self, name, fields, records=None):
         self.name = name
         self.fields = fields
-        columns = [f.name for f in fields]
-        if records is not None and isinstance(records, pd.DataFrame):
-            records = records.values
-        self._df = pd.DataFrame(records, columns=columns)
+        # columns = [f.name for f in fields]
+        if records is None:
+            records = []
+        # ensure records are Record objects
+        list.__init__(self, [Record(fields, rec) for rec in records])
 
     @classmethod
     def from_file(cls, path, name=None, fields=None, gzip=None):
+
         path = _table_filename(path)  # do early in case file not found
 
         if name is None:
-            name = os.path.basename(path).rpartition('.gz')[0]
+            name = os.path.basename(path).rsplit('.gz', 1)[0]
 
         if fields is None:
             rpath = os.path.join(os.path.dirname(path), _relations_filename)
@@ -258,27 +253,13 @@ class Table(object):
             # successfully inferred the relations for the table
             fields = rels[name]
 
-        records = None
-        # pd.read_table() fails on an empty file
-        if os.stat(path).st_size > 0:
-            # todo: use gzip parameter
-            records = pd.read_table(
-                path,
-                sep='@',
-                header=None,
-                names=[f.name for f in fields],
-                na_values=(-1,'')
+        records = []
+        with _open_table(path) as tab:
+            records.extend(
+                map((lambda s: decode_row(s, fields)), tab)
             )
-        return cls(name, fields, records)
 
-    def __getitem__(self, idx):
-        fields = self.fields
-        if isinstance(idx, slice):
-            return [
-                Record(fields, v.tolist()) for _, v in self._df.iterrows(idx)
-            ]
-        else:
-            return Record(fields, self._df.iloc[idx].tolist())
+        return cls(name, fields, records)
 
     def select(self, cols, mode='list'):
         if isinstance(cols, stringtypes):
@@ -314,7 +295,13 @@ class TestSuite(object):
         tablerels = self.relations[tablename]
         # if the table is None it is invalidated; reload it
         if self._data[tablename] is None:
-            self._reload_table(tablename)
+            if self._path is not None:
+                self._reload_table(tablename)
+            else:
+                self._data[tablename] = Table(
+                    tablename,
+                    self.relations[tablename]
+                )
         return self._data[tablename]
 
     def reload(self):
@@ -368,21 +355,6 @@ class TestSuite(object):
 # Non-class (i.e. static) functions
 
 
-def get_relations(path):
-    """
-    Parse the relations file and return a Relations object that
-    describes the database structure.
-
-    **Note**: for backward-compatibility only; use Relations.from_file()
-
-    Args:
-        path: The path of the relations file.
-    Returns:
-        A dictionary mapping a table name to a list of Field tuples.
-    """
-    return Relations.from_file(path)
-
-
 data_specifier_re = re.compile(r'(?P<table>[^:]+)?(:(?P<cols>.+))?$')
 def get_data_specifier(string):
     """
@@ -423,7 +395,7 @@ def decode_row(line, fields=None):
 
     Args:
         line: a raw line from a [incr tsdb()] profile.
-        fields: a list or TableRelations object of Fields for the row
+        fields: a list or Relation object of Fields for the row
     Returns:
         A list of column values.
     """
@@ -544,9 +516,7 @@ def _open_table(tbl_filename):
     path = _table_filename(tbl_filename)
     if path.endswith('.gz'):
         # text mode only from py3.3; until then use TextIOWrapper
-        with TextIOWrapper(
-                BufferedReader(gzopen(tbl_filename + '.gz', mode='r'))
-             ) as f:
+        with TextIOWrapper(BufferedReader(gzopen(path, mode='r'))) as f:
             yield f
     else:
         with open(tbl_filename) as f:
@@ -603,80 +573,10 @@ def make_row(row, fields):
     row_fields = []
     for f in fields:
         val = row.get(f.name, None)
-        if pd.isnull(val):
-            val = str(default_value(f.name, f.datatype))
+        if val is None:
+            val = str(f.default_value())
         row_fields.append(val)
     return encode_row(row_fields)
-
-
-def default_value(fieldname, datatype):
-    """
-    Return the default value for a column.
-
-    If the column name (e.g. *i-wf*) is defined to have an idiosyncratic
-    value, that value is returned. Otherwise the default value for the
-    column's datatype is returned.
-
-    Args:
-        fieldname: the column name (e.g. `i-wf`)
-        datatype: the datatype of the column (e.g. `:integer`)
-    Returns:
-        The default value for the column.
-    """
-    if fieldname in tsdb_coded_attributes:
-        return str(tsdb_coded_attributes[fieldname])
-    else:
-        return _default_datatype_values.get(datatype, '')
-
-
-def filter_rows(filters, rows):
-    """
-    Yield rows matching all applicable filters.
-
-    Filter functions have binary arity (e.g. `filter(row, col)`) where
-    the first parameter is the dictionary of row data, and the second
-    parameter is the data at one particular column.
-
-    Args:
-        filters: a tuple of (cols, filter_func) where filter_func will
-            be tested (filter_func(row, col)) for each col in cols where
-            col exists in the row
-        rows: an iterable of rows to filter
-    Yields:
-        Rows matching all applicable filters
-    """
-    for row in rows:
-        if all(condition(row, row.get(col))
-               for (cols, condition) in filters
-               for col in cols
-               if col is None or col in row):
-            yield row
-
-
-def apply_rows(applicators, rows):
-    """
-    Yield rows after applying the applicator functions to them.
-
-    Applicators are simple unary functions that return a value, and that
-    value is stored in the yielded row. E.g.
-    `row[col] = applicator(row[col])`. These are useful to, e.g., cast
-    strings to numeric datatypes, to convert formats stored in a cell,
-    extract features for machine learning, and so on.
-
-    Args:
-        applicators: a tuple of (cols, applicator) where the applicator
-            will be applied to each col in cols
-        rows: an iterable of rows for applicators to be called on
-    Yields:
-        Rows with specified column values replaced with the results of
-        the applicators
-    """
-    for row in rows:
-        for (cols, function) in applicators:
-            for col in (cols or []):
-                value = row.get(col, '')
-                row[col] = function(row, value)
-        yield row
 
 
 def select_rows(cols, rows, mode='list'):
@@ -741,6 +641,85 @@ def match_rows(rows1, rows2, key, sort_keys=True):
         yield (val, left, right)
 
 
+def join(table1, table2, on=None, how='inner', name=None):
+    if how not in ('inner', 'left'):
+        ItsdbError('Only \'inner\' and \'left\' join methods are allowed.')
+    # the name of the joined table
+    if name is None:
+        name = '{}+{}'.format(table1.name, table2.name)
+    # the relation of the joined table
+    prefixes = (table1.name + ':', table2.name + ':')
+    fields = Relations.Relation(
+        name,
+        [Field(prefixes[0] + f.name, *f[1:]) for f in table1.fields] +
+        [Field(prefixes[1] + f.name, *f[1:]) for f in table2.fields]
+    )
+    # validate and normalize the pivot
+    if isinstance(on, stringtypes):
+        on = _split_cols(on)
+    if not on:
+        on = set(table1.fields.keys()).intersection(table2.fields.keys())
+        if not on:
+            raise ItsdbError(
+                'No shared key to join on in the \'{}\' and \'{}\' tables.'
+                .format(table1.name, table2.name)
+            )
+    on = sorted(on)
+    key = lambda rec: tuple(rec.get(k) for k in on)
+    # get key mappings to the right side (useful for inner and left joins)
+    right = defaultdict(list)
+    for rec in table2:
+        right[key(rec)].append(rec)
+    # build joined table
+    rfill = [f.default_value() for f in table2.fields]
+    joined = []
+    for lrec in table1:
+        k = key(lrec)
+        if how == 'left' or k in right:
+            joined.extend(lrec + rrec for rrec in right.get(k, [rfill]))
+
+    return Table(name, fields, joined)
+
+
+
+##############################################################################
+# Deprecated
+
+def get_relations(path):
+    """
+    Parse the relations file and return a Relations object that
+    describes the database structure.
+
+    **Note**: for backward-compatibility only; use Relations.from_file()
+
+    Args:
+        path: The path of the relations file.
+    Returns:
+        A dictionary mapping a table name to a list of Field tuples.
+    """
+    return Relations.from_file(path)
+
+
+def default_value(fieldname, datatype):
+    """
+    Return the default value for a column.
+
+    If the column name (e.g. *i-wf*) is defined to have an idiosyncratic
+    value, that value is returned. Otherwise the default value for the
+    column's datatype is returned.
+
+    Args:
+        fieldname: the column name (e.g. `i-wf`)
+        datatype: the datatype of the column (e.g. `:integer`)
+    Returns:
+        The default value for the column.
+    """
+    if fieldname in tsdb_coded_attributes:
+        return str(tsdb_coded_attributes[fieldname])
+    else:
+        return _default_datatype_values.get(datatype, '')
+
+
 def make_skeleton(path, relations, item_rows, gzip=False):
     """
     Instantiate a new profile skeleton (only the relations file and
@@ -776,9 +755,55 @@ def make_skeleton(path, relations, item_rows, gzip=False):
     # return prof
 
 
+def filter_rows(filters, rows):
+    """
+    Yield rows matching all applicable filters.
 
-##############################################################################
-# Deprecated
+    Filter functions have binary arity (e.g. `filter(row, col)`) where
+    the first parameter is the dictionary of row data, and the second
+    parameter is the data at one particular column.
+
+    Args:
+        filters: a tuple of (cols, filter_func) where filter_func will
+            be tested (filter_func(row, col)) for each col in cols where
+            col exists in the row
+        rows: an iterable of rows to filter
+    Yields:
+        Rows matching all applicable filters
+    """
+    for row in rows:
+        if all(condition(row, row.get(col))
+               for (cols, condition) in filters
+               for col in cols
+               if col is None or col in row):
+            yield row
+
+
+def apply_rows(applicators, rows):
+    """
+    Yield rows after applying the applicator functions to them.
+
+    Applicators are simple unary functions that return a value, and that
+    value is stored in the yielded row. E.g.
+    `row[col] = applicator(row[col])`. These are useful to, e.g., cast
+    strings to numeric datatypes, to convert formats stored in a cell,
+    extract features for machine learning, and so on.
+
+    Args:
+        applicators: a tuple of (cols, applicator) where the applicator
+            will be applied to each col in cols
+        rows: an iterable of rows for applicators to be called on
+    Yields:
+        Rows with specified column values replaced with the results of
+        the applicators
+    """
+    for row in rows:
+        for (cols, function) in applicators:
+            for col in (cols or []):
+                value = row.get(col, '')
+                row[col] = function(row, value)
+        yield row
+
 
 class ItsdbProfile(object):
     """
