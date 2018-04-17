@@ -1,5 +1,10 @@
-# Ignore the build folder
+# Ignore cache, testing, build, and other temporary directories
 build/
+dist/
+.tox/
+.cache/
+.pytest_cache/
+PyDelphin.egg-info/
 # Ignore the compiled python files
 *.pyc
 __pycache__/
