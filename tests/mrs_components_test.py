@@ -396,6 +396,14 @@ class TestPred():
         assert p.pos == 'n'
         assert p.sense == '1'
         assert p.short_form() == '_dog_n_1'
+        # see https://github.com/delph-in/pydelphin/issues/129
+        p = spred('_te_adjunct_rel')
+        assert p.type == Pred.STRINGPRED
+        assert p.string == '_te_adjunct_rel'
+        assert p.lemma == 'te'
+        assert p.pos == None
+        assert p.sense == 'adjunct'
+        assert p.short_form() == '_te_adjunct'
         #TODO: the following shouldn't throw warnings.. the code should
         # be more robust, but there should be some Warning or logging
         #with pytest.raises(ValueError): spred('_dog_rel')
@@ -433,6 +441,15 @@ class TestPred():
         assert p.pos == 'n'
         assert p.sense == '1'
         assert p.short_form() == '_dog_n_1'
+        # see https://github.com/delph-in/pydelphin/issues/129
+        p = Pred.realpred('te', None, 'adjunct')
+        assert p.type == Pred.REALPRED
+        assert p.string == '_te_adjunct_rel'
+        assert p.lemma == 'te'
+        assert p.pos == None
+        assert p.sense == 'adjunct'
+        assert p.short_form() == '_te_adjunct'
+
         with pytest.raises(TypeError): Pred.realpred(lemma='dog')
         with pytest.raises(TypeError): Pred.realpred(pos='n')
         repr(p)  # no error

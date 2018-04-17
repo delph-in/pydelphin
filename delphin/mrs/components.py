@@ -456,7 +456,9 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
     @classmethod
     def realpred(cls, lemma, pos, sense=None):
         """Return a Pred from its components."""
-        string_tokens = [lemma, pos]
+        string_tokens = [lemma]
+        if pos is not None:
+            string_tokens.append(pos)
         if sense is not None:
             sense = str(sense)
             string_tokens.append(sense)

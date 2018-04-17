@@ -89,6 +89,21 @@ convenient:
 
 ```
 
+See https://github.com/delph-in/pydelphin/issues/129
+
+```python
+>>> m3 = next(dmrx.loads('''<dmrs-list>
+... <dmrs cfrom="-1" cto="-1">
+... <node nodeid="10000"><realpred lemma="te" sense="adjunct" /><sortinfo /></node>
+... </dmrs></dmrs-list>'''))
+>>> nodes(m3)[0].pred  # doctest: +ELLIPSIS
+<Pred object _te_adjunct_rel ...>
+>>> nodes(m3)[0].pred.pos is None
+True
+
+```
+
+
 ## Serialization
 
 The default prints everything on one line.
@@ -124,5 +139,13 @@ Using the `pretty_print` parameter adds newlines.
 <link from="10002" to="10001"><rargname>ARG1</rargname><post>NEQ</post></link>
 </dmrs>
 </dmrs-list>
+
+```
+
+See https://github.com/delph-in/pydelphin/issues/129
+
+```python
+>>> print(dmrx.dumps([m3]))
+<dmrs-list><dmrs cfrom="-1" cto="-1"><node cfrom="-1" cto="-1" nodeid="10000"><realpred lemma="te" sense="adjunct" /><sortinfo cvarsort="u" /></node></dmrs></dmrs-list>
 
 ```
