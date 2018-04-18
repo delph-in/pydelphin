@@ -118,7 +118,6 @@ dict_keys(['DERIV', 'MRS'])
 PyDelphin is developed for [Python 3](http://python.org/download/)
 (3.3+), but it has also been tested to work with Python 2.7. Optional
 requirements include:
-  - [docopt](http://docopt.org/) for script usage
   - [NetworkX](http://networkx.github.io/) for MRS isomorphism
     checking
   - [requests](http://requests.readthedocs.io/en/master/) for the

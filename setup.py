@@ -59,7 +59,6 @@ setup(
         'networkx',
         'requests',
         'Pygments',
-        'docopt >=0.6.0'
     ],
     entry_points={
         'console_scripts': [

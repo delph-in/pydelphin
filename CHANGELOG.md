@@ -24,6 +24,7 @@
 * `mkprof` command includes any non-empty core files in skeletons
 * SimpleMRS codec now instantiates with the Mrs class instead of Xmrs (#103)
 * SimpleMRS no longer breaks at non-breaking spaces in predicates (#128)
+* Remove docopt dependency for command-line interfaces (#137)
 
 ### Fixed
 
