@@ -3,12 +3,14 @@
 import sys
 import os
 import argparse
+import warnings
 import logging
 import json
 import textwrap
 from functools import partial
 
 from delphin.__about__ import __version__
+from delphin.exceptions import PyDelphinWarning
 from delphin.mrs import xmrs, eds
 from delphin import itsdb
 
@@ -31,7 +33,7 @@ def convert(args):
     """
     Convert between various MRS codecs or to export formats.
     """
-    from delphin.mrs import (simplemrs, mrx, dmrx, eds, simpledmrs, penman)
+    from delphin.mrs import (simplemrs, mrx, dmrx, eds, simpledmrs)
     from delphin.extra import latex
     codecs = {
         'simplemrs': (simplemrs.loads, simplemrs.dumps),
@@ -41,10 +43,10 @@ def convert(args):
         'mrs-json': (_mrs_json.loads, _mrs_json.dumps),
         'dmrs-json': (_dmrs_json.loads, _dmrs_json.dumps),
         'eds-json': (_eds_json.loads, _eds_json.dumps),
-        'dmrs-penman': (partial(penman.loads, model=xmrs.Dmrs),
-                        partial(penman.dumps, model=xmrs.Dmrs)),
-        'eds-penman': (partial(penman.loads, model=eds.Eds),
-                       partial(penman.dumps, model=eds.Eds)),
+        'dmrs-penman': (partial(_penman_loads, model=xmrs.Dmrs),
+                        partial(_penman_dumps, model=xmrs.Dmrs)),
+        'eds-penman': (partial(_penman_loads, model=eds.Eds),
+                       partial(_penman_dumps, model=eds.Eds)),
         'simpledmrs': (None, simpledmrs.dumps),
         'dmrs-tikz': (None, latex.dmrs_tikz_dependency)
     }
@@ -63,6 +65,15 @@ def convert(args):
         sys.exit('Conversion from EDS to non-EDS currently not supported.')
     args.color = (args.color == 'always'
                   or (args.color == 'auto' and sys.stdout.isatty()))
+    if args.color:
+        try:
+            import pygments
+        except ImportError:
+            warnings.warn(
+                'Pygments is not installed; output will not be highlighted.',
+                PyDelphinWarning
+            )
+            args.color = False
     if args.indent:
         args.pretty_print = True
         if args.indent.isdigit():
@@ -223,7 +234,6 @@ def compare(args):
 
 # simulate json codecs for MRS and DMRS
 
-
 class _MRS_JSON(object):
     CLS = xmrs.Mrs
 
@@ -267,6 +277,16 @@ class _EDS_JSON(_MRS_JSON):
 _mrs_json = _MRS_JSON()
 _dmrs_json = _DMRS_JSON()
 _eds_json = _EDS_JSON()
+
+# load Penman module on demand
+
+def _penman_loads(s, model=None, **kwargs):
+    from delphin.mrs import penman
+    return penman.loads(s, model=model, **kwargs)
+
+def _penman_dumps(x, model=None, **kwargs):
+    from delphin.mrs import penman
+    return penman.dumps(x, model=model, **kwargs)
 
 # working with directories and profiles
 
@@ -376,7 +396,6 @@ convert_parser.add_argument(
     '--no-properties',
     action='store_true',
     help='suppress morphosemantic properties')
-#convert_parser.add_argument('--no-lnk', action='store_true', help='suppress surface alignment information')
 convert_parser.add_argument(
     '--pretty-print',
     action='store_true',

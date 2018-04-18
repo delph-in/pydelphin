@@ -25,6 +25,7 @@
 * SimpleMRS codec now instantiates with the Mrs class instead of Xmrs (#103)
 * SimpleMRS no longer breaks at non-breaking spaces in predicates (#128)
 * Remove docopt dependency for command-line interfaces (#137)
+* Move imports of dependencies to avoid unnecessary ImportErrors (#100)
 
 ### Fixed
 
