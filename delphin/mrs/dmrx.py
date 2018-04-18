@@ -118,7 +118,7 @@ def _decode_pred(elem):
         return Pred.grammarpred(elem.text)
     elif elem.tag == 'realpred':
         return Pred.realpred(elem.get('lemma'),
-                             elem.get('pos'),
+                             elem.get('pos') or None,
                              elem.get('sense'))
 
 
@@ -212,9 +212,10 @@ def _encode_pred(pred):
         e.text = pred.string.strip('"\'')
     elif pred.type in (Pred.REALPRED, Pred.STRINGPRED):
         attributes = {}
-        if pred.lemma is not None:
-            attributes['lemma'] = pred.lemma
-        if pred.pos is not None:
+        attributes['lemma'] = pred.lemma
+        if pred.pos is None:
+            attributes['pos'] = ""
+        else:
             attributes['pos'] = pred.pos
         if pred.sense is not None:
             attributes['sense'] = str(pred.sense)

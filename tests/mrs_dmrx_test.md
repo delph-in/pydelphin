@@ -95,10 +95,15 @@ See https://github.com/delph-in/pydelphin/issues/129
 >>> m3 = next(dmrx.loads('''<dmrs-list>
 ... <dmrs cfrom="-1" cto="-1">
 ... <node nodeid="10000"><realpred lemma="te" sense="adjunct" /><sortinfo /></node>
+... <node nodeid="10001"><realpred lemma="te" pos="" sense="adjunct" /><sortinfo /></node>
 ... </dmrs></dmrs-list>'''))
 >>> nodes(m3)[0].pred  # doctest: +ELLIPSIS
 <Pred object _te_adjunct_rel ...>
 >>> nodes(m3)[0].pred.pos is None
+True
+>>> nodes(m3)[1].pred  # doctest: +ELLIPSIS
+<Pred object _te_adjunct_rel ...>
+>>> nodes(m3)[1].pred.pos is None
 True
 
 ```
@@ -146,6 +151,6 @@ See https://github.com/delph-in/pydelphin/issues/129
 
 ```python
 >>> print(dmrx.dumps([m3]))
-<dmrs-list><dmrs cfrom="-1" cto="-1"><node cfrom="-1" cto="-1" nodeid="10000"><realpred lemma="te" sense="adjunct" /><sortinfo cvarsort="u" /></node></dmrs></dmrs-list>
+<dmrs-list><dmrs cfrom="-1" cto="-1"><node cfrom="-1" cto="-1" nodeid="10000"><realpred lemma="te" pos="" sense="adjunct" /><sortinfo cvarsort="u" /></node><node cfrom="-1" cto="-1" nodeid="10001"><realpred lemma="te" pos="" sense="adjunct" /><sortinfo cvarsort="u" /></node></dmrs></dmrs-list>
 
 ```

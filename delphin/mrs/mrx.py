@@ -15,7 +15,7 @@ import xml.etree.ElementTree as etree
 
 from delphin.mrs import Mrs
 from delphin.mrs.components import (
-    ElementaryPredication, Pred, Lnk, HandleConstraint,
+    ElementaryPredication, Pred, Lnk, HandleConstraint, IndividualConstraint,
     elementarypredications, hcons, icons, sort_vid_split, var_re
 )
 from delphin.exceptions import XmrsDeserializationError as XDE
@@ -75,7 +75,7 @@ def deserialize(fh):
     # if memory becomes a big problem, consider catching start events,
     # get the root element (later start events can be ignored), and
     # root.clear() after decoding each mrs
-    for event, elem in etree.iterparse(fh, events=('end',)):
+    for _, elem in etree.iterparse(fh, events=('end',)):
         if elem.tag == 'mrs':
             yield _deserialize_mrs(elem)
             elem.clear()
@@ -91,8 +91,14 @@ def _deserialize_mrs(elem):
     elem = elem.find('.')  # in case elem is ElementTree rather than Element
     variables = defaultdict(list)
     # normalize_vars(elem) # try to make all vars have a sort
-    return Mrs(top=_decode_label(elem.find('label')),
-               index=_decode_var(elem.find('var'), variables=variables),
+    top = elem.find('label')
+    if top is not None:
+        top = _decode_label(top)
+    index = elem.find('var')
+    if index is not None:
+        index = _decode_var(index, variables=variables)
+    return Mrs(top=top,
+               index=index,
                rels=[_decode_ep(ep, variables) for ep in elem.iter('ep')],
                hcons=list(map(_decode_hcons, elem.iter('hcons'))),
                icons=list(map(_decode_icons, elem.iter('icons'))), # future
@@ -160,8 +166,8 @@ def _decode_pred(elem):
     elif elem.tag == 'spred':
         return Pred.stringpred(elem.text)
     elif elem.tag == 'realpred':
-        return Pred.readpred(elem.get('lemma'),
-                             elem.get('pos'),
+        return Pred.realpred(elem.get('lemma'),
+                             elem.get('pos') or None,
                              elem.get('sense'))
 
 
@@ -259,7 +265,7 @@ def _encode_mrs(m, properties):
 
 
 def _encode_label(label):
-    srt, vid = sort_vid_split(label)
+    _, vid = sort_vid_split(label)
     return etree.Element('label', vid=vid)
 
 
@@ -293,8 +299,6 @@ def _encode_ep(ep, varprops=None):
     e = etree.Element('ep', attrib=attributes)
     e.append(_encode_pred(ep.pred))
     e.append(_encode_label(ep.label))
-    if ep.iv is not None:
-        e.append(_encode_arg(IVARG_ROLE, _encode_variable(ep.iv, varprops)))
     for rargname, val in ep.args.items():
         if var_re.match(val):
             e.append(_encode_arg(rargname, _encode_variable(val, varprops)))
@@ -312,7 +316,7 @@ def _encode_pred(pred):
         p = etree.Element('spred')
         p.text = pred.string
     elif pred.type == Pred.REALPRED:
-        attributes = {'lemma': pred.lemma, 'pos': pred.pos}
+        attributes = {'lemma': pred.lemma, 'pos': pred.pos or ""}
         if pred.sense is not None:
             attributes['sense'] = pred.sense
         p = etree.Element('realpred', attrib=attributes)

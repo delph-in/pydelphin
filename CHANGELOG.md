@@ -34,6 +34,9 @@
 * Use target relations for writing empty files in `mkprof` command (#125)
 * Properly split role and post in Dmrs.from_triples()
 * Use top-specifying triples (e.g. (0, 'top', 10000)) in Dmrs.from_triples()
+* Don't complain about missing POS field in Preds (#129)
+* No longer print ARG0s twice in MRX
+* Let MRX deal with missing TOP and INDEX
 
 ### Removed
 ### Deprecated
