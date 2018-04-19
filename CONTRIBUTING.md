@@ -25,7 +25,7 @@ For bug requests, please provide the following, if possible:
   >>> __version__
   '0.6.0'
   ```
-* Python version (e.g. 2.7, 3.3, etc.)
+* Python version (e.g. 2.7, 3.4, etc.)
 
 For feature requests, please provide a use case for the feature.
 
@@ -59,7 +59,7 @@ Always run the unit tests before committing.
     tox
 
 [Tox](https://testrun.org/tox/latest/) must be installed, along with
-Python versions 2.7, 3.3, 3.4, and 3.5. It creates a virtual environment
+Python versions 2.7, 3.4, 3.5, and 3.6. It creates a virtual environment
 in order to run the tests, which helps avoid missing dependencies. For
 basic unit testing, you may install [pytest](http://pytest.org/) and
 run:

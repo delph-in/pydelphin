@@ -10,7 +10,7 @@ Semantics (MRS; including DMRS), derivation trees, and [incr tsdb()]
 profiles; introspection tools for Type Description Language (TDL),
 which is used to define HPSG grammars; a Python wrapper for the ACE
 parser; and some extra tools for syntax highlighting or LaTeX output.
-Python developers who work with DELPH-IN data can rely on pyDelphin to
+Python developers who work with DELPH-IN data can rely on PyDelphin to
 correctly deal with such data via convenient interfaces.'''
 
 base_dir = os.path.dirname(__file__)
@@ -37,9 +37,9 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Text Processing :: Linguistic',

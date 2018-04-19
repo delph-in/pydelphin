@@ -513,8 +513,8 @@ def decode_row(line, fields=None):
     if fields is not None:
         if len(cols) != len(fields):
             raise ItsdbError(
-                'Wrong number of fields in {} at line {}: {} != {}'
-                .format(tablename, i, len(data), num_fields)
+                'Wrong number of fields: {} != {}'
+                .format(len(cols), len(fields))
             )
         for i in range(len(cols)):
             col = cols[i]
@@ -558,7 +558,7 @@ def _escape(m):
 
 
 def escape(string):
-    """
+    r"""
     Replace any special characters with their [incr tsdb()] escape
     sequences. Default sequences are::
 
@@ -624,7 +624,8 @@ def _table_filename(tbl_filename):
 def _open_table(tbl_filename):
     path = _table_filename(tbl_filename)
     if path.endswith('.gz'):
-        # text mode only from py3.3; until then use TextIOWrapper
+        # cannot use mode='rt' until Python2.7 support is gone;
+        # until then use TextIOWrapper
         with TextIOWrapper(BufferedReader(gzopen(path, mode='r'))) as f:
             yield f
     else:

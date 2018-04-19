@@ -2,6 +2,11 @@
 
 ## [Unreleased][unreleased]
 
+### Python Versions
+
+* Removed Python 3.3 support
+* Added Python 3.6 support
+
 ### Added
 
 * `delphin.interface.ace.compile()` can take `executable` and `env`
@@ -24,7 +29,6 @@
 * `delphin.itsdb.Field.default_value()` replaces
   `delphin.itsdb.default_value()`
 * `delphin.util.deprecated` decorator for marking deprecated functions and methods
-
 
 ### Changed
 
@@ -86,7 +90,6 @@
 * Include file size of gzipped tables in summary of `delphin mkprof` (#110)
 * `normalize_pred_string()` now strips `_rel` (#111) and lowercases
 * `is_valid_pred_string()` no longer requires `_rel` (#111)
-
 
 ## [v0.6.1][]
 
