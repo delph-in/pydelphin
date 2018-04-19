@@ -33,7 +33,7 @@ def convert(args):
     """
     Convert between various MRS codecs or to export formats.
     """
-    from delphin.mrs import (simplemrs, mrx, dmrx, eds, simpledmrs)
+    from delphin.mrs import (simplemrs, mrx, prolog, dmrx, eds, simpledmrs)
     from delphin.extra import latex
     codecs = {
         'simplemrs': (simplemrs.loads, simplemrs.dumps),
@@ -41,6 +41,7 @@ def convert(args):
         'dmrx': (dmrx.loads, dmrx.dumps),
         'eds': (eds.loads, eds.dumps),
         'mrs-json': (_mrs_json.loads, _mrs_json.dumps),
+        'mrs-prolog': (None, prolog.dumps),
         'dmrs-json': (_dmrs_json.loads, _dmrs_json.dumps),
         'eds-json': (_eds_json.loads, _eds_json.dumps),
         'dmrs-penman': (partial(_penman_loads, model=xmrs.Dmrs),

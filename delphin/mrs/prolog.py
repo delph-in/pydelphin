@@ -8,24 +8,6 @@ Serialization functions for the Prolog format.
 
 from __future__ import print_function
 
-"""
-psoa(h1,e2,
-  [ rel('prop-or-ques_m',h1,
-        [ attrval('ARG0',e2),
-          attrval('MARG',h3),
-          attrval('PSV',u4),
-          attrval('TPC',u5) ]),
-    rel('_every_q',h6,
-        [ attrval('ARG0',x7),
-          attrval('RSTR',h9),
-          attrval('BODY',h8) ]),
-    rel('_dog_n_1',h10,
-        [ attrval('ARG0',x7) ]),
-    rel('_bark_v_1',h11,
-        [ attrval('ARG0',e2),
-          attrval('ARG1',x7) ]) ],
-  hcons([ qeq(h3,h11), qeq(h9,h10) ]))
-"""
 
 def dump(fh, ms, single=False, pretty_print=False, **kwargs):
     """
@@ -77,7 +59,7 @@ def serialize(ms, pretty_print=False, **kwargs):
     """Serialize an MRS structure into Prolog."""
     # structures
     pl = 'psoa({topvars},{_}[{rels}],{_}hcons([{hcons}]){icons})'
-    plep = 'rel({pred},{lbl},{___}[{attrvals}])'
+    plep = "rel('{pred}',{lbl},{___}[{attrvals}])"
     plav = "attrval('{attr}',{val})"
     plvc = '{reln}({left},{right})'
     # various indent levels

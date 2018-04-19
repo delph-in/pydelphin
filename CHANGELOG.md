@@ -165,6 +165,7 @@ fixed or the functionality is deprecated.
   (resolves #85)
 * `delphin.vpm` and tests
 * `delphin.semi` and tests
+* `delphin.mrs.prolog` serializer
 
 ### Changed
 
