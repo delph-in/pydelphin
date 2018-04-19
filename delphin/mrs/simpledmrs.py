@@ -2,7 +2,7 @@
 """
 Serialization for the SimpleDMRS format.
 
-Note that this format is provided by pyDelphin and not defined
+Note that this format is provided by PyDelphin and not defined
 anywhere, so it should only be used for user's convenience and not
 used as an interchange format or for other practical purposes. It was
 created with human legibility in mind (e.g. for investigating DMRSs
@@ -92,6 +92,8 @@ def _encode_dmrs(m, properties, indent=2):
         delim = ''
         space = ' '
 
+    attrs = []
+
     nodes_ = [
         _node.format(
             indent=space,
@@ -112,16 +114,32 @@ def _encode_dmrs(m, properties, indent=2):
         for n in nodes(m)
     ]
 
-    links_ = [
-        _link.format(
-            indent=space,
-            start=l.start,
-            pre=l.rargname or '',
-            post=l.post,
-            arrow='->' if l.rargname or l.post != EQ_POST else '--',
-            end=l.end
-        )
-        for l in links(m)
-    ]
+    links_ = []
+    for l in links(m):
+        if l.start == 0:
+            attrs.append('top={}'.format(l.end))
+        else:
+            links_.append(
+                _link.format(
+                    indent=space,
+                    start=l.start,
+                    pre=l.rargname or '',
+                    post=l.post,
+                    arrow='->' if l.rargname or l.post != EQ_POST else '--',
+                    end=l.end
+                )
+            )
 
-    return delim.join(['dmrs {'] + nodes_ + links_ + ['}'])
+    if m.index is not None:
+        idx = m.nodeid(m.index)
+        if idx is not None:
+            attrs.append('index={}'.format(idx))
+    if m.lnk is not None:
+        attrs.append('lnk={}'.format(str(m.lnk)))
+    if m.surface is not None:
+        attrs.append('surface="{}"'.format(m.surface))
+
+    if attrs:
+        attrs = ['{}[{}]'.format(space, ' '.join(attrs))]
+
+    return delim.join(['dmrs {'] + attrs + nodes_ + links_ + ['}'])

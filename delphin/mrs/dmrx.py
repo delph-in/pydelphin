@@ -69,7 +69,7 @@ def deserialize(fh):
     # if memory becomes a big problem, consider catching start events,
     # get the root element (later start events can be ignored), and
     # root.clear() after decoding each mrs
-    for event, elem in etree.iterparse(fh, events=('end',)):
+    for _, elem in etree.iterparse(fh, events=('end',)):
         if elem.tag == 'dmrs':
             yield _deserialize_dmrs(elem)
             elem.clear()
@@ -84,6 +84,9 @@ def _deserialize_dmrs(elem):
     elem = elem.find('.')  # in case elem is an ElementTree rather than Element
     return Dmrs(nodes=list(map(_decode_node, elem.iter('node'))),
                 links=list(map(_decode_link, elem.iter('link'))),
+                top=elem.get('top'),
+                index=elem.get('index'),
+                xarg=elem.get('xarg'),
                 lnk=_decode_lnk(elem),
                 surface=elem.get('surface'),
                 identifier=elem.get('ident'))
@@ -178,6 +181,15 @@ def serialize(ms, properties=True, encoding='unicode', pretty_print=False):
 def _encode_dmrs(m, properties):
     attributes = OrderedDict([('cfrom', str(m.cfrom)),
                               ('cto', str(m.cto))])
+    # if m.top is not None: ... currently handled by links()
+    if m.index is not None:
+        idx = m.nodeid(m.index)
+        if idx is not None:
+            attributes['index'] = str(idx)
+    if m.xarg is not None:
+        xarg = m.nodeid(m.xarg)
+        if xarg is not None:
+            attributes['xarg'] = str(xarg)
     if m.surface is not None:
         attributes['surface'] = m.surface
     if m.identifier is not None:

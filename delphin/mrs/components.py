@@ -436,13 +436,13 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
     @classmethod
     def stringpred(cls, predstr):
         """Return a Pred from its quoted string representation."""
-        lemma, pos, sense, end = split_pred_string(predstr)
+        lemma, pos, sense, _ = split_pred_string(predstr)
         return cls(Pred.STRINGPRED, lemma, pos, sense, predstr)
 
     @classmethod
     def grammarpred(cls, predstr):
         """Return a Pred from its symbol string."""
-        lemma, pos, sense, end = split_pred_string(predstr)
+        lemma, pos, sense, _ = split_pred_string(predstr)
         return cls(Pred.GRAMMARPRED, lemma, pos, sense, predstr)
 
     @staticmethod

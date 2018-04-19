@@ -2,6 +2,9 @@
 
 ## [Unreleased][unreleased]
 
+**Note**: there are some changes that may break backward compatibility; these
+changes are prefixed with "**BREAKING**"
+
 ### Python Versions
 
 * Removed Python 3.3 support
@@ -28,7 +31,11 @@
 * `delphin.itsdb.join()` does inner and left joins (#101)
 * `delphin.itsdb.Field.default_value()` replaces
   `delphin.itsdb.default_value()`
-* `delphin.util.deprecated` decorator for marking deprecated functions and methods
+* `delphin.util.deprecated` decorator for marking deprecated functions and
+   methods
+* DMRX now encodes index as a graph attribute
+* DMRS's dictionary view (for JSON output) now encodes index as a
+  top-level attribute.
 
 ### Changed
 
@@ -40,10 +47,17 @@
 * SimpleMRS no longer breaks at non-breaking spaces in predicates (#128)
 * Remove docopt dependency for command-line interfaces (#137)
 * Move imports of dependencies to avoid unnecessary ImportErrors (#100)
-* `delphin.itsdb.Field` the `other` list attribute is now just the
-  boolean `partial` since there's no other use of it
+* **BREAKING**: for `delphin.itsdb.Field`, the `other` list attribute is
+  now just the boolean `partial` since there's no other use of it
 * Add a few more patterns to `.gitignore`
 * Remove unnecessary line in `delphin.main.mkprof()`
+* **BREAKING**: Insert `top`, `index`, and `xarg` parameters into the
+  `delphin.mrs.Dmrs` class instantiator before the `lnk` parameter;
+  other arbitrary parameters are now disallowed
+* **BREAKING**: SimpleDMRS format encodes top, index, xarg, lnk, and
+  surface as graph attributes and removes the top link (`0:/H -> ...`)
+* The `delphin` command no longer catches errors when converting; it was
+  catching and hiding errors that were not intended to be hidden
 
 ### Fixed
 

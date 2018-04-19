@@ -104,11 +104,12 @@ def convert(args):
     if args.pretty_print: kwargs['pretty_print'] = args.pretty_print
     if args.indent: kwargs['indent'] = args.indent
     kwargs['properties'] = not args.no_properties
-    try:
-        print(dumps(xs, **kwargs))
-    except TypeError:
-        sys.exit('One or more parameters to {} are not supported: {}'.format(
-            args.to, ', '.join(kwargs)))
+    print(dumps(xs, **kwargs))
+    # try:
+    #     print(dumps(xs, **kwargs))
+    # except TypeError:
+    #     sys.exit('One or more parameters to {} are not supported: {}'.format(
+    #         args.to, ', '.join(kwargs)))
 
 
 def select(args):

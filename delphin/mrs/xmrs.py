@@ -127,7 +127,7 @@ class Xmrs(_LnkMixin):
             #     raise XmrsError(
             #         'EPs must have length >= 3: (nodeid, pred, label, ...)'
             #     )
-            nodeid, pred, lbl = ep.nodeid, ep.pred, ep.label
+            nodeid, lbl = ep.nodeid, ep.label
             if nodeid in _eps:
                 raise XmrsError(
                     'EP already exists in Xmrs: {} ({})'
@@ -692,7 +692,7 @@ class Xmrs(_LnkMixin):
             labels[lbl].add(nid)
             iv = args.get(IVARG_ROLE)
             if iv is None:
-                errors.append('EP (nid) is missing an intrinsic variable.'
+                errors.append('EP {nid} is missing an intrinsic variable.'
                               .format(nid))
             if is_q:
                 if iv in bvs:
@@ -772,7 +772,7 @@ class Mrs(Xmrs):
                 eps_.append(tuple([next_nodeid + i] + list(ep[1:])))
             else:
                 eps_.append(ep)
-        return super(Mrs, self).__init__(
+        super(Mrs, self).__init__(
             top=top, index=index, xarg=xarg,
             eps=eps_, hcons=hcons, icons=icons, vars=vars,
             lnk=lnk, surface=surface, identifier=identifier
@@ -846,7 +846,7 @@ class Mrs(Xmrs):
             identifier=d.get('identifier'),
             vars=variables
         )
-    
+
 
 def Rmrs(top=None, index=None, xarg=None,
          eps=None, args=None, hcons=None, icons=None,
@@ -915,13 +915,18 @@ class Dmrs(Xmrs):
 
     Dependency Minimal Recursion Semantics (DMRS) have a list of [Node]
     objects and a list of [Link] objects. There are no variables or
-    handles, so these will need to be created in order to make an [Xmrs]
-    object. A [Link] from the nodeid 0 (which does not have its own
-    [Node]) links from [TOP].
+    handles, so these will need to be created in order to make an
+    [Xmrs] object. The [TOP] node may be set directly via a parameter
+    or may be implicitly set via a [Link] from the special nodeid 0. If
+    both are given, the link is ignored. The [INDEX] and [XARG] nodes
+    may only be set via parameters.
 
     Args:
         nodes: an iterable of [Node] objects
         links: an iterable of [Link] objects
+        top: the scopal top node
+        index: the non-scopal top node
+        xarg: the external argument node
         lnk: the Lnk object associating the MRS to the surface form
         surface: the surface string
         identifier: a discourse-utterance id
@@ -937,32 +942,31 @@ class Dmrs(Xmrs):
     """
     def __init__(
             self,
-            nodes=None, links=None, lnk=None, surface=None, identifier=None,
-            **kwargs):
+            nodes=None, links=None,
+            top=None, index=None, xarg=None,
+            lnk=None, surface=None, identifier=None):
         if nodes is None: nodes = []
         if links is None: links = []
         qeq = HandleConstraint.qeq
         vgen = _VarGenerator()
+
+        # check this here to streamline things later
+        if top is not None:
+            links = [Link(LTOP_NODEID, top, None, H_POST)] + list(links)
+            top = None
+
         labels = _make_labels(nodes, links, vgen)
         qs = set(l.start for l in links
                  if (l.rargname or '').upper() == RSTR_ROLE)
         ivs = _make_ivs(nodes, vgen, qs)
-        top = index = xarg = None  # for now; maybe get them from kwargs?
+
         # initialize args with ARG0 for intrinsic variables
         args = {nid: {IVARG_ROLE: iv} for nid, iv in ivs.items()}
         hcons = []
         for l in links:
             if l.start not in args:
                 args[l.start] = {}
-            # FIXME: I don't have a clear answer about how LTOP links are
-            # constructed, so I will assume that H_POST or NIL_POST
-            # assumes a QEQ. Label equality would have been captured by
-            # _make_labels() earlier.
-            if safe_int(l.start) == LTOP_NODEID:
-                top = labels[l.start]
-                if l.post == H_POST or l.post == NIL_POST:
-                    hcons += [qeq(labels[l.start], labels[l.end])]
-            else:
+            if safe_int(l.start) != LTOP_NODEID:
                 if not l.rargname or l.rargname.upper() == BARE_EQ_ROLE:
                     continue  # don't make an argument for bare EQ links
                 if l.post == H_POST:
@@ -978,6 +982,16 @@ class Dmrs(Xmrs):
                     args[l.start][l.rargname] = labels[l.end]
                 else:  # NEQ_POST or EQ_POST
                     args[l.start][l.rargname] = ivs[l.end]
+            # ignore top link if top is already set
+            elif top is None:
+                # The most explicit value of post for a link that denotes a
+                # TOP that is qeq to a label is H_POST, but I equally accept
+                # NIL_POST for backward compatibility. HEQ_POST denotes a TOP
+                # that selects a label directly (and this label equality would
+                # have been captured earlier)
+                top = labels[l.start]
+                if l.post == H_POST or l.post == NIL_POST:
+                    hcons += [qeq(top, labels[l.end])]
         eps = []
         for node in nodes:
             nid = node.nodeid
@@ -989,8 +1003,8 @@ class Dmrs(Xmrs):
 
         icons = None  # future feature
 
-        return super(Dmrs, self).__init__(
-            top=top, index=index, xarg=xarg,
+        super(Dmrs, self).__init__(
+            top=top, index=ivs.get(index), xarg=ivs.get(xarg),
             eps=eps, hcons=hcons, icons=icons, vars=vgen.store,
             lnk=lnk, surface=surface, identifier=identifier
         )
@@ -1021,6 +1035,15 @@ class Dmrs(Xmrs):
             nodes=[_node(n) for n in nodes(self)],
             links=[_link(l) for l in links(self)]
         )
+        # if self.top is not None: ... currently handled by links
+        if self.index is not None:
+            idx = self.nodeid(self.index)
+            if idx is not None:
+                d['index'] = idx
+        if self.xarg is not None:
+            xarg = self.nodeid(self.index)
+            if xarg is not None:
+                d['index'] = xarg
         if self.lnk is not None: d['lnk'] = _lnk(self)
         if self.surface is not None: d['surface'] = self.surface
         if self.identifier is not None: d['identifier'] = self.identifier
