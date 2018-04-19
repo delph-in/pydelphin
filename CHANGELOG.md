@@ -17,11 +17,13 @@
   function default) (#114)
 * `delphin.itsdb.Relations` class for encoding/decoding relations files,
   which now also work on strings instead of actual files (#99)
+* `delphin.itsdb.Relation` class for storing the relations of a single table
 * `delphin.itsdb.Record`, `delphin.itsdb.Table`, and
   `delphin.itsdb.TestSuite` for modeling [incr tsdb()] substructures (#89)
 * `delphin.itsdb.join()` does inner and left joins (#101)
 * `delphin.itsdb.Field.default_value()` replaces
   `delphin.itsdb.default_value()`
+* `delphin.util.deprecated` decorator for marking deprecated functions and methods
 
 
 ### Changed

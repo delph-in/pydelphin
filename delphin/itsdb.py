@@ -20,7 +20,7 @@ from itertools import chain
 from contextlib import contextmanager
 
 from delphin.exceptions import ItsdbError
-from delphin.util import safe_int, stringtypes
+from delphin.util import safe_int, stringtypes, deprecated
 
 ##############################################################################
 # Module variables
@@ -87,6 +87,7 @@ class Field(
         return s
 
     def default_value(self):
+        """Get the default value of the field."""
         if self.name in tsdb_coded_attributes:
             return tsdb_coded_attributes[self.name]
         elif self.datatype == ':integer':
@@ -94,33 +95,52 @@ class Field(
         else:
             return ''
 
+
+class Relation(tuple):
+    """
+    A [incr tsdb()] table schema.
+
+    Args:
+        name: the table name
+        fields: a list of Field objects
+    """
+    def __new__(cls, name, fields):
+        tr = super(Relation, cls).__new__(cls, fields)
+        tr.name = name
+        tr._index = dict(
+            (f.name, i) for i, f in enumerate(fields)
+        )
+        tr._keys = tuple(f.name for f in fields if f.key)
+        return tr
+
+    def index(self, fieldname):
+        """Return the Field given by *fieldname*."""
+        return self._index[fieldname]
+
+    def keys(self):
+        """Return the tuple of field names of key fields."""
+        return self._keys
+
+
 class Relations(object):
     """
-    A "relations file" is a [incr tsdb()] database schema.
+    A [incr tsdb()] database schema.
+
+    Users should instantiate this class via one of its class methods:
+      - Relations.from_file()
+      - Relations.from_string()
+
+    Args:
+        tables: a list of (table, [Field]) tuples
     """
-
-    class Relation(tuple):
-        def __new__(cls, name, fields):
-            tr = super(Relations.Relation, cls).__new__(cls, fields)
-            tr.name = name
-            tr._index = dict(
-                (f.name, i) for i, f in enumerate(fields)
-            )
-            tr._keys = tuple(f.name for f in fields if f.key)
-            return tr
-
-        def index(self, fieldname):
-            return self._index[fieldname]
-
-        def keys(self):
-            return self._keys
 
     def __init__(self, tables):
         self.tables = tuple(t[0] for t in tables)
-        self._data = dict((t[0], self.Relation(*t)) for t in tables)
+        self._data = dict((t[0], Relation(*t)) for t in tables)
 
     @classmethod
     def from_file(cls, source):
+        """Instantiate Relations from a relations file."""
         if hasattr(source, 'read'):
             relations = cls.from_string(source.read())
         else:
@@ -130,6 +150,7 @@ class Relations(object):
 
     @classmethod
     def from_string(cls, s):
+        """Instantiate Relations from a relations string."""
         tables = []
         seen = set()
         current_table = None
@@ -186,6 +207,7 @@ class Relations(object):
         )
 
     def items(self):
+        """Return a list of (table, [Field]) for each table."""
         return [(table, self[table]) for table in self]
 
 
@@ -193,6 +215,14 @@ class Relations(object):
 # Test items and test suites
 
 class Record(list):
+    """
+    A row in a [incr tsdb()] table.
+
+    Args:
+        fields: the Relation schema for this table
+        iterable: an iterable containing the data for the record
+    """
+
     def __init__(self, fields, iterable):
         self.fields = fields
         cols = list(iterable)
@@ -214,6 +244,13 @@ class Record(list):
         return list.__getitem__(self, index)
 
     def get(self, key, default=None):
+        """
+        Return the field data given by field name *key*.
+
+        Args:
+            key: the field name of the data to return
+            default: the value to return if *key* is not in the row
+        """
         try:
             return self[key]
         except KeyError:
@@ -221,6 +258,21 @@ class Record(list):
 
 
 class Table(list):
+    """
+    A [incr tsdb()] table.
+
+    Instances of this class contain a collection of rows with the data
+    stored in the database. Generally a Table will be created by a
+    TestSuite object for a database, but a Table can also be instantiated
+    individually by the Table.from_file() class method, and the relations
+    file in the same directory is used to get the schema.
+
+    Args:
+        name: the table name
+        fields: the Relation schema for this table
+        records: the collection of Record objects containing the table data
+    """
+
     def __init__(self, name, fields, records=None):
         self.name = name
         self.fields = fields
@@ -231,8 +283,16 @@ class Table(list):
         list.__init__(self, [Record(fields, rec) for rec in records])
 
     @classmethod
-    def from_file(cls, path, name=None, fields=None, gzip=None):
+    def from_file(cls, path, name=None, fields=None):
+        """
+        Instantiate a Table from a database file.
 
+        Args:
+            path: the path to the table file
+            name: the table name (inferred by the filename if not given)
+            fields: the Relation schema for the table (loaded from the
+                relations file in the same directory if not given)
+        """
         path = _table_filename(path)  # do early in case file not found
 
         if name is None:
@@ -262,6 +322,16 @@ class Table(list):
         return cls(name, fields, records)
 
     def select(self, cols, mode='list'):
+        """
+        Select columns from each row in the table.
+
+        See select_rows() for a description of how to use the
+        *mode* parameter.
+
+        Args:
+            cols: an interable of Field (column) names
+            mode: how to return the data
+        """
         if isinstance(cols, stringtypes):
             cols = _split_cols(cols)
         if not cols:
@@ -270,6 +340,15 @@ class Table(list):
 
 
 class TestSuite(object):
+    """
+    A [incr tsdb()] test suite database.
+
+    Args:
+        path: the path to the test suite's directory
+        relations: the relations file describing the schema of
+            the database; if not given, the relations file under
+            *path* will be used
+    """
     def __init__(self, path=None, relations=None):
         self._path = path
 
@@ -292,7 +371,6 @@ class TestSuite(object):
             self.reload()
 
     def __getitem__(self, tablename):
-        tablerels = self.relations[tablename]
         # if the table is None it is invalidated; reload it
         if self._data[tablename] is None:
             if self._path is not None:
@@ -305,6 +383,7 @@ class TestSuite(object):
         return self._data[tablename]
 
     def reload(self):
+        """Discard temporary changes and reload the databse from disk."""
         for tablename in self.relations:
             self._reload_table(tablename)
 
@@ -318,6 +397,25 @@ class TestSuite(object):
         self._data[tablename] = table
 
     def select(self, arg, cols=None, mode='list'):
+        """
+        Select columns from each row in the table.
+
+        The first parameter, *arg*, may either be a table name or a
+        data specifier. If the former, the *cols* parameter selects the
+        columns from the table. If the latter, *cols* is left
+        unspecified and both the table and columns are taken from the
+        data specifier; e.g., `select('item:i-id@i-input')` is
+        equivalent to `select('item', ('i-id', 'i-input')).
+
+        See select_rows() for a description of how to use the *mode*
+        parameter.
+
+        Args:
+            arg: a table name, if *cols* is specified, otherwise a data
+                specifier
+            cols: an interable of Field (column) names
+            mode: how to return the data
+        """
         if cols is None:
             table, cols = get_data_specifier(arg)
         else:
@@ -327,6 +425,17 @@ class TestSuite(object):
         return select_rows(cols, self[table], mode=mode)
 
     def write(self, tables=None, path=None, append=False, gzip=None):
+        """
+        Write the test suite to disk.
+
+        Args:
+            tables: an iterable of names of tables to write; if `None`,
+                all tables will be written
+            path: the destination directory; if `None` use the path
+                assigned to the TestSuite
+            append: if `True`, append to rather than overwrite tables
+            gzip: compress non-empty tables with gzip
+        """
         if path is None:
             path = self._path
         if tables is None:
@@ -642,6 +751,26 @@ def match_rows(rows1, rows2, key, sort_keys=True):
 
 
 def join(table1, table2, on=None, how='inner', name=None):
+    """
+    Join two tables and return the resulting Table object.
+
+    Fields in the resulting table have their names prefixed with their
+    corresponding table name. For example, when joining `item` and
+    `parse` tables, the `i-input` field of the `item` table will be
+    named `item:i-input` in the resulting Table. Note that this means
+    the shared keys will appear twice---once for each table.
+
+    Both inner and left joins are possible by setting the *how*
+    parameter to `inner` and `left`, respectively.
+
+    Args:
+        table1: the left table to join
+        table2: the right table to join
+        on: the shared key to use for joining; if `None`, find shared
+            keys using the schemata of the tables
+        how: the method used for joining
+        name: the name assigned to the resulting table
+    """
     if how not in ('inner', 'left'):
         ItsdbError('Only \'inner\' and \'left\' join methods are allowed.')
     # the name of the joined table
@@ -649,7 +778,7 @@ def join(table1, table2, on=None, how='inner', name=None):
         name = '{}+{}'.format(table1.name, table2.name)
     # the relation of the joined table
     prefixes = (table1.name + ':', table2.name + ':')
-    fields = Relations.Relation(
+    fields = Relation(
         name,
         [Field(prefixes[0] + f.name, *f[1:]) for f in table1.fields] +
         [Field(prefixes[1] + f.name, *f[1:]) for f in table2.fields]
@@ -685,6 +814,7 @@ def join(table1, table2, on=None, how='inner', name=None):
 ##############################################################################
 # Deprecated
 
+@deprecated(final_version='1.0.0', alternative='Relations.from_file(path)')
 def get_relations(path):
     """
     Parse the relations file and return a Relations object that
@@ -700,6 +830,7 @@ def get_relations(path):
     return Relations.from_file(path)
 
 
+@deprecated(final_version='1.0.0', alternative='Field.default_value()')
 def default_value(fieldname, datatype):
     """
     Return the default value for a column.
@@ -720,6 +851,7 @@ def default_value(fieldname, datatype):
         return _default_datatype_values.get(datatype, '')
 
 
+@deprecated(final_version='1.0.0')
 def make_skeleton(path, relations, item_rows, gzip=False):
     """
     Instantiate a new profile skeleton (only the relations file and
@@ -755,6 +887,7 @@ def make_skeleton(path, relations, item_rows, gzip=False):
     # return prof
 
 
+@deprecated(final_version='1.0.0')
 def filter_rows(filters, rows):
     """
     Yield rows matching all applicable filters.
@@ -779,6 +912,7 @@ def filter_rows(filters, rows):
             yield row
 
 
+@deprecated(final_version='1.0.0')
 def apply_rows(applicators, rows):
     """
     Yield rows after applying the applicator functions to them.
@@ -830,6 +964,11 @@ class ItsdbProfile(object):
     # considered. Otherwise, only those present in the list are considered.
     _tables = None
 
+    @deprecated("The 'ItsdbProfile' class is deprecated "
+                "and will be removed from version {version}; "
+                "use the following instead: {alternative}",
+                final_version='1.0.0',
+                alternative='TestSuite')
     def __init__(self, path, relations=None,
                  filters=None, applicators=None, index=True):
         self.root = path
@@ -1140,6 +1279,8 @@ class ItsdbProfile(object):
                 else:
                     os.remove(gzfn)
 
+
+@deprecated(final_version='1.0.0', alternative='TestSuite')
 class ItsdbSkeleton(ItsdbProfile):
     """
     A [incr tsdb()] skeleton, analyzed and ready for reading or writing.

@@ -1,3 +1,29 @@
+import warnings
+from functools import wraps
+
+def deprecated(message=None, final_version=None, alternative=None):
+    if message is None:
+        message = "Function '{name}' is deprecated"
+        if final_version is not None:
+            message += " and will be removed from version {version}"
+        if alternative is not None:
+            message += '; use the following instead: {alternative}'
+
+    def deprecated_decorator(f):
+        @wraps(f)
+        def deprecated_wrapper(*args, **kwargs):
+            warnings.warn(
+                message.format(
+                    name=f.__name__,
+                    version=final_version,
+                    alternative=alternative
+                ),
+                DeprecationWarning,
+                stacklevel=2
+            )
+            return f(*args, **kwargs)
+        return deprecated_wrapper
+    return deprecated_decorator
 
 try:
     stringtypes = (str, unicode)  # Python 2
