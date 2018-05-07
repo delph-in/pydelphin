@@ -285,7 +285,7 @@ def repp(args):
                         str(step.operation), step.input, step.output))
 
     if args.FILE:
-        with open(args.file) as fh:
+        with open(args.FILE) as fh:
             do_repp(fh)
     else:
         do_repp(sys.stdin)
