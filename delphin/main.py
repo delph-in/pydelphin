@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
+from __future__ import unicode_literals
+
 import sys
 import os
+import io
 import argparse
 import warnings
 import logging
@@ -280,12 +283,12 @@ def repp(args):
                     print('Done:{}'.format(step.string))
                     continue
                 if step.applied == True or args.verbosity >= 2:
-                    print('{}:{}\n   In:{}\n  Out:{}'.format(
+                    print('{}:{!s}\n   In:{}\n  Out:{}'.format(
                         'Applied' if step.applied else 'Did not apply',
-                        str(step.operation), step.input, step.output))
+                        step.operation, step.input, step.output))
 
     if args.FILE:
-        with open(args.FILE) as fh:
+        with io.open(args.FILE, encoding='utf-8') as fh:
             do_repp(fh)
     else:
         do_repp(sys.stdin)

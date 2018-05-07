@@ -4,8 +4,10 @@ system of regular expressions for transformation and tokenization while
 retaining character indices from the original input string.
 
 """
+from __future__ import unicode_literals
 
 from os.path import exists, dirname, basename, join as joinpath
+import io
 import warnings
 import re
 from sre_parse import parse_template
@@ -266,7 +268,7 @@ class REPP(object):
         confdir = dirname(path)
 
         # TODO: can TDL parsing be repurposed for this variant?
-        conf = open(path).read()
+        conf = io.open(path, encoding='utf-8').read()
         conf = re.sub(r';.*', '', conf).replace('\n',' ')
         m = re.search(
             r'repp-modules\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.', conf)
@@ -477,7 +479,7 @@ def _tokenize(result, pattern):
 def _repp_lines(path):
     if not exists(path):
         raise REPPError('REPP file not found: {}'.format(path))
-    return open(path).read().splitlines()
+    return io.open(path, encoding='utf-8').read().splitlines()
 
 def _parse_repp(lines, r, directory):
     ops = list(_parse_repp_group(lines, r, directory))
