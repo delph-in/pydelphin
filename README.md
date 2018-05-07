@@ -42,25 +42,27 @@ for instructions.
 Here's a brief example of using the `itsdb` library:
 
 ```python
+>>> from os.path import expanduser
 >>> from delphin import itsdb
->>> prof = itsdb.ItsdbProfile('~/logon/dfki/jacy/tsdb/gold/mrs')
->>> for row in prof.read_table('item'):
-...     print(row.get('i-input'))
+>>> prof = itsdb.TestSuite(expanduser('~/grammars/jacy/tsdb/gold/mrs'))
+>>> for row in prof['item']:
+...     print(row['i-input'])
+... 
 雨 が 降っ た ．
 太郎 が 吠え た ．
 窓 が 開い た ．
 太郎 が 次郎 を 追っ た ．
 [...]
->>> next(prof.read_table('result')).get('derivation')
+>>> prof['result'][0]['derivation']
 '(utterance-root (91 utterance_rule-decl-finite -0.723739 0 4 (90 head_subj_rule -1.05796 0 4 (87 hf-complement-rule -0.50201 0 2 (86 quantify-n-rule -0.32216 0 1 (5 ame-noun 0 0 1 ("雨" 1 "\\"雨\\""))) (6 ga 0.531537 1 2 ("が" 2 "\\"が\\""))) (89 vstem-vend-rule -0.471785 2 4 (88 t-lexeme-c-stem-infl-rule 0.120963 2 3 (14 furu_1 0 2 3 ("降っ" 3 "\\"降っ\\""))) (24 ta-end -0.380719 3 4 ("た" 4 "\\"た\\""))))))'
 ```
 
 Here's an example of loading a SimpleMRS representation:
 
 ```python
->>> from delphin.codecs import simplemrs
+>>> from delphin.mrs import simplemrs
 >>> m = simplemrs.loads_one('[ LTOP: h1 INDEX: e2 [ e TENSE: PAST MOOD: INDICATIVE PROG: - PERF: - SF: PROP ASPECT: DEFAULT_ASPECT PASS: - ] RELS: < [ udef_q_rel<0:1> LBL: h3 ARG0: x6 [ x PERS: 3 ] RSTR: h5 BODY: h4 ] [ "_ame_n_rel"<0:1> LBL: h7 ARG0: x6 ] [ "_furu_v_1_rel"<2:3> LBL: h8 ARG0: e2 ARG1: x6 ] > HCONS: < h5 qeq h7 > ]')
->>> m.ltop
+>>> m.top
 'h1'
 >>> for p in m.preds():
 ...     print('{}|{}|{}|{}'.format(p.string, p.lemma, p.pos, p.sense))
@@ -68,48 +70,48 @@ Here's an example of loading a SimpleMRS representation:
 udef_q_rel|udef|q|None
 "_ame_n_rel"|ame|n|None
 "_furu_v_1_rel"|furu|v|1
->>> print(simplemrs.dumps_one(m, pretty_print=True))
+>>> print(simplemrs.dumps_one(m, pretty_print=True, properties=False))
 [ TOP: h1
-  INDEX: e2 [ e TENSE: PAST MOOD: INDICATIVE PROG: - PERF: - SF: PROP ASPECT: DEFAULT_ASPECT PASS: - ]
-  RELS: < [ udef_q_rel<0:1> LBL: h3 ARG0: x6 [ x PERS: 3 ] RSTR: h5 BODY: h4 ]
+  INDEX: e2
+  RELS: < [ udef_q_rel<0:1> LBL: h3 ARG0: x6 RSTR: h5 BODY: h4 ]
           [ "_ame_n_rel"<0:1> LBL: h7 ARG0: x6 ]
           [ "_furu_v_1_rel"<2:3> LBL: h8 ARG0: e2 ARG1: x6 ] >
   HCONS: < h5 qeq h7 > ]
-
 ```
 
 Here is TDL introspection:
 
 ```python
 >>> from delphin import tdl
->>> f = open('~/logon/lingo/erg/fundamentals.tdl', 'r')
->>> types = {t.identifier: t for t in tdl.parse(f)}
+>>> with open(expanduser('~/logon/lingo/erg/fundamentals.tdl'), 'r') as f:
+...     types = {t.identifier: t for t in tdl.parse(f)}
+... 
 >>> types['basic_word'].supertypes
 ['word_or_infl_rule', 'word_or_punct_rule']
 >>> types['basic_word'].features()
-[('SYNSEM', <TdlDefinition object at 140559634120136>), ('TOKENS', <TdlDefinition object at 140559631479864>), ('ORTH', <TdlDefinition object at 140559631479000>)]
+[('SYNSEM', <TdlDefinition object at 140470546301432>), ('ORTH', <TdlDefinition object at 140470546303736>), ('TOKENS', <TdlDefinition object at 140470546306248>)]
 >>> types['basic_word'].coreferences
-[('#rb', ['ORTH.RB', 'TOKENS.+LAST.+TRAIT.+RB']), ('#to', ['SYNSEM.LKEYS.KEYREL.CTO', 'ORTH.TO', 'TOKENS.+LAST.+TO']), ('#lb', ['ORTH.LB', 'TOKENS.+LIST.FIRST.+TRAIT.+LB']), ('#form', ['ORTH.FORM', 'TOKENS.+LIST.FIRST.+FORM']), ('#tl', ['SYNSEM.PHON.ONSET.--TL', 'TOKENS.+LIST']), ('#from', ['SYNSEM.LKEYS.KEYREL.CFROM', 'ORTH.FROM', 'TOKENS.+LIST.FIRST.+FROM']), ('#class', ['ORTH.CLASS', 'TOKENS.+LIST.FIRST.+CLASS'])]
-
+[('#tl', ['SYNSEM.PHON.ONSET.--TL', 'TOKENS.+LIST']), ('#from', ['SYNSEM.LKEYS.KEYREL.CFROM', 'ORTH.FROM', 'TOKENS.+LIST.FIRST.+FROM']), ('#to', ['SYNSEM.LKEYS.KEYREL.CTO', 'ORTH.TO', 'TOKENS.+LAST.+TO']), ('#class', ['ORTH.CLASS', 'TOKENS.+LIST.FIRST.+CLASS']), ('#form', ['ORTH.FORM', 'TOKENS.+LIST.FIRST.+FORM']), ('#lb', ['ORTH.LB', 'TOKENS.+LIST.FIRST.+TRAIT.+LB']), ('#rb', ['ORTH.RB', 'TOKENS.+LAST.+TRAIT.+RB'])]
 ```
 
 And here's how to compile, parse, and generate with the ACE wrapper:
 
 ```python
 >>> from delphin.interfaces import ace
->>> ace.compile('../jacy/ace/config.tdl', 'jacy.dat')
+>>> ace.compile(expanduser('~/grammars/jacy/ace/config.tdl'), 'jacy.dat')
 [...]
 >>> response = ace.parse('jacy.dat', '犬 が 吠える')
+NOTE: parsed 1 / 1 sentences, avg 735k, time 0.00676s
 >>> len(response.results())
 1
 >>> response.result(0).keys()
-dict_keys(['DERIV', 'MRS'])
->>> response.result(0)['MRS']
+dict_keys(['result-id', 'derivation', 'mrs', 'tree', 'flags'])
+>>> response.result(0)['mrs']
 '[ LTOP: h0 INDEX: e2 [ e TENSE: pres MOOD: indicative PROG: - PERF: - ASPECT: default_aspect PASS: - SF: prop ] RELS: < [ udef_q_rel<0:1> LBL: h4 ARG0: x3 [ x PERS: 3 ] RSTR: h5 BODY: h6 ]  [ "_inu_n_rel"<0:1> LBL: h7 ARG0: x3 ]  [ "_hoeru_v_1_rel"<4:7> LBL: h1 ARG0: e2 ARG1: x3 ] > HCONS: < h0 qeq h1 h5 qeq h7 > ]'
 >>> response.result(0).mrs()
 <Xmrs object (udef inu hoeru) at 140352613240112>
->>> ace.generate('jacy.dat', response.result(0)['MRS']).results()
-[ParseResult({'SENT': '犬 が 吠える'})]
+>>> ace.generate('jacy.dat', response.result(0)['mrs']).results()
+[ParseResult({'SENT': '犬 が 吠える', [...]})]
 ```
 
 
