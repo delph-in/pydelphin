@@ -3,7 +3,7 @@
 # the warehouse project:
 #   https://github.com/pypa/warehouse/blob/master/warehouse/__about__.py
 
-__version__ = '0.6.3-alpha'
+__version__ = '0.7.0'
 __version_info__ = __version__.replace('.', ' ').replace('-', ' ').split()
 
 __title__ = 'PyDelphin'
@@ -14,4 +14,4 @@ __author__ = 'Michael Wayne Goodman'
 __email__ = 'goodman.m.w@gmail.com'
 
 __license__ = 'MIT'
-__copyright__ = '2013--2017 %s <%s> and contributors' % (__author__, __email__)
+__copyright__ = '2013--2018 %s <%s> and contributors' % (__author__, __email__)

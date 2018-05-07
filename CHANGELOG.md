@@ -2,6 +2,13 @@
 
 ## [Unreleased][unreleased]
 
+## [v0.7.0][]
+
+This release adds a number of features. The main ones include a redone
+[incr tsdb()] module, Prolog MRS export, and a REPP tokenizer. This
+release also removes Python 3.3 support and adds Python 3.6 support,
+and removes or mitigates several dependencies.
+
 **Note**: there are some changes that may break backward compatibility; these
 changes are prefixed with "**BREAKING**"
 
