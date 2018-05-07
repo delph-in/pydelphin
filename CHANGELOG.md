@@ -564,6 +564,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v0.7.0]: ../../releases/tag/v0.7.0
 [v0.6.2]: ../../releases/tag/v0.6.2
 [v0.6.1]: ../../releases/tag/v0.6.1
 [v0.6.0]: ../../releases/tag/v0.6.0
