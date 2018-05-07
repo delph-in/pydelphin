@@ -151,6 +151,7 @@ The following packages/modules are available:
 - `tdl`: Type-Description Language
 - `tfs`: Typed-Feature Structures
 - `tokens`: Token lattices
+- `repp`: [Regular-Expression PreProcessor](http://moin.delph-in.net/ReppTop)
 - `extra.highlight`: [Pygments](http://pygments.org/)-based syntax
   highlighting (currently just for TDL and SimpleMRS)
 - `extra.latex`: Formatting for LaTeX (just DMRS)

@@ -12,11 +12,16 @@ from functools import partial
 from delphin.__about__ import __version__
 from delphin.exceptions import PyDelphinWarning
 from delphin.mrs import xmrs, eds
+from delphin.mrs.components import Lnk
 from delphin import itsdb
+from delphin.repp import REPP
 
 
 def main():
     args = parser.parse_args()
+
+    if not hasattr(args, 'func'):
+        sys.exit(parser.print_help())
 
     # global init
     if args.quiet:
@@ -230,6 +235,60 @@ def compare(args):
                 shared=shared,
                 right=gold_unique))
 
+
+def repp(args):
+    if args.config:
+        r = REPP.from_config(args.config)
+    elif args.m:
+        r = REPP.from_file(args.m)
+    else:
+        r = REPP()  # just tokenize
+
+    def do_repp(stream):
+        if args.trace:
+            do_trace(stream)
+        else:
+            do_tokenize(stream)
+
+    def do_tokenize(stream):
+        for line in stream:
+            res = r.tokenize(line.rstrip('\n'))
+            if args.format == 'yy':
+                print(res)
+            elif args.format == 'string':
+                print(' '.join(t.form for t in res.tokens))
+            elif args.format == 'line':
+                for t in res.tokens:
+                    print(t.form)
+                print()
+            elif args.format == 'triple':
+                for t in res.tokens:
+                    if t.lnk.type == Lnk.CHARSPAN:
+                        cfrom, cto = t.lnk.data
+                    else:
+                        cfrom, cto = -1, -1
+                    print(
+                        '({}, {}, {})'
+                        .format(cfrom, cto, t.form)
+                    )
+                print()
+
+    def do_trace(stream):
+        for line in stream:
+            for step in r.trace(line.rstrip('\n'), verbose=True):
+                if not hasattr(step, 'applied'):
+                    print('Done:{}'.format(step.string))
+                    continue
+                if step.applied == True or args.verbosity >= 2:
+                    print('{}:{}\n   In:{}\n  Out:{}'.format(
+                        'Applied' if step.applied else 'Did not apply',
+                        str(step.operation), step.input, step.output))
+
+    if args.FILE:
+        with open(args.file) as fh:
+            do_repp(fh)
+    else:
+        do_repp(sys.stdin)
 
 ## Helper definitions
 
@@ -473,6 +532,30 @@ compare_parser.add_argument(
 compare_parser.add_argument(
     'GOLD', help='path to the gold test-suite directory')
 
+# repp subparser
+repp_parser = argparse.ArgumentParser(add_help=False)
+repp_parser.set_defaults(func=repp)
+repp_parser.add_argument(
+    'FILE', nargs='?', help='an input file')
+repp_group = repp_parser.add_mutually_exclusive_group()
+repp_group.add_argument(
+    '-c', '--config', metavar='PATH',
+    help='a .set configuration file')
+repp_group.add_argument(
+    '-m', metavar='PATH', help='the main .rpp file')
+repp_parser.add_argument(
+    '-a', action='append', metavar='NAME',
+    help='activate an external module')
+repp_parser.add_argument(
+    '-f', '--format',
+    metavar='FMT',
+    choices=('string', 'line', 'triple', 'yy'),
+    default='yy',
+    help='output token format')
+repp_parser.add_argument(
+    '--trace', action='store_true',
+    help='print each step that modifies an input string')
+
 subparser = parser.add_subparsers(title='commands')
 subparser.add_parser('convert', parents=[common_parser, convert_parser])
 subparser.add_parser(
@@ -500,6 +583,8 @@ subparser.add_parser(
         """))
 subparser.add_parser(
     'compare', parents=[common_parser, compare_parser, profile_parser])
+subparser.add_parser(
+    'repp', parents=[common_parser, repp_parser])
 
 if __name__ == '__main__':
     main()

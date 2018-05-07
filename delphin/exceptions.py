@@ -3,13 +3,13 @@ class PyDelphinException(Exception):
     """The base class for pyDelphin exceptions."""
     def __init__(self, *args, **kwargs):
         """Create a new PyDelphinException."""
-        return super(PyDelphinException, self).__init__(*args, **kwargs)
+        super(PyDelphinException, self).__init__(*args, **kwargs)
 
 class PyDelphinWarning(Warning):
     """The base class for pyDelphin warnings."""
     def __init__(self, *args, **kwargs):
         """Create a new PyDelphinWarning."""
-        return super(PyDelphinWarning, self).__init__(*args, **kwargs)
+        super(PyDelphinWarning, self).__init__(*args, **kwargs)
 
 
 class ItsdbError(PyDelphinException):
@@ -44,7 +44,7 @@ class TdlError(PyDelphinException):
 
 class TdlParsingError(TdlError):
     """Raised when parsing TDL text fails."""
-    
+
     def __init__(self, *args, **kwargs):
         # Python2 doesn't allow parameters like:
         #   (*args, key=val, **kwargs)
@@ -72,3 +72,8 @@ class TdlParsingError(TdlError):
             self.identifier or 'type/rule definition',
             TdlError.__str__(self)
         )
+
+
+class REPPError(PyDelphinException):
+    """Raised when there is an error in tokenizing with REPP."""
+    pass

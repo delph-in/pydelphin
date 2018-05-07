@@ -36,6 +36,10 @@ changes are prefixed with "**BREAKING**"
 * DMRX now encodes index as a graph attribute
 * DMRS's dictionary view (for JSON output) now encodes index as a
   top-level attribute.
+* `delphin.mrs.prolog` serializer
+* `delphin.repp` for REPP tokenization
+* `delphin.exceptions.ReppError`
+* `delphin.exceptions.ReppWarning`
 
 ### Changed
 
@@ -165,7 +169,6 @@ fixed or the functionality is deprecated.
   (resolves #85)
 * `delphin.vpm` and tests
 * `delphin.semi` and tests
-* `delphin.mrs.prolog` serializer
 
 ### Changed
 
