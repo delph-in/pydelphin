@@ -72,47 +72,8 @@ from subprocess import (
 import locale; locale.setlocale(locale.LC_ALL, '')
 encoding = locale.getpreferredencoding(False)
 
-from delphin.interfaces.base import ParseResponse, ParseResult
+from delphin.interfaces.base import ParseResponse
 from delphin.util import SExpr, stringtypes
-
-class _AceResult(ParseResult):
-    """
-    This is a interim response object until the old behavior can be
-    removed (maybe v0.7.0).
-    """
-    def __getitem__(self, key):
-        key = {
-            'mrs': 'MRS',
-            'derivation': 'DERIV',
-            'surface': 'SENT',
-        }.get(key, key)
-        return ParseResult.__getitem__(self, key)
-
-    def get(self, key, default=None):
-        try:
-            return self[key]
-        except KeyError:
-            return ParseResult.get(self, key, default)
-
-
-class _AceResponse(ParseResponse):
-    """
-    This is a interim response object until the old behavior can be
-    removed (maybe v0.7.0).
-    """
-    _result_factory = _AceResult
-    def __getitem__(self, key):
-        key = {
-            'input': 'INPUT',
-            'results': 'RESULTS',
-        }.get(key, key)
-        return ParseResponse.__getitem__(self, key)
-
-    def get(self, key, default=None):
-        try:
-            return self[key]
-        except KeyError:
-            return ParseResponse.get(self, key, default)
 
 
 class AceProcess(object):
@@ -181,7 +142,7 @@ class AceProcess(object):
             termini = self._termini
         i, end = 0, len(termini)
         cur_terminus = termini[i]
-        
+
         lines = []
         while i < end:
             s = next_line()
@@ -240,7 +201,7 @@ class AceProcess(object):
         """
         self.send(datum)
         result = self.receive()
-        result['INPUT'] = datum
+        result['input'] = datum
         return result
 
     def close(self):
@@ -266,11 +227,11 @@ class AceParser(AceProcess):
     def _default_receive(self):
         lines = self._result_lines()
         response, lines = _make_response(lines)
-        response['RESULTS'] = [
-            dict(zip(('MRS', 'DERIV'), map(str.strip, line.split(' ; '))))
+        response['results'] = [
+            dict(zip(('mrs', 'derivation'), map(str.strip, line.split(' ; '))))
             for line in lines
         ]
-        return response        
+        return response
 
 
 class AceTransferer(AceProcess):
@@ -299,8 +260,8 @@ class AceTransferer(AceProcess):
     def _default_receive(self):
         lines = self._result_lines()
         response, lines = _make_response(lines)
-        response['RESULTS'] = [{'MRS': line.strip()} for line in lines]
-        return response        
+        response['results'] = [{'mrs': line.strip()} for line in lines]
+        return response
 
 
 class AceGenerator(AceProcess):
@@ -326,13 +287,13 @@ class AceGenerator(AceProcess):
             result = {'SENT': lines[i].strip()}
             i += 1
             if show_tree and lines[i].startswith('DTREE = '):
-                result['DERIV'] = lines[i][8:].strip()
+                result['derivation'] = lines[i][8:].strip()
                 i += 1
             if show_mrs and lines[i].startswith('MRS = '):
-                result['MRS'] = lines[i][6:].strip()
+                result['mrs'] = lines[i][6:].strip()
                 i += 1
             results.append(result)
-        response['RESULTS'] = results
+        response['results'] = results
         return response
 
     def _tsdb_receive(self):
@@ -341,7 +302,7 @@ class AceGenerator(AceProcess):
         response, lines = _make_response(lines)
         line = ' '.join(lines)  # ACE 0.9.24 on Mac puts superfluous newlines
         response = _tsdb_response(response, line)
-        return response        
+        return response
 
 
 def compile(cfg_path, out_path, executable=None, env=None, log=None):
@@ -469,13 +430,13 @@ def _ace_version(executable):
 
 
 def _make_response(lines):
-    response = _AceResponse({
-        'INPUT': None,
+    response = ParseResponse({
         'NOTES': [],
         'WARNINGS': [],
         'ERRORS': [],
-        'SENT': None,
-        'RESULTS': []
+        'input': None,
+        'surface': None,
+        'results': []
     })
     content_lines = []
     for line in lines:
@@ -486,7 +447,7 @@ def _make_response(lines):
         elif line.startswith('ERROR: '):
             response['ERRORS'].append(line[7:])
         elif line.startswith('SENT: ') or line.startswith('SKIP: '):
-            response['SENT'] = line[6:]
+            response['surface'] = line[6:]
         else:
             content_lines.append(line)
     return response, content_lines
@@ -509,16 +470,16 @@ def _tsdb_response(response, line):
                 res = {}
                 for reskey, resval in result:
                     if reskey == ':derivation':
-                        res['DERIV'] = resval.strip()
+                        res['derivation'] = resval.strip()
                     elif reskey == ':mrs':
-                        res['MRS'] = resval.strip()
+                        res['mrs'] = resval.strip()
                     elif reskey == ':surface':
-                        res['SENT'] = resval.strip()
+                        res['surface'] = resval.strip()
                     elif isinstance(resval, stringtypes):
                         res[reskey[1:]] = resval.strip()
                     else:
                         res[reskey[1:]] = resval
-                response['RESULTS'].append(res)
+                response['results'].append(res)
         elif isinstance(val, stringtypes):
             response[key[1:]] = val.strip()
         else:

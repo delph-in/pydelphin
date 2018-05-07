@@ -47,7 +47,7 @@ example:
     >>> r.result(0).mrs()
     <Xmrs object (udef dog chase udef cat) at 140000394933248>
 
-If pyDelphin does not support deserialization for a format provided by
+If PyDelphin does not support deserialization for a format provided by
 the server (e.g. LaTeX output), the original string would be returned
 (i.e. the same as via dict-access).
 

@@ -33,11 +33,11 @@ changes are prefixed with "**BREAKING**"
   `delphin.itsdb.default_value()`
 * `delphin.util.deprecated` decorator for marking deprecated functions and
    methods
-* DMRX now encodes index as a graph attribute
+* DMRX now encodes index as a graph attribute (#126)
 * DMRS's dictionary view (for JSON output) now encodes index as a
   top-level attribute.
-* `delphin.mrs.prolog` serializer
-* `delphin.repp` for REPP tokenization
+* `delphin.mrs.prolog` serializer (#8)
+* `delphin.repp` for REPP tokenization (#43)
 * `delphin.exceptions.ReppError`
 * `delphin.exceptions.ReppWarning`
 
@@ -77,6 +77,10 @@ changes are prefixed with "**BREAKING**"
 * Let MRX deal with missing TOP and INDEX
 
 ### Removed
+
+* **BREAKING** `delphin.interfaces.ace._AceResult (#97)
+* **BREAKING** `delphin.interfaces.ace._AceResponse (#97)
+
 ### Deprecated
 
 * `delphin.itsdb.get_relations()` - use `delphin.itsdb.Relations.from_file()`
