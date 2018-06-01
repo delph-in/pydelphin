@@ -15,7 +15,7 @@ import re
 from gzip import open as gzopen
 import logging
 from io import TextIOWrapper, BufferedReader
-from collections import defaultdict, namedtuple, OrderedDict
+from collections import defaultdict, namedtuple, OrderedDict, Mapping
 from itertools import chain
 from contextlib import contextmanager
 
@@ -224,8 +224,29 @@ class Record(list):
     """
 
     def __init__(self, fields, iterable):
+        # normalize data format
+        if isinstance(iterable, Mapping):
+            cols = [None] * len(fields)
+            for key, value in iterable.items():
+                try:
+                    index = fields.index(key)
+                except KeyError:
+                    raise ItsdbError('Invalid field name: {}'.format(key))
+                cols[index] = value
+        else:
+            cols = list(iterable)
+            if len(fields) != len(cols):
+                raise ItsdbError(
+                    'Incorrect number of column values: {} != {}'
+                    .format(len(cols), len(fields))
+                )
+        # validate that keys are set
+        for key_index in map(fields.index, fields.keys()):
+            if cols[key_index] is None:
+                raise ItsdbError(
+                    'Missing key: {}'.format(fields[key_index].name)
+                )
         self.fields = fields
-        cols = list(iterable)
         list.__init__(self, cols)
 
     def __repr__(self):
@@ -459,6 +480,7 @@ class TestSuite(object):
                 self.relations[table],
                 gzip=gzip
             )
+
 
 ##############################################################################
 # Non-class (i.e. static) functions

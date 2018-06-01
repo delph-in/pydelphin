@@ -1,9 +1,11 @@
 
 from __future__ import print_function
 
-import pytest
 import os
 import tempfile
+
+import pytest
+
 from delphin import itsdb
 
 _simple_relations = '''
@@ -93,10 +95,30 @@ def test_Record():
     assert r.fields == rels['item']
     assert len(r) == 2
     assert r['i-id'] == r[0] == 0
-    assert r['i-input'] == r[1] =='sentence'
+    assert r['i-input'] == r[1] == 'sentence'
     assert r.get('i-input') == 'sentence'
     assert r.get('unknown') == None
     assert str(r) == '0@sentence'
+    # incorrect number of fields
+    with pytest.raises(itsdb.ItsdbError):
+        itsdb.Record(rels['item'], [0])
+    # mapped fields
+    r = itsdb.Record(rels['item'], {'i-id': 0, 'i-input': 'sentence'})
+    assert len(r) == 2
+    assert r['i-id'] == r[0] == 0
+    assert r['i-input'] == r[1] == 'sentence'
+    # missing values are ok
+    r = itsdb.Record(rels['item'], {'i-id': 0})
+    assert len(r) == 2
+    assert r['i-id'] == r[0] == 0
+    assert r['i-input'] == r[1] == None
+    # missing keys are not ok
+    with pytest.raises(itsdb.ItsdbError):
+        r = itsdb.Record(rels['item'], {'i-input': 'sentence'})
+    # invalid fields are not ok
+    with pytest.raises(itsdb.ItsdbError):
+        r = itsdb.Record(rels['item'], {'i-id': 0, 'surface': 'sentence'})
+
 
 def test_Table(single_item_skeleton):
     rels = itsdb.Relations.from_string(_simple_relations)

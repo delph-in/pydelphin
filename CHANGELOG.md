@@ -12,6 +12,12 @@
   of the currently running process, or the last process if it has already
   ended
 
+### Changed
+
+* `delphin.itsdb.Record` can now accept a mapping of field names to values
+  for instantiation, and the column indices will be looked up from the schema
+* `delphin.itsdb.Record` now validates field data (and tests are added)
+
 ## [v0.7.0][]
 
 This release adds a number of features. The main ones include a redone
