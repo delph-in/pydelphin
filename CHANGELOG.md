@@ -2,6 +2,16 @@
 
 ## [Unreleased][unreleased]
 
+### Added
+
+* `delphin.interfaces.ace.AceProcess.run_infos` stores information related
+  to each run of an AceProcess, such as the machine architecture, user name,
+  and start/end times; this info is made available via the `run` key in
+  response objects
+* `delphin.interfaces.ace.AceProcess.run_info` accesses the run information
+  of the currently running process, or the last process if it has already
+  ended
+
 ## [v0.7.0][]
 
 This release adds a number of features. The main ones include a redone

@@ -68,12 +68,16 @@ from subprocess import (
     Popen,
     PIPE
 )
-
+from platform import platform   # portable system information
+from getpass import getuser     # portable way to get username
+from socket import gethostname  # portable way to get host name
+from datetime import datetime
 import locale; locale.setlocale(locale.LC_ALL, '')
 encoding = locale.getpreferredencoding(False)
 
 from delphin.interfaces.base import ParseResponse
 from delphin.util import SExpr, stringtypes
+from delphin.__about__ import __version__ as pydelphin_version
 
 
 class AceProcess(object):
@@ -108,24 +112,46 @@ class AceProcess(object):
         self.grm = grm
         self.cmdargs = cmdargs or []
         self.executable = executable or 'ace'
-        self.env = env or os.environ
-        self.ace_version = _ace_version(self.executable)
-        if tsdbinfo and self.ace_version >= (0, 9, 24):
+        ace_version = self.ace_version
+        if ace_version >= (0, 9, 14):
+            self.cmdargs.append('--tsdb-notes')
+        if tsdbinfo and ace_version >= (0, 9, 24):
             self.cmdargs.extend(['--tsdb-stdout', '--report-labels'])
             self.receive = self._tsdb_receive
         else:
             self.receive = self._default_receive
+        self.env = env or os.environ
+        self._run_id = -1
+        self.run_infos = []
         self._open()
+
+    @property
+    def ace_version(self):
+        return _ace_version(self.executable)
+
+    @property
+    def run_info(self):
+        return self.run_infos[-1]
 
     def _open(self):
         self._p = Popen(
             [self.executable, '-g', self.grm] + self._cmdargs + self.cmdargs,
             stdin=PIPE,
             stdout=PIPE,
-            # stderr=self._stderr,
             env=self.env,
             universal_newlines=True
         )
+        self._run_id += 1
+        self.run_infos.append({
+            'run-id': self._run_id,
+            'application': 'ACE {} via PyDelphin v{}'.format(
+                '.'.join(map(str, self.ace_version)), pydelphin_version),
+            'environment': ' '.join(self.cmdargs),
+            'user': getuser(),
+            'host': gethostname(),
+            'os': platform(),
+            'start': datetime.now()
+        })
 
     def __enter__(self):
         return self
@@ -153,11 +179,23 @@ class AceProcess(object):
                 self.close()
                 self._open()
                 break
+            # The 'run' note should appear when the process is opened, but
+            # handle it here to avoid potential deadlocks if it gets buffered
+            elif s.startswith('NOTE: tsdb run:'):
+                self._read_run_info(s)
+            # the rest should be normal result lines
             else:
                 lines.append(s.rstrip())
                 if cur_terminus.search(s):
                     i += 1
         return [line for line in lines if line != '']
+
+    def _read_run_info(self, line):
+        assert line.startswith('NOTE: tsdb run:')
+        for key, value in _sexpr_data(line[15:].lstrip()):
+            if key == ':application':
+                continue  # PyDelphin sets 'application'
+            self.run_info[key.lstrip(':')] = value
 
     def send(self, datum):
         """
@@ -174,7 +212,6 @@ class AceProcess(object):
             self._p.stdin.write((datum.rstrip() + '\n'))
             self._p.stdin.flush()
 
-
     def receive(self):
         """
         Return the stdout response from ACE.
@@ -190,7 +227,7 @@ class AceProcess(object):
 
     def _tsdb_receive(self):
         lines = self._result_lines()
-        response, lines = _make_response(lines)
+        response, lines = _make_response(lines, self.run_info)
         line = ' '.join(lines)  # ACE 0.9.24 on Mac puts superfluous newlines
         response = _tsdb_response(response, line)
         return response
@@ -208,9 +245,13 @@ class AceProcess(object):
         """
         Close the ACE process.
         """
+        self.run_info['end'] = datetime.now()
         self._p.stdin.close()
         for line in self._p.stdout:
-            logging.debug('ACE cleanup: {}'.format(line.rstrip()))
+            if line.startswith('NOTE: tsdb run:'):
+                self._read_run_info(line)
+            else:
+                logging.debug('ACE cleanup: {}'.format(line.rstrip()))
         retval = self._p.wait()
         return retval
 
@@ -226,7 +267,7 @@ class AceParser(AceProcess):
 
     def _default_receive(self):
         lines = self._result_lines()
-        response, lines = _make_response(lines)
+        response, lines = _make_response(lines, self.run_info)
         response['results'] = [
             dict(zip(('mrs', 'derivation'), map(str.strip, line.split(' ; '))))
             for line in lines
@@ -259,7 +300,7 @@ class AceTransferer(AceProcess):
 
     def _default_receive(self):
         lines = self._result_lines()
-        response, lines = _make_response(lines)
+        response, lines = _make_response(lines, self.run_info)
         response['results'] = [{'mrs': line.strip()} for line in lines]
         return response
 
@@ -279,7 +320,7 @@ class AceGenerator(AceProcess):
         show_mrs = '--show-realization-mrses' in self.cmdargs
 
         lines = self._result_lines()
-        response, lines = _make_response(lines)
+        response, lines = _make_response(lines, self.run_info)
 
         i, numlines = 0, len(lines)
         results = []
@@ -299,7 +340,7 @@ class AceGenerator(AceProcess):
     def _tsdb_receive(self):
         # with --tsdb-stdout, the notes line is not printed
         lines = self._result_lines(termini=[re.compile(r'\(:results \.')])
-        response, lines = _make_response(lines)
+        response, lines = _make_response(lines, self.run_info)
         line = ' '.join(lines)  # ACE 0.9.24 on Mac puts superfluous newlines
         response = _tsdb_response(response, line)
         return response
@@ -429,11 +470,12 @@ def _ace_version(executable):
     return version
 
 
-def _make_response(lines):
+def _make_response(lines, run):
     response = ParseResponse({
         'NOTES': [],
         'WARNINGS': [],
         'ERRORS': [],
+        'run': run,
         'input': None,
         'surface': None,
         'results': []
@@ -453,14 +495,18 @@ def _make_response(lines):
     return response, content_lines
 
 
-def _tsdb_response(response, line):
+def _sexpr_data(line):
     while line:
         expr = SExpr.parse(line)
         line = expr.remainder
         if len(expr.data) != 2:
             logging.error('Malformed output from ACE: {}'.format(line))
             break
-        key, val = expr.data
+        yield expr.data
+
+
+def _tsdb_response(response, line):
+    for key, val in _sexpr_data(line):
         if key == ':p-input':
             response.setdefault('tokens', {})['initial'] = val.strip()
         elif key == ':p-tokens':
