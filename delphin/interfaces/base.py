@@ -11,6 +11,31 @@ from delphin.mrs import (
 )
 from delphin.util import SExpr, stringtypes
 
+
+class Processor(object):
+    task = None
+
+    def process_item(self, datum, keys=None):
+        """
+        Send *datum* to the processor and return the result.
+
+        This method is a generic wrapper around a processor-specific
+        processing method that keeps track of additional item and
+        processor information. Specifically, if *keys* is provided,
+        it is copied into the `keys` key of the response object, and
+        if the processor object's `task` member is non-`None`, it is
+        copied into the `task` key of the response. These help with
+        keeping track of items when many are processed at once, and
+        to help downstream functions identify what the process did.
+
+        Args:
+            datum: the item content to process
+            keys: a mapping of item identifiers which will be copied
+                into the response
+        """
+        raise NotImplementedError()
+
+
 class ParseResult(dict):
     """
     A wrapper around a result dictionary to automate deserialization

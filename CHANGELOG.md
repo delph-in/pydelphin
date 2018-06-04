@@ -11,12 +11,17 @@
 * `delphin.interfaces.ace.AceProcess.run_info` accesses the run information
   of the currently running process, or the last process if it has already
   ended
+* `delphin.interfaces.base.Processor` is the base class for the ACE and REST
+  processor interfaces and introduces the `task` member and `process_item()`
+  function
 
 ### Changed
 
 * `delphin.itsdb.Record` can now accept a mapping of field names to values
   for instantiation, and the column indices will be looked up from the schema
 * `delphin.itsdb.Record` now validates field data (and tests are added)
+* `ace.AceProcess` and `rest.DelphinRestClient` in `delphin.interfaces` now
+  inherit from `base.Processor` (#141)
 
 ## [v0.7.0][]
 

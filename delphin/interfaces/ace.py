@@ -75,12 +75,12 @@ from datetime import datetime
 import locale; locale.setlocale(locale.LC_ALL, '')
 encoding = locale.getpreferredencoding(False)
 
-from delphin.interfaces.base import ParseResponse
+from delphin.interfaces.base import ParseResponse, Processor
 from delphin.util import SExpr, stringtypes
 from delphin.__about__ import __version__ as pydelphin_version
 
 
-class AceProcess(object):
+class AceProcess(Processor):
     """
     The base class for interfacing ACE.
 
@@ -241,6 +241,22 @@ class AceProcess(object):
         result['input'] = datum
         return result
 
+    def process_item(self, datum, keys=None):
+        """
+        Send *datum* to ACE and return the response with context.
+
+        The *keys* parameter can be used to track item identifiers
+        through an ACE interaction. If the `task` member is set on
+        the AceProcess instance (or one of its subclasses), it is
+        kept in the response as well.
+        """
+        response = self.interact(datum)
+        if keys is not None:
+            response['keys'] = keys
+        if 'task' not in response and self.task is not None:
+            response['task'] = self.task
+        return response
+
     def close(self):
         """
         Close the ACE process.
@@ -263,6 +279,7 @@ class AceParser(AceProcess):
     See [AceProcess] for initialization parameters.
     """
 
+    task = 'parse'
     _termini = [re.compile(r'^$'), re.compile(r'^$')]
 
     def _default_receive(self):
@@ -282,6 +299,7 @@ class AceTransferer(AceProcess):
     See [AceProcess] for initialization parameters.
     """
 
+    task = 'transfer'
     _termini = [re.compile(r'^$')]
 
     def __init__(self, grm, cmdargs=None, executable=None, env=None,
@@ -312,6 +330,7 @@ class AceGenerator(AceProcess):
     See [AceProcess] for initialization parameters.
     """
 
+    task = 'generate'
     _cmdargs = ['-e', '--tsdb-notes']
     _termini = [re.compile(r'NOTE: tsdb parse: ')]
 
