@@ -228,20 +228,26 @@ class Record(list):
     def __init__(self, fields, iterable):
         # normalize data format
         if isinstance(iterable, Mapping):
-            cols = [None] * len(fields)
-            for key, value in iterable.items():
-                try:
-                    index = fields.index(key)
-                except KeyError:
-                    raise ItsdbError('Invalid field name: {}'.format(key))
-                cols[index] = value
-        else:
-            cols = list(iterable)
-            if len(fields) != len(cols):
+            d = iterable
+            iterable = []
+            for f in fields:
+                if f.name in d:
+                    iterable.append(d[f.name])
+                    del d[f.name]
+                else:
+                    iterable.append(f.default_value())
+            if d:
                 raise ItsdbError(
-                    'Incorrect number of column values: {} != {}'
-                    .format(len(cols), len(fields))
+                    'Invalid field name(s): {}'.format(', '.join(d))
                 )
+
+        cols = list(iterable)
+        if len(fields) != len(cols):
+            raise ItsdbError(
+                'Incorrect number of column values: {} != {}'
+                .format(len(cols), len(fields))
+            )
+
         # validate that keys are set
         for key_index in map(fields.index, fields.keys()):
             if cols[key_index] is None:

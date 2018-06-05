@@ -207,8 +207,8 @@ class FieldMapper(object):
         parse['parse-id'] = self._parse_id
         parse['run-id'] = response.get('run', {}).get('run-id', -1)
         if 'tokens' in response:
-            parse['p-input']: response['tokens'].get('initial')
-            parse['p-tokens']: response['tokens'].get('internal')
+            parse['p-input'] = response['tokens'].get('initial')
+            parse['p-tokens'] = response['tokens'].get('internal')
             if 'ninputs' not in response:
                 toks = response.tokens('initial')
                 if toks is not None:
