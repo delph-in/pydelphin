@@ -14,6 +14,8 @@
 * `delphin.interfaces.base.Processor` is the base class for the ACE and REST
   processor interfaces and introduces the `task` member and `process_item()`
   function
+* `delphin.util.SExpr` now has a `format()` method which takes basic objects
+  (as from `SExpr.parse()`) and formats them in the lisp notation
 
 ### Changed
 

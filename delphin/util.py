@@ -117,3 +117,16 @@ SExpr = Peg(
         )
     )
 )
+
+# attach an additional method for convenience
+def _format_SExpr(d):
+    if isinstance(d, tuple) and len(d) == 2:
+        return '({} . {})'.format(d[0], d[1])
+    elif isinstance(d, (tuple, list)):
+        return '({})'.format(' '.join(map(_format_SExpr, d)))
+    elif isinstance(d, stringtypes):
+        return d
+    else:
+        return repr(d)
+
+SExpr.format = _format_SExpr

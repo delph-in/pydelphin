@@ -37,6 +37,12 @@ def test_SExpr():
     # other kinds of whitespace
     assert SExpr.parse('(\ta\n.\n\n  b)').data == ('a', 'b')
 
+def test_SExpr_format():
+    assert SExpr.format([]) == '()'
+    assert SExpr.format([1]) == '(1)'
+    assert SExpr.format([1.0]) == '(1.0)'
+    assert SExpr.format((1,2)) == '(1 . 2)'
+    assert SExpr.format(['a-a', ('b', 'c')]) == '(a-a (b . c))'
 
 # unescape_string is disabled in delphin.util
 # def test_unescape_string():
