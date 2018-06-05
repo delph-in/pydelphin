@@ -16,6 +16,10 @@
   function
 * `delphin.util.SExpr` now has a `format()` method which takes basic objects
   (as from `SExpr.parse()`) and formats them in the lisp notation
+* `delphin.interfaces.base.FieldMapper` for mapping interface response objects
+  to [incr tsdb()] (table, rowdata) tuples.
+* `delphin.itsdb.TestSuite.process()` function for using a processor (e.g.,
+  AceParser) to process each item in the testsuite.
 
 ### Changed
 

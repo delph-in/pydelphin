@@ -19,8 +19,10 @@ from collections import defaultdict, namedtuple, OrderedDict, Mapping
 from itertools import chain
 from contextlib import contextmanager
 
+
 from delphin.exceptions import ItsdbError
 from delphin.util import safe_int, stringtypes, deprecated
+from delphin.interfaces.base import FieldMapper
 
 ##############################################################################
 # Module variables
@@ -480,6 +482,65 @@ class TestSuite(object):
                 self.relations[table],
                 gzip=gzip
             )
+
+    def process(self, cpu, selector, source=None, fieldmapper=None):
+        """
+        Process each item in a [incr tsdb()] testsuite
+
+        Args:
+            cpu: a processor interface (e.g., [AceParser])
+            selector: a data specifier to select a single table and
+                column as processor input (e.g., `item:i-input`)
+            source: the testsuite from which input items are taken;
+                if `None`, use self
+            fieldmapper: a [FieldMapper] object for mapping response
+                fields to [incr tsdb()] fields; if `None`, use a
+                default mapper for the standard schema
+        Examples:
+            >>> ts.process(ace_parser, 'item:i-input')
+
+            >>> ts.process(ace_generator, 'result:mrs', source=ts2)
+        """
+        table, data_col = get_data_specifier(selector)
+        if len(data_col) != 1:
+            raise ItsdbError(
+                'Selector must specify exactly one data column: {}'
+                .format(selector)
+            )
+        data_col = data_col[0]
+        cols = list(self.relations[table].keys())
+        cols.append(data_col)
+
+        if source is None:
+            source = self
+
+        if fieldmapper is None:
+            fieldmapper = FieldMapper()
+
+        tables = {}
+        for item in source.select(table, cols, mode='dict'):
+            datum = item.pop(data_col)
+            response = cpu.process_item(datum, keys=item)
+            for tablename, data in fieldmapper.map(response):
+                if tablename not in tables:
+                    tables[tablename] = Table(
+                        tablename, self.relations[tablename]
+                    )
+                tables[tablename].append(
+                    Record(tables[tablename].fields, data)
+                )
+
+        for tablename, data in fieldmapper.cleanup():
+            if tablename not in tables:
+                tables[tablename] = Table(
+                    tablename, self.relations[tablename]
+                )
+            tables[tablename].append(
+                Record(tables[tablename].fields, data)
+            )
+
+        for tablename, table in tables.items():
+            self._data[tablename] = table
 
 
 ##############################################################################
