@@ -229,33 +229,33 @@ class Record(list):
         # normalize data format
         if isinstance(iterable, Mapping):
             d = iterable
-            iterable = []
-            for f in fields:
-                if f.name in d:
-                    iterable.append(d[f.name])
-                    del d[f.name]
-                else:
-                    iterable.append(f.default_value())
-            if d:
-                raise ItsdbError(
-                    'Invalid field name(s): {}'.format(', '.join(d))
-                )
+            iterable = [None] * len(fields)
+            for key, value in d.items():
+                try:
+                    index = fields.index(key)
+                except KeyError:
+                    raise ItsdbError('Invalid field name(s): ' + key)
+                iterable[index] = value
+        else:
+            iterable = list(iterable)
 
-        cols = list(iterable)
-        if len(fields) != len(cols):
+        if len(fields) != len(iterable):
             raise ItsdbError(
                 'Incorrect number of column values: {} != {}'
-                .format(len(cols), len(fields))
+                .format(len(iterable), len(fields))
             )
 
-        # validate that keys are set
-        for key_index in map(fields.index, fields.keys()):
-            if cols[key_index] is None:
-                raise ItsdbError(
-                    'Missing key: {}'.format(fields[key_index].name)
-                )
+        for i, value in enumerate(iterable):
+            field = fields[i]
+            if value is None:
+                if field.key:
+                    raise ItsdbError('Missing key: {}'.format(field.name))
+                iterable[i] = field.default_value()
+            else:
+                iterable[i] = value
+
         self.fields = fields
-        list.__init__(self, cols)
+        list.__init__(self, iterable)
 
     def __repr__(self):
         return "<{} '{}' {}>".format(

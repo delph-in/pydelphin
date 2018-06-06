@@ -102,6 +102,9 @@ def test_Record():
     # incorrect number of fields
     with pytest.raises(itsdb.ItsdbError):
         itsdb.Record(rels['item'], [0])
+    # None values get set to default
+    r = itsdb.Record(rels['item'], [0, None])
+    assert r['i-input'] == ''
     # mapped fields
     r = itsdb.Record(rels['item'], {'i-id': 0, 'i-input': 'sentence'})
     assert len(r) == 2
@@ -111,7 +114,7 @@ def test_Record():
     r = itsdb.Record(rels['item'], {'i-id': 0})
     assert len(r) == 2
     assert r['i-id'] == r[0] == 0
-    assert r['i-input'] == r[1] == None
+    assert r['i-input'] == r[1] == ''
     # missing keys are not ok
     with pytest.raises(itsdb.ItsdbError):
         r = itsdb.Record(rels['item'], {'i-input': 'sentence'})
