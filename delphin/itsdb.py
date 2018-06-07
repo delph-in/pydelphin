@@ -15,7 +15,9 @@ import re
 from gzip import open as gzopen
 import logging
 from io import TextIOWrapper, BufferedReader
-from collections import defaultdict, namedtuple, OrderedDict, Mapping
+from collections import (
+    defaultdict, namedtuple, OrderedDict, Sequence, Mapping
+)
 from itertools import chain
 from contextlib import contextmanager
 
@@ -412,7 +414,7 @@ class TestSuite(object):
         return self._data[tablename]
 
     def reload(self):
-        """Discard temporary changes and reload the databse from disk."""
+        """Discard temporary changes and reload the database from disk."""
         for tablename in self.relations:
             self._reload_table(tablename)
 
@@ -458,17 +460,29 @@ class TestSuite(object):
         Write the test suite to disk.
 
         Args:
-            tables: an iterable of names of tables to write; if `None`,
+            tables: a name or iterable of names of tables to write,
+                or a Mapping of table names to table data; if `None`,
                 all tables will be written
             path: the destination directory; if `None` use the path
                 assigned to the TestSuite
             append: if `True`, append to rather than overwrite tables
             gzip: compress non-empty tables with gzip
+        Examples:
+            >>> ts.write(path='new/path')
+            >>> ts.write('item')
+            >>> ts.write(['item', 'parse', 'result'])
+            >>> ts.write({'item': item_rows})
         """
         if path is None:
             path = self._path
         if tables is None:
             tables = self._data
+        elif isinstance(tables, stringtypes):
+            tables = {tables: self[tables]}
+        elif isinstance(tables, Mapping):
+            pass
+        elif isinstance(tables, Sequence):
+            tables = dict((table, self[table]) for table in tables)
 
         # prepare destination
         if not os.path.exists(path):
@@ -478,14 +492,20 @@ class TestSuite(object):
             with open(os.path.join(path, _relations_filename), 'w') as fh:
                 print(str(self.relations), file=fh)
 
-        for table, data in tables.items():
+        for tablename, data in tables.items():
+            # reload table from disk if it is invalidated
             if data is None:
-                data = self[table]
+                data = self[tablename]
+            # remove existing file(s)
+            fn = os.path.join(path, tablename)
+            if os.path.isfile(fn): os.remove(fn)
+            if os.path.isfile(fn + '.gz'): os.remove(fn + '.gz')
+            # finally write new file
             _write_table(
                 path,
-                table,
+                tablename,
                 data,
-                self.relations[table],
+                self.relations[tablename],
                 gzip=gzip
             )
 
@@ -789,7 +809,7 @@ def select_rows(cols, rows, mode='list'):
     | mode           | description       | example `['i-id', 'i-wf']` |
     | -------------- | ----------------- | -------------------------- |
     | list (default) | a list of values  | `[10, 1]`                  |
-    | dict           | col to value map  | `{'i-id':'10','i-wf':'1'}` |
+    | dict           | col to value map  | `{'i-id': 10,'i-wf': 1}`   |
     | row            | [incr tsdb()] row | `'10@1'`                   |
 
     Args:
