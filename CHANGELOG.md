@@ -28,6 +28,8 @@
 * `delphin.itsdb.Record` now validates field data (and tests are added)
 * `ace.AceProcess` and `rest.DelphinRestClient` in `delphin.interfaces` now
   inherit from `base.Processor` (#141)
+* Replaced `delphin.util.SExpr` with a custom non-PEG parser, which seems
+  to be much faster for pathological items (#145)
 
 ## [v0.7.0][]
 
