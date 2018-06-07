@@ -172,22 +172,22 @@ def mkprof(args):
             key_filter=True,
             gzip=args.gzip)
     else:
-        rows = []
+        o = itsdb.TestSuite(path=outdir, relations=relations)
         if p is None:
             if args.input is not None:
-                rows = _lines_to_rows(open(args.input))
+                o.write({'item': _lines_to_rows(open(args.input))})
             else:
-                rows = _lines_to_rows(sys.stdin)
-        o = itsdb.make_skeleton(outdir, relations, rows, gzip=args.gzip)
-        if p is not None:
+                o.write({'item': _lines_to_rows(sys.stdin)})
+        else:
             for table in itsdb.tsdb_core_files:
                 if p.size(table) > 0:
-                    o.write_table(table, p.read_table(table))
+                    o.write({table: p.read_table(table)}, gzip=args.gzip)
+        o.reload()
         # unless a skeleton was requested, make empty files for other tables
         if not args.skeleton:
             for table in o.relations:
-                if o.size(table) == 0:
-                    o.write_table(table, [])
+                if len(o[table]) == 0:
+                    o.write({table: []})
 
     # summarize what was done
     if sys.stdout.isatty():

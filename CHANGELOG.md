@@ -28,8 +28,13 @@
 * `delphin.itsdb.Record` now validates field data (and tests are added)
 * `ace.AceProcess` and `rest.DelphinRestClient` in `delphin.interfaces` now
   inherit from `base.Processor` (#141)
+* Reverted an incomplete rewrite of `delphin.itsdb.make_skeleton()`
 * Replaced `delphin.util.SExpr` with a custom non-PEG parser, which seems
   to be much faster for pathological items (#145)
+
+### Fixed
+
+* The `mkprof` command now correctly makes non-full profiles.
 
 ## [v0.7.0][]
 

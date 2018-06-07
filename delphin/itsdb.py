@@ -962,19 +962,16 @@ def make_skeleton(path, relations, item_rows, gzip=False):
     Raises:
         ItsdbError if the destination directory could not be created.
     """
-    skel = TestSuite(relations=relations)
-    skel.write({'item':item_rows}, path=path, gzip=gzip)
+    try:
+        os.makedirs(path)
+    except OSError:
+        raise ItsdbError('Path already exists: {}.'.format(path))
 
-    # try:
-    #     os.makedirs(path)
-    # except OSError:
-    #     raise ItsdbError('Path already exists: {}.'.format(path))
-
-    # import shutil
-    # shutil.copyfile(relations, os.path.join(path, _relations_filename))
-    # prof = ItsdbProfile(path, index=False)
-    # prof.write_table('item', item_rows, gzip=gzip)
-    # return prof
+    import shutil
+    shutil.copyfile(relations, os.path.join(path, _relations_filename))
+    prof = ItsdbProfile(path, index=False)
+    prof.write_table('item', item_rows, gzip=gzip)
+    return prof
 
 
 @deprecated(final_version='1.0.0')
