@@ -20,14 +20,19 @@
   to [incr tsdb()] (table, rowdata) tuples.
 * `delphin.itsdb.TestSuite.process()` function for using a processor (e.g.,
   AceParser) to process each item in the testsuite.
+* Add `process` command to main script
 
 ### Changed
 
 * `delphin.itsdb.Record` can now accept a mapping of field names to values
   for instantiation, and the column indices will be looked up from the schema
 * `delphin.itsdb.Record` now validates field data (and tests are added)
+* `delphin.itsdb.Record` values can be set by the field name and index
 * `ace.AceProcess` and `rest.DelphinRestClient` in `delphin.interfaces` now
   inherit from `base.Processor` (#141)
+* `delphin.itsdb.ItsdbProfile` takes an optional `cast` keyword argument; this
+  class is deprecated, but the addition is to smooth over the transition to
+  the new `TestSuite` class.
 * Clarified the documentation and code for `delphin.itsdb.TestSuite.write()`
   regarding the specifications of tables and/or data.
 * Reverted an incomplete rewrite of `delphin.itsdb.make_skeleton()`

@@ -207,6 +207,38 @@ def mkprof(args):
             print(fmt.format(stat.st_size, _red(filename + '.gz')))
 
 
+def process(args):
+    """
+    Process (e.g., parse) a [incr tsdb()] profile.
+    """
+    from delphin.interfaces import ace
+    if args.source is None:
+        args.source = args.PROFILE
+    if args.filter is None:
+        args.filter = []
+    if args.p:
+        args.filter.append('result:result-id=x=={}'.format(args.p))
+    if args.generate:
+        processor = ace.AceGenerator
+    elif args.transfer:
+        processor = ace.AceTransferer
+    else:
+        if not args.all_items:
+            args.filter.append('item:i-wf=x!=2')
+        processor = ace.AceParser
+
+    source = _prepare_input_profile(
+        args.source, filters=args.filter, applicators=args.apply, cast=True)
+
+    target = itsdb.TestSuite(args.PROFILE)
+
+    with processor(args.grammar) as cpu:
+        target.process(cpu, args.input, source=source)
+
+    target.write()
+
+
+
 def compare(args):
     """
     Compare two [incr tsdb()] profiles.
@@ -354,12 +386,12 @@ def _penman_dumps(x, model=None, **kwargs):
 # working with directories and profiles
 
 
-def _prepare_input_profile(path, filters=None, applicators=None):
+def _prepare_input_profile(path, filters=None, applicators=None, cast=False):
     flts = [_make_itsdb_action(*f.split('=', 1)) for f in (filters or [])]
     apls = [_make_itsdb_action(*f.split('=', 1)) for f in (applicators or [])]
     index = len(flts) > 0
     prof = itsdb.ItsdbProfile(
-        path, filters=flts, applicators=apls, index=index)
+        path, filters=flts, applicators=apls, index=index, cast=cast)
     return prof
 
 
@@ -527,6 +559,43 @@ mkprof_grp2.add_argument(
 mkprof_parser.add_argument(
     '-z', '--gzip', action='store_true', help='compress table files with gzip')
 
+# process subparser
+process_parser = argparse.ArgumentParser(add_help=False)
+process_parser.set_defaults(func=process)
+process_parser.add_argument(
+    'PROFILE', help='target profile'
+)
+process_parser.add_argument(
+    '-g', '--grammar', metavar='GRM', required=True,
+    help='compiled grammar image'
+)
+process_parser.add_argument(
+    '-s', '--source', metavar='PATH',
+    help='source profile; if unset, set to PROFILE'
+)
+process_parser.add_argument(
+    '-i', '--input', metavar='DATASPEC',
+    help='data specifier for input items (see above)'
+)
+process_parser.add_argument(
+    '--all-items', action='store_true',
+    help='don\'t exclude ignored items (i-wf==2) in parsing'
+)
+process_grp1 = process_parser.add_mutually_exclusive_group()
+process_grp1.add_argument(
+    '-e', '--generate', action='store_true',
+    help='generation mode (--source is strongly encouraged)'
+)
+process_grp1.add_argument(
+    '-t', '--transfer', action='store_true',
+    help='transfer mode (--source is strongly encouraged)'
+)
+process_parser.add_argument(
+    '-p', metavar='RID',
+    help=('transfer or generate from result with result-id=RID; '
+          'short for \'--filter result:result-id=x==RID\'')
+)
+
 # compare subparser
 compare_parser = argparse.ArgumentParser(add_help=False)
 compare_parser.set_defaults(func=compare)
@@ -584,6 +653,22 @@ subparser.add_parser(
         will copy a full profile, while the --skeleton option will only write
         the tsdb-core files (e.g., 'item') and 'relations' file.
         """))
+subparser.add_parser(
+    'process',
+    parents=[common_parser, process_parser, profile_parser],
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=redent("""
+        Use a processor (namely ACE) to process each item in the [incr tsdb()]
+        test suite given by --source (PROFILE if --source is not given). For
+        standard [incr tsdb()] schemata, input items given by the following
+        selectors for each task (configurable via the --input option):
+            * parse: item:i-input
+            * transfer: result:mrs
+            * generate: result:mrs
+        In addition, the following filter is applied if --source is a standard
+        [incr tsdb()] profile and --all-items is not used:
+            --filter=item:i-wf="x!=2"
+    """))
 subparser.add_parser(
     'compare', parents=[common_parser, compare_parser, profile_parser])
 subparser.add_parser(

@@ -58,6 +58,11 @@ tsdb_core_files = [
     "item-phenomenon",
     "item-set"
 ]
+_default_task_input_selectors = {
+    'parse': 'item:i-input',
+    'transfer': 'result:mrs',
+    'generate': 'result:mrs',
+}
 
 #############################################################################
 # Relations files
@@ -273,6 +278,12 @@ class Record(list):
         if not isinstance(index, int):
             index = self.fields.index(index)
         return list.__getitem__(self, index)
+
+    def __setitem__(self, index, value):
+        if not isinstance(index, int):
+            index = self.fields.index(index)
+        # should the value be validated against the datatype?
+        return list.__setitem__(self, index, value)
 
     def get(self, key, default=None):
         """
@@ -509,7 +520,7 @@ class TestSuite(object):
                 gzip=gzip
             )
 
-    def process(self, cpu, selector, source=None, fieldmapper=None):
+    def process(self, cpu, selector=None, source=None, fieldmapper=None):
         """
         Process each item in a [incr tsdb()] testsuite
 
@@ -527,14 +538,18 @@ class TestSuite(object):
 
             >>> ts.process(ace_generator, 'result:mrs', source=ts2)
         """
-        table, data_col = get_data_specifier(selector)
+        if selector is None:
+            selector = _default_task_input_selectors.get(cpu.task)
+
+        data_table, data_col = get_data_specifier(selector)
         if len(data_col) != 1:
             raise ItsdbError(
                 'Selector must specify exactly one data column: {}'
                 .format(selector)
             )
         data_col = data_col[0]
-        cols = list(self.relations[table].keys())
+        key_fields = [f for f in self.relations[data_table] if f.key]
+        cols = [f.name for f in key_fields]
         cols.append(data_col)
 
         if source is None:
@@ -544,29 +559,32 @@ class TestSuite(object):
             fieldmapper = FieldMapper()
 
         tables = {}
-        for item in source.select(table, cols, mode='dict'):
+        for item in source.select(data_table, cols, mode='dict'):
             datum = item.pop(data_col)
             response = cpu.process_item(datum, keys=item)
+            logging.info(
+                'Processed item {:>16}  {:>8} results'
+                .format(make_row(item, key_fields), len(response['results']))
+            )
             for tablename, data in fieldmapper.map(response):
-                if tablename not in tables:
-                    tables[tablename] = Table(
-                        tablename, self.relations[tablename]
-                    )
-                tables[tablename].append(
-                    Record(tables[tablename].fields, data)
-                )
+                _add_record(tables, tablename, data, self.relations)
 
         for tablename, data in fieldmapper.cleanup():
-            if tablename not in tables:
-                tables[tablename] = Table(
-                    tablename, self.relations[tablename]
-                )
-            tables[tablename].append(
-                Record(tables[tablename].fields, data)
-            )
+            _add_record(tables, tablename, data, self.relations)
 
         for tablename, table in tables.items():
             self._data[tablename] = table
+
+
+def _add_record(tables, tablename, data, relations):
+    fields = relations[tablename]
+    if tablename not in tables:
+        tables[tablename] = Table(tablename, fields)
+    # remove any keys that aren't relation fields
+    for invalid_key in set(data).difference([f.name for f in fields]):
+        del data[invalid_key]
+    tables[tablename].append(Record(fields, data))
+
 
 
 ##############################################################################
@@ -1064,6 +1082,8 @@ class ItsdbProfile(object):
             the filters.
         index: If `True`, indices are created based on the keys of
             each table.
+        cast: if `True`, automatically cast data into the type defined
+            by its relation field (e.g., :integer)
     """
 
     # _tables is a list of table names to consider (for indexing, writing,
@@ -1077,8 +1097,9 @@ class ItsdbProfile(object):
                 final_version='1.0.0',
                 alternative='TestSuite')
     def __init__(self, path, relations=None,
-                 filters=None, applicators=None, index=True):
+                 filters=None, applicators=None, index=True, cast=False):
         self.root = path
+        self.cast = cast
 
         # somewhat backwards-compatible resolution of relations file
         if isinstance(relations, dict):
@@ -1178,19 +1199,19 @@ class ItsdbProfile(object):
         mapping column names to values. Data from a profile is decoded
         by decode_row(). No filters or applicators are used.
         """
-
+        fields = self.table_relations(table) if self.cast else None
         field_names = [f.name for f in self.table_relations(table)]
         field_len = len(field_names)
         with _open_table(os.path.join(self.root, table)) as tbl:
             for line in tbl:
-                fields = decode_row(line)
-                if len(fields) != field_len:
+                cols = decode_row(line, fields)
+                if len(cols) != field_len:
                     # should this throw an exception instead?
                     logging.error('Number of stored fields ({}) '
                                   'differ from the expected number({}); '
                                   'fields may be misaligned!'
-                                  .format(len(fields), field_len))
-                row = OrderedDict(zip(field_names, fields))
+                                  .format(len(cols), field_len))
+                row = OrderedDict(zip(field_names, cols))
                 yield row
 
     def read_table(self, table, key_filter=True):

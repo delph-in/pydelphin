@@ -3,9 +3,11 @@ from __future__ import print_function
 
 import os
 import tempfile
+import datetime
 
 import pytest
 
+from delphin.interfaces.base import Processor, ParseResponse
 from delphin import itsdb
 
 _simple_relations = '''
@@ -13,8 +15,12 @@ item:
   i-id :integer :key
   i-input :string
 
+run:
+  run-id :integer :key    # unique test run identifier
+
 parse:
   parse-id :integer :key  # unique parse identifier
+  run-id :integer :key    # test run for this parse
   i-id :integer :key      # item parsed
 
 result:
@@ -23,6 +29,69 @@ result:
   mrs :string             # MRS for this reading
 '''
 
+@pytest.fixture
+def parser_cpu():
+    class DummyParser(Processor):
+        task = 'parse'
+        def process_item(self, datum, keys=None):
+            return ParseResponse(
+                NOTES=[],
+                WARNINGS=[],
+                ERRORS=[],
+                input='The dog barks',
+                surface=None,
+                keys={
+                    'i-id': 0
+                },
+                run={
+                    'run-id': 0,
+                    'platform': 'gcc 4.2',
+                    'application': 'ACE 0.9.27 via PyDelphin v0.7.0',
+                    'environment': '--tsdb-notes --tsdb-stdout --report-labels',
+                    'grammar': 'ERG (1214)',
+                    'avms': 9280,
+                    'lexicon': 38259,
+                    'lrules': 81,
+                    'rules': 212,
+                    'user': 'goodmami',
+                    'host': 'tpy',
+                    'os': 'Linux-4.15.0-23-generic-x86_64-with-Ubuntu-18.04-bionic',
+                    'start': datetime.datetime(2018, 6, 6, 12, 20, 49, 41208),
+                    'end': datetime.datetime(2018, 6, 6, 12, 20, 49, 97405)
+                },
+                pedges=31,
+                aedges=63,
+                ninputs=3,
+                ntokens=8,
+                tokens={
+                    'initial': '(1, 0, 1, <0:3>, 1, "The", 0, "null", "DT" 1.0) (2, 1, 2, <4:7>, 1, "dog", 0, "null", "NN" 1.0) (3, 2, 3, <8:13>, 1, "barks", 0, "null", "VBZ" 1.0)',
+                    'internal': '(31, 1, 2, <4:7>, 1, "dog", 0, "null") (33, 2, 3, <8:13>, 1, "barks", 0, "null") (34, 1, 2, <4:7>, 1, "dog", 0, "null") (35, 2, 3, <8:13>, 1, "barks", 0, "null") (36, 0, 1, <0:3>, 1, "the", 0, "null") (37, 1, 2, <4:7>, 1, "dog", 0, "null") (38, 2, 3, <8:13>, 1, "barks", 0, "null") (39, 0, 1, <0:3>, 1, "the", 0, "null")'
+                },
+                readings=2,
+                total=11,
+                tcpu=11,
+                treal=11,
+                unifications=30617,
+                copies=171,
+                others=980812,
+                results=[
+                    {
+                        'result-id': 0,
+                        'derivation': '(731 sb-hd_mc_c 0.404299 0 3 (729 sp-hd_n_c 0.997967 0 2 (51 the_1 -0.486623 0 1 ("the" 36 "token [ +FORM \\"the\\" +FROM \\"0\\" +TO \\"3\\" +ID *diff-list* [ LIST *list* LAST *list* ] +TNT null_tnt [ +TAGS *null* +PRBS *null* +MAIN tnt_main [ +TAG \\"DT\\" +PRB \\"1.0\\" ] ] +CLASS alphabetic [ +INITIAL + +CASE capitalized+lower ] +TRAIT token_trait [ +UW - +IT italics +LB bracket_null +RB bracket_null +HD token_head [ +LL ctype [ -CTYPE- string ] +TG string +TI \\"0\\" ] ] +PRED predsort +CARG \\"The\\" +TICK bool ]")) (728 n_sg_ilr 1.169754 1 2 (40 dog_n1 0.031966 1 2 ("dog" 31 "token [ +FORM \\"dog\\" +FROM \\"4\\" +TO \\"7\\" +ID *diff-list* [ LIST *list* LAST *list* ] +TNT null_tnt [ +TAGS *null* +PRBS *null* +MAIN tnt_main [ +TAG \\"NN\\" +PRB \\"1.0\\" ] ] +CLASS alphabetic [ +INITIAL - +CASE non_capitalized+lower ] +TRAIT token_trait [ +UW - +IT italics +LB bracket_null +RB bracket_null +HD token_head [ +LL ctype [ -CTYPE- string ] +TG string +TI \\"4\\" ] ] +PRED predsort +CARG \\"dog\\" +TICK bool ]")))) (730 v_3s-fin_olr -0.423270 2 3 (43 bark_v1 0.000000 2 3 ("barks" 33 "token [ +FORM \\"barks\\" +FROM \\"8\\" +TO \\"13\\" +ID *diff-list* [ LIST *list* LAST *list* ] +TNT null_tnt [ +TAGS *null* +PRBS *null* +MAIN tnt_main [ +TAG \\"VBZ\\" +PRB \\"1.0\\" ] ] +CLASS alphabetic [ +INITIAL - +CASE non_capitalized+lower ] +TRAIT token_trait [ +UW - +IT italics +LB bracket_null +RB bracket_null +HD token_head [ +LL ctype [ -CTYPE- string ] +TG string +TI \\"8\\" ] ] +PRED predsort +CARG \\"barks\\" +TICK bool ]"))))',
+                        'tree': '("S" ("N" ("DET" ("the")) ("N" ("N" ("dog")))) ("VP" ("V" ("barks"))))',
+                        'mrs': '[ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ] RELS: < [ _the_q<0:3> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: sg IND: + ] RSTR: h5 BODY: h6 ]  [ _dog_n_1<4:7> LBL: h7 ARG0: x3 ]  [ _bark_v_1<8:13> LBL: h1 ARG0: e2 ARG1: x3 ] > HCONS: < h0 qeq h1 h5 qeq h7 > ]',
+                        'flags': [(':ascore', 0.404299), (':probability', 0.830799)]
+                    },
+                    {
+                        'result-id': 1,
+                        'derivation': '(735 np_frg_c -1.187003 0 3 (734 sp-hd_n_c -1.354913 0 3 (51 the_1 -1.467909 0 1 ("the" 36 "token [ +FORM \\"the\\" +FROM \\"0\\" +TO \\"3\\" +ID *diff-list* [ LIST *list* LAST *list* ] +TNT null_tnt [ +TAGS *null* +PRBS *null* +MAIN tnt_main [ +TAG \\"DT\\" +PRB \\"1.0\\" ] ] +CLASS alphabetic [ +INITIAL + +CASE capitalized+lower ] +TRAIT token_trait [ +UW - +IT italics +LB bracket_null +RB bracket_null +HD token_head [ +LL ctype [ -CTYPE- string ] +TG string +TI \\"0\\" ] ] +PRED predsort +CARG \\"The\\" +TICK bool ]")) (733 n-hdn_cpd_c -0.345921 1 3 (40 dog_n1 0.000000 1 2 ("dog" 31 "token [ +FORM \\"dog\\" +FROM \\"4\\" +TO \\"7\\" +ID *diff-list* [ LIST *list* LAST *list* ] +TNT null_tnt [ +TAGS *null* +PRBS *null* +MAIN tnt_main [ +TAG \\"NN\\" +PRB \\"1.0\\" ] ] +CLASS alphabetic [ +INITIAL - +CASE non_capitalized+lower ] +TRAIT token_trait [ +UW - +IT italics +LB bracket_null +RB bracket_null +HD token_head [ +LL ctype [ -CTYPE- string ] +TG string +TI \\"4\\" ] ] +PRED predsort +CARG \\"dog\\" +TICK bool ]")) (732 n_pl_olr -0.035850 2 3 (42 bark_n1 0.000000 2 3 ("barks" 33 "token [ +FORM \\"barks\\" +FROM \\"8\\" +TO \\"13\\" +ID *diff-list* [ LIST *list* LAST *list* ] +TNT null_tnt [ +TAGS *null* +PRBS *null* +MAIN tnt_main [ +TAG \\"VBZ\\" +PRB \\"1.0\\" ] ] +CLASS alphabetic [ +INITIAL - +CASE non_capitalized+lower ] +TRAIT token_trait [ +UW - +IT italics +LB bracket_null +RB bracket_null +HD token_head [ +LL ctype [ -CTYPE- string ] +TG string +TI \\"8\\" ] ] +PRED predsort +CARG \\"barks\\" +TICK bool ]"))))))',
+                        'tree': '("XP" ("N" ("DET" ("the")) ("N" ("N" ("dog")) ("N" ("N" ("barks"))))))',
+                        'mrs': '[ LTOP: h0 INDEX: e2 [ e SF: prop-or-ques TENSE: untensed MOOD: indicative PROG: - PERF: - ] RELS: < [ unknown<0:13> LBL: h1 ARG0: e2 ARG: x4 [ x PERS: 3 NUM: pl ] ]  [ _the_q<0:3> LBL: h5 ARG0: x4 RSTR: h6 BODY: h7 ]  [ compound<4:13> LBL: h8 ARG0: e9 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: x4 ARG2: x10 [ x IND: + ] ]  [ udef_q<4:7> LBL: h11 ARG0: x10 RSTR: h12 BODY: h13 ]  [ _dog_n_1<4:7> LBL: h14 ARG0: x10 ]  [ _bark_n_1<8:13> LBL: h8 ARG0: x4 ] > HCONS: < h0 qeq h1 h6 qeq h8 h12 qeq h14 > ]',
+                        'flags': [(':ascore', -1.187003), (':probability', 0.169201)]
+                    }
+                ]
+            )
+    return DummyParser()
 
 @pytest.fixture
 def empty_profile():
@@ -42,7 +111,8 @@ def single_item_profile():
     d = tempfile.mkdtemp()
     print(_simple_relations, file=open(os.path.join(d, 'relations'), 'w'))
     print('0@The dog barks.', file=open(os.path.join(d, 'item'), 'w'))
-    print('0@0', file=open(os.path.join(d, 'parse'), 'w'))
+    print('0', file=open(os.path.join(d, 'run'), 'w'))
+    print('0@0@0', file=open(os.path.join(d, 'parse'), 'w'))
     print(
         '0@0@[ LTOP: h0 INDEX: e2 RELS: < '
         '[ _the_q<0:3> LBL: h4 ARG0: x3 RSTR: h5 BODY: h6 ] '
@@ -150,6 +220,7 @@ def test_Table(single_item_skeleton):
     assert t.name == 'item'
     assert len(t) == 1
     assert isinstance(t[0], itsdb.Record)
+    assert t[0]['i-id'] == 0
     assert t[0]['i-input'] == 'The dog barks.'
     assert list(t.select('i-input')) == [['The dog barks.']]
 
@@ -159,19 +230,70 @@ def test_Table(single_item_skeleton):
     assert t.name == 'item'
     assert len(t) == 1
 
-def test_TestSuite(single_item_profile):
-    rels = itsdb.Relations.from_string(_simple_relations)
-    t = itsdb.TestSuite(relations=rels)
-    assert len(t['item']) == 0
-    assert len(t['parse']) == 0
-    assert len(t['result']) == 0
-    assert list(t.select('item:i-input')) == []
+class TestSuite(object):
+    def test_init(self, single_item_profile):
+        rels = itsdb.Relations.from_string(_simple_relations)
+        t = itsdb.TestSuite(relations=rels)
+        assert len(t['item']) == 0
+        assert len(t['parse']) == 0
+        assert len(t['result']) == 0
 
-    t = itsdb.TestSuite(single_item_profile)
-    assert len(t['item']) == 1
-    assert len(t['parse']) == 1
-    assert len(t['result']) == 1
-    assert list(t.select('item:i-input')) == [['The dog barks.']]
+        t = itsdb.TestSuite(single_item_profile)
+        assert len(t['item']) == 1
+        assert len(t['parse']) == 1
+        assert len(t['result']) == 1
+
+    def test_select(self, single_item_profile):
+        rels = itsdb.Relations.from_string(_simple_relations)
+        t = itsdb.TestSuite(relations=rels)
+        assert list(t.select('item:i-input')) == []
+        t = itsdb.TestSuite(single_item_profile)
+        assert list(t.select('item:i-id@i-input')) == [[0, 'The dog barks.']]
+
+    def test_reload(self, single_item_profile):
+        t = itsdb.TestSuite(single_item_profile)
+        assert t['item'][0]['i-input'] == 'The dog barks.'
+        t['item'][0]['i-input'] = 'The dog sleeps.'
+        assert t['item'][0]['i-input'] == 'The dog sleeps.'
+        t.reload()
+        assert t['item'][0]['i-input'] == 'The dog barks.'
+
+    def test_write(self, single_item_profile):
+        t = itsdb.TestSuite(single_item_profile)
+        assert t['item'][0]['i-input'] == 'The dog barks.'
+        t['item'][0]['i-input'] = 'The dog sleeps.'
+        assert t['item'][0]['i-input'] == 'The dog sleeps.'
+        t.write()
+        t.reload()
+        assert t['item'][0]['i-input'] == 'The dog sleeps.'
+        t['item'][0]['i-input'] = 'The cat sleeps.'
+        t.write('parse')
+        t.reload()
+        assert t['item'][0]['i-input'] == 'The dog sleeps.'
+        t['item'][0]['i-input'] = 'The cat sleeps.'
+        t.write(['item', 'parse'])
+        assert t['item'][0]['i-input'] == 'The cat sleeps.'
+        record = itsdb.Record(
+            t.relations['item'], {'i-id': 0, 'i-input': 'The cat meows.'}
+        )
+        t.write({'item': [record]})
+        t.reload()
+        assert t['item'][0]['i-input'] == 'The cat meows.'
+
+
+    def test_process(self, parser_cpu, single_item_skeleton):
+        ts = itsdb.TestSuite(single_item_skeleton)
+        assert len(ts['parse']) == 0
+        assert len(ts['result']) == 0
+        ts.process(parser_cpu)
+        assert len(ts['parse']) == 1
+        assert len(ts['result']) == 2
+        assert ts['parse'][0]['parse-id'] == 0
+        assert ts['parse'][0]['run-id'] == 0
+        assert ts['result'][0]['parse-id'] == 0
+        assert ts['result'][0]['result-id'] == 0
+        assert ts['result'][1]['parse-id'] == 0
+        assert ts['result'][1]['result-id'] == 1
 
 def test_get_data_specifier():
     dataspec = itsdb.get_data_specifier
@@ -246,6 +368,7 @@ def test_get_relations(empty_profile):
     )
     assert r['parse'] == (
         itsdb.Field('parse-id', ':integer', True, False, 'unique parse identifier'),
+        itsdb.Field('run-id', ':integer', True, False, 'test run for this parse'),
         itsdb.Field('i-id', ':integer', True, False, 'item parsed')
     )
     assert r['result'] == (
