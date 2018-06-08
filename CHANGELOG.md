@@ -2,6 +2,14 @@
 
 ## [Unreleased][unreleased]
 
+
+## [v0.7.1][]
+
+There were some bugs in the last release, particularly with Python 2.7, which
+have been addressed in this release. There is one significant new feature,
+which is the ability to process [incr tsdb()] profiles, either with the
+`process()` method on `TestSuite` objects or via the new `process` command.
+
 **Note**: there are some changes that may break backward compatibility; these
 changes are prefixed with "**BREAKING**"
 
@@ -619,6 +627,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v0.7.1]: ../../releases/tag/v0.7.1
 [v0.7.0]: ../../releases/tag/v0.7.0
 [v0.6.2]: ../../releases/tag/v0.6.2
 [v0.6.1]: ../../releases/tag/v0.6.1

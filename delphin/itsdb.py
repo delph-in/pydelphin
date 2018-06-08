@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 """
 The `itsdb` module provides classes and functions for working with
 [incr tsdb()] profiles (or, more generally, testsuites). It handles
