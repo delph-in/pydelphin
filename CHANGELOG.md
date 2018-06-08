@@ -54,6 +54,7 @@ changes are prefixed with "**BREAKING**"
 ### Fixed
 
 * The `mkprof` command now correctly makes non-full profiles.
+* The `mkprof` command is now more Python 2.7-compatible
 * Made `delphin.itsdb` more compatible with Python 2.7
 
 ## [v0.7.0][]

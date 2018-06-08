@@ -403,10 +403,18 @@ def _make_itsdb_action(data_specifier, function):
 
 def _prepare_output_directory(path):
     try:
-        os.makedirs(path, exist_ok=True)
-    except PermissionError:
-        sys.exit('Permission denied to create output directory: {}'
-                 .format(path))
+        os.makedirs(path)  # exist_ok=True is available from Python 3.2
+    except OSError as ex:  # PermissionError is available from Python 3.3
+        if ex.errno == 13:
+            sys.exit('Permission denied to create output directory: {}'
+                     .format(path))
+        elif ex.errno == 17:
+            if os.path.isfile(path):
+                sys.exit('Path is an existing file: ' + path)
+            else:
+                pass  # existing directory; maybe it's usable
+        else:
+            raise
     if not os.access(path, os.R_OK | os.W_OK):
         sys.exit('Cannot write to output directory: {}'.format(path))
 
