@@ -2,6 +2,9 @@
 
 ## [Unreleased][unreleased]
 
+**Note**: there are some changes that may break backward compatibility; these
+changes are prefixed with "**BREAKING**"
+
 ### Added
 
 * `delphin.interfaces.ace.AceProcess.run_infos` stores information related
@@ -38,10 +41,20 @@
 * Reverted an incomplete rewrite of `delphin.itsdb.make_skeleton()`
 * Replaced `delphin.util.SExpr` with a custom non-PEG parser, which seems
   to be much faster for pathological items (#145)
+* **BREAKING** `ItsdbProfile`, `TestSuite`, and `Table.from_file()` in
+  `delphin.itsdb` now accept an encoding parameter, which defaults to `utf-8`.
+  Profiles will be read and written using the specified encoding, instead of
+  using whatever is defined by the locale. This should only be a breaking
+  change if your preferred locale is neither `ascii` nor `utf-8`.
+* **BREAKING** `ItsdbProfile` and `TestSuite` in `delphin.itsdb` delete extra
+  table files on writing (e.g., if `item.gz` is written, `item` will be
+  deleted if it also exists). This is only breaking if anyone relied on having
+  both the gzipped and regular versions of tables.
 
 ### Fixed
 
 * The `mkprof` command now correctly makes non-full profiles.
+* Made `delphin.itsdb` more compatible with Python 2.7
 
 ## [v0.7.0][]
 

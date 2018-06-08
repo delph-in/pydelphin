@@ -9,11 +9,17 @@ one can create a new skeleton using the make_skeleton() function.
 """
 
 from __future__ import print_function
+# TODO: Remove when Python2.7 support is gone
+try:
+    unicode
+except NameError:
+    unicode = str
 
 import os
 import re
-from gzip import open as gzopen
+from gzip import GzipFile
 import logging
+import io
 from io import TextIOWrapper, BufferedReader
 from collections import (
     defaultdict, namedtuple, OrderedDict, Sequence, Mapping
@@ -325,7 +331,7 @@ class Table(list):
         list.__init__(self, [Record(fields, rec) for rec in records])
 
     @classmethod
-    def from_file(cls, path, name=None, fields=None):
+    def from_file(cls, path, name=None, fields=None, encoding='utf-8'):
         """
         Instantiate a Table from a database file.
 
@@ -334,6 +340,7 @@ class Table(list):
             name: the table name (inferred by the filename if not given)
             fields: the Relation schema for the table (loaded from the
                 relations file in the same directory if not given)
+            encoding: the character encoding of the files in the testsuite
         """
         path = _table_filename(path)  # do early in case file not found
 
@@ -356,7 +363,7 @@ class Table(list):
             fields = rels[name]
 
         records = []
-        with _open_table(path) as tab:
+        with _open_table(path, encoding) as tab:
             records.extend(
                 map((lambda s: decode_row(s, fields)), tab)
             )
@@ -390,9 +397,11 @@ class TestSuite(object):
         relations: the relations file describing the schema of
             the database; if not given, the relations file under
             *path* will be used
+        encoding: the character encoding of the files in the testsuite
     """
-    def __init__(self, path=None, relations=None):
+    def __init__(self, path=None, relations=None, encoding='utf-8'):
         self._path = path
+        self.encoding = encoding
 
         if isinstance(relations, Relations):
             self.relations = relations
@@ -433,7 +442,8 @@ class TestSuite(object):
         fields = self.relations[tablename]
         tablepath = os.path.join(self._path, tablename)
         if os.path.exists(tablepath) or os.path.exists(tablepath + '.gz'):
-            table = Table.from_file(tablepath, name=tablename, fields=fields)
+            table = Table.from_file(tablepath, name=tablename,
+                                    fields=fields, encoding=self.encoding)
         else:
             table = Table(name=tablename, fields=fields)
         self._data[tablename] = table
@@ -507,17 +517,13 @@ class TestSuite(object):
             # reload table from disk if it is invalidated
             if data is None:
                 data = self[tablename]
-            # remove existing file(s)
-            fn = os.path.join(path, tablename)
-            if os.path.isfile(fn): os.remove(fn)
-            if os.path.isfile(fn + '.gz'): os.remove(fn + '.gz')
-            # finally write new file
             _write_table(
                 path,
                 tablename,
                 data,
                 self.relations[tablename],
-                gzip=gzip
+                gzip=gzip,
+                encoding=self.encoding
             )
 
     def process(self, cpu, selector=None, source=None, fieldmapper=None):
@@ -671,7 +677,10 @@ def encode_row(fields):
     Returns:
         A [incr tsdb()]-encoded string
     """
-    return _field_delimiter.join(map(escape, map(str, fields)))
+    # NOTE: str(f) only works for Python3
+    unicode_fields = [unicode(f) for f in fields]
+    escaped_fields = map(escape, unicode_fields)
+    return _field_delimiter.join(escaped_fields)
 
 
 _character_escapes = {
@@ -748,20 +757,20 @@ def _table_filename(tbl_filename):
 
 
 @contextmanager
-def _open_table(tbl_filename):
+def _open_table(tbl_filename, encoding):
     path = _table_filename(tbl_filename)
     if path.endswith('.gz'):
-        # cannot use mode='rt' until Python2.7 support is gone;
-        # until then use TextIOWrapper
-        with TextIOWrapper(BufferedReader(gzopen(path, mode='r'))) as f:
+        # gzip.open() cannot use mode='rt' until Python2.7 support
+        # is gone; until then use TextIOWrapper
+        with TextIOWrapper(GzipFile(path, mode='r'), encoding=encoding) as f:
             yield f
     else:
-        with open(tbl_filename) as f:
+        with io.open(tbl_filename, encoding=encoding) as f:
             yield f
 
 
 def _write_table(profile_dir, table_name, rows, fields,
-                 append=False, gzip=False):
+                 append=False, gzip=False, encoding='utf-8'):
     # don't gzip if empty
     rows = iter(rows)
     try:
@@ -780,13 +789,20 @@ def _write_table(profile_dir, table_name, rows, fields,
                          .format(profile_dir))
 
     tbl_filename = os.path.join(profile_dir, table_name)
+    gzfn = tbl_filename + '.gz'
     mode = 'a' if append else 'w'
     if gzip:
+        # clean up non-gzip files, if any
+        if os.path.isfile(tbl_filename):
+            os.remove(tbl_filename)
         # text mode only from py3.3; until then use TextIOWrapper
         #mode += 't'  # text mode for gzip
-        f = TextIOWrapper(gzopen(tbl_filename + '.gz', mode=mode))
+        f = TextIOWrapper(GzipFile(gzfn, mode=mode), encoding=encoding)
     else:
-        f = open(tbl_filename, mode=mode)
+        # clean up gzip files, if any
+        if os.path.isfile(gzfn):
+            os.remove(gzfn)
+        f = io.open(tbl_filename, mode=mode, encoding=encoding)
 
     for row in rows:
         f.write(make_row(row, fields) + '\n')
@@ -1097,9 +1113,11 @@ class ItsdbProfile(object):
                 final_version='1.0.0',
                 alternative='TestSuite')
     def __init__(self, path, relations=None,
-                 filters=None, applicators=None, index=True, cast=False):
+                 filters=None, applicators=None, index=True,
+                 cast=False, encoding='utf-8'):
         self.root = path
         self.cast = cast
+        self.encoding = encoding
 
         # somewhat backwards-compatible resolution of relations file
         if isinstance(relations, dict):
@@ -1202,7 +1220,8 @@ class ItsdbProfile(object):
         fields = self.table_relations(table) if self.cast else None
         field_names = [f.name for f in self.table_relations(table)]
         field_len = len(field_names)
-        with _open_table(os.path.join(self.root, table)) as tbl:
+        table_path = os.path.join(self.root, table)
+        with _open_table(table_path, self.encoding) as tbl:
             for line in tbl:
                 cols = decode_row(line, fields)
                 if len(cols) != field_len:
@@ -1296,7 +1315,8 @@ class ItsdbProfile(object):
                      rows,
                      self.table_relations(table),
                      append=append,
-                     gzip=gzip)
+                     gzip=gzip,
+                     encoding=self.encoding)
 
     def write_profile(self, profile_directory, relations_filename=None,
                       key_filter=True,
@@ -1341,8 +1361,10 @@ class ItsdbProfile(object):
                 fn = _table_filename(os.path.join(self.root, table))
                 _gzip = gzip if gzip is not None else fn.endswith('.gz')
                 rows = list(self.read_table(table, key_filter=key_filter))
-                _write_table(profile_directory, table, rows, fields,
-                             append=append, gzip=_gzip)
+                _write_table(
+                    profile_directory, table, rows, fields,
+                    append=append, gzip=_gzip, encoding=self.encoding
+                )
             except ItsdbError:
                 logging.warning(
                     'Could not write "{}"; table doesn\'t exist.'.format(table)

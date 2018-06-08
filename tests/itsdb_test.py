@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 
 from __future__ import print_function
 
@@ -280,7 +281,6 @@ class TestSuite(object):
         t.reload()
         assert t['item'][0]['i-input'] == 'The cat meows.'
 
-
     def test_process(self, parser_cpu, single_item_skeleton):
         ts = itsdb.TestSuite(single_item_skeleton)
         assert len(ts['parse']) == 0
@@ -324,6 +324,7 @@ def test_unescape():
 def test_decode_row():
     assert itsdb.decode_row('') == ['']
     assert itsdb.decode_row('one') == ['one']
+    assert itsdb.decode_row(u'あ') == [u'あ']
     assert itsdb.decode_row('one@two') == ['one', 'two']
     assert itsdb.decode_row('one@@three') == ['one', '', 'three']
     assert itsdb.decode_row('one\\s@\\\\two\\nabc\\x') == ['one@', '\\two\nabc\\x']
@@ -333,6 +334,7 @@ def test_decode_row():
 def test_encode_row():
     assert itsdb.encode_row(['']) == ''
     assert itsdb.encode_row(['one']) == 'one'
+    assert itsdb.encode_row([u'あ']) == u'あ'
     assert itsdb.encode_row(['one', 'two']) == 'one@two'
     assert itsdb.encode_row(['one', '', 'three']) == 'one@@three'
     assert itsdb.encode_row(['one@', '\\two\nabc']) == 'one\\s@\\\\two\\nabc'
