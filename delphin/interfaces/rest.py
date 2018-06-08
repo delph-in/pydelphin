@@ -63,7 +63,7 @@ try:
 except ImportError:
     from urlparse import urljoin
 
-from delphin.interfaces.base import ParseResponse
+from delphin.interfaces.base import ParseResponse, Processor
 
 default_erg_server = 'http://erg.delph-in.net/rest/0.9/'
 
@@ -89,10 +89,17 @@ class _RestResponse(ParseResponse):
             return ParseResponse.get(key, default)
 
 
-class DelphinRestClient(object):
+# For a more harmonious interface (see GitHub issue #141) the
+# DelphinRestClient could be subclassed (e.g., DelphinRestParser, etc.)
+# and the subclasses fix the parameters and headers at initialization
+
+class DelphinRestClient(Processor):
     """
     A class for managing requests to a DELPH-IN web API server.
     """
+
+    task = 'parse'
+
     def __init__(self, server=default_erg_server):
         self.server = server
 
@@ -125,6 +132,15 @@ class DelphinRestClient(object):
             return _RestResponse(r.json())
         else:
             r.raise_for_status()
+
+    def process_item(self, datum, keys=None, params=None, headers=None):
+        response = self.parse(datum, params=params, headers=headers)
+        if keys is not None:
+            response['keys'] = keys
+        if 'task' not in response and self.task is not None:
+            response['task'] = self.task
+        return response
+
 
 def parse(input, server=default_erg_server, params=None, headers=None):
     """

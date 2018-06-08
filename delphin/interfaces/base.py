@@ -1,5 +1,6 @@
 
 from collections import Sequence
+from datetime import datetime
 
 from delphin.derivation import Derivation
 from delphin.tokens import YyTokenLattice
@@ -10,6 +11,31 @@ from delphin.mrs import (
     eds,
 )
 from delphin.util import SExpr, stringtypes
+
+
+class Processor(object):
+    task = None
+
+    def process_item(self, datum, keys=None):
+        """
+        Send *datum* to the processor and return the result.
+
+        This method is a generic wrapper around a processor-specific
+        processing method that keeps track of additional item and
+        processor information. Specifically, if *keys* is provided,
+        it is copied into the `keys` key of the response object, and
+        if the processor object's `task` member is non-`None`, it is
+        copied into the `task` key of the response. These help with
+        keeping track of items when many are processed at once, and
+        to help downstream functions identify what the process did.
+
+        Args:
+            datum: the item content to process
+            keys: a mapping of item identifiers which will be copied
+                into the response
+        """
+        raise NotImplementedError()
+
 
 class ParseResult(dict):
     """
@@ -130,3 +156,117 @@ class ParseResponse(dict):
                 toks = YyTokenLattice.from_list(toks)
         return toks
 
+
+class FieldMapper(object):
+    """
+    A class for mapping respsonses to [incr tsdb()] fields.
+
+    This class provides two methods for mapping responses to fields:
+
+    * map() - takes a response and returns a list of (table, data)
+        tuples for the data in the response, as well as aggregating
+        any necessary information
+    * cleanup() - returns any (table, data) tuples resulting from
+        aggregated data over all runs, then clears this data
+
+    Alternative [incr tsdb()] schema can be handled by overriding
+    these two methods and the __init__() method.
+    """
+    def __init__(self):
+        # the parse keys exclude some that are handled specially
+        self._parse_keys = '''
+            ninputs ntokens readings first total tcpu tgc treal words
+            l-stasks p-ctasks p-ftasks p-etasks p-stasks
+            aedges pedges raedges rpedges tedges eedges ledges sedges redges
+            unifications copies conses symbols others gcs i-load a-load
+            date error comment
+        '''.split()
+        self._result_keys = '''
+            result-id time r-ctasks r-ftasks r-etasks r-stasks size
+            r-aedges r-pedges derivation surface tree mrs
+        '''.split()
+        self._run_keys = '''
+            run-comment platform protocol tsdb application environment
+            grammar avms sorts templates lexicon lrules rules
+            user host os start end items status
+        '''.split()
+        self._parse_id = -1
+        self._runs = {}
+        self._last_run_id = -1
+
+    def map(self, response):
+        """
+        Process *response* and return a list of (table, rowdata) tuples.
+        """
+        inserts = []
+
+        parse = {}
+        # custom remapping, cleanup, and filling in holes
+        parse['i-id'] = response.get('keys', {}).get('i-id', -1)
+        self._parse_id = max(self._parse_id + 1, parse['i-id'])
+        parse['parse-id'] = self._parse_id
+        parse['run-id'] = response.get('run', {}).get('run-id', -1)
+        if 'tokens' in response:
+            parse['p-input'] = response['tokens'].get('initial')
+            parse['p-tokens'] = response['tokens'].get('internal')
+            if 'ninputs' not in response:
+                toks = response.tokens('initial')
+                if toks is not None:
+                    response['ninputs'] = len(toks.tokens)
+            if 'ntokens' not in response:
+                toks = response.tokens('internal')
+                if toks is not None:
+                    response['ntokens'] = len(toks.tokens)
+        if 'readings' not in response and 'results' in response:
+            response['readings'] = len(response['results'])
+        # basic mapping
+        for key in self._parse_keys:
+            if key in response:
+                parse[key] = response[key]
+        inserts.append(('parse', parse))
+
+        for result in response.get('results', []):
+            d = {'parse-id': self._parse_id}
+            if 'flags' in result:
+                d['flags'] = SExpr.format(result['flags'])
+            for key in self._result_keys:
+                if key in result:
+                    d[key] = result[key]
+            inserts.append(('result', d))
+
+        if 'run' in response:
+            run_id = response['run'].get('run-id', -1)
+            # check if last run was not closed properly
+            if run_id not in self._runs and self._last_run_id in self._runs:
+                last_run = self._runs[self._last_run_id]
+                if 'end' not in last_run:
+                    last_run['end'] = datetime.now()
+            self._runs[run_id] = response['run']
+            self._last_run_id = run_id
+
+        return inserts
+
+    def cleanup(self):
+        """
+        Return aggregated (table, rowdata) tuples and clear the state.
+        """
+        inserts = []
+
+        last_run = self._runs[self._last_run_id]
+        if 'end' not in last_run:
+            last_run['end'] = datetime.now()
+
+        for run_id in sorted(self._runs):
+            run = self._runs[run_id]
+            d = {'run-id': run.get('run-id', -1)}
+            for key in self._run_keys:
+                if key in run:
+                    d[key] = run[key]
+            inserts.append(('run', d))
+
+        # reset for next task
+        self._parse_id = -1
+        self._runs = {}
+        self._last_run_id = -1
+
+        return inserts

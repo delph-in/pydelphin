@@ -2,6 +2,69 @@
 
 ## [Unreleased][unreleased]
 
+
+## [v0.7.1][]
+
+There were some bugs in the last release, particularly with Python 2.7, which
+have been addressed in this release. There is one significant new feature,
+which is the ability to process [incr tsdb()] profiles, either with the
+`process()` method on `TestSuite` objects or via the new `process` command.
+
+**Note**: there are some changes that may break backward compatibility; these
+changes are prefixed with "**BREAKING**"
+
+### Added
+
+* `delphin.interfaces.ace.AceProcess.run_infos` stores information related
+  to each run of an AceProcess, such as the machine architecture, user name,
+  and start/end times; this info is made available via the `run` key in
+  response objects
+* `delphin.interfaces.ace.AceProcess.run_info` accesses the run information
+  of the currently running process, or the last process if it has already
+  ended
+* `delphin.interfaces.base.Processor` is the base class for the ACE and REST
+  processor interfaces and introduces the `task` member and `process_item()`
+  function
+* `delphin.util.SExpr` now has a `format()` method which takes basic objects
+  (as from `SExpr.parse()`) and formats them in the lisp notation
+* `delphin.interfaces.base.FieldMapper` for mapping interface response objects
+  to [incr tsdb()] (table, rowdata) tuples.
+* `delphin.itsdb.TestSuite.process()` function for using a processor (e.g.,
+  AceParser) to process each item in the testsuite.
+* Add `process` command to main script
+
+### Changed
+
+* `delphin.itsdb.Record` can now accept a mapping of field names to values
+  for instantiation, and the column indices will be looked up from the schema
+* `delphin.itsdb.Record` now validates field data (and tests are added)
+* `delphin.itsdb.Record` values can be set by the field name and index
+* `ace.AceProcess` and `rest.DelphinRestClient` in `delphin.interfaces` now
+  inherit from `base.Processor` (#141)
+* `delphin.itsdb.ItsdbProfile` takes an optional `cast` keyword argument; this
+  class is deprecated, but the addition is to smooth over the transition to
+  the new `TestSuite` class.
+* Clarified the documentation and code for `delphin.itsdb.TestSuite.write()`
+  regarding the specifications of tables and/or data.
+* Reverted an incomplete rewrite of `delphin.itsdb.make_skeleton()`
+* Replaced `delphin.util.SExpr` with a custom non-PEG parser, which seems
+  to be much faster for pathological items (#145)
+* **BREAKING** `ItsdbProfile`, `TestSuite`, and `Table.from_file()` in
+  `delphin.itsdb` now accept an encoding parameter, which defaults to `utf-8`.
+  Profiles will be read and written using the specified encoding, instead of
+  using whatever is defined by the locale. This should only be a breaking
+  change if your preferred locale is neither `ascii` nor `utf-8`.
+* **BREAKING** `ItsdbProfile` and `TestSuite` in `delphin.itsdb` delete extra
+  table files on writing (e.g., if `item.gz` is written, `item` will be
+  deleted if it also exists). This is only breaking if anyone relied on having
+  both the gzipped and regular versions of tables.
+
+### Fixed
+
+* The `mkprof` command now correctly makes non-full profiles.
+* The `mkprof` command is now more Python 2.7-compatible
+* Made `delphin.itsdb` more compatible with Python 2.7
+
 ## [v0.7.0][]
 
 This release adds a number of features. The main ones include a redone
@@ -564,6 +627,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v0.7.1]: ../../releases/tag/v0.7.1
 [v0.7.0]: ../../releases/tag/v0.7.0
 [v0.6.2]: ../../releases/tag/v0.6.2
 [v0.6.1]: ../../releases/tag/v0.6.1

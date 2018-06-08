@@ -172,22 +172,22 @@ def mkprof(args):
             key_filter=True,
             gzip=args.gzip)
     else:
-        rows = []
+        o = itsdb.TestSuite(path=outdir, relations=relations)
         if p is None:
             if args.input is not None:
-                rows = _lines_to_rows(open(args.input))
+                o.write({'item': _lines_to_rows(open(args.input))})
             else:
-                rows = _lines_to_rows(sys.stdin)
-        o = itsdb.make_skeleton(outdir, relations, rows, gzip=args.gzip)
-        if p is not None:
+                o.write({'item': _lines_to_rows(sys.stdin)})
+        else:
             for table in itsdb.tsdb_core_files:
                 if p.size(table) > 0:
-                    o.write_table(table, p.read_table(table))
+                    o.write({table: p.read_table(table)}, gzip=args.gzip)
+        o.reload()
         # unless a skeleton was requested, make empty files for other tables
         if not args.skeleton:
             for table in o.relations:
-                if o.size(table) == 0:
-                    o.write_table(table, [])
+                if len(o[table]) == 0:
+                    o.write({table: []})
 
     # summarize what was done
     if sys.stdout.isatty():
@@ -205,6 +205,38 @@ def mkprof(args):
         elif os.path.isfile(f + '.gz'):
             stat = os.stat(f + '.gz')
             print(fmt.format(stat.st_size, _red(filename + '.gz')))
+
+
+def process(args):
+    """
+    Process (e.g., parse) a [incr tsdb()] profile.
+    """
+    from delphin.interfaces import ace
+    if args.source is None:
+        args.source = args.PROFILE
+    if args.filter is None:
+        args.filter = []
+    if args.p:
+        args.filter.append('result:result-id=x=={}'.format(args.p))
+    if args.generate:
+        processor = ace.AceGenerator
+    elif args.transfer:
+        processor = ace.AceTransferer
+    else:
+        if not args.all_items:
+            args.filter.append('item:i-wf=x!=2')
+        processor = ace.AceParser
+
+    source = _prepare_input_profile(
+        args.source, filters=args.filter, applicators=args.apply, cast=True)
+
+    target = itsdb.TestSuite(args.PROFILE)
+
+    with processor(args.grammar) as cpu:
+        target.process(cpu, args.input, source=source)
+
+    target.write()
+
 
 
 def compare(args):
@@ -354,12 +386,12 @@ def _penman_dumps(x, model=None, **kwargs):
 # working with directories and profiles
 
 
-def _prepare_input_profile(path, filters=None, applicators=None):
+def _prepare_input_profile(path, filters=None, applicators=None, cast=False):
     flts = [_make_itsdb_action(*f.split('=', 1)) for f in (filters or [])]
     apls = [_make_itsdb_action(*f.split('=', 1)) for f in (applicators or [])]
     index = len(flts) > 0
     prof = itsdb.ItsdbProfile(
-        path, filters=flts, applicators=apls, index=index)
+        path, filters=flts, applicators=apls, index=index, cast=cast)
     return prof
 
 
@@ -371,10 +403,18 @@ def _make_itsdb_action(data_specifier, function):
 
 def _prepare_output_directory(path):
     try:
-        os.makedirs(path, exist_ok=True)
-    except PermissionError:
-        sys.exit('Permission denied to create output directory: {}'
-                 .format(path))
+        os.makedirs(path)  # exist_ok=True is available from Python 3.2
+    except OSError as ex:  # PermissionError is available from Python 3.3
+        if ex.errno == 13:
+            sys.exit('Permission denied to create output directory: {}'
+                     .format(path))
+        elif ex.errno == 17:
+            if os.path.isfile(path):
+                sys.exit('Path is an existing file: ' + path)
+            else:
+                pass  # existing directory; maybe it's usable
+        else:
+            raise
     if not os.access(path, os.R_OK | os.W_OK):
         sys.exit('Cannot write to output directory: {}'.format(path))
 
@@ -527,6 +567,43 @@ mkprof_grp2.add_argument(
 mkprof_parser.add_argument(
     '-z', '--gzip', action='store_true', help='compress table files with gzip')
 
+# process subparser
+process_parser = argparse.ArgumentParser(add_help=False)
+process_parser.set_defaults(func=process)
+process_parser.add_argument(
+    'PROFILE', help='target profile'
+)
+process_parser.add_argument(
+    '-g', '--grammar', metavar='GRM', required=True,
+    help='compiled grammar image'
+)
+process_parser.add_argument(
+    '-s', '--source', metavar='PATH',
+    help='source profile; if unset, set to PROFILE'
+)
+process_parser.add_argument(
+    '-i', '--input', metavar='DATASPEC',
+    help='data specifier for input items (see above)'
+)
+process_parser.add_argument(
+    '--all-items', action='store_true',
+    help='don\'t exclude ignored items (i-wf==2) in parsing'
+)
+process_grp1 = process_parser.add_mutually_exclusive_group()
+process_grp1.add_argument(
+    '-e', '--generate', action='store_true',
+    help='generation mode (--source is strongly encouraged)'
+)
+process_grp1.add_argument(
+    '-t', '--transfer', action='store_true',
+    help='transfer mode (--source is strongly encouraged)'
+)
+process_parser.add_argument(
+    '-p', metavar='RID',
+    help=('transfer or generate from result with result-id=RID; '
+          'short for \'--filter result:result-id=x==RID\'')
+)
+
 # compare subparser
 compare_parser = argparse.ArgumentParser(add_help=False)
 compare_parser.set_defaults(func=compare)
@@ -584,6 +661,22 @@ subparser.add_parser(
         will copy a full profile, while the --skeleton option will only write
         the tsdb-core files (e.g., 'item') and 'relations' file.
         """))
+subparser.add_parser(
+    'process',
+    parents=[common_parser, process_parser, profile_parser],
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=redent("""
+        Use a processor (namely ACE) to process each item in the [incr tsdb()]
+        test suite given by --source (PROFILE if --source is not given). For
+        standard [incr tsdb()] schemata, input items given by the following
+        selectors for each task (configurable via the --input option):
+            * parse: item:i-input
+            * transfer: result:mrs
+            * generate: result:mrs
+        In addition, the following filter is applied if --source is a standard
+        [incr tsdb()] profile and --all-items is not used:
+            --filter=item:i-wf="x!=2"
+    """))
 subparser.add_parser(
     'compare', parents=[common_parser, compare_parser, profile_parser])
 subparser.add_parser(

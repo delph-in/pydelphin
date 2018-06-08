@@ -1,26 +1,72 @@
+# -*- coding: UTF-8 -*-
+
 """
-The itsdb module makes it easy to work with [incr tsdb()] profiles.
-The ItsdbProfile class works with whole profiles, but it generally
-relies on the module-level functions to do its work (such as
-get_relations() or decode_row()). Queries over profiles can be
-customized through the use of filters (see filter_rows()), applicators
-(see apply_rows()), and selectors (see select_rows()). In addition,
-one can create a new skeleton using the make_skeleton() function.
+The `itsdb` module provides classes and functions for working with
+[incr tsdb()] profiles (or, more generally, testsuites). It handles
+the technical details of encoding and decoding records in tables,
+including escaping and unescaping the reserved characters, pairing
+columns with their relational descriptions, and casting types (such
+as `:integer`, etc.), so that the user has a natural way of working
+with the data. This module covers all aspects of [incr tsdb()] data,
+from [Relations] files and [Field] descriptions to [Record], [Table],
+and full [TestSuite] classes. [TestSuite] is the most user-facing
+interface, and it makes it easy to load the tables of a testsuite
+into memory, inspect its contents, modify or create data, and write
+the data to disk.
+
+```python
+>>> from delphin import itsdb
+>>> ts = itsdb.TestSuite('jacy/tsdb/gold/mrs')
+>>> len(ts['item'])  # tables are lists and support, e.g., len()
+135
+>>> ts['item'][0]['i-input']  # get the input sentence of the first item
+'雨 が 降っ た ．'
+>>> ts['item'][0]['i-id']  # :integer fields are cast to ints
+11
+>>> # desegment each sentence
+>>> for record in ts['item']:
+...     record['i-input'] = ''.join(record['i-input'].split())
+... 
+>>> ts['item'][0]['i-input']
+'雨が降った．'
+>>> ts.write(path='mrs-unsegmented')  # write to a new profile
+>>> ts.reload()  # Restore values from original profile on disk
+>>> ts['item'][0]['i-input']
+'雨 が 降っ た ．'
+```
+
+By default, the `itsdb` module expects testsuites to use the standard
+[incr tsdb()] schema. Testsuites are always read and written
+according to the associated or specified relations file, but other
+things, such as default field values and the list of "core" tables,
+are defined for the standard schema. It is, however, possible to
+define non-standard schemata for particular applications, and most
+functions will continue to work.
 """
 
 from __future__ import print_function
+# TODO: Remove when Python2.7 support is gone
+try:
+    unicode
+except NameError:
+    unicode = str
 
 import os
 import re
-from gzip import open as gzopen
+from gzip import GzipFile
 import logging
+import io
 from io import TextIOWrapper, BufferedReader
-from collections import defaultdict, namedtuple, OrderedDict
+from collections import (
+    defaultdict, namedtuple, OrderedDict, Sequence, Mapping
+)
 from itertools import chain
 from contextlib import contextmanager
 
+
 from delphin.exceptions import ItsdbError
 from delphin.util import safe_int, stringtypes, deprecated
+from delphin.interfaces.base import FieldMapper
 
 ##############################################################################
 # Module variables
@@ -54,6 +100,11 @@ tsdb_core_files = [
     "item-phenomenon",
     "item-set"
 ]
+_default_task_input_selectors = {
+    'parse': 'item:i-input',
+    'transfer': 'result:mrs',
+    'generate': 'result:mrs',
+}
 
 #############################################################################
 # Relations files
@@ -224,9 +275,36 @@ class Record(list):
     """
 
     def __init__(self, fields, iterable):
+        # normalize data format
+        if isinstance(iterable, Mapping):
+            d = iterable
+            iterable = [None] * len(fields)
+            for key, value in d.items():
+                try:
+                    index = fields.index(key)
+                except KeyError:
+                    raise ItsdbError('Invalid field name(s): ' + key)
+                iterable[index] = value
+        else:
+            iterable = list(iterable)
+
+        if len(fields) != len(iterable):
+            raise ItsdbError(
+                'Incorrect number of column values: {} != {}'
+                .format(len(iterable), len(fields))
+            )
+
+        for i, value in enumerate(iterable):
+            field = fields[i]
+            if value is None:
+                if field.key:
+                    raise ItsdbError('Missing key: {}'.format(field.name))
+                iterable[i] = field.default_value()
+            else:
+                iterable[i] = value
+
         self.fields = fields
-        cols = list(iterable)
-        list.__init__(self, cols)
+        list.__init__(self, iterable)
 
     def __repr__(self):
         return "<{} '{}' {}>".format(
@@ -242,6 +320,12 @@ class Record(list):
         if not isinstance(index, int):
             index = self.fields.index(index)
         return list.__getitem__(self, index)
+
+    def __setitem__(self, index, value):
+        if not isinstance(index, int):
+            index = self.fields.index(index)
+        # should the value be validated against the datatype?
+        return list.__setitem__(self, index, value)
 
     def get(self, key, default=None):
         """
@@ -283,7 +367,7 @@ class Table(list):
         list.__init__(self, [Record(fields, rec) for rec in records])
 
     @classmethod
-    def from_file(cls, path, name=None, fields=None):
+    def from_file(cls, path, name=None, fields=None, encoding='utf-8'):
         """
         Instantiate a Table from a database file.
 
@@ -292,6 +376,7 @@ class Table(list):
             name: the table name (inferred by the filename if not given)
             fields: the Relation schema for the table (loaded from the
                 relations file in the same directory if not given)
+            encoding: the character encoding of the files in the testsuite
         """
         path = _table_filename(path)  # do early in case file not found
 
@@ -314,7 +399,7 @@ class Table(list):
             fields = rels[name]
 
         records = []
-        with _open_table(path) as tab:
+        with _open_table(path, encoding) as tab:
             records.extend(
                 map((lambda s: decode_row(s, fields)), tab)
             )
@@ -348,9 +433,11 @@ class TestSuite(object):
         relations: the relations file describing the schema of
             the database; if not given, the relations file under
             *path* will be used
+        encoding: the character encoding of the files in the testsuite
     """
-    def __init__(self, path=None, relations=None):
+    def __init__(self, path=None, relations=None, encoding='utf-8'):
         self._path = path
+        self.encoding = encoding
 
         if isinstance(relations, Relations):
             self.relations = relations
@@ -383,7 +470,7 @@ class TestSuite(object):
         return self._data[tablename]
 
     def reload(self):
-        """Discard temporary changes and reload the databse from disk."""
+        """Discard temporary changes and reload the database from disk."""
         for tablename in self.relations:
             self._reload_table(tablename)
 
@@ -391,7 +478,8 @@ class TestSuite(object):
         fields = self.relations[tablename]
         tablepath = os.path.join(self._path, tablename)
         if os.path.exists(tablepath) or os.path.exists(tablepath + '.gz'):
-            table = Table.from_file(tablepath, name=tablename, fields=fields)
+            table = Table.from_file(tablepath, name=tablename,
+                                    fields=fields, encoding=self.encoding)
         else:
             table = Table(name=tablename, fields=fields)
         self._data[tablename] = table
@@ -429,17 +517,29 @@ class TestSuite(object):
         Write the test suite to disk.
 
         Args:
-            tables: an iterable of names of tables to write; if `None`,
+            tables: a name or iterable of names of tables to write,
+                or a Mapping of table names to table data; if `None`,
                 all tables will be written
             path: the destination directory; if `None` use the path
                 assigned to the TestSuite
             append: if `True`, append to rather than overwrite tables
             gzip: compress non-empty tables with gzip
+        Examples:
+            >>> ts.write(path='new/path')
+            >>> ts.write('item')
+            >>> ts.write(['item', 'parse', 'result'])
+            >>> ts.write({'item': item_rows})
         """
         if path is None:
             path = self._path
         if tables is None:
             tables = self._data
+        elif isinstance(tables, stringtypes):
+            tables = {tables: self[tables]}
+        elif isinstance(tables, Mapping):
+            pass
+        elif isinstance(tables, Sequence):
+            tables = dict((table, self[table]) for table in tables)
 
         # prepare destination
         if not os.path.exists(path):
@@ -449,16 +549,85 @@ class TestSuite(object):
             with open(os.path.join(path, _relations_filename), 'w') as fh:
                 print(str(self.relations), file=fh)
 
-        for table, data in tables.items():
+        for tablename, data in tables.items():
+            # reload table from disk if it is invalidated
             if data is None:
-                data = self[table]
+                data = self[tablename]
             _write_table(
                 path,
-                table,
+                tablename,
                 data,
-                self.relations[table],
-                gzip=gzip
+                self.relations[tablename],
+                gzip=gzip,
+                encoding=self.encoding
             )
+
+    def process(self, cpu, selector=None, source=None, fieldmapper=None):
+        """
+        Process each item in a [incr tsdb()] testsuite
+
+        Args:
+            cpu: a processor interface (e.g., [AceParser])
+            selector: a data specifier to select a single table and
+                column as processor input (e.g., `item:i-input`)
+            source: the testsuite from which input items are taken;
+                if `None`, use self
+            fieldmapper: a [FieldMapper] object for mapping response
+                fields to [incr tsdb()] fields; if `None`, use a
+                default mapper for the standard schema
+        Examples:
+            >>> ts.process(ace_parser, 'item:i-input')
+
+            >>> ts.process(ace_generator, 'result:mrs', source=ts2)
+        """
+        if selector is None:
+            selector = _default_task_input_selectors.get(cpu.task)
+
+        data_table, data_col = get_data_specifier(selector)
+        if len(data_col) != 1:
+            raise ItsdbError(
+                'Selector must specify exactly one data column: {}'
+                .format(selector)
+            )
+        data_col = data_col[0]
+        key_fields = [f for f in self.relations[data_table] if f.key]
+        cols = [f.name for f in key_fields]
+        cols.append(data_col)
+
+        if source is None:
+            source = self
+
+        if fieldmapper is None:
+            fieldmapper = FieldMapper()
+
+        tables = {}
+        for item in source.select(data_table, cols, mode='dict'):
+            datum = item.pop(data_col)
+            response = cpu.process_item(datum, keys=item)
+            logging.info(
+                'Processed item {:>16}  {:>8} results'
+                .format(make_row(item, key_fields), len(response['results']))
+            )
+            for tablename, data in fieldmapper.map(response):
+                _add_record(tables, tablename, data, self.relations)
+
+        for tablename, data in fieldmapper.cleanup():
+            _add_record(tables, tablename, data, self.relations)
+
+        for tablename, table in tables.items():
+            self._data[tablename] = table
+
+
+def _add_record(tables, tablename, data, relations):
+    fields = relations[tablename]
+    if tablename not in tables:
+        tables[tablename] = Table(tablename, fields)
+    # remove any keys that aren't relation fields
+    for invalid_key in set(data).difference([f.name for f in fields]):
+        del data[invalid_key]
+    tables[tablename].append(Record(fields, data))
+
+
 
 ##############################################################################
 # Non-class (i.e. static) functions
@@ -544,7 +713,10 @@ def encode_row(fields):
     Returns:
         A [incr tsdb()]-encoded string
     """
-    return _field_delimiter.join(map(escape, map(str, fields)))
+    # NOTE: str(f) only works for Python3
+    unicode_fields = [unicode(f) for f in fields]
+    escaped_fields = map(escape, unicode_fields)
+    return _field_delimiter.join(escaped_fields)
 
 
 _character_escapes = {
@@ -621,20 +793,20 @@ def _table_filename(tbl_filename):
 
 
 @contextmanager
-def _open_table(tbl_filename):
+def _open_table(tbl_filename, encoding):
     path = _table_filename(tbl_filename)
     if path.endswith('.gz'):
-        # cannot use mode='rt' until Python2.7 support is gone;
-        # until then use TextIOWrapper
-        with TextIOWrapper(BufferedReader(gzopen(path, mode='r'))) as f:
+        # gzip.open() cannot use mode='rt' until Python2.7 support
+        # is gone; until then use TextIOWrapper
+        with TextIOWrapper(GzipFile(path, mode='r'), encoding=encoding) as f:
             yield f
     else:
-        with open(tbl_filename) as f:
+        with io.open(tbl_filename, encoding=encoding) as f:
             yield f
 
 
 def _write_table(profile_dir, table_name, rows, fields,
-                 append=False, gzip=False):
+                 append=False, gzip=False, encoding='utf-8'):
     # don't gzip if empty
     rows = iter(rows)
     try:
@@ -653,13 +825,20 @@ def _write_table(profile_dir, table_name, rows, fields,
                          .format(profile_dir))
 
     tbl_filename = os.path.join(profile_dir, table_name)
+    gzfn = tbl_filename + '.gz'
     mode = 'a' if append else 'w'
     if gzip:
+        # clean up non-gzip files, if any
+        if os.path.isfile(tbl_filename):
+            os.remove(tbl_filename)
         # text mode only from py3.3; until then use TextIOWrapper
         #mode += 't'  # text mode for gzip
-        f = TextIOWrapper(gzopen(tbl_filename + '.gz', mode=mode))
+        f = TextIOWrapper(GzipFile(gzfn, mode=mode), encoding=encoding)
     else:
-        f = open(tbl_filename, mode=mode)
+        # clean up gzip files, if any
+        if os.path.isfile(gzfn):
+            os.remove(gzfn)
+        f = io.open(tbl_filename, mode=mode, encoding=encoding)
 
     for row in rows:
         f.write(make_row(row, fields) + '\n')
@@ -700,7 +879,7 @@ def select_rows(cols, rows, mode='list'):
     | mode           | description       | example `['i-id', 'i-wf']` |
     | -------------- | ----------------- | -------------------------- |
     | list (default) | a list of values  | `[10, 1]`                  |
-    | dict           | col to value map  | `{'i-id':'10','i-wf':'1'}` |
+    | dict           | col to value map  | `{'i-id': 10,'i-wf': 1}`   |
     | row            | [incr tsdb()] row | `'10@1'`                   |
 
     Args:
@@ -873,19 +1052,16 @@ def make_skeleton(path, relations, item_rows, gzip=False):
     Raises:
         ItsdbError if the destination directory could not be created.
     """
-    skel = TestSuite(relations=relations)
-    skel.write({'item':item_rows}, path=path, gzip=gzip)
+    try:
+        os.makedirs(path)
+    except OSError:
+        raise ItsdbError('Path already exists: {}.'.format(path))
 
-    # try:
-    #     os.makedirs(path)
-    # except OSError:
-    #     raise ItsdbError('Path already exists: {}.'.format(path))
-
-    # import shutil
-    # shutil.copyfile(relations, os.path.join(path, _relations_filename))
-    # prof = ItsdbProfile(path, index=False)
-    # prof.write_table('item', item_rows, gzip=gzip)
-    # return prof
+    import shutil
+    shutil.copyfile(relations, os.path.join(path, _relations_filename))
+    prof = ItsdbProfile(path, index=False)
+    prof.write_table('item', item_rows, gzip=gzip)
+    return prof
 
 
 @deprecated(final_version='1.0.0')
@@ -958,6 +1134,8 @@ class ItsdbProfile(object):
             the filters.
         index: If `True`, indices are created based on the keys of
             each table.
+        cast: if `True`, automatically cast data into the type defined
+            by its relation field (e.g., :integer)
     """
 
     # _tables is a list of table names to consider (for indexing, writing,
@@ -971,8 +1149,11 @@ class ItsdbProfile(object):
                 final_version='1.0.0',
                 alternative='TestSuite')
     def __init__(self, path, relations=None,
-                 filters=None, applicators=None, index=True):
+                 filters=None, applicators=None, index=True,
+                 cast=False, encoding='utf-8'):
         self.root = path
+        self.cast = cast
+        self.encoding = encoding
 
         # somewhat backwards-compatible resolution of relations file
         if isinstance(relations, dict):
@@ -1072,19 +1253,20 @@ class ItsdbProfile(object):
         mapping column names to values. Data from a profile is decoded
         by decode_row(). No filters or applicators are used.
         """
-
+        fields = self.table_relations(table) if self.cast else None
         field_names = [f.name for f in self.table_relations(table)]
         field_len = len(field_names)
-        with _open_table(os.path.join(self.root, table)) as tbl:
+        table_path = os.path.join(self.root, table)
+        with _open_table(table_path, self.encoding) as tbl:
             for line in tbl:
-                fields = decode_row(line)
-                if len(fields) != field_len:
+                cols = decode_row(line, fields)
+                if len(cols) != field_len:
                     # should this throw an exception instead?
                     logging.error('Number of stored fields ({}) '
                                   'differ from the expected number({}); '
                                   'fields may be misaligned!'
-                                  .format(len(fields), field_len))
-                row = OrderedDict(zip(field_names, fields))
+                                  .format(len(cols), field_len))
+                row = OrderedDict(zip(field_names, cols))
                 yield row
 
     def read_table(self, table, key_filter=True):
@@ -1169,7 +1351,8 @@ class ItsdbProfile(object):
                      rows,
                      self.table_relations(table),
                      append=append,
-                     gzip=gzip)
+                     gzip=gzip,
+                     encoding=self.encoding)
 
     def write_profile(self, profile_directory, relations_filename=None,
                       key_filter=True,
@@ -1214,8 +1397,10 @@ class ItsdbProfile(object):
                 fn = _table_filename(os.path.join(self.root, table))
                 _gzip = gzip if gzip is not None else fn.endswith('.gz')
                 rows = list(self.read_table(table, key_filter=key_filter))
-                _write_table(profile_directory, table, rows, fields,
-                             append=append, gzip=_gzip)
+                _write_table(
+                    profile_directory, table, rows, fields,
+                    append=append, gzip=_gzip, encoding=self.encoding
+                )
             except ItsdbError:
                 logging.warning(
                     'Could not write "{}"; table doesn\'t exist.'.format(table)
