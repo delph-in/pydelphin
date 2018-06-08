@@ -1,11 +1,45 @@
 """
-The itsdb module makes it easy to work with [incr tsdb()] profiles.
-The ItsdbProfile class works with whole profiles, but it generally
-relies on the module-level functions to do its work (such as
-get_relations() or decode_row()). Queries over profiles can be
-customized through the use of filters (see filter_rows()), applicators
-(see apply_rows()), and selectors (see select_rows()). In addition,
-one can create a new skeleton using the make_skeleton() function.
+The `itsdb` module provides classes and functions for working with
+[incr tsdb()] profiles (or, more generally, testsuites). It handles
+the technical details of encoding and decoding records in tables,
+including escaping and unescaping the reserved characters, pairing
+columns with their relational descriptions, and casting types (such
+as `:integer`, etc.), so that the user has a natural way of working
+with the data. This module covers all aspects of [incr tsdb()] data,
+from [Relations] files and [Field] descriptions to [Record], [Table],
+and full [TestSuite] classes. [TestSuite] is the most user-facing
+interface, and it makes it easy to load the tables of a testsuite
+into memory, inspect its contents, modify or create data, and write
+the data to disk.
+
+```python
+>>> from delphin import itsdb
+>>> ts = itsdb.TestSuite('jacy/tsdb/gold/mrs')
+>>> len(ts['item'])  # tables are lists and support, e.g., len()
+135
+>>> ts['item'][0]['i-input']  # get the input sentence of the first item
+'雨 が 降っ た ．'
+>>> ts['item'][0]['i-id']  # :integer fields are cast to ints
+11
+>>> # desegment each sentence
+>>> for record in ts['item']:
+...     record['i-input'] = ''.join(record['i-input'].split())
+... 
+>>> ts['item'][0]['i-input']
+'雨が降った．'
+>>> ts.write(path='mrs-unsegmented')  # write to a new profile
+>>> ts.reload()  # Restore values from original profile on disk
+>>> ts['item'][0]['i-input']
+'雨 が 降っ た ．'
+```
+
+By default, the `itsdb` module expects testsuites to use the standard
+[incr tsdb()] schema. Testsuites are always read and written
+according to the associated or specified relations file, but other
+things, such as default field values and the list of "core" tables,
+are defined for the standard schema. It is, however, possible to
+define non-standard schemata for particular applications, and most
+functions will continue to work.
 """
 
 from __future__ import print_function
