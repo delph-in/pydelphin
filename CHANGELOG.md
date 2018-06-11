@@ -2,6 +2,10 @@
 
 ## [Unreleased][unreleased]
 
+### Fixed
+
+* ACE interface no longer gives unnecessary error message when reading the run
+  info from the first line of output (#148)
 
 ## [v0.7.1][]
 

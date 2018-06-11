@@ -182,7 +182,7 @@ class AceProcess(Processor):
             # The 'run' note should appear when the process is opened, but
             # handle it here to avoid potential deadlocks if it gets buffered
             elif s.startswith('NOTE: tsdb run:'):
-                self._read_run_info(s)
+                self._read_run_info(s.rstrip())
             # the rest should be normal result lines
             else:
                 lines.append(s.rstrip())
@@ -517,10 +517,10 @@ def _make_response(lines, run):
 def _sexpr_data(line):
     while line:
         expr = SExpr.parse(line)
-        line = expr.remainder
         if len(expr.data) != 2:
             logging.error('Malformed output from ACE: {}'.format(line))
             break
+        line = expr.remainder
         yield expr.data
 
 
