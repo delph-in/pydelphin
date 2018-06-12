@@ -32,8 +32,8 @@ from .components import (
 )
 from .xmrs import Xmrs, Mrs, Dmrs, Rmrs
 
-__all__ = [Lnk, Node, ElementaryPredication,
-           HandleConstraint, Pred, Link, Xmrs, Mrs, Dmrs]
+__all__ = ['Lnk', 'Node', 'ElementaryPredication',
+           'HandleConstraint', 'Pred', 'Link', 'Xmrs', 'Mrs', 'Dmrs']
 
 
 def convert(txt, src_fmt, tgt_fmt, single=True, **kwargs):
