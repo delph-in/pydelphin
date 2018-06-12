@@ -414,7 +414,7 @@ class Table(list):
         *mode* parameter.
 
         Args:
-            cols: an interable of Field (column) names
+            cols: an iterable of Field (column) names
             mode: how to return the data
         """
         if isinstance(cols, stringtypes):
@@ -501,7 +501,7 @@ class TestSuite(object):
         Args:
             arg: a table name, if *cols* is specified, otherwise a data
                 specifier
-            cols: an interable of Field (column) names
+            cols: an iterable of Field (column) names
             mode: how to return the data
         """
         if cols is None:

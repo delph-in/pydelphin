@@ -2,6 +2,10 @@
 
 ## [Unreleased][unreleased]
 
+## [v0.7.2][]
+
+This is a very minor release that just fixes one bug introduced in v0.7.1.
+
 ### Fixed
 
 * ACE interface no longer gives unnecessary error message when reading the run
@@ -631,6 +635,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v0.7.2]: ../../releases/tag/v0.7.2
 [v0.7.1]: ../../releases/tag/v0.7.1
 [v0.7.0]: ../../releases/tag/v0.7.0
 [v0.6.2]: ../../releases/tag/v0.6.2
