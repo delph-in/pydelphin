@@ -7,6 +7,22 @@ delphin.derivation
   Loading Derivation Data
   -----------------------
 
+  For loading a full derivation structure from either the UDF/UDX
+  string representations or the dictionary representation, the
+  :class:`Derivation` class provides class methods to help with the
+  decoding.
+
+  >>> from delphin import derivation
+  >>> d1 = derivation.Derivation.from_string(
+  ...     '(1 entity-name 1 0 1 ("token"))')
+  ... 
+  >>> d2 = derivation.Derivation.from_dict(
+  ...     {'id': 1, 'entity': 'entity-name', 'score': 1,
+  ...      'start': 0, 'end': 1, 'form': 'token'}]})
+  ... 
+  >>> d1 == d2
+  True
+
   .. autoclass:: Derivation
     :show-inheritance:
     :members:
@@ -14,6 +30,8 @@ delphin.derivation
   UDF/UDX Node Types
   ------------------
 
+  There are three different node Types
+  
   .. autoclass:: UdfNode
     :members:
 

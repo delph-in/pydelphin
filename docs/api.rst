@@ -6,7 +6,7 @@ API Documentation
    :maxdepth: 2
    :caption: Modules
 
-   api/delphin.derivations.rst
+   api/delphin.derivation.rst
    api/delphin.extra.rst
    api/delphin.interfaces.rst
    api/delphin.itsdb.rst
