@@ -60,17 +60,22 @@ TOP = '*top*'
 
 
 class Variable(namedtuple('Variable', ('type', 'supertypes', 'proplist'))):
+    """An MRS variable description."""
+
     @property
     def properties(self):
+        """Return the properties constrained by the Variable."""
         return dict(self.proplist)
 
     @classmethod
     def from_dict(cls, d):
+        """Instantiate a Variable from a dictionary representation."""
         return cls(
             d['type'], tuple(d['parents']), list(d['properties'].items())
         )
 
     def to_dict(self):
+        """Return a dictionary representation of the Variable."""
         return {
             'type': self.type,
             'parents': list(self.supertypes),
@@ -79,6 +84,8 @@ class Variable(namedtuple('Variable', ('type', 'supertypes', 'proplist'))):
 
 
 class Role(namedtuple('Role', ('rargname', 'value', 'proplist', 'optional'))):
+    """An MRS role description."""
+
     def __new__(cls, rargname, value, proplist=None, optional=False):
         if proplist is None: proplist = []
         return super(Role, cls).__new__(
@@ -87,10 +94,12 @@ class Role(namedtuple('Role', ('rargname', 'value', 'proplist', 'optional'))):
 
     @property
     def properties(self):
+        """Return the properties constrained by the Role."""
         return dict(self.proplist)
 
     @classmethod
     def from_dict(cls, d):
+        """Instantiate a Role from a dictionary representation."""
         return cls(
             d['rargname'],
             d['value'],
@@ -99,6 +108,7 @@ class Role(namedtuple('Role', ('rargname', 'value', 'proplist', 'optional'))):
         )
 
     def to_dict(self):
+        """Return a dictionary representation of the Role."""
         d = {'rargname': self.rargname, 'value': self.value}
         if self.properties:
             d['properties'] = self.properties
@@ -108,23 +118,31 @@ class Role(namedtuple('Role', ('rargname', 'value', 'proplist', 'optional'))):
 
 
 class Property(namedtuple('Property', ('type', 'supertypes'))):
+    """An MRS morphosemantic property description."""
+
     @classmethod
     def from_dict(cls, d):
+        """Instantiate a Property from a dictionary representation."""
         return cls(d['type'], tuple(d['parents']))
 
     def to_dict(self):
+        """Return a dictionary representation of the Property."""
         return {'type': self.type, 'parents': list(self.supertypes)}
 
 
 class Predicate(namedtuple('Predicate',
                            ('predicate', 'supertypes', 'synopses'))):
+    """An MRS predicate description."""
+
     @classmethod
     def from_dict(cls, d):
+        """Instantiate a Predicate from a dictionary representation."""
         synopses = [tuple(map(Role.from_dict, synopsis))
                     for synopsis in d.get('synopses', [])]
         return cls(d['predicate'], tuple(d['parents']), synopses)
 
     def to_dict(self):
+        """Return a dictionary representation of the Predicate."""
         return {
             'predicate': self.predicate,
             'parents': list(self.supertypes),
@@ -296,9 +314,7 @@ class SemI(object):
 
     @classmethod
     def from_dict(cls, d):
-        """
-        Instantiate a SemI from a dictionary representation.
-        """
+        """Instantiate a SemI from a dictionary representation."""
         read = lambda cls: (lambda pair: (pair[0], cls.from_dict(pair[1])))
         return cls(
             variables=map(read(Variable), d.get('variables', {}).items()),
@@ -308,9 +324,7 @@ class SemI(object):
         )
 
     def to_dict(self):
-        """
-        Return a dictionary representation of the SemI.
-        """
+        """Return a dictionary representation of the SemI."""
         make = lambda pair: (pair[0], pair[1].to_dict())
         return dict(
             variables=dict(make(v) for v in self.variables.items()),

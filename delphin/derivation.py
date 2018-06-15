@@ -1,17 +1,30 @@
 # coding: utf-8
 
 """
-Classes and functions related to Derivation trees.
-see here: http://moin.delph-in.net/ItsdbDerivations
+Classes and functions related to derivation trees.
 
-For the following example from Jacy:
+Derivation trees represent a unique analysis of an input using an
+implemented grammar. They are a kind of syntax tree, but as they use
+the actual grammar entities (e.g., rules or lexical entries) as node
+labels, they are more specific than trees using general category labels
+(e.g., "N" or "VP"). As such, they are more likely to change across
+grammar versions.
+
+.. seealso::
+  More information about derivation trees is found at
+  http://moin.delph-in.net/ItsdbDerivations
+
+For the following Japanese example...
+
+::
 
     遠く    に  銃声    が  聞こえ た 。
     tooku   ni  juusei  ga  kikoe-ta
     distant LOC gunshot NOM can.hear-PFV
     "Shots were heard in the distance."
 
-Here is the derivation tree of a parse:
+... here is the derivation tree of a parse from
+`Jacy <http://moin.delph-in.net/JacyTop>`_::
 
     (utterance-root
      (564 utterance_rule-decl-finite 1.02132 0 6
@@ -37,30 +50,37 @@ Here is the derivation tree of a parse:
           ("た" 5 6)))))))
 
 Derivation trees have 3 types of nodes:
+
   * root nodes, with only an entity name and a single child
+
   * normal nodes, with 5 fields (below) and a list of children
-    - *id* (an integer id given by the processor that produced the derivation)
-    - *entity* (e.g. rule or type name)
-    - *score* (a (MaxEnt) score for the subtree rooted at the current node)
-    - *start* (the character index of the left-most side of the tree)
-    - *end* (the character index of the right-most side of the tree)
-  * terminal/left/lexical nodes, which contain the input tokens processed
-    by that subtree
 
-This module has a class UdfNode for capturing root and normal nodes.
-Root nodes are expressed as a UdfNode whose *id* is `None`. For root
-nodes, all fields except entity and the list of daughters are expected
-to be `None`. Leaf nodes are simply an iterable of token information.
+    - *id* -- an integer id given by the producer of the derivation
+    - *entity* -- rule or type name
+    - *score* -- a (MaxEnt) score for the current node's subtree
+    - *start* -- the character index of the left-most side of the tree
+    - *end* -- the character index of the right-most side of the tree
 
-The Derivation class---itself a UdfNode---, has some tree-level
-operations defined, in particular the `from_string()` method, which is
-used to read the serialized derivation into a Python object.
+  * terminal/left/lexical nodes, which contain the input tokens
+    processed by that subtree
+
+This module uses the :class:`UdfNode` class for capturing root and
+normal nodes. Root nodes are expressed as a :class:`UdfNode` whose
+``id`` is ``None``. For root nodes, all fields except ``entity`` and
+the list of daughters are expected to be ``None``. Leaf nodes are
+simply an iterable of token information.
+
+The :class:`Derivation` class---itself a :class:`UdfNode`---, has some
+tree-level operations defined, in particular the
+:meth:`Derivation.from_string` method, which is used to read the
+serialized derivation into a Python object.
 
 """
 
-import warnings
 import re
 from collections import namedtuple, Sequence
+
+from delphin.util import deprecated
 
 _terminal_fields = ('form', 'tokens')
 _token_fields = ('id', 'tfs')
@@ -87,9 +107,11 @@ class _UdfNodeBase(object):
 
     def is_root(self):
         """
-        Return True if the node is a root node. Note that this is a
-        specific type of node, and not just the top node. By convention,
-        a node is root if its *id* is `None`.
+        Return True if the node is a root node.
+
+        Note:
+            This is not simply the top node; by convention, a node is
+            a root if its ``id`` is ``None``.
         """
         return isinstance(self, UdfNode) and self.id is None
 
@@ -98,12 +120,22 @@ class _UdfNodeBase(object):
     def to_udf(self, indent=1):
         """
         Encode the node and its descendants in the UDF format.
+
+        Args:
+            indent (int): the number of spaces to indent at each level
+        Returns:
+            str: the UDF-serialized string
         """
         return _to_udf(self, indent, 1)
 
     def to_udx(self, indent=1):
         """
         Encode the node and its descendants in the UDF export format.
+
+        Args:
+            indent (int): the number of spaces to indent at each level
+        Returns:
+            str: the UDX-serialized string
         """
         return _to_udf(self, indent, 1, udx=True)
 
@@ -113,11 +145,13 @@ class _UdfNodeBase(object):
 
         Args:
             fields: if given, this is a whitelist of fields to include
-                on nodes (`daughters` and `form` are always shown)
+                on nodes (``daughters`` and ``form`` are always shown)
             labels: optional label annotations to embed in the
                 derivation dict; the value is a list of lists matching
-                the structure of the derivation (e.g., 
-                `["S" ["NP" ["NNS" ["Dogs"]]] ["VP" ["VBZ" ["bark"]]]]`)
+                the structure of the derivation (e.g.,
+                ``["S" ["NP" ["NNS" ["Dogs"]]] ["VP" ["VBZ" ["bark"]]]]``)
+        Returns:
+            dict: the dictionary representation of the structure
         """
         fields = set(fields)
         diff = fields.difference(_all_fields)
@@ -221,9 +255,15 @@ def _to_dict(obj, fields, labels):
 
 class UdfToken(namedtuple('UdfToken', _token_fields)):
     """
+    A token represenatation in derivations.
+
     Token data are not formally nodes, but do have an *id*. Most
-    [UdfTerminal] nodes will only have one [UdfToken], but multiword
-    entities (e.g. "ad hoc") will have more than one.
+    :class:`UdfTerminal` nodes will only have one UdfToken, but
+    multi-word entities (e.g. "ad hoc") will have more than one.
+
+    Args:
+        id (int): token identifier
+        tfs (str): the feature structure for the token
     """
     def __new__(cls, id, tfs):
         if id is not None:
@@ -233,7 +273,7 @@ class UdfToken(namedtuple('UdfToken', _token_fields)):
     def __repr__(self):
         return '<UdfToken object ({} {!r}) at {}>'.format(
             self.id, self.tfs, id(self)
-        )        
+        )
 
     def __eq__(self, other):
         """
@@ -246,9 +286,16 @@ class UdfToken(namedtuple('UdfToken', _token_fields)):
 
 class UdfTerminal(_UdfNodeBase, namedtuple('UdfTerminal', _terminal_fields)):
     """
-    Terminal nodes in the Unified Derivation Format. The *form*
-    field is always set, but *tokens* may be `None`.
+    Terminal nodes in the Unified Derivation Format.
+
+    The *form* field is always set, but *tokens* may be ``None``.
+
     See: http://moin.delph-in.net/ItsdbDerivations
+
+    Args:
+        form (str): surface form of the terminal
+        tokens (list, optional): iterable of tokens
+        parent (UdfNode, optional): parent node in derivation
     """
 
     def __new__(cls, form, tokens=None, parent=None):
@@ -278,13 +325,29 @@ class UdfTerminal(_UdfNodeBase, namedtuple('UdfTerminal', _terminal_fields)):
 
 class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
     """
-    Normal (non-leaf) nodes in the Unified Derivation Format. Root nodes
-    are just UdfNodes whose *id*, by convention, is `None`. The
-    *daughters* list can composed of either UdfNodes or other objects
-    (generally it should be uniformly one or the other). In the latter
-    case, the UdfNode is a preterminal, and the daughters are terminal
-    nodes.
+    Normal (non-leaf) nodes in the Unified Derivation Format.
+
+    Root nodes are just UdfNodes whose *id*, by convention, is
+    ``None``. The *daughters* list can composed of either UdfNodes or
+    other objects (generally it should be uniformly one or the other).
+    In the latter case, the UdfNode is a preterminal, and the daughters
+    are terminal nodes.
+
     See: http://moin.delph-in.net/ItsdbDerivations
+
+    Args:
+        id (int): unique node identifier
+        entity (str): grammar entity represented by the node
+        score (float, optional): probability or weight of the node
+        start (int, optional): start position of tokens encompassed by
+            the node
+        end (int, optional): end position of tokens encompassed by the
+            node
+        daughters (list, optional): iterable of daughter nodes
+        head (bool, optional): ``True`` if the node is a syntactic head
+            node
+        type (str, optional): grammar type name
+        parent (UdfNode, optional): parent node in derivation
     """
 
     def __new__(cls, id, entity,
@@ -342,10 +405,13 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
 
     def is_head(self):
         """
-        Return `True` if the node is a head (is marked as a head in
-        the UDX format or has no siblings), `False` if the node is
-        known to not be a head (has a sibling that is a head), or
-        otherwise return `None`.
+        Return ``True`` if the node is a head.
+
+        A node is a head if it is marked as a head in the UDX format or
+        it has no siblings. ``False`` is returned if the node is known
+        to not be a head (has a sibling that is a head). Otherwise it is
+        indeterminate if the node is a head, and ``None`` is returned.
+
         """
         if (self._head or self.is_root() or
                 len(getattr(self._parent, 'daughters', [None])) == 1):
@@ -354,24 +420,33 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
             return False
         return None
 
+    @deprecated(final_version='1.0.0', alternative='UdfNode.entity')
     def basic_entity(self):
         """
-        Return the entity without the lexical type information. In the
-        export (UDX) format, lexical types follow entities of
-        preterminal nodes, joined by an at-sign (`@`). In regular UDF or
-        non-preterminal nodes, this will just return the entity string.
+        Return the entity without the lexical type information.
+
+        In the export (UDX) format, lexical types follow entities of
+        preterminal nodes, joined by an at-sign (``@``). In regular UDF
+        or non-preterminal nodes, this will just return the entity
+        string.
+
+        .. deprecated:: 0.5.1
+           Use :attr:`entity`
         """
-        warnings.warn('Deprecated; try UdfNode.entity', DeprecationWarning)
         return self.entity
 
+    @deprecated(final_version='1.0.0', alternative='UdfNode.type')
     def lexical_type(self):
         """
-        Return the lexical type of a preterminal node. In export (UDX)
-        format, lexical types follow entities of preterminal nodes,
-        joined by an at-sign (`@`). In regular UDF or non-preterminal
-        nodes, this will return None.
+        Return the lexical type of a preterminal node.
+
+        In export (UDX) format, lexical types follow entities of
+        preterminal nodes, joined by an at-sign (``@``). In regular UDF
+        or non-preterminal nodes, this will return None.
+
+        .. deprecated:: 0.5.1
+           Use :attr:`type`
         """
-        warnings.warn('Deprecated; try UdfNode.type', DeprecationWarning)
         return self.type
 
     # Convenience methods
@@ -402,8 +477,12 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
 
 class Derivation(UdfNode):
     """
-    A class for reading, writing, and storing derivation trees. Objects
-    of this class are UDF nodes.
+    A [incr tsdb()] derivation.
+
+    This class exists to facilitate the reading of UDF string
+    serializations and dictionary representations (e.g., decoded from
+    JSON). The resulting structure is otherwise equivalent to a
+    :class:`UdfNode`, and inherits all its methods.
     """
 
     # note that this regex doesn't have the initial open-parenthesis
@@ -454,11 +533,9 @@ class Derivation(UdfNode):
     @classmethod
     def from_string(cls, s):
         """
-        Instantiate a Derivation from a standard string representation.
-        See here for details: http://moin.delph-in.net/ItsdbDerivations
+        Instantiate a Derivation from a UDF or UDX string representation.
 
-        This method accommodates both the normal UDF format and the
-        UDX export format.
+        See here for details: http://moin.delph-in.net/ItsdbDerivations
         """
         if not (s.startswith('(') and s.endswith(')')):
             raise ValueError(
@@ -515,7 +592,7 @@ class Derivation(UdfNode):
     @classmethod
     def from_dict(cls, d):
         """
-        Decode from a dictionary as from UdfNode.to_dict().
+        Decode from a dictionary as from :meth:`to_dict`.
         """
         return cls(*_from_dict(d))
 

@@ -90,12 +90,14 @@ class Lnk(namedtuple('Lnk', ('type', 'data'))):
         Valid *types* and their associated *data* shown in the table
         below.
 
-        | type      | data                | example   |
-        | --------- | ------------------- | --------- |
-        | charspan  | surface string span | (0, 5)    |
-        | chartspan | chart vertex span   | (0, 5)    |
-        | tokens    | token identifiers   | (0, 1, 2) |
-        | edge      | edge identifier     | 1         |
+        =========  ===================  =========
+        type       data                 example
+        =========  ===================  =========
+        charspan   surface string span  (0, 5)
+        chartspan  chart vertex span    (0, 5)
+        tokens     token identifiers    (0, 1, 2)
+        edge       edge identifier      1
+        =========  ===================  =========
 
 
     Example:
