@@ -3,26 +3,39 @@
 An interface for the ACE processor.
 
 This module provides classes and functions for managing interactive
-communication with an open ACE process.
+communication with an open
+`ACE <http://sweaglesw.org/linguistics/ace/>`_ process.
 
-The [AceParser], [AceTransferer], and [AceGenerator] classes are used
-for parsing, transferring, and generating with ACE. All are subclasses
-of [AceProcess], which connects to ACE in the background, sends it data
-via its stdin, and receives responses via its stdout. Responses from ACE
-are interpreted so the data is more accessible in Python.
+Note:
+  ACE is required for the functionality in this module, but it is not
+  included with PyDelphin. Pre-compiled binaries are available for
+  Linux and MacOS: http://sweaglesw.org/linguistics/ace/
 
-:warning: *Instantiating [AceParser], [AceTransferer], or [AceGenerator]
-opens ACE in a subprocess, so take care to [close](#AceProcess-close)
-the process when finished (or, alternatively, instantiate the class in a
-context manager).*
+  For installation instructions, see:
+  http://moin.delph-in.net/AceInstall
 
-Interpreted responses are stored in a dictionary-like [ParseResponse]
-object. When queried like a dictionary, these objects return the raw
-response strings. When queried via its methods, the PyDelphin models of
-the data are returned. The response objects may contain a number of
-[ParseResult] objects. These objects similarly provide raw-string
-access via dictionary keys and PyDelphin-model access via methods. Here
-is an example of parsing a sentence with [AceParser]:
+The :class:`AceParser`, :class:`AceTransferer`, and
+:class:`AceGenerator` classes are used for parsing, transferring, and
+generating with ACE. All are subclasses of :class:`AceProcess`, which
+connects to ACE in the background, sends it data via its stdin, and
+receives responses via its stdout. Responses from ACE are interpreted
+so the data is more accessible in Python.
+
+Warning:
+  Instantiating :class:`AceParser`, :class:`AceTransferer`, or
+  :class:`AceGenerator` opens ACE in a subprocess, so take care to
+  close the process (:meth:`AceProcess.close`) when finished or,
+  alternatively, instantiate the class in a context manager.
+
+Interpreted responses are stored in a dictionary-like
+:class:`~delphin.interfaces.base.ParseResponse` object. When queried
+as a dictionary, these objects return the raw response strings. When
+queried via its methods, the PyDelphin models of the data are returned.
+The response objects may contain a number of
+:class:`~delphin.interfaces.ParseResult` objects. These objects
+similarly provide raw-string access via dictionary keys and
+PyDelphin-model access via methods. Here is an example of parsing a
+sentence with :class:`AceParser`:
 
     >>> with AceParser('erg-1214-x86-64-0.9.24.dat') as parser:
     ...     response = parser.interact('Cats sleep.')
@@ -32,30 +45,18 @@ is an example of parsing a sentence with [AceParser]:
     [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ] RELS: < [ udef_q<0:4> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: pl IND: + ] RSTR: h5 BODY: h6 ]  [ _cat_n_1<0:4> LBL: h7 ARG0: x3 ]  [ _sleep_v_1<5:11> LBL: h1 ARG0: e2 ARG1: x3 ] > HCONS: < h0 qeq h1 h5 qeq h7 > ]
     <Xmrs object (udef cat sleep) at 139880862399696>
 
-Functions exist for non-interactive communication with ACE: [parse()]
-and [parse_from_iterable()] open and close an AceParser instance;
-[transfer()] and [transfer_from_iterable()] open and close an
-AceTransferer instance; and [generate()] and [generate_from_iterable()]
-open and close an [AceGenerator] instance. Note that these functions
+Functions exist for non-interactive communication with ACE:
+:func:`parse` and :func:`parse_from_iterable` open and close an
+:class:`AceParser` instance; :func:`transfer` and
+:func:`transfer_from_iterable` open and close an :class:`AceTransferer`
+instance; and :func:`generate` and :func:`generate_from_iterable` open
+and close an :class:`AceGenerator` instance. Note that these functions
 open a new ACE subprocess every time they are called, so if you have
 many items to process, it is more efficient to use
-[parse_from_iterable()], [transfer_from_iterable()], or
-[generate_from_iterable()] than the single-item versions.
+:func:`parse_from_iterable`, :func:`transfer_from_iterable`, or
+:func:`generate_from_iterable` than the single-item versions, or to
+interact with the :class:`AceProcess` subclass instances directly.
 
-Requires: ACE (http://sweaglesw.org/linguistics/ace/)
-
-[AceProcess]: #AceProcess
-[AceParser]: #AceParser
-[AceTransferer]: #AceTransferer
-[AceGenerator]: #AceGenerator
-[parse()]: #parse
-[parse_from_iterable()]: #parse_from_iterable
-[transfer()]: #transfer
-[transfer_from_iterable()]: #transfer_from_iterable
-[generate()]: #generate
-[generate_from_iterable()]: #generate_from_iterable
-[ParseResponse]: delphin.interfaces.base#ParseResponse
-[ParseResult]: delphin.interfaces.base#ParseResult
 """
 
 import logging
@@ -85,23 +86,29 @@ class AceProcess(Processor):
     The base class for interfacing ACE.
 
     This manages most subprocess communication with ACE, but does not
-    interpret the response returned via AceProcess.receive().
-    Subclasses override receive() to interpret the task-specific
+    interpret the response returned via ACE's stdout. Subclasses
+    override the :meth:`receive` method to interpret the task-specific
     response formats.
 
     Args:
-        grm: the path to the compiled grammar file
-        cmdargs (list): a list of command-line arguments for ACE;
-            note that arguments and their values should be
-            separate entries, e.g. ['-n', '5']
-        executable: the path to the ACE binary; if `None`, ACE is
-            assumed to be callable via `ace`
+        grm (str): path to a compiled grammar image
+        cmdargs (list, optional): a list of command-line arguments
+            for ACE; note that arguments and their values should be
+            separate entries, e.g. `['-n', '5']`
+        executable (str, optional): the path to the ACE binary; if
+            `None`, ACE is assumed to be callable via `ace`
         env (dict): environment variables to pass to the ACE
             subprocess
-        tsdbinfo: if True and ACE is compatible, gather additional
-            information from ACE's --tsdb-stdout option
+        tsdbinfo (bool): if `True` and ACE's version is compatible,
+            all information ACE reports for [incr tsdb()] processing
+            is gathered and returned in the response
     """
 
+    #: The name of the task performed by the processor (`'parse'`,
+    #: `'transfer'`, or `'generate'`). This is useful when a function,
+    #: such as :meth:`delphin.itsdb.TestSuite.process`, accepts any
+    #: :class:`AceProcess` instance.
+    task = None
     _cmdargs = []
     _termini = []
 
@@ -127,10 +134,12 @@ class AceProcess(Processor):
 
     @property
     def ace_version(self):
+        """The version of the specified ACE binary."""
         return _ace_version(self.executable)
 
     @property
     def run_info(self):
+        """Contextual information about the the running process."""
         return self.run_infos[-1]
 
     def _open(self):
@@ -200,6 +209,12 @@ class AceProcess(Processor):
     def send(self, datum):
         """
         Send *datum* (e.g. a sentence or MRS) to ACE.
+
+        Warning:
+          Sending data without reading (e.g., via :meth:`receive`) can
+          fill the buffer and cause data to be lost. Use the
+          :meth:`interact` method for most data-processing tasks with
+          ACE.
         """
         try:
             self._p.stdin.write((datum.rstrip() + '\n'))
@@ -218,7 +233,9 @@ class AceProcess(Processor):
 
         Warning:
             Reading beyond the last line of stdout from ACE can cause
-            the process to hang while it waits for the next line.
+            the process to hang while it waits for the next line. Use
+            the :meth:`interact` method for most data-processing tasks
+            with ACE.
         """
         raise NotImplementedError()
 
@@ -235,6 +252,17 @@ class AceProcess(Processor):
     def interact(self, datum):
         """
         Send *datum* to ACE and return the response.
+
+        This is the recommended method for sending and receiving data
+        to/from an ACE process as it reduces the chances of
+        over-filling or reading past the end of the buffer. If input
+        item identifiers need to be tracked throughout processing, see
+        :meth:`process_item`.
+
+        Args:
+            datum (str): the input sentence or MRS
+        Returns:
+            :class:`~delphin.interfaces.ParseResponse`
         """
         self.send(datum)
         result = self.receive()
@@ -249,6 +277,11 @@ class AceProcess(Processor):
         through an ACE interaction. If the `task` member is set on
         the AceProcess instance (or one of its subclasses), it is
         kept in the response as well.
+        Args:
+            datum (str): the input sentence or MRS
+            keys (dict): a mapping of item identifier names and values
+        Returns:
+            :class:`~delphin.interfaces.ParseResponse`
         """
         response = self.interact(datum)
         if keys is not None:
@@ -259,7 +292,7 @@ class AceProcess(Processor):
 
     def close(self):
         """
-        Close the ACE process.
+        Close the ACE process and return the process's exit code.
         """
         self.run_info['end'] = datetime.now()
         self._p.stdin.close()
@@ -276,7 +309,7 @@ class AceParser(AceProcess):
     """
     A class for managing parse requests with ACE.
 
-    See [AceProcess] for initialization parameters.
+    See :class:`AceProcess` for initialization parameters.
     """
 
     task = 'parse'
@@ -296,7 +329,11 @@ class AceTransferer(AceProcess):
     """
     A class for managing transfer requests with ACE.
 
-    See [AceProcess] for initialization parameters.
+    Note that currently the `tsdbinfo` parameter must be set to `False`
+    as ACE is not yet able to provide detailed information for
+    transfer results.
+
+    See :class:`AceProcess` for initialization parameters.
     """
 
     task = 'transfer'
@@ -327,7 +364,7 @@ class AceGenerator(AceProcess):
     """
     A class for managing realization requests with ACE.
 
-    See [AceProcess] for initialization parameters.
+    See :class:`AceProcess` for initialization parameters.
     """
 
     task = 'generate'
@@ -370,16 +407,16 @@ def compile(cfg_path, out_path, executable=None, env=None, log=None):
     Use ACE to compile a grammar.
 
     Args:
-        cfg_path: the path to the ACE config file
-        out_path: the path where the compiled grammar will be written
-        executable: the path to the ACE binary; if `None`, ACE is
-            assumed to be callable via `ace`
-        env (dict): environment variables to pass to the ACE
+        cfg_path (str): the path to the ACE config file
+        out_path (str): the path where the compiled grammar will be
+            written
+        executable (str, optional): the path to the ACE binary; if
+            `None`, the `ace` command will be used
+        env (dict, optional): environment variables to pass to the ACE
             subprocess
-        log: if given, the path where ACE's stdout and stderr compile
-            messages will be written
+        log (file, optional): if given, the file, opened for writing,
+            or stream to write ACE's stdout and stderr compile messages
     """
-    #debug('Compiling grammar at {}'.format(abspath(cfg_path)), log)
     try:
         check_call(
             [(executable or 'ace'), '-g', cfg_path, '-G', out_path],
@@ -392,17 +429,22 @@ def compile(cfg_path, out_path, executable=None, env=None, log=None):
             .format(log.name if log is not None else '<stderr>')
         )
         raise
-    #debug('Compiled grammar written to {}'.format(abspath(out_path)), log)
 
 
 def parse_from_iterable(grm, data, **kwargs):
     """
-    Parse each sentence in *data* with ACE using *grm*.
+    Parse each sentence in *data* with ACE using grammar *grm*.
 
     Args:
-        grm: the path to the grammar image
+        grm (str): path to a compiled grammar image
         data (iterable): the sentences to parse
-        kwargs: additional keyword arguments to pass to the AceParser
+        **kwargs: additional keyword arguments to pass to the AceParser
+    Yields:
+        :class:`~delphin.interfaces.ParseResponse`
+    Example:
+        >>> sentences = ['Dogs bark.', 'It rained']
+        >>> responses = list(ace.parse_from_iterable('erg.dat', sentences))
+        NOTE: parsed 2 / 2 sentences, avg 723k, time 0.01026s
     """
     with AceParser(grm, **kwargs) as parser:
         for datum in data:
@@ -411,25 +453,32 @@ def parse_from_iterable(grm, data, **kwargs):
 
 def parse(grm, datum, **kwargs):
     """
-    Parse sentence *datum* with ACE using *grm*.
+    Parse sentence *datum* with ACE using grammar *grm*.
 
     Args:
-        grm: the path to the grammar image
-        datum: the sentence to parse
-        kwargs: additional keyword arguments to pass to the AceParser
+        grm (str): path to a compiled grammar image
+        datum (str): the sentence to parse
+        **kwargs: additional keyword arguments to pass to the AceParser
+    Returns:
+        :class:`~delphin.interfaces.ParseResponse`
+    Example:
+        >>> response = ace.parse('erg.dat', 'Dogs bark.')
+        NOTE: parsed 1 / 1 sentences, avg 797k, time 0.00707s
     """
     return next(parse_from_iterable(grm, [datum], **kwargs))
 
 
 def transfer_from_iterable(grm, data, **kwargs):
     """
-    Transfer from each MRS in *data* with ACE using *grm*.
+    Transfer from each MRS in *data* with ACE using grammar *grm*.
 
     Args:
-        grm: the path to the grammar image
-        data (iterable): the SimpleMRS strings to transfer from
-        kwargs: additional keyword arguments to pass to the
+        grm (str): path to a compiled grammar image
+        data (iterable): source MRSs as SimpleMRS strings
+        **kwargs: additional keyword arguments to pass to the
             AceTransferer
+    Yields:
+        :class:`~delphin.interfaces.ParseResponse`
     """
     with AceTransferer(grm, **kwargs) as transferer:
         for datum in data:
@@ -438,26 +487,30 @@ def transfer_from_iterable(grm, data, **kwargs):
 
 def transfer(grm, datum, **kwargs):
     """
-    Transfer from the MRS *datum* with ACE using *grm*.
+    Transfer from the MRS *datum* with ACE using grammar *grm*.
 
     Args:
-        grm: the path to the grammar image
-        datum: the SimpleMRS string to transfer from
-        kwargs: additional keyword arguments to pass to the
+        grm (str): path to a compiled grammar image
+        datum: source MRS as a SimpleMRS string
+        **kwargs: additional keyword arguments to pass to the
             AceTransferer
+    Returns:
+        :class:`~delphin.interfaces.ParseResponse`
     """
     return next(transfer_from_iterable(grm, [datum], **kwargs))
 
 
 def generate_from_iterable(grm, data, **kwargs):
     """
-    Generate from each MRS in *data* with ACE using *grm*.
+    Generate from each MRS in *data* with ACE using grammar *grm*.
 
     Args:
-        grm: the path to the grammar image
-        data (iterable): the SimpleMRS strings to generate from
-        kwargs: additional keyword arguments to pass to the
+        grm (str): path to a compiled grammar image
+        data (iterable): MRSs as SimpleMRS strings
+        **kwargs: additional keyword arguments to pass to the
             AceGenerator
+    Yields:
+        :class:`~delphin.interfaces.ParseResponse`
     """
     with AceGenerator(grm, **kwargs) as generator:
         for datum in data:
@@ -469,10 +522,12 @@ def generate(grm, datum, **kwargs):
     Generate from the MRS *datum* with ACE using *grm*.
 
     Args:
-        grm: the path to the grammar image
+        grm (str): path to a compiled grammar image
         datum: the SimpleMRS string to generate from
-        kwargs: additional keyword arguments to pass to the
+        **kwargs: additional keyword arguments to pass to the
             AceGenerator
+    Returns:
+        :class:`~delphin.interfaces.ParseResponse`
     """
     return next(generate_from_iterable(grm, [datum], **kwargs))
 

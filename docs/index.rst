@@ -6,11 +6,36 @@
 PyDelphin
 =========
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+.. sidebar:: Quick Links
 
-   api.rst
+  - `How to contribute <../CONTRIBUTING.md>`_
+  - `Report a bug <https://github.com/delph-in/pydelphin/issues>`_
+  - `Changelog <../CHANGELOG.md>`_
+  - `Code of conduct <../CODE_OF_CONDUCT.md>`_
+
+.. toctree::
+  :maxdepth: 2
+  :caption: Tutorials:
+
+  tutorials/ace.rst
+  tutorials/itsdb-tutorial.rst
+
+
+.. toctree::
+  :maxdepth: 2
+  :caption: API Reference:
+
+  api/delphin.derivation.rst
+  api/delphin.extra.rst
+  api/delphin.interfaces.rst
+  api/delphin.itsdb.rst
+  api/delphin.mrs.rst
+  api/delphin.mrs.semi.rst
+  api/delphin.mrs.simplemrs.rst
+  api/delphin.mrs.vpm.rst
+  api/delphin.repp.rst
+  api/delphin.tdl.rst
+  api/delphin.tokens.rst
 
 
 Indices and tables
