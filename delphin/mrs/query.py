@@ -2,18 +2,32 @@
 Functions for inspecting and interpreting the structure of an Xmrs.
 """
 
-import warnings
 from itertools import product
 
 from delphin.mrs.components import nodes, links, var_id
 from delphin.mrs.util import rargname_sortkey
+from delphin.util import deprecated
 
 # query methods
 def select_nodeids(xmrs, iv=None, label=None, pred=None):
     """
-    Return the list of all nodeids whose respective [EP] has the
-    matching *iv* (intrinsic variable), *label*, or *pred* values. If
-    none match, return an empty list.
+    Return the list of matching nodeids in *xmrs*.
+
+    Nodeids in *xmrs* match if their corresponding
+    :class:`~delphin.mrs.components.ElementaryPredication` object
+    matches its `intrinsic_variable` to *iv*, `label` to *label*,
+    and `pred` to *pred*. The *iv*, *label*, and *pred* filters are
+    ignored if they are `None`.
+
+    Args:
+        xmrs (:class:`~delphin.mrs.xmrs.Xmrs`): semantic structure to
+            query
+        iv (str, optional): intrinsic variable to match
+        label (str, optional): label to match
+        pred (str, :class:`~delphin.mrs.components.Pred`, optional):
+            predicate to match
+    Returns:
+        list: matching nodeids
     """
     def datamatch(nid):
         ep = xmrs.ep(nid)
@@ -25,8 +39,20 @@ def select_nodeids(xmrs, iv=None, label=None, pred=None):
 
 def select_nodes(xmrs, nodeid=None, pred=None):
     """
-    Return the list of all [Nodes] that have the matching *nodeid*
-    and/or *pred* values. If none match, return an empty list.
+    Return the list of matching nodes in *xmrs*.
+
+    DMRS :class:`nodes <delphin.mrs.components.node>` for *xmrs* match
+    if their `nodeid` matches *nodeid* and `pred` matches *pred*. The
+    *nodeid* and *pred* filters are ignored if they are `None`.
+
+    Args:
+        xmrs (:class:`~delphin.mrs.xmrs.Xmrs`): semantic structure to
+            query
+        nodeid (optional): DMRS nodeid to match
+        pred (str, :class:`~delphin.mrs.components.Pred`, optional):
+            predicate to match
+    Returns:
+        list: matching nodes
     """
     nodematch = lambda n: ((nodeid is None or n.nodeid == nodeid) and
                            (pred is None or n.pred == pred))
@@ -35,9 +61,24 @@ def select_nodes(xmrs, nodeid=None, pred=None):
 
 def select_eps(xmrs, nodeid=None, iv=None, label=None, pred=None):
     """
-    Return the list of all [EPs] that have the matching *nodeid*,
-    *iv*, *label*, and or *pred* values. If none match, return an
-    empty list.
+    Return the list of matching elementary predications in *xmrs*.
+
+    :class:`~delphin.mrs.components.ElementaryPredication` objects for
+    *xmrs* match if their `nodeid` matches *nodeid*,
+    `intrinsic_variable` matches *iv*, `label` matches *label*, and
+    `pred` to *pred*. The *nodeid*, *iv*, *label*, and *pred* filters
+    are ignored if they are `None`.
+
+    Args:
+        xmrs (:class:`~delphin.mrs.xmrs.Xmrs`): semantic structure to
+            query
+        nodeid (optional): nodeid to match
+        iv (str, optional): intrinsic variable to match
+        label (str, optional): label to match
+        pred (str, :class:`~delphin.mrs.components.Pred`, optional):
+            predicate to match
+    Returns:
+        list: matching elementary predications
     """
     epmatch = lambda n: ((nodeid is None or n.nodeid == nodeid) and
                          (iv is None or n.iv == iv) and
@@ -48,9 +89,29 @@ def select_eps(xmrs, nodeid=None, iv=None, label=None, pred=None):
 
 def select_args(xmrs, nodeid=None, rargname=None, value=None):
     """
-    Return a list of triples (nodeid, rargname, value) for all arguments
-    matching *nodeid*, *rargname*, and/or *value* values. If none match,
-    return an empty list.
+    Return the list of matching (nodeid, role, value) triples in *xmrs*.
+
+    Predication arguments in *xmrs* match if the `nodeid` of the
+    :class:`~delphin.mrs.components.ElementaryPredication` they are
+    arguments of match *nodeid*, their role matches *rargname*, and
+    their value matches *value*. The *nodeid*, *rargname*, and *value*
+    filters are ignored if they are `None`.
+
+    Note:
+        The *value* filter matches the variable, handle, or constant
+        that is the overt value for the argument. If you want to find
+        arguments that target a particular nodeid, look into
+        :meth:`Xmrs.incoming_args() <delphin.mrs.xmrs.Xmrs.incoming_args>`.
+        If you want to match a target value to its resolved object, see
+        :func:`find_argument_target`.
+    Args:
+        xmrs (:class:`~delphin.mrs.xmrs.Xmrs`): semantic structure to
+            query
+        nodeid (optional): nodeid to match
+        rargname (str, optional): role name to match
+        value (str, optional): argument value to match
+    Returns:
+        list: matching arguments as (nodeid, role, value) triples
     """
     argmatch = lambda a: ((nodeid is None or a[0] == nodeid) and
                           (rargname is None or
@@ -69,9 +130,22 @@ def select_args(xmrs, nodeid=None, rargname=None, value=None):
 
 def select_links(xmrs, start=None, end=None, rargname=None, post=None):
     """
-    Return the list of all [Links] that have the matching *start*,
-    *end*, *rargname*, and/or *post* values. If none match, return
-    an empty list.
+    Return the list of matching links for *xmrs*.
+
+    :class:`~delphin.mrs.components.Link` objects for *xmrs* match if
+    their `start` matches *start*, `end` matches *end*, `rargname`
+    matches *rargname*, and `post` matches *post*. The *start*, *end*,
+    *rargname*, and *post* filters are ignored if they are `None`.
+
+    Args:
+        xmrs (:class:`~delphin.mrs.xmrs.Xmrs`): semantic structure to
+            query
+        start (optional): link start nodeid to match
+        end (optional): link end nodeid to match
+        rargname (str, optional): role name to match
+        post (str, optional): Link post-slash label to match
+    Returns:
+        list: matching links
     """
     linkmatch = lambda l: (
         (start is None or l.start == start) and
@@ -83,9 +157,21 @@ def select_links(xmrs, start=None, end=None, rargname=None, post=None):
 
 def select_hcons(xmrs, hi=None, relation=None, lo=None):
     """
-    Return the list of all [HandleConstraints] that have the matching
-    *hi*, *relation*, and/or *lo* values. If none match, return an
-    empty list.
+    Return the list of matching HCONS for *xmrs*.
+
+    :class:`~delphin.mrs.components.HandleConstraint` objects for
+    *xmrs* match if their `hi` matches *hi*, `relation` matches
+    *relation*, and `lo` matches *lo*. The *hi*, *relation*, and *lo*
+    filters are ignored if they are `None`.
+
+    Args:
+        xmrs (:class:`~delphin.mrs.xmrs.Xmrs`): semantic structure to
+            query
+        hi (str, optional): hi handle (hole) to match
+        relation (str, optional): handle constraint relation to match
+        lo (str, optional): lo handle (label) to match
+    Returns:
+        list: matching HCONS
     """
     hcmatch = lambda hc: (
         (hi is None or hc.hi == hi) and
@@ -96,9 +182,21 @@ def select_hcons(xmrs, hi=None, relation=None, lo=None):
 
 def select_icons(xmrs, left=None, relation=None, right=None):
     """
-    Return the list of all [IndividualConstraints] that have the
-    matching *left*, *relation*, and/or *right* values. If none
-    match, return an empty list.
+    Return the list of matching ICONS for *xmrs*.
+
+    :class:`~delphin.mrs.components.IndividualConstraint` objects for
+    *xmrs* match if their `left` matches *left*, `relation` matches
+    *relation*, and `right` matches *right*. The *left*, *relation*,
+    and *right* filters are ignored if they are `None`.
+
+    Args:
+        xmrs (:class:`~delphin.mrs.xmrs.Xmrs`): semantic structure to
+            query
+        left (str, optional): left variable to match
+        relation (str, optional): individual constraint relation to match
+        right (str, optional): right variable to match
+    Returns:
+        list: matching ICONS
     """
     icmatch = lambda ic: (
         (left is None or ic.left == left) and
@@ -111,27 +209,30 @@ def find_argument_target(xmrs, nodeid, rargname):
     """
     Return the target of an argument (rather than just the variable).
 
-    Args:
-        xmrs: The [Xmrs] object to use.
-        nodeid: The nodeid of the argument.
-        rargname: The role-argument name of the argument.
-    Returns:
-        The object that is the target of the argument. Possible values
-        include:
-
-        | Arg value          | e.g.  | Target                        |
-        | ------------------ | ----- | ----------------------------- |
-        | intrinsic variable | x4    | nodeid; of the EP with the IV |
-        | hole variable      | h0    | nodeid; HCONS's labelset head |
-        | label              | h1    | nodeid; label's labelset head |
-        | unbound variable   | i3    | the variable itself           |
-        | constant           | "IBM" | the constant itself           |
-
     Note:
         If the argument value is an intrinsic variable whose target is
         an EP that has a quantifier, the non-quantifier EP's nodeid
         will be returned. With this nodeid, one can then use
-        find_quantifier() to get its quantifier's nodeid.
+        :meth:`Xmrs.nodeid() <delphin.mrs.xmrs.Xmrs.nodeid>` to get its
+        quantifier's nodeid.
+    Args:
+        xmrs (:class:`~delphin.mrs.xmrs.Xmrs`): semantic structure to
+            use
+        nodeid: nodeid of the argument.
+        rargname: role name of the argument.
+    Returns:
+        The object that is the target of the argument. Possible values
+        include:
+
+        ==================  =====  =============================
+        Argument value      e.g.   Target
+        ------------------  -----  -----------------------------
+        intrinsic variable  x4     nodeid; of the EP with the IV
+        hole variable       h0     nodeid; HCONS's labelset head
+        label               h1     nodeid; label's labelset head
+        unbound variable    i3     the variable itself
+        constant            "IBM"  the constant itself
+        ==================  =====  =============================
     """
     tgt = xmrs.args(nodeid)[rargname]
     if tgt in xmrs.variables():
@@ -155,17 +256,22 @@ def find_argument_target(xmrs, nodeid, rargname):
 
 def find_subgraphs_by_preds(xmrs, preds, connected=None):
     """
-    Yield subgraphs matching a list of preds. Because preds may match
-    multiple EPs/nodes in the Xmrs, more than one subgraph is
-    possible.
+    Yield subgraphs matching a list of predicates.
+
+    Predicates may match multiple EPs/nodes in the *xmrs*, meaning that
+    more than one subgraph is possible. Also, predicates in *preds*
+    match in number, so if a predicate appears twice in *preds*, there
+    will be two matching EPs/nodes in each subgraph.
 
     Args:
-        xmrs: The [Xmrs] object to use.
-        preds: An iterable of [Preds] to include in subgraphs.
-        connected: If True, all yielded subgraphs must be connected,
-            as determined by Xmrs.is_connected().
+        xmrs (:class:`~delphin.mrs.xmrs.Xmrs`): semantic structure to
+            use
+        preds: iterable of predicates to include in subgraphs
+        connected (bool, optional): if `True`, all yielded subgraphs
+            must be connected, as determined by
+            :meth:`Xmrs.is_connected() <delphin.mrs.xmrs.Xmrs.is_connected>`.
     Yields:
-        [Xmrs] objects for the found subgraphs.
+        A :class:`~delphin.mrs.xmrs.Xmrs` object for each subgraphs found.
     """
     preds = list(preds)
     count = len(preds)
@@ -188,10 +294,8 @@ def find_subgraphs_by_preds(xmrs, preds, connected=None):
 #     return [var for var, vd in xmrs._vars.items()
 #             if 'iv' in vd or 'LBL' in vd['refs'] or 'hcons' in vd]
 
-def intrinsic_variable(xmrs, nid):
-    return xmrs.ep(nid).intrinsic_variable
-
 def intrinsic_variables(xmrs):
+    """Return the list of all intrinsic variables in *xmrs*"""
     ivs = set(
         ep.intrinsic_variable for ep in xmrs.eps()
         if not ep.is_quantifier() and ep.intrinsic_variable is not None
@@ -199,6 +303,7 @@ def intrinsic_variables(xmrs):
     return sorted(ivs, key=var_id)
 
 def bound_variables(xmrs):
+    """Return the list of all bound variables in *xmrs*"""
     bvs = set(
         ep.intrinsic_variable for ep in xmrs.eps()
         if ep.is_quantifier() and ep.intrinsic_variable is not None
@@ -210,10 +315,10 @@ def in_labelset(xmrs, nodeids, label=None):
     Test if all nodeids share a label.
 
     Args:
-        nodeids: An iterable of nodeids.
-        label: If given, all nodeids must share this label.
+        nodeids: iterable of nodeids
+        label (str, optional): the label that all nodeids must share
     Returns:
-        True if all nodeids share a label, otherwise False.
+        bool: `True` if all nodeids share a label, otherwise `False`
     """
     nodeids = set(nodeids)
     if label is None:
@@ -221,27 +326,24 @@ def in_labelset(xmrs, nodeids, label=None):
     return nodeids.issubset(xmrs._vars[label]['refs']['LBL'])
 
 
-#def audit(xmrs): inspect well-formedness and report individual errors
-
 # deprecated
 
+@deprecated(final_version='1.0.0',
+            alternative='xmrs.ep(nid).intrinsic_variable')
+def intrinsic_variable(xmrs, nid):
+    return xmrs.ep(nid).intrinsic_variable
+
+@deprecated(final_version='1.0.0',
+            alternative='xmrs.nodeid(xmrs.ep(nodeid).iv, quantifier=True)')
 def find_quantifier(xmrs, nodeid):
-    warnings.warn(
-        'find_quantifier() is deprecated; '
-        'try xmrs.nodeid(xmrs.ep(nodeid).iv, quantifier=True)',
-        DeprecationWarning
-    )
     ep = xmrs.ep(nodeid)
     if not ep.is_quantifier():
         return xmrs.nodeid(xmrs.ep(nodeid).iv, quantifier=True)
     return None
 
+@deprecated(final_version='1.0.0',
+            alternative='xmrs.outgoing_args(nodeid)')
 def get_outbound_args(xmrs, nodeid, allow_unbound=True):
-    warnings.warn(
-        'get_outbound_args() is deprecated; '
-        'try xmrs.outgoing_args(nodeid)',
-        DeprecationWarning
-    )
     tgts = set(intrinsic_variables(xmrs))
     tgts.update(xmrs.labels())
     tgts.update(hc.hi for hc in xmrs.hcons())
@@ -254,10 +356,7 @@ def get_outbound_args(xmrs, nodeid, allow_unbound=True):
         if allow_unbound or val in tgts
     ]
 
+@deprecated(final_version='1.0.0',
+            alternative='xmrs.nodeid(iv, quantifier=quantifier)')
 def nodeid(xmrs, iv, quantifier=False):
-    warnings.warn(
-        'nodeid() is deprecated; '
-        'try xmrs.nodeid(iv, quantifier=quantifier)',
-        DeprecationWarning
-    )
     return xmrs.nodeid(iv, quantifier=quantifier)
