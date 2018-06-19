@@ -14,22 +14,28 @@ PyDelphin
   - `Code of conduct <../CODE_OF_CONDUCT.md>`_
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
   :caption: Tutorials:
 
+  tutorials/walkthrough.rst
   tutorials/ace.rst
-  tutorials/itsdb-tutorial.rst
+  tutorials/commands.rst
+  tutorials/itsdb.rst
 
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
   :caption: API Reference:
 
   api/delphin.derivation.rst
   api/delphin.extra.rst
   api/delphin.interfaces.rst
+  api/delphin.interfaces.ace.rst
+  api/delphin.interfaces.rest.rst
   api/delphin.itsdb.rst
   api/delphin.mrs.rst
+  api/delphin.mrs.compare.rst
+  api/delphin.mrs.query.rst
   api/delphin.mrs.semi.rst
   api/delphin.mrs.simplemrs.rst
   api/delphin.mrs.vpm.rst

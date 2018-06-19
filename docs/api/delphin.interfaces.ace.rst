@@ -4,7 +4,7 @@ delphin.mrs.interfaces.ace
 
 .. seealso::
 
-  the :doc:`ACE tutorial <../tutorials/ace>` for a more user-friendly introduction
+  See :doc:`../tutorials/ace` for a more user-friendly introduction
 
 .. automodule:: delphin.interfaces.ace
 

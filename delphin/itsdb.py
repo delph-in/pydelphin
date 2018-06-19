@@ -298,8 +298,10 @@ class Record(list):
     A row in a [incr tsdb()] table.
 
     Args:
-        fields: the Relation schema for this table
+        fields: the Relation schema for the table of this record
         iterable: an iterable containing the data for the record
+    Attributes:
+        fields (:class:`Relation`): table schema
     """
 
     def __init__(self, fields, iterable):
@@ -383,6 +385,9 @@ class Table(list):
         name: the table name
         fields: the Relation schema for this table
         records: the collection of Record objects containing the table data
+    Attributes:
+        name (str): table name
+        fields (:class:`Relation`): table schema
     """
 
     def __init__(self, name, fields, records=None):
@@ -454,14 +459,18 @@ class Table(list):
 
 class TestSuite(object):
     """
-    A [incr tsdb()] test suite database.
+    A [incr tsdb()] testsuite database.
 
     Args:
-        path: the path to the test suite's directory
+        path: the path to the testsuite's directory
         relations: the relations file describing the schema of
             the database; if not given, the relations file under
             *path* will be used
         encoding: the character encoding of the files in the testsuite
+    Attributes:
+        encoding (:py:class:`str`): character encoding used when reading and
+            writing tables
+        relations (:class:`Relations`): database schema
     """
     def __init__(self, path=None, relations=None, encoding='utf-8'):
         self._path = path
@@ -542,7 +551,7 @@ class TestSuite(object):
 
     def write(self, tables=None, path=None, append=False, gzip=None):
         """
-        Write the test suite to disk.
+        Write the testsuite to disk.
 
         Args:
             tables: a name or iterable of names of tables to write,
