@@ -1,6 +1,6 @@
 
 """
-Classes and functions for working with the components of *MRS objects.
+Classes and functions for working with the components of \*MRS objects.
 """
 
 import re

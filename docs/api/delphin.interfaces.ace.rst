@@ -1,6 +1,6 @@
 
-delphin.mrs.interfaces.ace
-==========================
+delphin.interfaces.ace
+======================
 
 .. seealso::
 

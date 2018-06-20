@@ -1,6 +1,6 @@
 
-delphin.mrs.interfaces.rest
-===========================
+delphin.interfaces.rest
+=======================
 
 .. automodule:: delphin.interfaces.rest
   :members:

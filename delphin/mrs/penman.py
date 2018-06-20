@@ -2,11 +2,11 @@
 """
 Serialization functions for the PENMAN graph format.
 
-Unlike other *MRS serializers, this one takes a *model* argument for
+Unlike other \*MRS serializers, this one takes a *model* argument for
 the load(), loads(), dump(), and dumps() methods, which determines what
 the graph will look like. This is because DMRS and EDS (and possibly
 others) yield different graph structures, but both can be encoded as
-PENMAN graphs. In this sense, it's more like JSON formatting of *MRS.
+PENMAN graphs. In this sense, it's more like JSON formatting of \*MRS.
 """
 
 from __future__ import absolute_import, print_function

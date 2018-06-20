@@ -34,11 +34,6 @@ PyDelphin
   api/delphin.interfaces.rest.rst
   api/delphin.itsdb.rst
   api/delphin.mrs.rst
-  api/delphin.mrs.compare.rst
-  api/delphin.mrs.query.rst
-  api/delphin.mrs.semi.rst
-  api/delphin.mrs.simplemrs.rst
-  api/delphin.mrs.vpm.rst
   api/delphin.repp.rst
   api/delphin.tdl.rst
   api/delphin.tokens.rst
