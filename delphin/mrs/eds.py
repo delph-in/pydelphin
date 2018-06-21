@@ -1,4 +1,8 @@
 
+"""
+Elementary Dependency Structures (EDS).
+"""
+
 from __future__ import print_function
 
 from itertools import count
@@ -32,6 +36,21 @@ from delphin.lib.pegre import (
 )
 
 class Eds(object):
+    """
+    An Elementary Dependency Structure (EDS) instance.
+
+    EDS are semantic structures deriving from MRS, but they are not
+    interconvertible with MRS and therefore do not share a common
+    superclass (viz, :class:`~delphin.mrs.xmrs.Xmrs`) in PyDelphin,
+    although this may change in a future version. EDS shares some
+    common features with DMRS, so this class borrows some DMRS
+    elements, such as :class:`Nodes <delphin.mrs.components.Node>`.
+
+    Args:
+        top: nodeid of the top node in the graph
+        nodes: iterable of :class:`Nodes <delphin.mrs.components.Node>`
+        edges: iterable of (start, role, end) triples
+    """
     def __init__(self, top=None, nodes=None, edges=None):
         if nodes is None: nodes = []
         if edges is None: edges = []
@@ -45,6 +64,9 @@ class Eds(object):
 
     @classmethod
     def from_xmrs(cls, xmrs):
+        """
+        Instantiate an Eds from an Xmrs (lossy conversion).
+        """
         eps = xmrs.eps()
         deps = _find_dependencies(xmrs, eps)
         ids = _unique_ids(eps, deps)
@@ -66,19 +88,26 @@ class Eds(object):
         )
 
     def nodeids(self):
+        """Return the list of nodeids."""
         return list(self._nodeids)
 
     def node(self, nodeid):
+        """Return the node whose `nodeid` is *nodeid*."""
         return self._nodes[nodeid]
 
     def nodes(self):
+        """Return the list of nodes."""
         getnode = self._nodes.__getitem__
         return [getnode(nid) for nid in self._nodeids]
 
     def edges(self, nodeid):
+        """Return the edges starting at *nodeid*."""
         return dict(self._edges.get(nodeid, []))
 
     def to_dict(self, properties=True):
+        """
+        Encode the Eds as a dictionary suitable for JSON serialization.
+        """
         nodes = {}
         for node in self.nodes():
             nd = {
@@ -100,6 +129,9 @@ class Eds(object):
 
     @classmethod
     def from_dict(cls, d):
+        """
+        Decode a dictionary, as from :meth:`to_dict`, into an Eds object.
+        """
         makepred, charspan = Pred.string_or_grammar_pred, Lnk.charspan
         top = d.get('top')
         nodes, edges = [], []
@@ -129,6 +161,9 @@ class Eds(object):
         return cls(top, nodes=nodes, edges=edges)
 
     def to_triples(self, short_pred=True, properties=True):
+        """
+        Encode the Eds as triples suitable for PENMAN serialization.
+        """
         node_triples, edge_triples = [], []
         # sort nodeids just so top var is first
         nodes = sorted(self.nodes(), key=lambda n: n.nodeid != self.top)
@@ -156,6 +191,9 @@ class Eds(object):
 
     @classmethod
     def from_triples(cls, triples):
+        """
+        Decode triples, as from :meth:`to_triples`, into an Eds object.
+        """
         lnk, surface, identifier = None, None, None
         nids, nd, edges = [], {}, []
         for src, rel, tgt in triples:
@@ -240,6 +278,16 @@ def _find_root(m):
 ## Serialization
 
 def load(fh, single=False):
+    """
+    Deserialize Eds from a file (handle or filename)
+
+    Args:
+        fh (str, file): input filename or file object
+        single: if `True`, only return the first read Xmrs object
+    Returns:
+        a generator of Xmrs objects (unless the *single* option is
+        `True`)
+    """
     if isinstance(fh, stringtypes):
         s = open(fh, 'r').read()
     else:
@@ -247,12 +295,34 @@ def load(fh, single=False):
     return loads(s, single=single)
 
 def loads(s, single=False):
+    """
+    Deserialize Eds string representations
+
+    Args:
+        s (str): Eds string
+        single: if `True`, only return the first read Xmrs object
+    Returns:
+        a generator of Xmrs objects (unless the *single* option is
+        `True`)
+    """
     es = deserialize(s)
     if single:
         return next(es)
     return es
 
 def dump(fh, ms, single=False, properties=False, pretty_print=True, **kwargs):
+    """
+    Serialize Xmrs objects to Eds and write to a file
+
+    Args:
+        fh: file object where data will be written
+        ms: an iterator of Xmrs objects to serialize (unless the
+            *single* option is `True`)
+        single: if `True`, treat *ms* as a single Xmrs object
+            instead of as an iterator
+        properties: if `False`, suppress variable properties
+        pretty_print: if `True`, add newlines and indentation
+    """
     print(dumps(ms,
                 single=single,
                 properties=properties,
@@ -261,6 +331,19 @@ def dump(fh, ms, single=False, properties=False, pretty_print=True, **kwargs):
           file=fh)
 
 def dumps(ms, single=False, properties=False, pretty_print=True, **kwargs):
+    """
+    Serialize an Xmrs object to a Eds representation
+
+    Args:
+        ms: an iterator of Xmrs objects to serialize (unless the
+            *single* option is `True`)
+        single: if `True`, treat *ms* as a single Xmrs object instead
+            of as an iterator
+        properties: if `False`, suppress variable properties
+        pretty_print: if `True`, add newlines and indentation
+    Returns:
+        an Eds string representation of a corpus of Xmrs
+    """
     if not pretty_print and kwargs.get('indent'):
         pretty_print = True
     if single:

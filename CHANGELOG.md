@@ -2,6 +2,12 @@
 
 ## [Unreleased][unreleased]
 
+
+### Deprecated
+
+* `delphin.mrs.query.intrinsic_variable()`; probably should have been
+  deprecated in v0.4.1.
+
 ## [v0.7.2][]
 
 This is a very minor release that just fixes one bug introduced in v0.7.1.

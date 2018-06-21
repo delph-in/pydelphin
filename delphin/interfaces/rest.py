@@ -1,43 +1,51 @@
 
 """
-Client access to the RESTful API for DELPH-IN data.
+Client access to the HTTP ("RESTful") API for DELPH-IN data.
 
 This module provides classes and functions for making requests to
 servers that implement the DELPH-IN web API described here:
 
     http://moin.delph-in.net/ErgApi
 
-Basic access is available via the parse() and parse_from_iterable()
-functions:
+Note:
+  Requires `requests` (https://pypi.python.org/pypi/requests)
 
-    >>> from delphin.interfaces import rest
-    >>> url = 'http://erg.delph-in.net/rest/0.9/'
-    >>> rest.parse('Abrams slept.', server=url)
-    ParseResponse({'input': 'Abrams slept.', 'tcpu': 0.05, ...
-    >>> rest.parse_from_iterable(['Abrams slept.', 'It rained.'], server=url)
-    <generator object parse_from_iterable at 0x7f546661c258>
+Basic access is available via the :func:`parse` and
+:func:`parse_from_iterable` functions:
 
-If *server* is not provided, the default ERG server (as used above) is
-used by default. Request parameters (described at
-http://moin.delph-in.net/ErgApi) can be provided via the *params*
-argument.
+>>> from delphin.interfaces import rest
+>>> url = 'http://erg.delph-in.net/rest/0.9/'
+>>> rest.parse('Abrams slept.', server=url)
+ParseResponse({'input': 'Abrams slept.', 'tcpu': 0.05, ...
+>>> rest.parse_from_iterable(['Abrams slept.', 'It rained.'], server=url)
+<generator object parse_from_iterable at 0x7f546661c258>
 
-These functions both instantiate and use the DelphinRestClient class,
-which manages the connections to a server. It can be used directly:
+If the `server` parameter is not provided to `parse()`, the default ERG
+server (as used above) is used by default. Request parameters
+(described at http://moin.delph-in.net/ErgApi) can be provided via the
+`params` argument.
 
-    >>> client = rest.DelphinRestClient(server=url)
-    >>> client.parse('Dogs chase cats.')
-    ParseResponse({'input': 'Dogs chase cats.', ...
+These functions both instantiate and use the :class:`DelphinRestClient`
+class, which manages the connections to a server. It can also be used
+directly:
 
-The server responds with JSON data, which is parsed to a dictionary.
-The responses from DelphinRestClient.parse() are then wrapped in
-ParseResponse objects, which provide two methods for inspecting the
-results. `ParseResponse.result(i)` returns the *i*th result
-(0-indexed), and `ParseResponse.results()` returns the list of all
-results. The benefit of using these methods is that it wraps the
-result dictionary in a ParseResult object, which provides methods for
-automatically deserializing derivations, EDS, MRS, or DMRS data. For
-example:
+>>> client = rest.DelphinRestClient(server=url)
+>>> client.parse('Dogs chase cats.')
+ParseResponse({'input': 'Dogs chase cats.', ...
+
+The server responds with JSON data, which PyDelphin parses to a
+dictionary. The responses from :meth:`DelphinRestClient.parse` are then
+wrapped in :class:`~delphin.interfaces.base.ParseResponse` objects,
+which provide two methods for inspecting the results. The
+:meth:`ParseResponse.result() <delphin.interfaces.base.ParseResponse.result>`
+method takes a parameter `i` and returns the *i*\ th result
+(0-indexed), and the
+:meth:`ParseResponse.results() <delphin.interfaces.base.ParseResponse.results>`
+method returns the list of all results. The benefit of using these
+methods is that they wrap the result dictionary in a
+:class:`~delphin.interfaces.base.ParseResult` object,
+which provides methods for automatically deserializing derivations,
+EDS, MRS, or DMRS data. For example:
 
     >>> r = client.parse('Dogs chase cats', params={'mrs':'json'})
     >>> r.result(0)
@@ -49,9 +57,8 @@ example:
 
 If PyDelphin does not support deserialization for a format provided by
 the server (e.g. LaTeX output), the original string would be returned
-(i.e. the same as via dict-access).
+by these methods (i.e. the same as via dict-access).
 
-Requires: requests (https://pypi.python.org/pypi/requests)
 """
 
 import json

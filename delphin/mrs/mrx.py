@@ -1,11 +1,8 @@
 
-# MRX codec
-# Summary: This module implements serialization and deserialization of
-#          the XML encoding of Minimal Recusion Semantics. It provides
-#          standard Pickle API calls of load, loads, dump, and dumps for
-#          serializing and deserializing single MRX instances.
-#          Further, encode_list and decode_list are provided for lists
-#          of MRX instances, and they read and write incrementally.
+"""
+MRX (XML for MRS) serialization and deserialization.
+"""
+
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
 from __future__ import print_function
@@ -29,6 +26,16 @@ from delphin.mrs.util import etree_tostring
 
 
 def load(fh, single=False):
+    """
+    Deserialize MRX from a file (handle or filename)
+
+    Args:
+        fh (str, file): input filename or file object
+        single: if `True`, only return the first read Xmrs object
+    Returns:
+        a generator of Xmrs objects (unless the *single* option is
+        `True`)
+    """
     ms = deserialize(fh)
     if single:
         ms = next(ms)
@@ -36,6 +43,15 @@ def load(fh, single=False):
 
 
 def loads(s, single=False):
+    """
+    Deserialize MRX string representations
+
+    Args:
+        s (str): a MRX string
+        single (bool): if `True`, only return the first Xmrs object
+    Returns:
+        a generator of Xmrs objects (unless *single* is `True`)
+    """
     corpus = etree.fromstring(s)
     if single:
         ds = _deserialize_mrs(next(corpus))
@@ -44,12 +60,52 @@ def loads(s, single=False):
     return ds
 
 
-def dump(fh, ms, **kwargs):
-    print(dumps(ms, **kwargs), file=fh)
+def dump(fh, ms, single=False, properties=True,
+         encoding='unicode', pretty_print=False, **kwargs):
+    """
+    Serialize Xmrs objects to MRX and write to a file
+
+    Args:
+        fh: file object where data will be written
+        ms: an iterator of Xmrs objects to serialize (unless the
+            *single* option is `True`)
+        single: if `True`, treat *ms* as a single Xmrs object
+            instead of as an iterator
+        properties: if `False`, suppress variable properties
+        encoding: the character encoding of the string prior
+            writing to a file (generally `"unicode"` is desired)
+        pretty_print: if `True`, add newlines and indentation
+    """
+    print(
+        dumps(
+            ms,
+            single=single,
+            properties=properties,
+            encoding=encoding,
+            pretty_print=pretty_print,
+            **kwargs),
+        file=fh
+    )
 
 
 def dumps(ms, single=False, properties=True,
           encoding='unicode', pretty_print=False, **kwargs):
+    """
+    Serialize an Xmrs object to a MRX representation
+
+    Args:
+        ms: an iterator of Xmrs objects to serialize (unless the
+            *single* option is `True`)
+        single: if `True`, treat *ms* as a single Xmrs object instead
+            of as an iterator
+        properties: if `False`, suppress variable properties
+        encoding: the character encoding of the string (`"unicode"`
+            returns a regular (unicode) string in Python 3 and a
+            unicode string in Python 2)
+        pretty_print: if `True`, add newlines and indentation
+    Returns:
+        a MRX string representation of a corpus of Xmrs
+    """
     if not pretty_print and kwargs.get('indent'):
         pretty_print = True
     if single:
@@ -70,7 +126,6 @@ dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 
 
 def deserialize(fh):
-    """Deserialize an MRX-encoded MRS structure."""
     # <!ELEMENT mrs-list (mrs)*>
     # if memory becomes a big problem, consider catching start events,
     # get the root element (later start events can be ignored), and

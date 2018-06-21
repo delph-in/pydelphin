@@ -1,6 +1,6 @@
 
 """
-Classes and functions for working with the components of *MRS objects.
+Classes and functions for working with the components of \*MRS objects.
 """
 
 import re
@@ -28,7 +28,15 @@ var_re = re.compile(r'^([-\w]*\D)(\d+)$')
 
 
 def sort_vid_split(vs):
-    """Split a valid variable string into the variable sort and id."""
+    """
+    Split a valid variable string into its variable sort and id.
+
+    Examples:
+        >>> sort_vid_split('h3')
+        ('h', '3')
+        >>> sort_vid_split('ref-ind12')
+        ('ref-ind', '12')
+    """
     match = var_re.match(vs)
     if match is None:
         raise ValueError('Invalid variable string: {}'.format(str(vs)))
@@ -37,12 +45,28 @@ def sort_vid_split(vs):
 
 
 def var_sort(v):
-    """Return the sort of a valid variable string."""
+    """
+    Return the sort of a valid variable string.
+
+    Examples:
+        >>> var_sort('h3')
+        'h'
+        >>> var_sort('ref-ind12')
+        'ref-ind'
+    """
     return sort_vid_split(v)[0]
 
 
 def var_id(v):
-    """Return the integer id of a valid variable string."""
+    """
+    Return the integer id of a valid variable string.
+
+    Examples:
+        >>> var_id('h3')
+        3
+        >>> var_id('ref-ind12')
+        12
+    """
     return int(sort_vid_split(v)[1])
 
 
@@ -78,24 +102,30 @@ class _VarGenerator(object):
 
 class Lnk(namedtuple('Lnk', ('type', 'data'))):
     """
+    Surface-alignment information for predications.
+
     Lnk objects link predicates to the surface form in one of several
     ways, the most common of which being the character span of the
     original string.
 
     Args:
-        data: the Lnk specifiers, whose quality depends on *type*
         type: the way the Lnk relates the semantics to the surface form
-
+        data: the Lnk specifiers, whose quality depends on *type*
+    Attributes:
+        type: the way the Lnk relates the semantics to the surface form
+        data: the Lnk specifiers, whose quality depends on *type*
     Note:
         Valid *types* and their associated *data* shown in the table
         below.
 
-        | type      | data                | example   |
-        | --------- | ------------------- | --------- |
-        | charspan  | surface string span | (0, 5)    |
-        | chartspan | chart vertex span   | (0, 5)    |
-        | tokens    | token identifiers   | (0, 1, 2) |
-        | edge      | edge identifier     | 1         |
+        =========  ===================  =========
+        type       data                 example
+        =========  ===================  =========
+        charspan   surface string span  (0, 5)
+        chartspan  chart vertex span    (0, 5)
+        tokens     token identifiers    (0, 1, 2)
+        edge       edge identifier      1
+        =========  ===================  =========
 
 
     Example:
@@ -186,17 +216,23 @@ class Lnk(namedtuple('Lnk', ('type', 'data'))):
 
 class _LnkMixin(object):
     """
-    A mixin class for predications ([EPs] or [Nodes]) or full [Xmrs]
-    objects, which are the types that can be linked to surface strings.
-    This class provides the `cfrom` and `cto` properties so they are
-    always available (defaulting to a value of `-1` if there is no lnk
-    or if the lnk is not a Lnk.CHARSPAN type).
+    A mixin class for adding `cfrom` and `cto` properties on structures.
+
+    By far the most common :class:`Lnk` type is for character spans,
+    and these spans are conveniently described by `cfrom` and `cto`
+    properties. This mixin is used by larger structures, such as
+    :class:`ElementaryPredication`, :class:`Node`, and
+    :class:`~delphin.mrs.xmrs.Xmrs`, to add `cfrom` and `cto`
+    properties. These properties exist regardless of the whether the
+    Lnk is a character span or not; if not, or if Lnk information is
+    missing, they return the default value of `-1`.
     """
     @property
     def cfrom(self):
         """
-        The initial character position in the surface string. Defaults
-        to -1 if there is no valid cfrom value.
+        The initial character position in the surface string.
+
+        Defaults to -1 if there is no valid cfrom value.
         """
         cfrom = -1
         try:
@@ -209,8 +245,9 @@ class _LnkMixin(object):
     @property
     def cto(self):
         """
-        The final character position in the surface string. Defaults
-        to -1 if there is no valid cto value.
+        The final character position in the surface string.
+
+        Defaults to -1 if there is no valid cto value.
         """
         cto = -1
         try:
@@ -228,8 +265,23 @@ class Link(namedtuple('Link', ('start', 'end', 'rargname', 'post'))):
     DMRS-style dependency link.
 
     Links are a way of representing arguments without variables. A
-    Link encodes a start and end node, the argument name, and label
-    information (e.g. label equality, qeq, etc).
+    Link encodes a start and end node, the role name, and the scopal
+    relationship between the start and end (e.g. label equality, qeq,
+    etc).
+
+    Args:
+        start: nodeid of the start of the Link
+        end: nodeid of the end of the Link
+        rargname (str): role of the argument
+        post (str): "post-slash label" indicating the scopal
+            relationship between the start and end of the Link;
+            possible values are `NEQ`, `EQ`, `HEQ`, and `H`
+    Attributes:
+        start: nodeid of the start of the Link
+        end: nodeid of the end of the Link
+        rargname (str): role of the argument
+        post (str): "post-slash label" indicating the scopal
+            relationship between the start and end of the Link
     """
     def __new__(cls, start, end, rargname, post):
         return super(Link, cls).__new__(
@@ -243,7 +295,7 @@ class Link(namedtuple('Link', ('start', 'end', 'rargname', 'post'))):
 
 
 def links(xmrs):
-    """Return the list of [Links] for the *xmrs*."""
+    """Return the list of Links for the *xmrs*."""
 
     # Links exist for every non-intrinsic argument that has a variable
     # that is the intrinsic variable of some other predicate, as well
@@ -320,7 +372,19 @@ def links(xmrs):
 
 class HandleConstraint(
         namedtuple('HandleConstraint', ('hi', 'relation', 'lo'))):
-    """A relation between two handles."""
+    """
+    A relation between two handles.
+
+    Arguments:
+        hi (str): hi handle (hole) of the constraint
+        relation (str): relation of the constraint (nearly always
+            `"qeq"`, but `"lheq"` and `"outscopes"` are also valid)
+        lo (str): lo handle (label) of the constraint
+    Attributes:
+        hi (str): hi handle (hole) of the constraint
+        relation (str): relation of the constraint
+        lo (str): lo handle (label) of the constraint
+    """
 
     QEQ = 'qeq'  # Equality modulo Quantifiers
     LHEQ = 'lheq'  # Label-Handle Equality
@@ -337,19 +401,30 @@ class HandleConstraint(
 
 
 def hcons(xmrs):
-    """Return the list of all [HandleConstraints] in *xmrs*."""
+    """Return the list of all HandleConstraints in *xmrs*."""
     return [
         HandleConstraint(hi, reln, lo)
         for hi, reln, lo in sorted(xmrs.hcons(), key=lambda hc: var_id(hc[0]))
     ]
 
 
-IndividualConstraint = namedtuple('IndividualConstraint',
-                                  ['left', 'relation', 'right'])
+class IndividualConstraint(
+        namedtuple('IndividualConstraint', ['left', 'relation', 'right'])):
+    """
+    A relation between two variables.
 
+    Arguments:
+        left (str): left variable of the constraint
+        relation (str): relation of the constraint
+        right (str): right variable of the constraint
+    Attributes:
+        left (str): left variable of the constraint
+        relation (str): relation of the constraint
+        right (str): right variable of the constraint
+    """
 
 def icons(xmrs):
-    """Return the list of all [IndividualConstraints] in *xmrs*."""
+    """Return the list of all IndividualConstraints in *xmrs*."""
     return [
         IndividualConstraint(left, reln, right)
         for left, reln, right in sorted(xmrs.icons(),
@@ -365,17 +440,17 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
     A semantic predicate.
 
     **Abstract** predicates don't begin with an underscore, and they
-    generally are defined as types in a grammar. **Surface**
-    predicates always begin with an underscore (ignoring possible
-    quotes), and are often defined as strings in a lexicon.
+    generally are defined as types in a grammar. **Surface** predicates
+    always begin with an underscore (ignoring possible quotes), and are
+    often defined as strings in a lexicon.
 
     In PyDelphin, Preds are equivalent if they have the same lemma,
-    pos, and sense, and are both abstract or both surface preds.
-    Other factors are ignored for comparison, such as their being
-    string-, grammar-, or real-preds, whether they are quoted or not,
-    whether they end with `_rel` or not, or differences in
-    capitalization. Hashed Pred objects (e.g., in a dict or set) also
-    use the normalized form. However, unlike with equality comparisons,
+    pos, and sense, and are both abstract or both surface preds. Other
+    factors are ignored for comparison, such as their being string-,
+    grammar-, or real-preds, whether they are quoted or not, whether
+    they end with `_rel` or not, or differences in capitalization.
+    Hashed Pred objects (e.g., in a dict or set) also use the
+    normalized form. However, unlike with equality comparisons,
     Pred-formatted strings are not treated as equivalent in a hash.
 
     Args:
@@ -388,7 +463,12 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
         sense: the (often omitted) sense of the predicate
     Returns:
         a Pred object
-
+    Attributes:
+        type: predicate type (Pred.GRAMMARPRED, Pred.REALPRED, or
+            Pred.STRINGPRED)
+        lemma: lemma component of the predicate
+        pos: part-of-speech component of the predicate
+        sense: sense component of the predicate
     Example:
         Preds are compared using their string representations.
         Surrounding quotes (double or single) are ignored, and
@@ -435,19 +515,19 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
     @classmethod
     def stringpred(cls, predstr):
-        """Return a Pred from its quoted string representation."""
+        """Instantiate a Pred from its quoted string representation."""
         lemma, pos, sense, _ = split_pred_string(predstr)
         return cls(Pred.STRINGPRED, lemma, pos, sense, predstr)
 
     @classmethod
     def grammarpred(cls, predstr):
-        """Return a Pred from its symbol string."""
+        """Instantiate a Pred from its symbol string."""
         lemma, pos, sense, _ = split_pred_string(predstr)
         return cls(Pred.GRAMMARPRED, lemma, pos, sense, predstr)
 
     @staticmethod
     def string_or_grammar_pred(predstr):
-        """Return a Pred from either its string or grammar symbol."""
+        """Instantiate a Pred from either its string or grammar symbol."""
         if predstr.strip('"').lstrip("'").startswith('_'):
             return Pred.stringpred(predstr)
         else:
@@ -455,7 +535,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
     @classmethod
     def realpred(cls, lemma, pos, sense=None):
-        """Return a Pred from its components."""
+        """Instantiate a Pred from its components."""
         string_tokens = [lemma]
         if pos is not None:
             string_tokens.append(pos)
@@ -467,7 +547,10 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
     def short_form(self):
         """
-        Return the pred string without quotes or a _rel suffix.
+        Return the pred string without quotes or a `_rel` suffix.
+
+        The short form is the same as the normalized form from
+        :func:`normalize_pred_string`.
 
         Example:
 
@@ -492,14 +575,9 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
 def split_pred_string(predstr):
     """
-    Extract the components from a pred string and log errors for any
-    malformedness.
-
-    Args:
-        predstr: a predicate string
+    Split *predstr* and return the (lemma, pos, sense, suffix) components.
 
     Examples:
-
         >>> Pred.split_pred_string('_dog_n_1_rel')
         ('dog', 'n', '1', 'rel')
         >>> Pred.split_pred_string('quant_rel')
@@ -523,8 +601,17 @@ def split_pred_string(predstr):
 
 def is_valid_pred_string(predstr):
     """
-    Return `True` if the given predicate string represents a valid
-    Pred, `False` otherwise.
+    Return `True` if *predstr* is a valid predicate string.
+
+    Examples:
+        >>> is_valid_pred_string('"_dog_n_1_rel"')
+        True
+        >>> is_valid_pred_string('_dog_n_1')
+        True
+        >>> is_valid_pred_string('_dog_noun_1')
+        False
+        >>> is_valid_pred_string('dog_noun_1')
+        True
     """
     predstr = predstr.strip('"').lstrip("'")
     # this is a stricter regex than in Pred, but doesn't check POS
@@ -537,8 +624,16 @@ def is_valid_pred_string(predstr):
 
 def normalize_pred_string(predstr):
     """
-    Make pred strings more consistent by removing quotes and the _rel
-    suffix, and by lowercasing them.
+    Normalize the predicate string *predstr* to a conventional form.
+
+    This makes predicate strings more consistent by removing quotes and
+    the `_rel` suffix, and by lowercasing them.
+
+    Examples:
+        >>> normalize_pred_string('"_dog_n_1_rel"')
+        '_dog_n_1'
+        >>> normalize_pred_string('_dog_n_1')
+        '_dog_n_1'
     """
     tokens = [t for t in split_pred_string(predstr)[:3] if t is not None]
     if predstr.lstrip('\'"')[:1] == '_':
@@ -551,19 +646,35 @@ class Node(
                         'lnk', 'surface', 'base', 'carg')),
     _LnkMixin):
     """
-    A very simple predication for DMRSs. Nodes don't have arguments
-    or labels like [ElementaryPredication] objects, but they do have
-    a property for CARGs and contain their variable sort and
-    properties in sortinfo.
+    A DMRS node.
+
+    Nodes are very simple predications for DMRSs. Nodes don't have
+    arguments or labels like :class:`ElementaryPredication` objects,
+    but they do have a property for CARGs and contain their variable
+    sort and properties in `sortinfo`.
 
     Args:
         nodeid: node identifier
-        pred: node's Pred
-        sortinfo: node properties (with cvarsort)
-        lnk: Lnk object associated with the pred
-        surface: surface string
-        base: base form
-        carg: constant argument string
+        pred (:class:`Pred`): semantic predicate
+        sortinfo (dict, optional): mapping of morphosyntactic
+            properties and values; the `cvarsort` property is
+            specified in this mapping
+        lnk (:class:`Lnk`, optional): surface alignment
+        surface (str, optional): surface string
+        base (str, optional): base form
+        carg (str, optional): constant argument string
+    Attributes:
+        Attributes:
+        pred (:class:`Pred`): semantic predicate
+        sortinfo (dict): mapping of morphosyntactic
+            properties and values; the `cvarsort` property is
+            specified in this mapping
+        lnk (:class:`Lnk`): surface alignment
+        surface (str): surface string
+        base (str): base form
+        carg (str): constant argument string
+        cfrom (int): surface alignment starting position
+        cto (int): surface alignment ending position
     """
 
     def __new__(cls, nodeid, pred, sortinfo=None,
@@ -615,7 +726,12 @@ class Node(
     @property
     def cvarsort(self):
         """
-        The sortal type of the predicate.
+        The "variable" type of the predicate.
+
+        Note:
+          DMRS does not use variables, but it is useful to indicate
+          whether a node is an individual, eventuality, etc., so this
+          property encodes that information.
         """
         return self.sortinfo.get(CVARSORT)
 
@@ -625,6 +741,11 @@ class Node(
 
     @property
     def properties(self):
+        """
+        Morphosemantic property mapping.
+
+        Unlike :attr:`sortinfo`, this does not include `cvarsort`.
+        """
         d = dict(self.sortinfo)
         if CVARSORT in d:
             del d[CVARSORT]
@@ -632,7 +753,7 @@ class Node(
 
     def is_quantifier(self):
         """
-        Return `True` if the Node's [Pred] appears to be a quantifier.
+        Return `True` if the Node's predicate appears to be a quantifier.
 
         *Deprecated since v0.6.0*
         """
@@ -666,32 +787,41 @@ class ElementaryPredication(
                ('nodeid', 'pred', 'label', 'args', 'lnk', 'surface', 'base')),
     _LnkMixin):
     """
-    An elementary predication (EP) combines a predicate with various
-    structural semantic properties.
+    An MRS elementary predication (EP).
 
-    EPs must have the `nodeid`, `pred`, and `label`, arguments,
-    while the others are optional. MRS does not use nodeids, so it's
-    fine to use `None`. Whenever an EP is used in an Xmrs, it gets
-    assigned a nodeid. Generally EPs will have an ARG0 on their `args`
-    dictionary to indicate their intrinisic variable, but it is not
-    required.
+    EPs combine a predicate with various structural semantic
+    properties. They must have a `nodeid`, `pred`, and `label`.
+    Arguments and other properties are optional. Note nodeids are not a
+    formal property of MRS (unlike DMRS, or the "anchors" of RMRS), but
+    they are required for Pydelphin to uniquely identify EPs in an
+    :class:`~delphin.mrs.xmrs.Xmrs`. Intrinsic arguments (`ARG0`) are
+    not required, but they are important for many semantic operations,
+    and therefore it is a good idea to include them.
 
     Args:
         nodeid: a nodeid
-        pred: The Pred of the EP
-        label: label handle
-        args: a mapping of role-argument names to values
-        lnk: Lnk object associated with the pred
-        surface: surface string
-        base: base form
+        pred (:class:`Pred`): semantic predicate
+        label (str): scope handle
+        args (dict, optional): mapping of roles to values
+        lnk (:class:`Lnk`, optional): surface alignment
+        surface (str, optional): surface string
+        base (str, optional): base form
+    Attributes:
+        nodeid: a nodeid
+        pred (:class:`Pred`): semantic predicate
+        label (str): scope handle
+        args (dict): mapping of roles to values
+        lnk (:class:`Lnk`): surface alignment
+        surface (str): surface string
+        base (str): base form
+        cfrom (int): surface alignment starting position
+        cto (int): surface alignment ending position
     """
 
     def __new__(cls, nodeid, pred, label, args=None,
                  lnk=None, surface=None, base=None):
         if args is None:
             args = {}
-        if nodeid is not None:
-            nodeid = nodeid
         # else:
         #     args = dict((a.rargname, a) for a in args)
         return super(ElementaryPredication, cls).__new__(
@@ -718,13 +848,13 @@ class ElementaryPredication(
     @property
     def intrinsic_variable(self):
         """
-        The value of the intrinsic argument (ARG0).
+        The value of the intrinsic argument (likely `ARG0`).
         """
         if IVARG_ROLE in self.args:
             return self.args[IVARG_ROLE]
         return None
 
-    #: A synonym for ElementaryPredication.intrinsic_variable
+    #: A synonym for :attr:`ElementaryPredication.intrinsic_variable`
     iv = intrinsic_variable
 
     @property
@@ -736,24 +866,27 @@ class ElementaryPredication(
 
     def is_quantifier(self):
         """
-        Return `True` if the EP is a quantifier predication.
+        Return `True` if this is a quantifier predication.
         """
         return RSTR_ROLE in self.args
 
 
 def elementarypredications(xmrs):
-    """Return the list of [ElementaryPredication] objects in *xmrs*."""
+    """
+    Return the list of :class:`ElementaryPredication` objects in *xmrs*.
+    """
     return list(starmap(ElementaryPredication, xmrs.eps()))
 
 
 def elementarypredication(xmrs, nodeid):
     """
-    Retrieve the EP with the given nodeid, or raises KeyError if no
-    EP matches.
+    Retrieve the elementary predication with the given nodeid.
 
     Args:
-        nodeid: The nodeid of the EP to return.
+        nodeid: nodeid of the EP to return
     Returns:
-        An ElementaryPredication.
+        :class:`ElementaryPredication`
+    Raises:
+        :py:exc:`KeyError` if no EP matches
     """
     return ElementaryPredication(*xmrs.ep(nodeid))

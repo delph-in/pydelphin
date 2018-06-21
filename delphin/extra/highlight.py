@@ -1,8 +1,6 @@
 
 """
 Pygments-based highlighting lexers for DELPH-IN formats.
-
-Requires: pygments
 """
 
 import re

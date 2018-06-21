@@ -1,13 +1,22 @@
+# coding: utf-8
+
 """
 Classes and functions for parsing and inspecting TDL.
 
 This module makes it easy to inspect what is written on definitions in
-Typed Description Language (TDL), but it doesn't interpret type
+Type Description Language [TDL]_, but it doesn't interpret type
 hierarchies (such as by performing unification, subsumption
 calculations, or creating GLB types). That is, while it wouldn't be
 useful for creating a parser, it is useful if you want to statically
 inspect the types in a grammar and the constraints they apply.
 
+.. [TDL] Hans-Ulrich Krieger and Ulrich Schäfer. TDL: a type
+  description language for constraint-based grammars. In Proceedings of
+  the 15th conference on Computational linguistics, volume 2, pages
+  893–899. Association for Computational Linguistics, 1994.
+
+  Ann Copestake. Implementing typed feature structure grammars, volume
+  110. CSLI publications Stanford, 2002.
 """
 
 import re
@@ -25,8 +34,11 @@ _diff_list_last = 'LAST'
 
 class TdlDefinition(TypedFeatureStructure):
     """
-    A TdlDefinition is like a TypedFeatureStructure but each structure
-    may have a list of supertypes instead of a type. It also allows for
+    A typed feature structure with supertypes.
+
+    A TdlDefinition is like a
+    :class:`~delphin.tfs.TypedFeatureStructure` but each structure may
+    have a list of supertypes instead of a type. It also allows for
     comments.
     """
 
@@ -49,6 +61,9 @@ class TdlDefinition(TypedFeatureStructure):
         return bool(self.supertypes) or len(self._avm) != 1
 
     def local_constraints(self):
+        """
+        Return the constraints defined in the local AVM.
+        """
         cs = []
         for feat, val in self._avm.items():
             try:
@@ -63,10 +78,21 @@ class TdlDefinition(TypedFeatureStructure):
 
 
 class TdlConsList(TdlDefinition):
+    """
+    A TdlDefinition for cons-lists (``< ... >``)
+
+    Navigating the feature structure for lists can be cumbersome, so
+    this subclass of :class:`TdlDefinition` provides the :meth:`values`
+    method to collect the items nested inside the list and return them
+    as a Python list.
+    """
     def __repr__(self):
         return "<TdlConsList object at {}>".format(id(self))
 
     def values(self):
+        """
+        Return the list of values.
+        """
         def collect(d):
             if d is None or d.get('FIRST') is None: return []
             vals = [d['FIRST']]
@@ -76,10 +102,21 @@ class TdlConsList(TdlDefinition):
 
 
 class TdlDiffList(TdlDefinition):
+    """
+    A TdlDefinition for diff-lists (``<! ... !>``)
+
+    Navigating the feature structure for lists can be cumbersome, so
+    this subclass of :class:`TdlDefinition` provides the :meth:`values`
+    method to collect the items nested inside the list and return them
+    as a Python list.
+    """
     def __repr__(self):
         return "<TdlDiffList object at {}>".format(id(self))
 
     def values(self):
+        """
+        Return the list of values.
+        """
         def collect(d):
             if d is None or d.get('FIRST') is None: return []
             vals = [d['FIRST']]
@@ -89,6 +126,15 @@ class TdlDiffList(TdlDefinition):
 
 
 class TdlType(TdlDefinition):
+    """
+    A top-level TdlDefinition with an identifier.
+
+    Args:
+        identifier (str): type name
+        definition (:class:`TdlDefinition`): definition of the type
+        coreferences (list): (tag, paths) tuple of coreferences, where
+            paths is a list of feature paths that share the tag
+    """
     def __init__(self, identifier, definition, coreferences=None):
         TdlDefinition.__init__(self, definition.supertypes,
                                definition._avm.items(), definition.comment)
@@ -113,6 +159,13 @@ class TdlType(TdlDefinition):
 
 
 class TdlInflRule(TdlType):
+    """
+    TDL inflectional rule.
+
+    Args:
+        identifier (str): type name
+        affix (str): inflectional affixes
+    """
     def __init__(self, identifier, affix=None, **kwargs):
         TdlType.__init__(self, identifier, **kwargs)
         self.affix = affix
@@ -138,13 +191,13 @@ _tdl_end_comment_re = re.compile(r'.*#\|\s*$')
 
 
 def tokenize(s):
+    """
+    Tokenize a string *s* of TDL code.
+    """
     return _tdl_re.findall(s)
 
 
 def lex(stream):
-    """
-    Yield (line_no, event, obj)
-    """
     lines = enumerate(stream)
     line_no = 0
     try:
@@ -198,6 +251,9 @@ def _nest_level(in_pattern, out_pattern, tokens):
 
 
 def parse(f):
+    """
+    Parse the open TDL file *f* and yield the type definitions.
+    """
     for line_no, event, data in lex(f):
         data = deque(data)
         try:

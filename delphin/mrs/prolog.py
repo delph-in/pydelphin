@@ -1,6 +1,26 @@
 
 """
 Serialization functions for the Prolog format.
+
+Example:
+    >>> from delphin.interfaces import rest
+    >>> from delphin.mrs import prolog
+    >>> response = rest.parse('The dog sleeps soundly.', params={'mrs':'json'})
+    >>> print(prolog.dumps([response.result(0).mrs()], pretty_print=True))
+    psoa(h1,e3,
+    [rel('_the_q',h4,
+        [attrval('ARG0',x6),
+            attrval('RSTR',h7),
+            attrval('BODY',h5)]),
+    rel('_dog_n_1',h8,
+        [attrval('ARG0',x6)]),
+    rel('_sleep_v_1',h2,
+        [attrval('ARG0',e3),
+            attrval('ARG1',x6)]),
+    rel('_sound_a_1',h2,
+        [attrval('ARG0',e9),
+            attrval('ARG1',e3)])],
+    hcons([qeq(h1,h2),qeq(h7,h8)]))
 """
 
 
@@ -11,19 +31,15 @@ from __future__ import print_function
 
 def dump(fh, ms, single=False, pretty_print=False, **kwargs):
     """
-    Serialize [Xmrs] objects to the Prolog representation and write
-    to a file
+    Serialize Xmrs objects to the Prolog representation and write to a file.
 
     Args:
-        fh: filename or file object
-        ms: an iterator of [Xmrs] objects to serialize (unless the
+        fh: file object where data will be written
+        ms: an iterator of Xmrs objects to serialize (unless the
             *single* option is `True`)
-        single: if `True`, treat *ms* as a single [Xmrs] object
+        single: if `True`, treat *ms* as a single Xmrs object
             instead of as an iterator
-        pretty_print: if `True`, the output is formatted to be easier
-            to read
-    Returns:
-      None
+        pretty_print: if `True`, add newlines and indentation
     """
     print(dumps(ms,
                 single=single,
@@ -34,17 +50,16 @@ def dump(fh, ms, single=False, pretty_print=False, **kwargs):
 
 def dumps(ms, single=False, pretty_print=False, **kwargs):
     """
-    Serialize an [Xmrs] object to the Prolog representation
+    Serialize an Xmrs object to the Prolog representation
 
     Args:
-        ms: an iterator of [Xmrs] objects to serialize (unless the
+        ms: an iterator of Xmrs objects to serialize (unless the
             *single* option is `True`)
-        single: if `True`, treat *ms* as a single [Xmrs] object instead
+        single: if `True`, treat *ms* as a single Xmrs object instead
             of as an iterator
-        pretty_print: if `True`, the output is formatted to be easier to
-            read
+        pretty_print: if `True`, add newlines and indentation
     Returns:
-        the Prolog string representation of a corpus of [Xmrs]
+        the Prolog string representation of a corpus of Xmrs
     """
     if single:
         ms = [ms]
@@ -56,7 +71,6 @@ dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 
 
 def serialize(ms, pretty_print=False, **kwargs):
-    """Serialize an MRS structure into Prolog."""
     # structures
     pl = 'psoa({topvars},{_}[{rels}],{_}hcons([{hcons}]){icons})'
     plep = "rel('{pred}',{lbl},{___}[{attrvals}])"

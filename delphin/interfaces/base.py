@@ -135,7 +135,7 @@ class ParseResponse(dict):
         return [self._result_factory(r) for r in self.get('results', [])]
 
     def result(self, i):
-        """Return a ParseResult object for the *i*th result."""
+        """Return a ParseResult object for the *i*\ th result."""
         return self._result_factory(self.get('results', [])[i])
 
     def tokens(self, tokenset='internal'):
@@ -146,7 +146,10 @@ class ParseResponse(dict):
         original string.
 
         Args:
-            tokenset: either `initial` or `internal` (default: `internal`)
+            tokenset (str): return `'initial'` or `'internal'` tokens
+                (default: `'internal'`)
+        Returns:
+            :class:`YyTokenLattice`
         """
         toks = self.get('tokens', {}).get(tokenset)
         if toks is not None:

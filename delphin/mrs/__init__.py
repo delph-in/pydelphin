@@ -1,28 +1,41 @@
 # -*- coding: UTF-8 -*-
 
 """
-
 This module contains classes and methods related to Minimal Recursion
-Semantics (Copestake et al. 2005). In addition to MRS, there are the
-related formalisms Robust Minimal Recursion Semantics (RMRS;
-Copestake, 2003), Elementary Dependency Structures (Oepen and Lønning,
-2006), and Dependency Minimal Recursion Semantics (DMRS; Copestake,
-2009). In pyDelphin, the greater MRS formalism is referred to as \*MRS
-(so "MRS" then refers to the original formalism), and the [Xmrs] class
-is implemented to handle all of them (note: RMRS support is postponed
-until a need is established).
+Semantics [MRS]_. In addition to MRS, there are the related formalisms
+Robust Minimal Recursion Semantics [RMRS]_, Elementary Dependency
+Structures [EDS]_, and Dependency Minimal Recursion Semantics [DMRS]_.
+As a convenience, \*MRS refers to the collection of MRS and related
+formalisms (so "MRS" then refers to the original formalism), and
+PyDelphin accordingly defines :class:`~delphin.mrs.xmrs.Xmrs` as the
+common subclass for the various formalisms.
 
-Users will interact mostly with [Xmrs] objects, but will not often
-instantiate them directly. Instead, they are created by serializing
-one of the various formats (such as delphin.mrs.simplemrs,
-delphin.mrs.mrx, or delphin.mrs.dmrx). No matter
-what serialization format (or formalism) is used to load a \*MRS
-structure, it will be stored the same way in memory, so any queries or
-actions taken on these structures will use the same methods.
+Users will interact mostly with :class:`~delphin.mrs.xmrs.Xmrs`
+objects, but will not often instantiate them directly. Instead, they
+are created by serializing one of the various formats (such as
+:mod:`delphin.mrs.simplemrs`, :mod:`delphin.mrs.mrx`, or
+:mod;`delphin.mrs.dmrx`). No matter what serialization format (or
+formalism) is used to load a \*MRS structure, it will be stored the
+same way in memory, so any queries or actions taken on these structures
+will use the same methods.
 
-Internally, an [Xmrs] object may be built up of various component
-classes, such as [ElementaryPredication], [Node], or
-[HandleConstraint].
+.. [MRS] Copestake, Ann, Dan Flickinger, Carl Pollard,
+  and Ivan A. Sag. "Minimal recursion semantics: An introduction."
+  Research on language and computation 3, no. 2-3 (2005): 281-332.
+.. [RMRS] Copestake, Ann. "Report on the design of RMRS."
+  DeepThought project deliverable (2003).
+.. [EDS] Stephan Oepen, Dan Flickinger, Kristina Toutanova, and
+  Christopher D Manning. Lingo Redwoods. Research on Language and
+  Computation, 2(4):575–596, 2004.;
+
+  Stephan Oepen and Jan Tore Lønning. Discriminant-based MRS
+  banking. In Proceedings of the 5th International Conference on
+  Language Resources and Evaluation, pages 1250–1255, 2006.
+.. [DMRS] Copestake, Ann. Slacker Semantics: Why superficiality,
+  dependency and avoidance of commitment can be the right way to go.
+  In Proceedings of the 12th Conference of the European Chapter of
+  the Association for Computational Linguistics, pages 1–9.
+  Association for Computational Linguistics, 2009.
 """
 
 # these may be order-sensitive

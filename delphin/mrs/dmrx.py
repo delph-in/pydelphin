@@ -1,12 +1,8 @@
 
-# DMRX codec
-# Summary: This module implements serialization and deserialization of the
-#          XML encoding of Distributed Minimal Recusion Semantics (DMRS). It
-#          provides standard Pickle API calls of load, loads, dump, and dumps
-#          for serializing and deserializing DMRX corpora. Further,
-#          load_one, loads_one, dump_one, and dumps_one operate on a single
-#          DMRX/DMRS.
-#
+"""
+DMRX (XML for DMRS) serialization and deserialization.
+"""
+
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
 from __future__ import print_function
@@ -26,6 +22,16 @@ from delphin.mrs.util import etree_tostring
 
 
 def load(fh, single=False):
+    """
+    Deserialize DMRX from a file (handle or filename)
+
+    Args:
+        fh (str, file): input filename or file object
+        single: if `True`, only return the first read Xmrs object
+    Returns:
+        a generator of Xmrs objects (unless the *single* option is
+        `True`)
+    """
     ms = deserialize(fh)
     if single:
         ms = next(ms)
@@ -33,6 +39,15 @@ def load(fh, single=False):
 
 
 def loads(s, single=False):
+    """
+    Deserialize DMRX string representations
+
+    Args:
+        s (str): a DMRX string
+        single (bool): if `True`, only return the first Xmrs object
+    Returns:
+        a generator of Xmrs objects (unless *single* is `True`)
+    """
     corpus = etree.fromstring(s)
     if single:
         ds = _deserialize_dmrs(next(iter(corpus)))
@@ -41,11 +56,45 @@ def loads(s, single=False):
     return ds
 
 
-def dump(fh, ms, **kwargs):
-    print(dumps(ms, **kwargs), file=fh)
+def dump(fh, ms, single=False, properties=True, pretty_print=False, **kwargs):
+    """
+    Serialize Xmrs objects to DMRX and write to a file
+
+    Args:
+        fh: file object where data will be written
+        ms: an iterator of Xmrs objects to serialize (unless the
+            *single* option is `True`)
+        single: if `True`, treat *ms* as a single Xmrs object
+            instead of as an iterator
+        properties: if `False`, suppress variable properties
+        pretty_print: if `True`, add newlines and indentation
+    """
+    print(
+        dumps(
+            ms,
+            single=single,
+            properties=properties,
+            pretty_print=pretty_print,
+            **kwargs
+        ),
+        file=fh
+    )
 
 
 def dumps(ms, single=False, properties=True, pretty_print=False, **kwargs):
+    """
+    Serialize an Xmrs object to a DMRX representation
+
+    Args:
+        ms: an iterator of Xmrs objects to serialize (unless the
+            *single* option is `True`)
+        single: if `True`, treat *ms* as a single Xmrs object instead
+            of as an iterator
+        properties: if `False`, suppress variable properties
+        pretty_print: if `True`, add newlines and indentation
+    Returns:
+        a DMRX string representation of a corpus of Xmrs
+    """
     if not pretty_print and kwargs.get('indent'):
         pretty_print = True
     if single:
@@ -64,7 +113,6 @@ dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
 # Decoding
 
 def deserialize(fh):
-    """Deserialize a DMRX-encoded DMRS structure."""
     # <!ELEMENT dmrs-list (dmrs)*>
     # if memory becomes a big problem, consider catching start events,
     # get the root element (later start events can be ignored), and

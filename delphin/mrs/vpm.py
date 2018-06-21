@@ -1,9 +1,15 @@
 
 """
+Variable property mapping (VPM).
+
 Variable property mappings (VPMs) convert grammar-internal variables
 (e.g. `event5`) to the grammar-external form (e.g. `e5`), and also map
 variable properties (e.g. `PNG: 1pl` might map to `PERS: 1` and
-`NUM: pl`). See http://moin.delph-in.net/RmrsVpm for more information.
+`NUM: pl`).
+
+.. seealso::
+  - Wiki about VPM: http://moin.delph-in.net/RmrsVpm
+
 """
 
 import re
@@ -23,10 +29,10 @@ def load(source, semi=None):
     Args:
         source: a filename or file-like object containing the VPM
             definitions
-        semi: a [SemI] instance; if provided, it is passed to the VPM
-            constructor
+        semi (:class:`~delphin.mrs.semi.SemI`, optional): if provided,
+            it is passed to the VPM constructor
     Returns:
-        a VPM instance
+        a :class:`VPM` instance
     """
     if hasattr(source, 'read'):
         return _load(source, semi)
@@ -81,8 +87,8 @@ class VPM(object):
             featmap is a tuple of two lists: (source_features,
             target_features); and valmap is a list of value tuples:
             (source_values, OP, target_values)
-        semi: if provided, the [SemI] object is used for more
-            sophisticated value comparisons
+        semi (:class:`~delphin.mrs.semi.SemI`, optional): if provided,
+            this is used for more sophisticated value comparisons
     """
 
     def __init__(self, typemap, propmap, semi=None):
@@ -100,7 +106,7 @@ class VPM(object):
         Args:
             var: a variable
             props: a dictionary mapping properties to values
-            reverse: if True, apply the rules in reverse (e.g. from
+            reverse: if `True`, apply the rules in reverse (e.g. from
                 grammar-external to grammar-internal forms)
         Returns:
             a tuple (v, p) of the mapped variable and properties
@@ -144,7 +150,7 @@ class VPM(object):
 
 def _valmatch(vs, ss, op, varsort, semi, section):
     """
-    Return True if for every paired *v* and *s* from *vs* and *ss*:
+    Return `True` if for every paired *v* and *s* from *vs* and *ss*:
         v <> s (subsumption or equality if *semi* is `None`)
         v == s (equality)
         s == '*'

@@ -1,47 +1,74 @@
 # -*- coding: UTF-8 -*-
 
 """
-The `itsdb` module provides classes and functions for working with
-[incr tsdb()] profiles (or, more generally, testsuites). It handles
-the technical details of encoding and decoding records in tables,
-including escaping and unescaping the reserved characters, pairing
-columns with their relational descriptions, and casting types (such
-as `:integer`, etc.), so that the user has a natural way of working
-with the data. This module covers all aspects of [incr tsdb()] data,
-from [Relations] files and [Field] descriptions to [Record], [Table],
-and full [TestSuite] classes. [TestSuite] is the most user-facing
-interface, and it makes it easy to load the tables of a testsuite
-into memory, inspect its contents, modify or create data, and write
-the data to disk.
+Classes and functions for working with [incr tsdb()] profiles.
 
-```python
->>> from delphin import itsdb
->>> ts = itsdb.TestSuite('jacy/tsdb/gold/mrs')
->>> len(ts['item'])  # tables are lists and support, e.g., len()
-135
->>> ts['item'][0]['i-input']  # get the input sentence of the first item
-'雨 が 降っ た ．'
->>> ts['item'][0]['i-id']  # :integer fields are cast to ints
-11
->>> # desegment each sentence
->>> for record in ts['item']:
-...     record['i-input'] = ''.join(record['i-input'].split())
-... 
->>> ts['item'][0]['i-input']
-'雨が降った．'
->>> ts.write(path='mrs-unsegmented')  # write to a new profile
->>> ts.reload()  # Restore values from original profile on disk
->>> ts['item'][0]['i-input']
-'雨 が 降っ た ．'
-```
+The ``itsdb`` module provides classes and functions for working with
+[incr tsdb()] profiles (or, more generally, testsuites; see
+http://moin.delph-in.net/ItsdbTop). It handles the technical details
+of encoding and decoding records in tables, including escaping and
+unescaping reserved characters, pairing columns with their relational
+descriptions, casting types (such as ``:integer``, etc.), and
+transparently handling gzipped tables, so that the user has a natural
+way of working with the data. Capabilities include:
 
-By default, the `itsdb` module expects testsuites to use the standard
-[incr tsdb()] schema. Testsuites are always read and written
+* Reading and writing testsuites:
+
+    >>> from delphin import itsdb
+    >>> ts = itsdb.TestSuite('jacy/tsdb/gold/mrs')
+    >>> ts.write(path='mrs-copy')
+
+* Selecting data by table name, record index, and column name or index:
+
+    >>> ts['item'][0]['i-input']  # input sentence of the first item
+    '雨 が 降っ た ．'
+    >>> ts['item'][0]['i-id']     # :integer fields are cast to ints
+    11
+
+* Selecting data as a query:
+
+    >>> next(ts.select('item:i-id@i-input'))
+    [11, '雨 が 降っ た ．']
+
+* In-memory modification of testsuite data:
+
+    >>> # desegment each sentence
+    >>> for record in ts['item']:
+    ...     record['i-input'] = ''.join(record['i-input'].split())
+    ... 
+    >>> ts['item'][0]['i-input']
+    '雨が降った．'
+
+* Joining tables
+
+    >>> joined = itsdb.join(ts['parse'], ts['result'])
+    >>> joined[0]['parse:i-id'], joined[0]['result:mrs']
+    (11, '[ LTOP: h1 INDEX: e2 [ e TENSE: PAST ...')
+
+* Processing data with ACE (results are stored in memory)
+
+    >>> from delphin.interfaces import ace
+    >>> with ace.AceParser('jacy.dat') as cpu:
+    ...     ts.process(cpu)
+    ... 
+    NOTE: parsed 126 / 135 sentences, avg 3167k, time 1.87536s
+    >>> ts.write('new-profile')
+
+This module covers all aspects of [incr tsdb()] data, from
+:class:`Relations` files and :class:`Field` descriptions to
+:class:`Record`, :class:`Table`, and full :class:`TestSuite` classes.
+:class:`TestSuite` is the most user-facing interface, and it makes it
+easy to load the tables of a testsuite into memory, inspect its
+contents, modify or create data, and write the data to disk.
+
+By default, the ``itsdb`` module expects testsuites to use the
+standard [incr tsdb()] schema. Testsuites are always read and written
 according to the associated or specified relations file, but other
 things, such as default field values and the list of "core" tables,
 are defined for the standard schema. It is, however, possible to
 define non-standard schemata for particular applications, and most
 functions will continue to work.
+
 """
 
 from __future__ import print_function
@@ -115,11 +142,12 @@ class Field(
     A tuple describing a column in an [incr tsdb()] profile.
 
     Args:
-        name: the column name
-        datatype: e.g. ":string" or ":integer"
-        key: True if the column is a key in the database
-        partial: True if the column is a partial key
-        comment: a description of the column
+        name (str): the column name
+        datatype (str): ``":string"``, ``":integer"``, ``":date"``,
+            or ``":float"``
+        key (bool): ``True`` if the column is a key in the database
+        partial (bool): ``True`` if the column is a partial key
+        comment (str): a description of the column
     '''
     def __new__(cls, name, datatype, key=False, partial=False, comment=None):
         return super(Field, cls).__new__(
@@ -177,12 +205,12 @@ class Relations(object):
     """
     A [incr tsdb()] database schema.
 
-    Users should instantiate this class via one of its class methods:
-      - Relations.from_file()
-      - Relations.from_string()
+    Note:
+      Use :meth:`from_file` or :meth:`from_string` for instantiating
+      a Relations object.
 
     Args:
-        tables: a list of (table, [Field]) tuples
+        tables: a list of ``(table, [Field])`` tuples
     """
 
     def __init__(self, tables):
@@ -270,8 +298,10 @@ class Record(list):
     A row in a [incr tsdb()] table.
 
     Args:
-        fields: the Relation schema for this table
+        fields: the Relation schema for the table of this record
         iterable: an iterable containing the data for the record
+    Attributes:
+        fields (:class:`Relation`): table schema
     """
 
     def __init__(self, fields, iterable):
@@ -355,6 +385,9 @@ class Table(list):
         name: the table name
         fields: the Relation schema for this table
         records: the collection of Record objects containing the table data
+    Attributes:
+        name (str): table name
+        fields (:class:`Relation`): table schema
     """
 
     def __init__(self, name, fields, records=None):
@@ -426,14 +459,18 @@ class Table(list):
 
 class TestSuite(object):
     """
-    A [incr tsdb()] test suite database.
+    A [incr tsdb()] testsuite database.
 
     Args:
-        path: the path to the test suite's directory
+        path: the path to the testsuite's directory
         relations: the relations file describing the schema of
             the database; if not given, the relations file under
             *path* will be used
         encoding: the character encoding of the files in the testsuite
+    Attributes:
+        encoding (:py:class:`str`): character encoding used when reading and
+            writing tables
+        relations (:class:`Relations`): database schema
     """
     def __init__(self, path=None, relations=None, encoding='utf-8'):
         self._path = path
@@ -492,8 +529,8 @@ class TestSuite(object):
         data specifier. If the former, the *cols* parameter selects the
         columns from the table. If the latter, *cols* is left
         unspecified and both the table and columns are taken from the
-        data specifier; e.g., `select('item:i-id@i-input')` is
-        equivalent to `select('item', ('i-id', 'i-input')).
+        data specifier; e.g., ``select('item:i-id@i-input')`` is
+        equivalent to ``select('item', ('i-id', 'i-input'))``.
 
         See select_rows() for a description of how to use the *mode*
         parameter.
@@ -514,7 +551,7 @@ class TestSuite(object):
 
     def write(self, tables=None, path=None, append=False, gzip=None):
         """
-        Write the test suite to disk.
+        Write the testsuite to disk.
 
         Args:
             tables: a name or iterable of names of tables to write,
@@ -569,15 +606,14 @@ class TestSuite(object):
         Args:
             cpu: a processor interface (e.g., [AceParser])
             selector: a data specifier to select a single table and
-                column as processor input (e.g., `item:i-input`)
+                column as processor input (e.g., ``"item:i-input"``)
             source: the testsuite from which input items are taken;
-                if `None`, use self
+                if ``None``, use self
             fieldmapper: a [FieldMapper] object for mapping response
-                fields to [incr tsdb()] fields; if `None`, use a
+                fields to [incr tsdb()] fields; if ``None``, use a
                 default mapper for the standard schema
         Examples:
             >>> ts.process(ace_parser, 'item:i-input')
-
             >>> ts.process(ace_generator, 'result:mrs', source=ts2)
         """
         if selector is None:
@@ -666,10 +702,10 @@ def decode_row(line, fields=None):
     """
     Decode a raw line from a profile into a list of column values.
 
-    Decoding involves splitting the line by the field delimiter ('@'
-    by default) and unescaping special characters. If *fields* is
-    given, cast the values into the datatype given by their respective
-    Field object.
+    Decoding involves splitting the line by the field delimiter
+    (``"@"`` by default) and unescaping special characters. If *fields*
+    is given, cast the values into the datatype given by their
+    respective Field object.
 
     Args:
         line: a raw line from a [incr tsdb()] profile.
@@ -705,7 +741,7 @@ def encode_row(fields):
 
     Encoding involves escaping special characters for each value, then
     joining the values into a single string with the field delimiter
-    ('@' by default). It does not fill in default values (see
+    (``"@"`` by default). It does not fill in default values (see
     make_row()).
 
     Args:
@@ -738,7 +774,7 @@ def escape(string):
         (newline) -> \\n
         \\        -> \\\\
 
-    Also see unescape()
+    Also see :func:`unescape`
 
     Args:
         string: the string to escape
@@ -757,10 +793,10 @@ def _unescape(m):
 def unescape(string):
     """
     Replace [incr tsdb()] escape sequences with the regular equivalents.
-    See escape().
+    Also see :func:`escape`.
 
     Args:
-        string: the escaped string
+        string (str): the escaped string
     Returns:
         The string with escape sequences replaced
     """
@@ -854,8 +890,8 @@ def make_row(row, fields):
     the mapping.
 
     Args:
-        row: a dictionary mapping column names to values
-        fields: an iterable of [Field] objects
+        row: a mapping of column names to values
+        fields: an iterable of :class:`Field` objects
     Returns:
         A [incr tsdb()]-encoded string
     """
@@ -876,11 +912,13 @@ def select_rows(cols, rows, mode='list'):
     This function selects the data in *cols* from *rows* and yields it
     in a form specified by *mode*. Possible values of *mode* are:
 
-    | mode           | description       | example `['i-id', 'i-wf']` |
-    | -------------- | ----------------- | -------------------------- |
-    | list (default) | a list of values  | `[10, 1]`                  |
-    | dict           | col to value map  | `{'i-id': 10,'i-wf': 1}`   |
-    | row            | [incr tsdb()] row | `'10@1'`                   |
+    ==============  =================  ============================
+    mode            description        example `['i-id', 'i-wf']`
+    ==============  =================  ============================
+    list (default)  a list of values   `[10, 1]`
+    dict            col to value map   {'i-id': 10,'i-wf': 1}`
+    row             [incr tsdb()] row  `'10@1'`
+    ==============  =================  ============================
 
     Args:
         cols: an iterable of column names to select data for
@@ -908,9 +946,9 @@ def select_rows(cols, rows, mode='list'):
 
 def match_rows(rows1, rows2, key, sort_keys=True):
     """
-    Yield triples of (value, left_rows, right_rows) where `left_rows`
-    and `right_rows` are lists of rows that share the same column
-    value for *key*.
+    Yield triples of ``(value, left_rows, right_rows)`` where
+    ``left_rows`` and ``right_rows`` are lists of rows that share the
+    same column value for *key*.
     """
     matched = OrderedDict()
     for i, rows in enumerate([rows1, rows2]):
@@ -944,12 +982,13 @@ def join(table1, table2, on=None, how='inner', name=None):
     parameter to `inner` and `left`, respectively.
 
     Args:
-        table1: the left table to join
-        table2: the right table to join
-        on: the shared key to use for joining; if `None`, find shared
-            keys using the schemata of the tables
-        how: the method used for joining
-        name: the name assigned to the resulting table
+        table1 (:class:`Table`): the left table to join
+        table2 (:class:`Table`): the right table to join
+        on (str): the shared key to use for joining; if `None`, find
+            shared keys using the schemata of the tables
+        how (str): the method used for joining (``"inner"`` or
+            ``"left"``)
+        name (str): the name assigned to the resulting table
     """
     if how not in ('inner', 'left'):
         ItsdbError('Only \'inner\' and \'left\' join methods are allowed.')

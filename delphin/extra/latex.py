@@ -42,7 +42,7 @@ def dmrs_tikz_dependency(xs, **kwargs):
     """
     Return a LaTeX document with each Xmrs in *xs* rendered as DMRSs.
 
-    DMRSs use the tikz-dependency package for visualization.
+    DMRSs use the `tikz-dependency` package for visualization.
     """
     def link_label(link):
         return '{}/{}'.format(link.rargname or '', link.post)

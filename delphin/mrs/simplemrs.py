@@ -61,16 +61,16 @@ def load(fh, single=False, version=_default_version,
     Deserialize SimpleMRSs from a file (handle or filename)
 
     Args:
-        fh: filename or file object
-        single: if `True`, only return the first read [Xmrs] object
+        fh (str, file): input filename or file object
+        single: if `True`, only return the first read Xmrs object
         strict: deprecated; a `True` value is the same as
-            `errors='strict', and a `False` value is the same as
-            `errors='warn'
-        errors: if `strict`, ill-formed MRSs raise an error; if
-            `warn`, raise a warning instead; if `ignore`, do not warn
-            or raise errors for ill-formed MRSs
+            `errors='strict'`, and a `False` value is the same as
+            `errors='warn'`
+        errors: if `'strict'`, ill-formed MRSs raise an error; if
+            `'warn'`, raise a warning instead; if `'ignore'`, do not
+            warn or raise errors for ill-formed MRSs
     Returns:
-        a generator of [Xmrs] objects (unless the *single* option is
+        a generator of Xmrs objects (unless the *single* option is
         `True`)
     """
     if isinstance(fh, stringtypes):
@@ -87,11 +87,10 @@ def loads(s, single=False, version=_default_version,
     Deserialize SimpleMRS string representations
 
     Args:
-        s: a SimpleMRS string
-        single: if `True`, only return the first read [Xmrs] object
+        s (str): a SimpleMRS string
+        single (bool): if `True`, only return the first Xmrs object
     Returns:
-        a generator of [Xmrs] objects (unless the *single* option is
-        `True`)
+        a generator of Xmrs objects (unless *single* is `True`)
     """
     ms = deserialize(s, version=version, strict=strict, errors=errors)
     if single:
@@ -103,21 +102,17 @@ def loads(s, single=False, version=_default_version,
 def dump(fh, ms, single=False, version=_default_version, properties=True,
          pretty_print=False, color=False, **kwargs):
     """
-    Serialize [Xmrs] objects to a SimpleMRS representation and write
-    to a file
+    Serialize Xmrs objects to SimpleMRS and write to a file
 
     Args:
-        fh: filename or file object
-        ms: an iterator of [Xmrs] objects to serialize (unless the
+        fh: file object where data will be written
+        ms: an iterator of Xmrs objects to serialize (unless the
             *single* option is `True`)
-        single: if `True`, treat *ms* as a single [Xmrs] object
+        single: if `True`, treat *ms* as a single Xmrs object
             instead of as an iterator
-        properties: if False, suppress variable properties
-        pretty_print: if `True`, the output is formatted to be easier
-            to read
+        properties: if `False`, suppress variable properties
+        pretty_print: if `True`, add newlines and indentation
         color: if `True`, colorize the output with ANSI color codes
-    Returns:
-      None
     """
     print(dumps(ms,
                 single=single,
@@ -132,19 +127,18 @@ def dump(fh, ms, single=False, version=_default_version, properties=True,
 def dumps(ms, single=False, version=_default_version, properties=True,
           pretty_print=False, color=False, **kwargs):
     """
-    Serialize an [Xmrs] object to a SimpleMRS representation
+    Serialize an Xmrs object to a SimpleMRS representation
 
     Args:
-        ms: an iterator of [Xmrs] objects to serialize (unless the
+        ms: an iterator of Xmrs objects to serialize (unless the
             *single* option is `True`)
-        single: if `True`, treat *ms* as a single [Xmrs] object instead
+        single: if `True`, treat *ms* as a single Xmrs object instead
             of as an iterator
-        properties: if False, suppress variable properties
-        pretty_print: if `True`, the output is formatted to be easier to
-            read
+        properties: if `False`, suppress variable properties
+        pretty_print: if `True`, add newlines and indentation
         color: if `True`, colorize the output with ANSI color codes
     Returns:
-        a SimpleMrs string representation of a corpus of [Xmrs]
+        a SimpleMrs string representation of a corpus of Xmrs
     """
     if not pretty_print and kwargs.get('indent'):
         pretty_print = True
