@@ -389,9 +389,8 @@ The TDL language is fairly simple, but the interpretation of type
 hierarchies (feature inheritance, re-entrancies, unification and
 subsumption) can be very complex. PyDelphin has partial support for
 reading TDL files. It can read nearly any kind of TDL in a DELPH-IN
-grammar (type definitions, lexicons, inflectional rules, transfer
-rules, etc.), but it does not do any interpretation. It can be useful
-for static code analysis.
+grammar (type definitions, lexicons, transfer rules, etc.), but it does
+not do any interpretation. It can be useful for static code analysis.
 
 >>> from delphin import tdl
 >>> lex = {}

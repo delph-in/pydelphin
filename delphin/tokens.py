@@ -67,7 +67,7 @@ class YyToken(_yy_token):
     @classmethod
     def from_dict(cls, d):
         """
-        Decode from a dictionary as from YyToken.to_dict().
+        Decode from a dictionary as from :meth:`to_dict`.
         """
         return cls(
             d['id'],
@@ -176,7 +176,7 @@ class YyTokenLattice(object):
     @classmethod
     def from_list(cls, toks):
         """
-        Decode from a list as from YyTokenLattice.to_list().
+        Decode from a list as from :meth:`to_list`.
         """
         return cls(list(map(YyToken.from_dict, toks)))
 

@@ -57,7 +57,7 @@ class Xmrs(_LnkMixin):
         top: the top (i.e. LTOP) handle
         index: the semantic index
         xarg: the external argument
-        lnk: Lnk object associating the [Xmrs] to the surface form
+        lnk (:class:`~delphin.mrs.components.Lnk`): surface alignment
         surface: the surface string
         identifier: a discourse-utterance ID (often unset)
     """
@@ -236,7 +236,7 @@ class Xmrs(_LnkMixin):
     @property
     def ltop(self):
         """
-        The top handle if specified; ``None`` otherwise.
+        The top handle if specified; `None` otherwise.
 
         Note:
             Equivalent to :attr:`top`
@@ -251,7 +251,7 @@ class Xmrs(_LnkMixin):
 
         Args:
             iv: the intrinsic variable of the predication to select
-            quantifier: if ``True``, treat *iv* as a bound variable and
+            quantifier: if `True`, treat *iv* as a bound variable and
                 find its quantifier; otherwise the non-quantifier will
                 be returned
         """
@@ -263,9 +263,9 @@ class Xmrs(_LnkMixin):
 
         Args:
             ivs: the intrinsic variables of the predications to select;
-                if ``None``, return all nodeids (but see *quantifier*)
+                if `None`, return all nodeids (but see *quantifier*)
             quantifier: if `True`, only return nodeids of quantifiers;
-                if ``False``, only return non-quantifiers; if ``None``
+                if `False`, only return non-quantifiers; if `None`
                 (the default), return both
         """
         if ivs is None:
@@ -294,7 +294,7 @@ class Xmrs(_LnkMixin):
 
         Args:
             nodeids: an iterable of nodeids of EPs to return; if
-                ``None``, return all EPs
+                `None`, return all EPs
         """
         if nodeids is None: nodeids = self._nodeids
         _eps = self._eps
@@ -317,7 +317,7 @@ class Xmrs(_LnkMixin):
         Return the ICONS with left variable *left*, or all ICONS.
 
         Args:
-            left: the left variable of the ICONS to return; if ``None``,
+            left: the left variable of the ICONS to return; if `None`,
                 return all ICONS
         """
         if left is not None:
@@ -367,7 +367,7 @@ class Xmrs(_LnkMixin):
 
         Args:
             nodeids: an iterable of nodeids of predications to return
-                Preds from; if ``None``, return all Preds
+                Preds from; if `None`, return all Preds
         """
         if nodeids is None: nodeids = self._nodeids
         _eps = self._eps
@@ -385,12 +385,12 @@ class Xmrs(_LnkMixin):
 
         Args:
             nodeids: an iterable of nodeids for predications to get
-                labels from; if ``None``, return labels for all
+                labels from; if `None`, return labels for all
                 predications
         Note:
             This returns the label of each predication, even if it's
             shared by another predication. Thus,
-            ``zip(nodeids, xmrs.labels(nodeids))`` will pair nodeids with
+            `zip(nodeids, xmrs.labels(nodeids))` will pair nodeids with
             their labels.
         Returns:
             A list of labels
@@ -411,7 +411,7 @@ class Xmrs(_LnkMixin):
         Args:
             nodeid: the nodeid of the EP that is the arguments' source
         Returns:
-            dict: ``{nodeid: {rargname: value}}``
+            dict: `{nodeid: {rargname: value}}`
         """
         return dict(self._eps[nodeid][3])
 
@@ -429,7 +429,7 @@ class Xmrs(_LnkMixin):
         Args:
             nodeid: the nodeid of the EP that is the arguments' source
         Returns:
-            dict: ``{nodeid: {rargname: value}}``
+            dict: `{nodeid: {rargname: value}}`
         """
         _vars = self._vars
         _hcons = self._hcons
@@ -456,7 +456,7 @@ class Xmrs(_LnkMixin):
         Args:
             nodeid: the nodeid of the EP that is the arguments' target
         Returns:
-            dict: ``{source_nodeid: {rargname: value}}``
+            dict: `{source_nodeid: {rargname: value}}`
         """
         _vars = self._vars
         ep = self._eps[nodeid]
@@ -601,7 +601,7 @@ class Xmrs(_LnkMixin):
 
     def is_connected(self):
         """
-        Return ``True`` if the Xmrs represents a connected graph.
+        Return `True` if the Xmrs represents a connected graph.
 
         Subgraphs can be connected through things like arguments,
         QEQs, and label equalities.
@@ -647,7 +647,7 @@ class Xmrs(_LnkMixin):
 
     def is_well_formed(self):
         """
-        Return ``True`` if the Xmrs is well-formed, ``False`` otherwise.
+        Return `True` if the Xmrs is well-formed, `False` otherwise.
 
         See :meth:`validate`
         """
@@ -862,13 +862,13 @@ def Rmrs(top=None, index=None, xarg=None,
         index: the INDEX variable
         xarg: the XARG variable
         eps: an iterable of EPs
-        args: a nested mapping of ``{nodeid: {rargname: value}}``
+        args: a nested mapping of `{nodeid: {rargname: value}}`
         hcons: an iterable of HandleConstraint objects
         icons: an iterable of IndividualConstraint objects
         lnk: the Lnk object associating the MRS to the surface form
         surface: the surface string
         identifier: a discourse-utterance id
-        vars: a mapping of variables to a list of ``(property, value)``
+        vars: a mapping of variables to a list of `(property, value)`
             pairs
 
     Example:
@@ -913,7 +913,7 @@ class Dmrs(Xmrs):
     Dependency Minimal Recursion Semantics (DMRS) have a list of Node
     objects and a list of Link objects. There are no variables or
     handles, so these will need to be created in order to make an
-    [Xmrs] object. The *top* node may be set directly via a parameter
+    Xmrs object. The *top* node may be set directly via a parameter
     or may be implicitly set via a Link from the special nodeid 0. If
     both are given, the link is ignored. The *index* and *xarg* nodes
     may only be set via parameters.

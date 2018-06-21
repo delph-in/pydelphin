@@ -1,7 +1,19 @@
+# coding: utf-8
+
 """
-A Regular-Expression Preprocessor (REPP) is a method of applying a
+Regular Expression Preprocessor (REPP)
+
+A Regular-Expression Preprocessor [REPP]_ is a method of applying a
 system of regular expressions for transformation and tokenization while
 retaining character indices from the original input string.
+
+.. [REPP] Rebecca Dridan and Stephan Oepen. Tokenization: Returning to
+  a long solved problem---a survey, contrastive experiment,
+  recommendations, and toolkit. In Proceedings of the 50th Annual
+  Meeting of the Association for Computational Linguistics (Volume 2:
+  Short Papers), pages 378–382, Jeju Island, Korea, July 2012.
+  Association for Computational Linguistics.
+  URL http://www.aclweb.org/anthology/P12-2074.
 
 """
 from __future__ import unicode_literals
@@ -19,17 +31,31 @@ from delphin.mrs.components import Lnk
 from delphin.exceptions import REPPError
 
 
-REPPStep = namedtuple(
-    'REPPStep',
-    'input output operation applied startmap endmap'.split()
-)
+class REPPStep(namedtuple(
+        'REPPStep', 'input output operation applied startmap endmap')):
+    """
+    A single rule application in REPP.
+
+    Attributes:
+        input (str): input string (prior to application)
+        output (str): output string (after application)
+        operation: operation performed
+        applied (bool): `True` if the rule was applied
+        startmap (:py:class:`array`): integer array of start offsets
+        endmap (:py:class:`array`): integer array of end offsets
+    """
 
 
-REPPResult = namedtuple(
-    'REPPResult',
-    'string startmap endmap'.split()
-)
+class REPPResult(namedtuple(
+        'REPPResult', 'string startmap endmap')):
+    """
+    The final result of REPP application.
 
+    Attributes:
+        string (str): resulting string after all rules have applied
+        startmap (:py:class:`array`): integer array of start offsets
+        endmap (:py:class:`array`): integer array of end offsets
+    """
 
 class _REPPOperation(object):
     """
@@ -215,25 +241,27 @@ class REPP(object):
     A Regular Expression Pre-Processor (REPP).
 
     The normal way to create a new REPP is to read a .rpp file via the
-    REPP.from_file() classmethod. For REPPs that are defined in code,
-    there is the REPP.from_string() classmethod, which parses the same
+    :meth:`from_file` classmethod. For REPPs that are defined in code,
+    there is the :meth:`from_string` classmethod, which parses the same
     definitions but does not require file I/O. Both methods, as does
-    the class's __init__() method, allow for pre-loaded and named
+    the class's `__init__()` method, allow for pre-loaded and named
     external *modules* to be provided, which allow for external group
-    calls (also see REPP.from_file() for implicit module loading). By
+    calls (also see :meth:`from_file` or implicit module loading). By
     default, all external submodules are deactivated, but they can be
-    activated by adding the module names to *active* or, later, via
-    the REPP.activate() method.
+    activated by adding the module names to *active* or, later, via the
+    :meth:`activate` method.
 
-    A third classmethod, REPP.from_config(), reads a PET-style
-    configuration file (e.g., repp.set) which may specify the
+    A third classmethod, :meth:`from_config`, reads a PET-style
+    configuration file (e.g., `repp.set`) which may specify the
     available and active modules, and therefore does not take the
     *modules* and *active* parameters.
 
     Args:
-        name: the name assigned to this module
-        modules: a mapping from identifiers to REPP modules
-        active: an iterable of default module activations
+        name (str, optional): the name assigned to this module
+        modules (dict, optional): a mapping from identifiers to REPP
+            modules
+        active (iterable, optional): an iterable of default module
+            activations
     """
 
     def __init__(self, name=None, modules=None, active=None):
@@ -253,15 +281,16 @@ class REPP(object):
     @classmethod
     def from_config(cls, path, directory=None):
         """
-        Instantiate a REPP from a PET-style .set configuration file.
+        Instantiate a REPP from a PET-style `.set` configuration file.
 
         The *path* parameter points to the configuration file.
         Submodules are loaded from *directory*. If *directory* is not
         given, it is the directory part of *path*.
 
         Args:
-            path: the path to the REPP configuration file
-            directory: the directory in which to search for submodules
+            path (str): the path to the REPP configuration file
+            directory (str, optional): the directory in which to search
+                for submodules
         """
         if not exists(path):
             raise REPPError('REPP config file not found: {}'.format(path))
@@ -313,7 +342,7 @@ class REPP(object):
     @classmethod
     def from_file(cls, path, directory=None, modules=None, active=None):
         """
-        Instantiate a REPP from a .rpp file.
+        Instantiate a REPP from a `.rpp` file.
 
         The *path* parameter points to the top-level module. Submodules
         are loaded from *directory*. If *directory* is not given, it is
@@ -329,10 +358,13 @@ class REPP(object):
         pattern.
 
         Args:
-            path: the path to the base REPP file to load
-            directory: the directory in which to search for submodules
-            modules: a mapping from identifiers to REPP modules
-            active: an iterable of default module activations
+            path (str): the path to the base REPP file to load
+            directory (str, optional): the directory in which to search
+                for submodules
+            modules (dict, optional): a mapping from identifiers to
+                REPP modules
+            active (iterable, optional): an iterable of default module
+                activations
         """
         name = basename(path)
         if name.endswith('.rpp'):
@@ -349,9 +381,11 @@ class REPP(object):
         Instantiate a REPP from a string.
 
         Args:
-            name: the name of the REPP module
-            modules: a mapping from identifiers to REPP modules
-            active: an iterable of default module activations
+            name (str, optional): the name of the REPP module
+            modules (dict, optional): a mapping from identifiers to
+                REPP modules
+            active (iterable, optional): an iterable of default module
+                activations
         """
         r = cls(name=name, modules=modules, active=active)
         _parse_repp(s.splitlines(), r, None)
@@ -378,12 +412,12 @@ class REPP(object):
         Apply the REPP's rewrite rules to the input string *s*.
 
         Args:
-            s: the input string to process
-            active: a collection of external module names that may be
-                applied if called
+            s (str): the input string to process
+            active (optional): a collection of external module names
+                that may be applied if called
         Returns:
-            a [REPPResult] object containing the processed string and
-            characterization maps
+            a :class:`REPPResult` object containing the processed
+                string and characterization maps
         """
         if active is None:
             active = self.active
@@ -391,17 +425,18 @@ class REPP(object):
 
     def trace(self, s, active=None, verbose=False):
         """
-        Rewrite string *s* like apply(), but yield each rewrite step.
+        Rewrite string *s* like `apply()`, but yield each rewrite step.
 
         Args:
-            s: the input string to process
-            active: a collection of external module names that may be
-                applied if called
-            verbose: if `False`, only output rules or groups that
-                matched the input
+            s (str): the input string to process
+            active (optional): a collection of external module names
+                that may be applied if called
+            verbose (bool, optional): if `False`, only output rules or
+                groups that matched the input
         Yields:
-            a [REPPStep] object for each intermediate rewrite step, and
-            finally a [REPPResult] object after the last rewrite
+            a :class:`REPPStep` object for each intermediate rewrite
+                step, and finally a :class:`REPPResult` object after
+                the last rewrite
         """
         if active is None:
             active = self.active
@@ -412,14 +447,14 @@ class REPP(object):
         Rewrite and tokenize the input string *s*.
 
         Args:
-            s: the input string to process
-            pattern: the regular expression pattern on which to split
-                tokens; defaults to `[ \t]+`
-            active: a collection of external module names that may be
-                applied if called
+            s (str): the input string to process
+            pattern (str, optional): the regular expression pattern on
+                which to split tokens; defaults to `[ \t]+`
+            active (optional): a collection of external module names
+                that may be applied if called
         Returns:
-            a YyTokenLattice containing the tokens and their
-            characterization information
+            a :class:`~delphin.tokens.YyTokenLattice` containing the
+            tokens and their characterization information
         """
         if pattern is None:
             if self.tokenize_pattern is None:

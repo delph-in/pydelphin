@@ -61,7 +61,7 @@ def load(fh, single=False, version=_default_version,
     Deserialize SimpleMRSs from a file (handle or filename)
 
     Args:
-        fh: filename or file object
+        fh (str, file): input filename or file object
         single: if `True`, only return the first read Xmrs object
         strict: deprecated; a `True` value is the same as
             `errors='strict'`, and a `False` value is the same as
@@ -105,7 +105,7 @@ def dump(fh, ms, single=False, version=_default_version, properties=True,
     Serialize Xmrs objects to SimpleMRS and write to a file
 
     Args:
-        fh: filename or file object
+        fh: file object where data will be written
         ms: an iterator of Xmrs objects to serialize (unless the
             *single* option is `True`)
         single: if `True`, treat *ms* as a single Xmrs object
@@ -134,9 +134,8 @@ def dumps(ms, single=False, version=_default_version, properties=True,
             *single* option is `True`)
         single: if `True`, treat *ms* as a single Xmrs object instead
             of as an iterator
-        properties: if False, suppress variable properties
-        pretty_print: if `True`, the output is formatted to be easier to
-            read
+        properties: if `False`, suppress variable properties
+        pretty_print: if `True`, add newlines and indentation
         color: if `True`, colorize the output with ANSI color codes
     Returns:
         a SimpleMrs string representation of a corpus of Xmrs

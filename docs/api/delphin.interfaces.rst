@@ -12,5 +12,8 @@ delphin.interfaces
    delphin.interfaces.ace.rst
    delphin.interfaces.rest.rst
 
+Common Classes
+--------------
+
 .. automodule:: delphin.interfaces.base
   :members:

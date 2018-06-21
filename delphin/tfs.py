@@ -8,6 +8,17 @@ access.
 """
 
 class TypedFeatureStructure(object):
+    """
+    A typed feature structure.
+
+    This class manages the access of nested features using
+    dot-delimited notation (e.g., `SYNSEM.LOCAL.CAT.HEAD`).
+
+    Args:
+        type (str): type name
+        featvals (dict, list): a mapping or iterable of feature paths
+            to feature values
+    """
 
     __slots__ = ['_type', '_avm']
 
@@ -65,6 +76,9 @@ class TypedFeatureStructure(object):
         self._type = value
 
     def get(self, key, default=None):
+        """
+        Return the value for *key* if it exists, otherwise *default*.
+        """
         try:
             val = self[key]
         except KeyError:
@@ -81,6 +95,9 @@ class TypedFeatureStructure(object):
         return len(self._avm) != 1
 
     def features(self):
+        """
+        Return the list of tuples of feature paths and feature values.
+        """
         fs = []
         for feat, val in self._avm.items():
             try:

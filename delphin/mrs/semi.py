@@ -1,10 +1,16 @@
 
 """
-Semantic Interfaces (SEM-I) describe the inventory of semantic
-components in a grammar, include variables, properties, roles, and
+Semantic Interface (SEM-I)
+
+Semantic interfaces (SEM-Is) describe the inventory of semantic
+components in a grammar, including variables, properties, roles, and
 predicates. This information can be used for validating semantic
 structures or for filling out missing information in incomplete
 representations.
+
+.. seealso::
+  - Wiki on SEM-I: http://moin.delph-in.net/SemiRfc
+
 """
 
 
@@ -64,7 +70,7 @@ class Variable(namedtuple('Variable', ('type', 'supertypes', 'proplist'))):
 
     @property
     def properties(self):
-        """Return the properties constrained by the Variable."""
+        """Properties constrained by the Variable."""
         return dict(self.proplist)
 
     @classmethod
@@ -94,7 +100,7 @@ class Role(namedtuple('Role', ('rargname', 'value', 'proplist', 'optional'))):
 
     @property
     def properties(self):
-        """Return the properties constrained by the Role."""
+        """Properties constrained by the Role."""
         return dict(self.proplist)
 
     @classmethod
