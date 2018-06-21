@@ -8,10 +8,12 @@ PyDelphin
 
 .. sidebar:: Quick Links
 
-  - `How to contribute <../CONTRIBUTING.md>`_
+  - `Project page <https://github.com/delph-in/pydelphin>`_
+  - `How to contribute <https://github.com/delph-in/pydelphin/blob/develop/CONTRIBUTING.md>`_
   - `Report a bug <https://github.com/delph-in/pydelphin/issues>`_
-  - `Changelog <../CHANGELOG.md>`_
-  - `Code of conduct <../CODE_OF_CONDUCT.md>`_
+  - `Changelog <https://github.com/delph-in/pydelphin/blob/develop/CHANGELOG.md>`_
+  - `Code of conduct <https://github.com/delph-in/pydelphin/blob/develop/CODE_OF_CONDUCT.md>`_
+  - `License (MIT) <https://github.com/delph-in/pydelphin/blob/develop/LICENSE>`_
 
 .. toctree::
   :maxdepth: 1
