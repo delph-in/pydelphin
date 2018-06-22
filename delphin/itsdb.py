@@ -3,12 +3,12 @@
 """
 Classes and functions for working with [incr tsdb()] profiles.
 
-The ``itsdb`` module provides classes and functions for working with
+The `itsdb` module provides classes and functions for working with
 [incr tsdb()] profiles (or, more generally, testsuites; see
 http://moin.delph-in.net/ItsdbTop). It handles the technical details
 of encoding and decoding records in tables, including escaping and
 unescaping reserved characters, pairing columns with their relational
-descriptions, casting types (such as ``:integer``, etc.), and
+descriptions, casting types (such as `:integer`, etc.), and
 transparently handling gzipped tables, so that the user has a natural
 way of working with the data. Capabilities include:
 
@@ -61,7 +61,7 @@ This module covers all aspects of [incr tsdb()] data, from
 easy to load the tables of a testsuite into memory, inspect its
 contents, modify or create data, and write the data to disk.
 
-By default, the ``itsdb`` module expects testsuites to use the
+By default, the `itsdb` module expects testsuites to use the
 standard [incr tsdb()] schema. Testsuites are always read and written
 according to the associated or specified relations file, but other
 things, such as default field values and the list of "core" tables,
@@ -143,10 +143,10 @@ class Field(
 
     Args:
         name (str): the column name
-        datatype (str): ``":string"``, ``":integer"``, ``":date"``,
-            or ``":float"``
-        key (bool): ``True`` if the column is a key in the database
-        partial (bool): ``True`` if the column is a partial key
+        datatype (str): `":string"`, `":integer"`, `":date"`,
+            or `":float"`
+        key (bool): `True` if the column is a key in the database
+        partial (bool): `True` if the column is a partial key
         comment (str): a description of the column
     '''
     def __new__(cls, name, datatype, key=False, partial=False, comment=None):
@@ -210,7 +210,7 @@ class Relations(object):
       a Relations object.
 
     Args:
-        tables: a list of ``(table, [Field])`` tuples
+        tables: a list of `(table, :class:`Relation`)` tuples
     """
 
     def __init__(self, tables):
@@ -286,7 +286,7 @@ class Relations(object):
         )
 
     def items(self):
-        """Return a list of (table, [Field]) for each table."""
+        """Return a list of (table, :class:`Relation`) for each table."""
         return [(table, self[table]) for table in self]
 
 
@@ -529,8 +529,8 @@ class TestSuite(object):
         data specifier. If the former, the *cols* parameter selects the
         columns from the table. If the latter, *cols* is left
         unspecified and both the table and columns are taken from the
-        data specifier; e.g., ``select('item:i-id@i-input')`` is
-        equivalent to ``select('item', ('i-id', 'i-input'))``.
+        data specifier; e.g., `select('item:i-id@i-input')` is
+        equivalent to `select('item', ('i-id', 'i-input'))`.
 
         See select_rows() for a description of how to use the *mode*
         parameter.
@@ -604,14 +604,17 @@ class TestSuite(object):
         Process each item in a [incr tsdb()] testsuite
 
         Args:
-            cpu: a processor interface (e.g., [AceParser])
-            selector: a data specifier to select a single table and
-                column as processor input (e.g., ``"item:i-input"``)
-            source: the testsuite from which input items are taken;
-                if ``None``, use self
-            fieldmapper: a [FieldMapper] object for mapping response
-                fields to [incr tsdb()] fields; if ``None``, use a
-                default mapper for the standard schema
+            cpu (:class:`~delphin.interfaces.base.Processor`):
+                processor interface (e.g.,
+                :class:`~delphin.interfaces.ace.AceParser`)
+            selector (str): data specifier to select a single table and
+                column as processor input (e.g., `"item:i-input"`)
+            source (:class:`TestSuite`): testsuite from which input
+                items are taken; if `None`, use `self`
+            fieldmapper (:class:`~delphin.interfaces.base.FieldMapper`):
+                object for mapping response fields to [incr tsdb()]
+                fields; if `None`, use a default mapper for the
+                standard schema
         Examples:
             >>> ts.process(ace_parser, 'item:i-input')
             >>> ts.process(ace_generator, 'result:mrs', source=ts2)
@@ -703,7 +706,7 @@ def decode_row(line, fields=None):
     Decode a raw line from a profile into a list of column values.
 
     Decoding involves splitting the line by the field delimiter
-    (``"@"`` by default) and unescaping special characters. If *fields*
+    (`"@"` by default) and unescaping special characters. If *fields*
     is given, cast the values into the datatype given by their
     respective Field object.
 
@@ -741,7 +744,7 @@ def encode_row(fields):
 
     Encoding involves escaping special characters for each value, then
     joining the values into a single string with the field delimiter
-    (``"@"`` by default). It does not fill in default values (see
+    (`"@"` by default). It does not fill in default values (see
     make_row()).
 
     Args:
@@ -916,7 +919,7 @@ def select_rows(cols, rows, mode='list'):
     mode            description        example `['i-id', 'i-wf']`
     ==============  =================  ============================
     list (default)  a list of values   `[10, 1]`
-    dict            col to value map   {'i-id': 10,'i-wf': 1}`
+    dict            col to value map   `{'i-id': 10,'i-wf': 1}`
     row             [incr tsdb()] row  `'10@1'`
     ==============  =================  ============================
 
@@ -946,8 +949,8 @@ def select_rows(cols, rows, mode='list'):
 
 def match_rows(rows1, rows2, key, sort_keys=True):
     """
-    Yield triples of ``(value, left_rows, right_rows)`` where
-    ``left_rows`` and ``right_rows`` are lists of rows that share the
+    Yield triples of `(value, left_rows, right_rows)` where
+    `left_rows` and `right_rows` are lists of rows that share the
     same column value for *key*.
     """
     matched = OrderedDict()
@@ -986,8 +989,8 @@ def join(table1, table2, on=None, how='inner', name=None):
         table2 (:class:`Table`): the right table to join
         on (str): the shared key to use for joining; if `None`, find
             shared keys using the schemata of the tables
-        how (str): the method used for joining (``"inner"`` or
-            ``"left"``)
+        how (str): the method used for joining (`"inner"` or
+            `"left"`)
         name (str): the name assigned to the resulting table
     """
     if how not in ('inner', 'left'):
@@ -1045,6 +1048,8 @@ def get_relations(path):
         path: The path of the relations file.
     Returns:
         A dictionary mapping a table name to a list of Field tuples.
+
+    .. deprecated:: v0.7.0
     """
     return Relations.from_file(path)
 
@@ -1063,6 +1068,8 @@ def default_value(fieldname, datatype):
         datatype: the datatype of the column (e.g. `:integer`)
     Returns:
         The default value for the column.
+
+    .. deprecated:: v0.7.0
     """
     if fieldname in tsdb_coded_attributes:
         return str(tsdb_coded_attributes[fieldname])
@@ -1090,6 +1097,8 @@ def make_skeleton(path, relations, item_rows, gzip=False):
         data will already have been written to disk).
     Raises:
         ItsdbError if the destination directory could not be created.
+
+    .. deprecated:: v0.7.0
     """
     try:
         os.makedirs(path)
@@ -1119,6 +1128,8 @@ def filter_rows(filters, rows):
         rows: an iterable of rows to filter
     Yields:
         Rows matching all applicable filters
+
+    .. deprecated:: v0.7.0
     """
     for row in rows:
         if all(condition(row, row.get(col))
@@ -1146,6 +1157,8 @@ def apply_rows(applicators, rows):
     Yields:
         Rows with specified column values replaced with the results of
         the applicators
+
+    .. deprecated:: v0.7.0
     """
     for row in rows:
         for (cols, function) in applicators:
@@ -1175,6 +1188,8 @@ class ItsdbProfile(object):
             each table.
         cast: if `True`, automatically cast data into the type defined
             by its relation field (e.g., :integer)
+
+    .. deprecated:: v0.7.0
     """
 
     # _tables is a list of table names to consider (for indexing, writing,
@@ -1505,12 +1520,28 @@ class ItsdbProfile(object):
                     os.remove(gzfn)
 
 
-@deprecated(final_version='1.0.0', alternative='TestSuite')
 class ItsdbSkeleton(ItsdbProfile):
     """
     A [incr tsdb()] skeleton, analyzed and ready for reading or writing.
 
-    See [ItsdbProfile] for initialization parameters.
+    See :class:`ItsdbProfile` for initialization parameters.
+
+    .. deprecated:: v0.7.0
     """
 
     _tables = tsdb_core_files
+
+    @deprecated(final_version='1.0.0', alternative='TestSuite')
+    def __init__(self, path, relations=None,
+                 filters=None, applicators=None, index=True,
+                 cast=False, encoding='utf-8'):
+        super(ItsdbSkeleton, self).__init__(
+            self,
+            path,
+            relations=relations,
+            filters=filters,
+            applicators=applicators,
+            index=index,
+            cast=cast,
+            encoding=encoding
+        )

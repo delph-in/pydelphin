@@ -32,7 +32,7 @@ databases:
 * :class:`Table` -- A table (or file) in a testsuite
 * :class:`Record` -- A row (or line) in a table
 
-.. autoclass:: delphin.itsdb.TestSuite
+.. autoclass:: TestSuite
   :members:
 .. autoclass:: delphin.itsdb.Table
   :members:
@@ -85,3 +85,20 @@ Utility Functions
 .. autofunction:: delphin.itsdb.decode_row
 .. autofunction:: delphin.itsdb.encode_row
 .. autofunction:: delphin.itsdb.get_data_specifier
+
+Deprecated
+----------
+
+The following are remnants of the old functionality that will be
+removed in a future version, but remain for now to aid in the
+transition.
+
+.. autoclass:: ItsdbProfile
+  :members:
+.. autoclass:: ItsdbSkeleton
+  :members:
+.. autofunction:: get_relations
+.. autofunction:: default_value
+.. autofunction:: make_skeleton
+.. autofunction:: filter_rows
+.. autofunction:: apply_rows
