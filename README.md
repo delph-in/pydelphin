@@ -1,9 +1,8 @@
 # PyDelphin <br/> Python libraries for DELPH-IN
 
-| Branch | Status |
-| ------ | ------ |
-| [master](https://github.com/delph-in/pydelphin/tree/master)  | [![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=master)](https://travis-ci.org/delph-in/pydelphin) |
-| [develop](https://github.com/delph-in/pydelphin/tree/develop) | [![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=develop)](https://travis-ci.org/delph-in/pydelphin) |
+| [master](https://github.com/delph-in/pydelphin/tree/master) branch | [develop](https://github.com/delph-in/pydelphin/tree/develop) branch | [documentation](https://pydelphin.readthedocs.io/) |
+| ------ | ------ | ------ |
+| [![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=master)](https://travis-ci.org/delph-in/pydelphin) | [![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=develop)](https://travis-ci.org/delph-in/pydelphin) | [![Documentation Status](https://readthedocs.org/projects/pydelphin/badge/?version=latest)](https://pydelphin.readthedocs.io/en/latest/?badge=latest) |
 
 > NOTE for previous PyDelphin users: Recent versions of PyDelphin may
 > have backwards-incompatible changes with prior versions. Please
@@ -28,16 +27,17 @@ schema, creating sub-profiles, or converting between MRS representations
 * [Installation and Requirements](#installation-and-requirements)
 * [Libraries](#sub-packages)
 
-[front-end tool]: https://github.com/delph-in/pydelphin/wiki/Command-line-Tutorial
+[front-end tool]: https://pydelphin.readthedocs.io/en/latest/tutorials/commands.html
 
-#### Documentation
+## Documentation
 
-Documentation is available on the
-[wiki](https://github.com/delph-in/pydelphin/wiki). Help is
-appreciated! See [here](https://github.com/delph-in/pydelphin/blob/master/CONTRIBUTING.md#generating-api-documentation)
-for instructions.
+Documentation, including tutorials and an API reference, is available here:
+http://pydelphin.readthedocs.io/
 
-#### Usage Examples
+New to PyDelphin? Try the
+[walkthrough](https://pydelphin.readthedocs.io/en/latest/tutorials/walkthrough.html).
+
+## Usage Examples
 
 Here's a brief example of using the `itsdb` library:
 
@@ -159,7 +159,7 @@ The following packages/modules are available:
 - `extra.latex`: Formatting for LaTeX (just DMRS)
 - `interfaces.ace`: Python wrapper for common tasks using
   [ACE](http://sweaglesw.org/linguistics/ace/)
-- `interfaces.rest`: Client for the RESTful web 
+- `interfaces.rest`: Client for the RESTful web
   [API](http://moin.delph-in.net/ErgApi)
 
 ## Contributors
@@ -189,4 +189,3 @@ The following packages/modules are available:
 * Also see (may have overlap with the above):
   - http://moin.delph-in.net/ToolsTop
   - http://moin.delph-in.net/DelphinApplications
-

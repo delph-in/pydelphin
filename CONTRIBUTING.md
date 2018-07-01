@@ -49,8 +49,8 @@ Please follow these guidelines for code and repository changes:
   examples of applications utilizing PyDelphin.
 * API documentation is generated from the code and uses docstrings, so
   provide descriptive docstrings for all modules, classs, methods, and
-  functions. Follow [Google-style docstrings][] and use [Markdown][] for
-  formatting.
+  functions. Follow [Google-style docstrings][] and use
+  [reStructuredText][] for formatting.
 
 ### Testing
 
@@ -78,29 +78,25 @@ Compute test coverage by installing
 Note that the codebase doesn't yet have full test coverage.
 Contributions of unit tests are very welcome!
 
-## API Documentation
+## Documentation
 
-API documentation is generated from the code itself, so follow these
-guidelines:
+The documentation resides in the `docs/` subdirectory, which contains
+all content for the tutorials and some content for the API reference.
+The bulk of the content for the API reference is in the docstrings of
+the modules, classes, and functions of the code itself. Therefore, all
+*public* modules, classes, methods, and functions should have
+docstrings and should not have a name with a leading underscore, as
+otherwise they will not appear in the documentation.
 
-* Modules, classes, methods, and functions with a leading underscore
-  (`_`) in the name are considered *not* part of the public API, and
-  will be ignored.
-* Use docstrings to document the code.
+The API reference and tutorials are written in [reStructuredText][]
+and generated using [Sphinx][] on the [Read the Docs][] service.
+Repository files, such as the README, CHANGELOG, and CONTRIBUTING
+fies, are written in [Markdown][].
 
-[CartogrAPI][] and [RenderDown][] are used to generate the wiki
-documentation. Ensure both are downloaded, with dependencies
-satified, and on PYTHONPATH. PyDelphin's dependencies should also be
-accessible from PYTHONPATH. Then clone the wiki repository:
-
-    git clone https://github.com/delph-in/pydelphin.wiki.git
-
-And run RenderDown on the Home.mako file:
-
-    python3 renderdown.py -o pydelphin.wiki/ pydelphin.wiki/Home.mako
-
-This will overwrite the `.md` files in the wiki directory. Commit and
-push the changes to update the documentation.
+For instructions on building the documentation, see [docs/](docs).
+Do not check in the generated documentation files (e.g., `*.html`);
+only documentation source files belong, as the rest will be
+generated automatically by [Read the Docs][].
 
 
 # Release Checklist
@@ -132,4 +128,7 @@ Do the following tasks prior to releasing on GitHub and PyPI.
 [CartogrAPI]: https://github.com/goodmami/cartograpi
 [RenderDown]: https://github.com/goodmami/renderdown
 [Google-style docstrings]: https://google.github.io/styleguide/pyguide.html?showone=Comments#Comments
-[Markdown]: https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet
+[Sphinx]: http://www.sphinx-doc.org/
+[reStructuredText]: http://docutils.sourceforge.net/
+[Read the Docs]: https://readthedocs.org/
+[Markdown]: https://github.github.com/gfm/

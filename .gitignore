@@ -6,7 +6,6 @@ dist/
 .pytest_cache/
 PyDelphin.egg-info/
 docs/_build/
-docs/_static/
 docs/_templates/
 tmp/
 # Ignore the compiled python files
