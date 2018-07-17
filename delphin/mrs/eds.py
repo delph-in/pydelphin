@@ -279,14 +279,14 @@ def _find_root(m):
 
 def load(fh, single=False):
     """
-    Deserialize Eds from a file (handle or filename)
+    Deserialize :class:`Eds` from a file (handle or filename)
 
     Args:
         fh (str, file): input filename or file object
-        single: if `True`, only return the first read Xmrs object
+        single (bool): if `True`, only return the first Xmrs object
     Returns:
-        a generator of Xmrs objects (unless the *single* option is
-        `True`)
+        a generator of :class:`Eds` objects (unless the *single* option
+        is `True`)
     """
     if isinstance(fh, stringtypes):
         s = open(fh, 'r').read()
@@ -296,53 +296,62 @@ def load(fh, single=False):
 
 def loads(s, single=False):
     """
-    Deserialize Eds string representations
+    Deserialize :class:`Eds` string representations
 
     Args:
         s (str): Eds string
-        single: if `True`, only return the first read Xmrs object
+        single (bool): if `True`, only return the first Xmrs object
     Returns:
-        a generator of Xmrs objects (unless the *single* option is
-        `True`)
+        a generator of :class:`Eds` objects (unless the *single* option
+        is `True`)
     """
     es = deserialize(s)
     if single:
         return next(es)
     return es
 
-def dump(fh, ms, single=False, properties=False, pretty_print=True, **kwargs):
+def dump(fh, ms, single=False,
+         properties=False, pretty_print=True, show_status=False, **kwargs):
     """
     Serialize Xmrs objects to Eds and write to a file
 
     Args:
         fh: file object where data will be written
-        ms: an iterator of Xmrs objects to serialize (unless the
-            *single* option is `True`)
-        single: if `True`, treat *ms* as a single Xmrs object
-            instead of as an iterator
-        properties: if `False`, suppress variable properties
-        pretty_print: if `True`, add newlines and indentation
+        ms: an iterator of :class:`~delphin.mrs.xmrs.Xmrs` objects to
+            serialize (unless the *single* option is `True`)
+        single (bool): if `True`, treat *ms* as a single
+            :class:`~delphin.mrs.xmrs.Xmrs` object instead of as an
+            iterator
+        properties (bool): if `False`, suppress variable properties
+        pretty_print (bool): if `True`, add newlines and indentation
+        show_status (bool): if `True`, annotate disconnected graphs and
+            nodes
     """
     print(dumps(ms,
                 single=single,
                 properties=properties,
                 pretty_print=pretty_print,
+                show_status=show_status,
                 **kwargs),
           file=fh)
 
-def dumps(ms, single=False, properties=False, pretty_print=True, **kwargs):
+def dumps(ms, single=False,
+          properties=False, pretty_print=True, show_status=False, **kwargs):
     """
     Serialize an Xmrs object to a Eds representation
 
     Args:
-        ms: an iterator of Xmrs objects to serialize (unless the
-            *single* option is `True`)
-        single: if `True`, treat *ms* as a single Xmrs object instead
-            of as an iterator
-        properties: if `False`, suppress variable properties
-        pretty_print: if `True`, add newlines and indentation
+        ms: an iterator of :class:`~delphin.mrs.xmrs.Xmrs` objects to
+            serialize (unless the *single* option is `True`)
+        single (bool): if `True`, treat *ms* as a single
+            :class:`~delphin.mrs.xmrs.Xmrs` object instead of as an
+            iterator
+        properties (bool): if `False`, suppress variable properties
+        pretty_print (bool): if `True`, add newlines and indentation
+        show_status (bool): if `True`, annotate disconnected graphs and
+            nodes
     Returns:
-        an Eds string representation of a corpus of Xmrs
+        an :class:`Eds` string representation of a corpus of Xmrs
     """
     if not pretty_print and kwargs.get('indent'):
         pretty_print = True
@@ -352,6 +361,7 @@ def dumps(ms, single=False, properties=False, pretty_print=True, **kwargs):
         ms,
         properties=properties,
         pretty_print=pretty_print,
+        show_status=show_status,
         **kwargs
     )
 
@@ -421,19 +431,15 @@ carg = '("{constant}")'
 proplist = '{{{varsort}{proplist}}}'
 dep = '{argname} {value}'
 
-def serialize(ms, properties=False, pretty_print=True, **kwargs):
+def serialize(ms, properties=False, pretty_print=True, show_status=False,
+              **kwargs):
     delim = '\n' if pretty_print else ' '
     return delim.join(
-        _serialize_eds(
-            m,
-            properties=properties,
-            pretty_print=pretty_print,
-            **kwargs
-        )
+        _serialize_eds(m, properties, pretty_print, show_status)
         for m in ms
     )
 
-def _serialize_eds(e, properties=False, pretty_print=True, **kwargs):
+def _serialize_eds(e, properties, pretty_print, show_status):
     if not isinstance(e, Eds):
         e = Eds.from_xmrs(e)
     # do something predictable for empty EDS
@@ -448,16 +454,20 @@ def _serialize_eds(e, properties=False, pretty_print=True, **kwargs):
             g[tgt].add(n)
     nidgrp = _bfs(g, start=e.top)
 
+    status = ''
+    if show_status and nidgrp != set(e.nodeids()):
+        status = ' (fragmented)'
     delim = '\n' if pretty_print else ' '
     connected = ' ' if pretty_print else ''
+    disconnected = '|' if show_status else ' '
 
     return eds.format(
         top=e.top + ':' if e.top is not None else ':',
-        flag='' if nidgrp == set(e.nodeids()) else ' (fragmented)',
+        flag=status,
         delim=delim,
         ed_list=delim.join(
             ed.format(
-                membership=connected if n.nodeid in nidgrp else '|',
+                membership=connected if n.nodeid in nidgrp else disconnected,
                 id=n.nodeid,
                 pred=n.pred.short_form(),
                 lnk=str(n.lnk) if n.lnk else '',

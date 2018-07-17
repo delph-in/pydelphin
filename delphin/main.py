@@ -112,6 +112,10 @@ def convert(args):
     if args.color: kwargs['color'] = args.color
     if args.pretty_print: kwargs['pretty_print'] = args.pretty_print
     if args.indent: kwargs['indent'] = args.indent
+    if args.to == 'eds':
+        kwargs['pretty_print'] = args.pretty_print
+        if args.show_status:
+            kwargs['show_status'] = True
     kwargs['properties'] = not args.no_properties
     print(dumps(xs, **kwargs))
     # try:
@@ -518,6 +522,10 @@ convert_parser.add_argument(
     default='result:mrs',
     help=('table:col data specifier; ignored if PATH does not point '
           'to a test suite directory (default: result:mrs)'))
+convert_parser.add_argument(
+    '--show-status',
+    action='store_true',
+    help='(--to=eds only) annotate disconnected graphs and nodes')
 
 # Arguments for the select command
 select_parser = argparse.ArgumentParser(add_help=False)
@@ -637,7 +645,20 @@ repp_parser.add_argument(
     help='print each step that modifies an input string')
 
 subparser = parser.add_subparsers(title='commands')
-subparser.add_parser('convert', parents=[common_parser, convert_parser])
+subparser.add_parser(
+    'convert',
+    parents=[common_parser, convert_parser],
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=redent("""
+        Convert \*MRS representations.
+
+        Available representations:
+          simplemrs, mrx, mrs-json, mrs-prolog*, dmrx, dmrs-penman, dmrs-json,
+          simpledmrs*, dmrs-tikz*, eds^, eds-penman^, eds-json^
+
+        * available for export only
+        ^ imported EDSs can only be exported to another EDS representation
+        """))
 subparser.add_parser(
     'select', parents=[common_parser, select_parser, profile_parser])
 subparser.add_parser(

@@ -265,6 +265,15 @@ def test_serialize():
     )
 
     assert eds.dumps_one(nearly_every_dog_barked) == (
+        '{e2:\n'
+        ' e5:_nearly_x_deg<0:6>[]\n'
+        ' _1:_every_q<7:12>[BV x3]\n'
+        ' x3:_dog_n_1<13:16>[]\n'
+        ' e2:_bark_v_1<17:24>[ARG1 x3]\n'
+        '}'
+    )
+
+    assert eds.dumps_one(nearly_every_dog_barked, show_status=True) == (
         '{e2: (fragmented)\n'
         '|e5:_nearly_x_deg<0:6>[]\n'
         ' _1:_every_q<7:12>[BV x3]\n'

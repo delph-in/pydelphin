@@ -2,6 +2,17 @@
 
 ## [Unreleased][unreleased]
 
+### Added
+
+* `delphin.mrs.eds`: `dump()` and `dumps()` take a `show_status` parameter
+  which turns on the annotation of disconnected graphs and nodes (#157)
+* The `convert` command can take a `--show-status` command which annotates
+  disconnected graphs and nodes when `--to=eds`
+
+### Changed
+
+* Converting with `--to=eds` no longer shows disconnected graphs and nodes
+  by default (see `--show-status` above)
 
 ### Deprecated
 
