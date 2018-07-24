@@ -114,8 +114,8 @@ def convert(args):
     if args.indent: kwargs['indent'] = args.indent
     if args.to == 'eds':
         kwargs['pretty_print'] = args.pretty_print
-        if args.show_status:
-            kwargs['show_status'] = True
+        kwargs['show_status'] = args.show_status
+        kwargs['predicate_modifiers'] = args.predicate_modifiers
     kwargs['properties'] = not args.no_properties
     print(dumps(xs, **kwargs))
     # try:
@@ -526,6 +526,10 @@ convert_parser.add_argument(
     '--show-status',
     action='store_true',
     help='(--to=eds only) annotate disconnected graphs and nodes')
+convert_parser.add_argument(
+    '--predicate-modifiers',
+    action='store_true',
+    help='(--to=eds* only) attempt to join disconnected graphs')
 
 # Arguments for the select command
 select_parser = argparse.ArgumentParser(add_help=False)

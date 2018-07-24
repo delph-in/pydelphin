@@ -6,13 +6,23 @@
 
 * `delphin.mrs.eds`: `dump()` and `dumps()` take a `show_status` parameter
   which turns on the annotation of disconnected graphs and nodes (#157)
-* The `convert` command can take a `--show-status` command which annotates
+* `delphin.mrs.eds`: `Eds.from_xmrs()`, `dump()` and `dumps()` take a
+  `predicate_modifiers` parameter which enables the use of a function to
+  add additional edges in order to join disconnected graphs (#156)
+* `delphin.mrs.eds.non_argument_modifiers()` is the default method for
+  EDS predicate modification, but it also works (with different
+  parameters) for DMRS-like edges.
+* The `convert` command can take a `--show-status` option which annotates
   disconnected graphs and nodes when `--to=eds`
+* The `convert` command can take a `--predicate-modifiers` option which
+  attempts to rejoin disconnected EDS graphs that fit certain criteria
 
 ### Changed
 
 * Converting with `--to=eds` no longer shows disconnected graphs and nodes
   by default (see `--show-status` above)
+* Representative node selection for DMRS and EDS considers the scope
+  hierarchy when looking for candidate nodes
 
 ### Deprecated
 

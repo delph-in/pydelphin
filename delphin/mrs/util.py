@@ -77,7 +77,7 @@ def rargname_sortkey(rargname):
     return (
         rargname != 'LBL',
         rargname in ('BODY', 'CARG'),
-        rargname.endswith('HNDL'),
+        # rargname.endswith('HNDL'),
         rargname
     )
 

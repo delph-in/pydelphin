@@ -35,6 +35,7 @@ from delphin.lib.pegre import (
     DQString
 )
 
+
 class Eds(object):
     """
     An Elementary Dependency Structure (EDS) instance.
@@ -63,12 +64,41 @@ class Eds(object):
             self._edges[start][rargname] = end
 
     @classmethod
-    def from_xmrs(cls, xmrs):
+    def from_xmrs(cls, xmrs, predicate_modifiers=False):
         """
         Instantiate an Eds from an Xmrs (lossy conversion).
+
+        Args:
+            xmrs (:class:`~delphin.mrs.xmrs.Xmrs`): Xmrs instance to
+                convert from
+            predicate_modifiers (function, bool): function that is
+                called as `func(xmrs, deps)` after finding the basic
+                dependencies (`deps`), returning a mapping of
+                predicate-modifier dependencies; the form of `deps` and
+                the returned mapping are `{head: [(role, dependent)]}`;
+                if *predicate_modifiers* is `True`, the function is
+                created using :func:`non_argument_modifiers` as:
+                `non_argument_modifiers(role="ARG1", connecting=True);
+                if *predicate_modifiers* is `False`, only the basic
+                dependencies are returned
         """
         eps = xmrs.eps()
-        deps = _find_dependencies(xmrs, eps)
+        deps = _find_basic_dependencies(xmrs, eps)
+
+        # if requested, find additional dependencies not captured already
+        if predicate_modifiers is True:
+            func = non_argument_modifiers(role='ARG1', only_connecting=True)
+            addl_deps = func(xmrs, deps)
+        elif predicate_modifiers is False or predicate_modifiers is None:
+            addl_deps = {}
+        elif hasattr(predicate_modifiers, '__call__'):
+            addl_deps = predicate_modifiers(xmrs, deps)
+        else:
+            raise TypeError('a boolean or callable is required')
+
+        for nid, deplist in addl_deps.items():
+            deps.setdefault(nid, []).extend(deplist)
+
         ids = _unique_ids(eps, deps)
         root = _find_root(xmrs)
         if root is not None:
@@ -76,6 +106,7 @@ class Eds(object):
         nodes = [Node(ids[n.nodeid], *n[1:]) for n in make_nodes(xmrs)]
         edges = [(ids[a], rarg, ids[b]) for a, deplist in deps.items()
                                         for rarg, b in deplist]
+
         return cls(top=root, nodes=nodes, edges=edges)
 
     def __eq__(self, other):
@@ -194,7 +225,6 @@ class Eds(object):
         """
         Decode triples, as from :meth:`to_triples`, into an Eds object.
         """
-        lnk, surface, identifier = None, None, None
         nids, nd, edges = [], {}, []
         for src, rel, tgt in triples:
             if src not in nd:
@@ -228,7 +258,7 @@ class Eds(object):
         return cls(top=top, nodes=nodes, edges=edges)
 
 
-def _find_dependencies(m, eps):
+def _find_basic_dependencies(m, eps):
     deps = {}
     for ep in eps:
         nid = ep.nodeid
@@ -237,11 +267,81 @@ def _find_dependencies(m, eps):
         else:
             epdeps = []
             args = m.outgoing_args(nid)
-            for rargname, val in args.items():
+            for rargname in args:
                 tgtnid = find_argument_target(m, nid, rargname)
                 epdeps.append((rargname, tgtnid))
             deps[nid] = epdeps
     return deps
+
+
+def non_argument_modifiers(role='ARG1', only_connecting=True):
+    """
+    Return a function that finds non-argument modifier dependencies.
+
+    Args:
+        role (str): the role that is assigned to the dependency
+        only_connecting (bool): if `True`, only return dependencies
+            that connect separate components in the basic dependencies;
+            if `False`, all non-argument modifier dependencies are
+            included
+
+    Returns:
+        a function with signature `func(xmrs, deps)` that returns a
+        mapping of non-argument modifier dependencies
+
+    Examples:
+        The default function behaves like the LKB:
+
+        >>> func = non_argument_modifiers()
+
+        A variation is similar to DMRS's MOD/EQ links:
+
+        >>> func = non_argument_modifiers(role="MOD", only_connecting=False)
+    """
+    def func(xmrs, deps):
+        ccmap = _connected_component_map(xmrs, deps)
+        addl = {}
+        if not only_connecting or len(set(ccmap.values())) > 1:
+            lsh = xmrs.labelset_heads
+            lblheads = {v: lsh(v) for v, vd in xmrs._vars.items()
+                        if 'LBL' in vd['refs']}
+            for heads in lblheads.values():
+                if len(heads) > 1:
+                    first = heads[0]
+                    joined = set([ccmap[first]])
+                    for other in heads[1:]:
+                        occ = ccmap[other]
+                        srt = var_sort(xmrs.args(other).get(role, 'u0'))
+                        needs_edge = not only_connecting or occ not in joined
+                        edge_available = srt == 'u'
+                        if needs_edge and edge_available:
+                            addl.setdefault(other, []).append((role, first))
+                            joined.add(occ)
+        return addl
+
+    return func
+
+
+def _connected_component_map(xmrs, deps):
+    # simplify graph structure for _bfs
+    simple_deps = {nid: set() for nid in deps}
+    for src in deps:
+        for _, tgt in deps[src]:
+            simple_deps[src].add(tgt)
+            simple_deps[tgt].add(src)
+    # find connected components
+    ccmap = {}
+    seen = set()
+    idx = 0
+    for nid in xmrs.nodeids():
+        if nid not in seen:
+            component = _bfs(simple_deps, nid)
+            seen.update(component)
+            for n in component:
+                ccmap[n] = idx
+            idx += 1
+    return ccmap
+
 
 def _unique_ids(eps, deps):
     # deps can be used to single out ep from set sharing ARG0s
@@ -265,6 +365,7 @@ def _unique_ids(eps, deps):
             for nid in nids[1:]:
                 ids[nid] = next(new_ids)
     return ids
+
 
 def _find_root(m):
     try:
@@ -294,6 +395,7 @@ def load(fh, single=False):
         s = fh.read()
     return loads(s, single=single)
 
+
 def loads(s, single=False):
     """
     Deserialize :class:`Eds` string representations
@@ -310,8 +412,10 @@ def loads(s, single=False):
         return next(es)
     return es
 
+
 def dump(fh, ms, single=False,
-         properties=False, pretty_print=True, show_status=False, **kwargs):
+         properties=False, pretty_print=True,
+         show_status=False, predicate_modifiers=False, **kwargs):
     """
     Serialize Xmrs objects to Eds and write to a file
 
@@ -332,11 +436,14 @@ def dump(fh, ms, single=False,
                 properties=properties,
                 pretty_print=pretty_print,
                 show_status=show_status,
+                predicate_modifiers=predicate_modifiers,
                 **kwargs),
           file=fh)
 
+
 def dumps(ms, single=False,
-          properties=False, pretty_print=True, show_status=False, **kwargs):
+          properties=False, pretty_print=True,
+          show_status=False, predicate_modifiers=False, **kwargs):
     """
     Serialize an Xmrs object to a Eds representation
 
@@ -362,8 +469,10 @@ def dumps(ms, single=False,
         properties=properties,
         pretty_print=pretty_print,
         show_status=show_status,
+        predicate_modifiers=predicate_modifiers,
         **kwargs
     )
+
 
 def load_one(fh, **kwargs): return load(fh, single=True, **kwargs)
 def loads_one(s, **kwargs): return loads(s, single=True, **kwargs)
@@ -379,11 +488,13 @@ def _make_eds(d):
         edges.extend(_edges)
     return Eds(top=top, nodes=nodes, edges=edges)
 
+
 def _make_nodedata(d):
     nid = d[0]
     node = Node(nid, pred=d[1], sortinfo=d[4], lnk=d[2], carg=d[3])
     edges = [(nid, rarg, tgt) for rarg, tgt in d[5]]
     return (node, edges)
+
 
 _COLON   = regex(r'\s*:\s*', value=Ignore)
 _COMMA   = regex(r',\s*')
@@ -405,6 +516,7 @@ _TYPE    = opt(_SYMBOL, value=lambda i: [(CVARSORT, i)], default=[])
 _AVLIST  = nt('AVLIST')
 _ATTRVAL = nt('ATTRVAL')
 
+
 _eds_parser = Peg(
     grammar=dict(
         start=delimited(_EDS, Spacing),
@@ -421,9 +533,11 @@ _eds_parser = Peg(
     )
 )
 
+
 def deserialize(s):
     for e in _eds_parser.parse(s).data:
         yield e
+
 
 eds = '{{{top}{flag}{delim}{ed_list}{enddelim}}}'
 ed =  '{membership}{id}:{pred}{lnk}{carg}{props}[{dep_list}]'
@@ -431,17 +545,22 @@ carg = '("{constant}")'
 proplist = '{{{varsort}{proplist}}}'
 dep = '{argname} {value}'
 
-def serialize(ms, properties=False, pretty_print=True, show_status=False,
-              **kwargs):
+
+def serialize(ms, properties=False, pretty_print=True,
+              show_status=False, predicate_modifiers=False, **kwargs):
     delim = '\n' if pretty_print else ' '
     return delim.join(
-        _serialize_eds(m, properties, pretty_print, show_status)
+        _serialize_eds(
+            m, properties, pretty_print, show_status, predicate_modifiers
+        )
         for m in ms
     )
 
-def _serialize_eds(e, properties, pretty_print, show_status):
+
+def _serialize_eds(e, properties, pretty_print, show_status,
+                   predicate_modifiers):
     if not isinstance(e, Eds):
-        e = Eds.from_xmrs(e)
+        e = Eds.from_xmrs(e, predicate_modifiers=predicate_modifiers)
     # do something predictable for empty EDS
     if len(e.nodeids()) == 0:
         return '{:\n}' if pretty_print else '{:}'
@@ -449,7 +568,7 @@ def _serialize_eds(e, properties, pretty_print, show_status):
     # determine if graph is connected
     g = {n: set() for n in e.nodeids()}
     for n in e.nodeids():
-        for rargname, tgt in e.edges(n).items():
+        for tgt in e.edges(n).values():
             g[n].add(tgt)
             g[tgt].add(n)
     nidgrp = _bfs(g, start=e.top)

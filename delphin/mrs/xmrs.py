@@ -506,43 +506,40 @@ class Xmrs(_LnkMixin):
         """
         _eps = self._eps
         _vars = self._vars
+        _hcons = self._hcons
         nodeids = {nodeid: _eps[nodeid][3].get(IVARG_ROLE, None)
                 for nodeid in _vars[label]['refs']['LBL']}
         if len(nodeids) <= 1:
             return list(nodeids)
 
-        ivs = {iv: nodeid for nodeid, iv in nodeids.items() if iv is not None}
+        scope_sets = {}
+        for nid in nodeids:
+            scope_sets[nid] = _ivs_in_scope(nid, _eps, _vars, _hcons)
 
-        out = {n: len(list(filter(ivs.__contains__, _eps[n][3].values())))
-               for n in nodeids}
-        # out_deg is 1 for ARG0, but <= 1 because sometimes ARG0 is missing
-        candidates = [n for n, out_deg in out.items() if out_deg <= 1]
-        in_ = {}
-        q = {}  # quantifier or quantified
+        out = {}
+        for n in nodeids:
+            out[n] = 0
+            for role, val in _eps[n][3].items():
+                if role == IVARG_ROLE or role == CONSTARG_ROLE:
+                    continue
+                elif any(val in s for n2, s in scope_sets.items() if n2 != n):
+                    out[n] += 1
+
+        candidates = [n for n, out_deg in out.items() if out_deg == 0]
+        rank = {}
         for n in candidates:
             iv = nodeids[n]
-            if iv in _vars:
-                in_[n] = sum(1 for slist in _vars[iv]['refs'].values()
-                             for s in slist if s in nodeids)
-                q[n] = 1 if self.nodeid(iv, quantifier=True) is not None else 0
+            pred = _eps[n][1]
+            if iv in _vars and self.nodeid(iv, quantifier=True) is not None:
+                rank[n] = 0
+            elif pred.is_quantifier():
+                rank[n] = 0
+            elif pred.type == Pred.GRAMMARPRED:
+                rank[n] = 2
             else:
-                in_[n] = 0
-                q[n] = 1 if _eps[n][1].is_quantifier() else 0
+                rank[n] = 1
 
-        return sorted(
-            candidates,
-            key=lambda n: (
-                # prefer fewer outgoing args to eps in the labelset
-                out[n],
-                # prefer more incoming args from eps in the labelset
-                -in_[n],
-                # prefer quantifiers (if it has a labelset > 1, it's a
-                # compound quantifier, like "nearly all") or quantified
-                -q[n],
-                # finally sort by the nodeid itself
-                n
-            )
-        )
+        return sorted(candidates, key=lambda n: rank[n])
 
     def subgraph(self, nodeids):
         """
@@ -1199,3 +1196,18 @@ def _bfs(g, start=None):
             seen.add(x)
             agenda.extend(y for y in g.get(x, []) if y not in seen)
     return seen
+
+def _ivs_in_scope(nodeid, _eps, _vars, _hcons):
+    ivs = set()
+    args = _eps[nodeid][3]
+    for role, val in args.items():
+        if role == IVARG_ROLE:
+            ivs.add(val)
+        elif role == CONSTARG_ROLE:
+            pass
+        elif var_sort(val) == HANDLESORT:
+            if val in _hcons:
+                val = _hcons[val].lo
+            for conj_nid in _vars[val]['refs']['LBL']:
+                ivs.update(_ivs_in_scope(conj_nid, _eps, _vars, _hcons))
+    return ivs
