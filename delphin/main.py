@@ -6,7 +6,7 @@ import sys
 import os
 import io
 import argparse
-import warnings
+import logging
 import logging
 import json
 import textwrap
@@ -385,9 +385,16 @@ def _penman_loads(s, model=None, **kwargs):
     from delphin.mrs import penman
     return penman.loads(s, model=model, **kwargs)
 
-def _penman_dumps(x, model=None, **kwargs):
+def _penman_dumps(xs, model=None, **kwargs):
     from delphin.mrs import penman
-    return penman.dumps(x, model=model, **kwargs)
+    strings = []
+    for x in xs:
+        try:
+            strings.append(penman.dumps([x], model=model, **kwargs))
+        except penman.penman.EncodeError:
+            logging.error('Invalid graph; possibly disconnected')
+            strings.append('')
+    return '\n'.join(strings)
 
 # working with directories and profiles
 

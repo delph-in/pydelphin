@@ -26,6 +26,12 @@
 * `delphin.mrs.xmrs.Xmrs.from_xmrs()` and `delphin.mrs.eds.Eds.from_xmrs()`
   now take a `**kwargs` argument to facilitate the `convert` command (#160)
 
+### Fixed
+
+* Converting to PENMAN via the `convert` command should no longer crash for
+  disconnected graphs, but print a log message to stderr, print a blank line
+  to stdout, and then continue (#161)
+
 ### Deprecated
 
 * `delphin.mrs.query.intrinsic_variable()`; probably should have been
