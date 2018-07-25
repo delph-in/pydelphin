@@ -115,6 +115,7 @@ def convert(args):
     if args.to == 'eds':
         kwargs['pretty_print'] = args.pretty_print
         kwargs['show_status'] = args.show_status
+    if args.to.startswith('eds'):
         kwargs['predicate_modifiers'] = args.predicate_modifiers
     kwargs['properties'] = not args.no_properties
     print(dumps(xs, **kwargs))
@@ -359,7 +360,8 @@ class _MRS_JSON(object):
         return json.dumps(
             [
                 self.CLS.to_dict(
-                    (x if isinstance(x, self.CLS) else self.CLS.from_xmrs(x)),
+                    (x if isinstance(x, self.CLS)
+                       else self.CLS.from_xmrs(x, **kwargs)),
                     properties=properties) for x in xs
             ],
             indent=indent)

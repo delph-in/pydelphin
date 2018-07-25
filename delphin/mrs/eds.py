@@ -64,7 +64,7 @@ class Eds(object):
             self._edges[start][rargname] = end
 
     @classmethod
-    def from_xmrs(cls, xmrs, predicate_modifiers=False):
+    def from_xmrs(cls, xmrs, predicate_modifiers=False, **kwargs):
         """
         Instantiate an Eds from an Xmrs (lossy conversion).
 

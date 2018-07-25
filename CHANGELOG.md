@@ -23,6 +23,8 @@
   by default (see `--show-status` above)
 * Representative node selection for DMRS and EDS considers the scope
   hierarchy when looking for candidate nodes
+* `delphin.mrs.xmrs.Xmrs.from_xmrs()` and `delphin.mrs.eds.Eds.from_xmrs()`
+  now take a `**kwargs` argument to facilitate the `convert` command (#160)
 
 ### Deprecated
 

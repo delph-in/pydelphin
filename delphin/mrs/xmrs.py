@@ -102,9 +102,16 @@ class Xmrs(_LnkMixin):
         self.identifier = identifier  # Associates an utterance with the RMRS
 
     @classmethod
-    def from_xmrs(cls, xmrs):
+    def from_xmrs(cls, xmrs, **kwargs):
         """
         Facilitate conversion among subclasses.
+
+        Args:
+            xmrs (:class:`Xmrs`): instance to convert from; possibly
+                an instance of a subclass, such as :class:`Mrs` or
+                :class:`Dmrs`
+            **kwargs: additional keyword arguments that may be used
+                by a subclass's redefinition of :meth:`from_xmrs`.
         """
         x = cls()
         x.__dict__.update(xmrs.__dict__)

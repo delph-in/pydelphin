@@ -111,7 +111,8 @@ def dumps(xs, model=None, properties=False, indent=True, **kwargs):
     codec = XMRSCodec()
     graphs = [
         codec.triples_to_graph(
-            model.to_triples(model.from_xmrs(x), properties=properties)
+            model.to_triples(model.from_xmrs(x, **kwargs),
+                             properties=properties)
         )
         for x in xs
     ]
