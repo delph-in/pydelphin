@@ -411,14 +411,14 @@ class Xmrs(_LnkMixin):
         Return the arguments for the predication given by *nodeid*.
 
         All arguments (including intrinsic and constant arguments) are
-        included. DMRS-style undirected links are not considered
+        included. MOD/EQ links are not considered
         arguments. If only arguments that target other predications are
         desired, see :meth:`outgoing_args`.
 
         Args:
             nodeid: the nodeid of the EP that is the arguments' source
         Returns:
-            dict: `{nodeid: {rargname: value}}`
+            dict: `{role: tgt}`
         """
         return dict(self._eps[nodeid][3])
 
@@ -429,14 +429,14 @@ class Xmrs(_LnkMixin):
         Return the arguments going from *nodeid* to other predications.
 
         Valid arguments include regular variable arguments and scopal
-        (label-selecting or HCONS) arguments. DMRS-style undirected
+        (label-selecting or HCONS) arguments. MOD/EQ
         links, intrinsic arguments, and constant arguments are not
         included.
 
         Args:
             nodeid: the nodeid of the EP that is the arguments' source
         Returns:
-            dict: `{nodeid: {rargname: value}}`
+            dict: `{role: tgt}`
         """
         _vars = self._vars
         _hcons = self._hcons
@@ -457,7 +457,7 @@ class Xmrs(_LnkMixin):
         Return the arguments that target *nodeid*.
 
         Valid arguments include regular variable arguments and scopal
-        (label-selecting or HCONS) arguments. DMRS-style undirected
+        (label-selecting or HCONS) arguments. MOD/EQ
         links and intrinsic arguments are not included.
 
         Args:
