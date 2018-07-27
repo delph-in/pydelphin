@@ -43,9 +43,9 @@ def _make_digraph(x, check_varprops):
     for ep in x.eps():
         nid, pred, args = ep[0], ep[1], ep[3]
         if CONSTARG_ROLE in args:
-            s = '{}({})'.format(pred.string, args[CONSTARG_ROLE])
+            s = '{}({})'.format(pred.short_form(), args[CONSTARG_ROLE])
         else:
-            s = pred.string
+            s = pred.short_form()
         dg.add_node(nid, sig=s)
         dg.add_edges_from((nid, var_id(val)) for role, val in args.items()
                           if role != CONSTARG_ROLE)
@@ -450,7 +450,7 @@ def _isomorphic_var_signature(vd, xmrs, check_varprops):
         else:
             for nid in refval:
                 pred = xmrs.pred(nid)
-                sig.append('%s:%s' % (pred.string, role))
+                sig.append('%s:%s' % (pred.short_form(), role))
 
     return ' '.join(sorted(sig))
 
