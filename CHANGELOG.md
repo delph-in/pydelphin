@@ -35,9 +35,10 @@
   `delphin.mrs.xmrs.Xmrs.outgoing_args()`, and `delphin.mrs.xmrs.Xmrs.incoming_args()`,
   from "DMRS-style undirected links" to "MOD/EQ links" and updated the Return
   value of `Xmrs.args()` and `Xmrs.outgoing_args` from `{nodeid: {}}` to 
-  `{role: tgt}`(#113)
-* Comparing MRS that only differ by the presence of `_rel` at the end
-  of a predicate no longer fails when using `delphin.mrs.compare.isomorphic()`
+  `{role: tgt}`(#133)
+* `delphin.mrs.compare.isomorphic()` compares predicates using a normalized form
+* Updated the code and the docstrings for references to 'string' and 'grammar'
+  predicates to refer to 'surface' and 'abstract' predicates (#117)
 
 ### Deprecated
 
