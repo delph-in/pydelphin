@@ -8,7 +8,7 @@ from delphin.mrs.config import UNKNOWNSORT
 #from delphin.mrs import simplemrs  # for convenience in later tests
 from delphin.exceptions import XmrsError
 
-sp = Pred.stringpred
+sp = Pred.surface
 
 
 # for convenience

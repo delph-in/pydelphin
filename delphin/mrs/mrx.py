@@ -217,9 +217,9 @@ def _decode_pred(elem):
     #           pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
     #           sense CDATA #IMPLIED >
     if elem.tag == 'pred':
-        return Pred.grammarpred(elem.text)
+        return Pred.abstract(elem.text)
     elif elem.tag == 'spred':
-        return Pred.stringpred(elem.text)
+        return Pred.surface(elem.text)
     elif elem.tag == 'realpred':
         return Pred.realpred(elem.get('lemma'),
                              elem.get('pos') or None,
@@ -364,10 +364,10 @@ def _encode_ep(ep, varprops=None):
 
 def _encode_pred(pred):
     p = None
-    if pred.type == Pred.GRAMMARPRED:
+    if pred.type == Pred.ABSTRACT:
         p = etree.Element('pred')
         p.text = pred.string
-    elif pred.type == Pred.STRINGPRED:
+    elif pred.type == Pred.SURFACE:
         p = etree.Element('spred')
         p.text = pred.string
     elif pred.type == Pred.REALPRED:

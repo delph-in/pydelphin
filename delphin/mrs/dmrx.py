@@ -166,7 +166,7 @@ def _decode_pred(elem):
     #           sense CDATA #IMPLIED >
     # <!ELEMENT gpred (#PCDATA)>
     if elem.tag == 'gpred':
-        return Pred.grammarpred(elem.text)
+        return Pred.abstract(elem.text)
     elif elem.tag == 'realpred':
         return Pred.realpred(elem.get('lemma'),
                              elem.get('pos') or None,
@@ -267,10 +267,10 @@ def _encode_node(node, properties):
 
 
 def _encode_pred(pred):
-    if pred.type == Pred.GRAMMARPRED:
+    if pred.type == Pred.ABSTRACT:
         e = etree.Element('gpred')
         e.text = pred.string.strip('"\'')
-    elif pred.type in (Pred.REALPRED, Pred.STRINGPRED):
+    elif pred.type in (Pred.REALPRED, Pred.SURFACE):
         attributes = {}
         attributes['lemma'] = pred.lemma
         if pred.pos is None:

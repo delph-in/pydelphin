@@ -31,6 +31,14 @@
 * Converting to PENMAN via the `convert` command should no longer crash for
   disconnected graphs, but print a log message to stderr, print a blank line
   to stdout, and then continue (#161)
+* Updated the docstrings for `delphin.mrs.xmrs.Xmrs.args()`, 
+  `delphin.mrs.xmrs.Xmrs.outgoing_args()`, and `delphin.mrs.xmrs.Xmrs.incoming_args()`,
+  from "DMRS-style undirected links" to "MOD/EQ links" and updated the Return
+  value of `Xmrs.args()` and `Xmrs.outgoing_args` from `{nodeid: {}}` to 
+  `{role: tgt}`(#133)
+* `delphin.mrs.compare.isomorphic()` compares predicates using a normalized form
+* Updated the code and the docstrings for references to 'string' and 'grammar'
+  predicates to refer to 'surface' and 'abstract' predicates (#117)
 
 ### Deprecated
 

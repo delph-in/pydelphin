@@ -70,7 +70,7 @@ def eds_it_rains():
         nodes=[
             Node(
                 'e2',
-                Pred.stringpred('"_rain_v_1_rel"'),
+                Pred.surface('"_rain_v_1_rel"'),
                 sortinfo={
                     'SF': 'prop', 'TENSE': 'pres', 'MOOD': 'indicative',
                     'PROG': '-', 'PERF': '-', CVARSORT: 'e'},
@@ -85,11 +85,11 @@ def eds_dogs_chase_Kim():
     return eds.Eds(
         top='e2',
         nodes=[
-            Node('_1', Pred.stringpred('udef_q_rel')),
-            Node('x4', Pred.stringpred('"_dog_n_1_rel"')),
-            Node('e2', Pred.stringpred('"_chase_v_1_rel"')),
-            Node('_2', Pred.stringpred('proper_q_rel')),
-            Node('x6', Pred.stringpred('named_rel'), carg='Kim')
+            Node('_1', Pred.surface('udef_q_rel')),
+            Node('x4', Pred.surface('"_dog_n_1_rel"')),
+            Node('e2', Pred.surface('"_chase_v_1_rel"')),
+            Node('_2', Pred.surface('proper_q_rel')),
+            Node('x6', Pred.surface('named_rel'), carg='Kim')
         ],
         edges=[
             ('_1', 'BV', 'x4'),
@@ -104,10 +104,10 @@ def eds_kim_probably_sleeps():
     return eds.Eds(
         top='e9',
         nodes=[
-            Node('_1', Pred.stringpred('proper_q_rel')),
-            Node('x3', Pred.stringpred('named_rel'), carg='Kim'),
-            Node('e9', Pred.stringpred('_probable_a_1_rel')),
-            Node('e2', Pred.stringpred('_sleep_v_1_rel')),        
+            Node('_1', Pred.surface('proper_q_rel')),
+            Node('x3', Pred.surface('named_rel'), carg='Kim'),
+            Node('e9', Pred.surface('_probable_a_1_rel')),
+            Node('e2', Pred.surface('_sleep_v_1_rel')),        
         ],
         edges=[
             ('_1', 'BV', 'x3'),

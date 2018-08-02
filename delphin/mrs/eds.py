@@ -163,7 +163,7 @@ class Eds(object):
         """
         Decode a dictionary, as from :meth:`to_dict`, into an Eds object.
         """
-        makepred, charspan = Pred.string_or_grammar_pred, Lnk.charspan
+        makepred, charspan = Pred.surface_or_abstract, Lnk.charspan
         top = d.get('top')
         nodes, edges = [], []
         for nid, node in d.get('nodes', {}).items():
@@ -231,7 +231,7 @@ class Eds(object):
                 nids.append(src)
                 nd[src] = {'pred': None, 'lnk': None, 'carg': None, 'si': []}
             if rel == 'predicate':
-                nd[src]['pred'] = Pred.string_or_grammar_pred(tgt)
+                nd[src]['pred'] = Pred.surface_or_abstract(tgt)
             elif rel == 'lnk':
                 cfrom, cto = tgt.strip('"<>').split(':')
                 nd[src]['lnk'] = Lnk.charspan(int(cfrom), int(cto))
@@ -501,7 +501,7 @@ _COMMA   = regex(r',\s*')
 _SPACES  = regex(r'\s+', value=Ignore)
 _SYMBOL  = regex(r'[-+\w]+')
 _PRED    = regex(r'((?!<-?\d|\("|\{|\[)\w)+',
-                 value=Pred.string_or_grammar_pred)
+                 value=Pred.surface_or_abstract)
 _EDS     = nt('EDS', value=_make_eds)
 _TOP     = opt(nt('TOP'), default=None)
 _TOPID   = opt(_SYMBOL, default=None)
