@@ -3,7 +3,7 @@ from delphin.mrs.xmrs import Xmrs
 from delphin.mrs.components import ElementaryPredication as EP, Pred
 from delphin.mrs import query
 
-sp = Pred.stringpred
+sp = Pred.surface
 qeq = lambda hi, lo: (hi, 'qeq', lo)
 
 # "Cats are chased by big dogs." (reordered, but equivalent)

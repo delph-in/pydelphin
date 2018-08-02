@@ -10,6 +10,7 @@ from collections import namedtuple, MutableMapping
 from itertools import starmap
 
 from delphin.exceptions import (XmrsError, XmrsStructureError)
+from delphin.util import deprecated
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
     UNKNOWNSORT, HANDLESORT, CVARSORT, QUANTIFIER_POS,
@@ -446,8 +447,8 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
     In PyDelphin, Preds are equivalent if they have the same lemma,
     pos, and sense, and are both abstract or both surface preds. Other
-    factors are ignored for comparison, such as their being string-,
-    grammar-, or real-preds, whether they are quoted or not, whether
+    factors are ignored for comparison, such as their being surface-,
+    abstract-, or real-preds, whether they are quoted or not, whether
     they end with `_rel` or not, or differences in capitalization.
     Hashed Pred objects (e.g., in a dict or set) also use the
     normalized form. However, unlike with equality comparisons,
@@ -455,7 +456,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
     Args:
         type: the type of predicate; valid values are
-            Pred.GRAMMARPRED, Pred.REALPRED, and Pred.STRINGPRED,
+            Pred.ABSTRACT, Pred.REALPRED, and Pred.SURFACE,
             although in practice Preds are instantiated via
             classmethods that select the type
         lemma: the lemma of the predicate
@@ -464,8 +465,8 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
     Returns:
         a Pred object
     Attributes:
-        type: predicate type (Pred.GRAMMARPRED, Pred.REALPRED, or
-            Pred.STRINGPRED)
+        type: predicate type (Pred.ABSTRACT, Pred.REALPRED, 
+        and Pred.SURFACE)
         lemma: lemma component of the predicate
         pos: part-of-speech component of the predicate
         sense: sense component of the predicate
@@ -475,9 +476,9 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
         capitalization doesn't matter. In addition, preds may be
         compared directly to their string representations:
 
-        >>> p1 = Pred.stringpred('_dog_n_1_rel')
+        >>> p1 = Pred.surface('_dog_n_1_rel')
         >>> p2 = Pred.realpred(lemma='dog', pos='n', sense='1')
-        >>> p3 = Pred.grammarpred('dog_n_1_rel')
+        >>> p3 = Pred.abstract('dog_n_1_rel')
         >>> p1 == p2
         True
         >>> p1 == '_dog_n_1_rel'
@@ -493,15 +494,15 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
         re.IGNORECASE
     )
     # Pred types (used mainly in input/output, not internally in pyDelphin)
-    GRAMMARPRED = 0  # only a string allowed (quoted or not)
+    ABSTRACT = GRAMMARPRED = 0  # only a string allowed (quoted or not)
     REALPRED = 1  # may explicitly define lemma, pos, sense
-    STRINGPRED = 2  # quoted string form of realpred
+    SURFACE = STRINGPRED = 2  # quoted string form of realpred
 
     def __eq__(self, other):
         if other is None:
             return False
         if not isinstance(other, Pred):
-            other = Pred.stringpred(other)
+            other = Pred.surface(other)
         return self.short_form().lower() == other.short_form().lower()
 
     def __str__ (self):
@@ -514,24 +515,42 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
         return hash(self.short_form())
 
     @classmethod
-    def stringpred(cls, predstr):
+    @deprecated(final_version='1.0.0', alternative='Pred.surface()')
+    def stringpred(cls, predstr): 
         """Instantiate a Pred from its quoted string representation."""
-        lemma, pos, sense, _ = split_pred_string(predstr)
-        return cls(Pred.STRINGPRED, lemma, pos, sense, predstr)
+        return cls.surface(predstr)
 
     @classmethod
+    def surface(cls, predstr):
+        """Instantiate a Pred from its quoted string representation."""
+        lemma, pos, sense, _ = split_pred_string(predstr)
+        return cls(Pred.SURFACE, lemma, pos, sense, predstr)
+
+    @classmethod
+    @deprecated(final_version='1.0.0', alternative='Pred.abstract()')
     def grammarpred(cls, predstr):
         """Instantiate a Pred from its symbol string."""
-        lemma, pos, sense, _ = split_pred_string(predstr)
-        return cls(Pred.GRAMMARPRED, lemma, pos, sense, predstr)
+        return cls.abstract(predstr)
 
-    @staticmethod
-    def string_or_grammar_pred(predstr):
-        """Instantiate a Pred from either its string or grammar symbol."""
+    @classmethod
+    def abstract(cls, predstr):
+        """Instantiate a Pred from its symbol string."""
+        lemma, pos, sense, _ = split_pred_string(predstr)
+        return cls(Pred.ABSTRACT, lemma, pos, sense, predstr)
+
+    @classmethod
+    @deprecated(final_version='1.0.0', alternative='Pred.surface_or_abstract_pred()')
+    def string_or_grammar_pred(cls, predstr):
+        """Instantiate a Pred from either its surface or abstract symbol."""
+        return cls.surface_or_abstract_pred(predstr)
+
+    @classmethod
+    def surface_or_abstract_pred(cls, predstr):
+        """Instantiate a Pred from either its surface or abstract symbol."""
         if predstr.strip('"').lstrip("'").startswith('_'):
-            return Pred.stringpred(predstr)
+            return cls.surface(predstr)
         else:
-            return Pred.grammarpred(predstr)
+            return cls.abstract(predstr)
 
     @classmethod
     def realpred(cls, lemma, pos, sense=None):
@@ -554,7 +573,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
         Example:
 
-            >>> p = Pred.stringpred('"_cat_n_1_rel"')
+            >>> p = Pred.surface('"_cat_n_1_rel"')
             >>> p.short_form()
             '_cat_n_1'
         """

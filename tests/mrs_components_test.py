@@ -10,7 +10,7 @@ from delphin.mrs.components import (
     Pred, split_pred_string, is_valid_pred_string, normalize_pred_string,
     Node, ElementaryPredication as EP
 )
-spred = Pred.stringpred
+spred = Pred.surface
 from delphin.mrs.xmrs import Xmrs
 from delphin.mrs.config import (
     CVARSORT, IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
@@ -338,27 +338,27 @@ def test_hcons():
 
 class TestPred():
     def testGpred(self):
-        p = Pred.grammarpred('pron_rel')
-        assert p.type == Pred.GRAMMARPRED
+        p = Pred.abstract('pron_rel')
+        assert p.type == Pred.ABSTRACT
         assert p.string == 'pron_rel'
         assert p.lemma == 'pron'
         assert p.pos == None
         assert p.sense == None
         assert p.short_form() == 'pron'
-        p = Pred.grammarpred('udef_q_rel')
+        p = Pred.abstract('udef_q_rel')
         assert p.string == 'udef_q_rel'
         assert p.lemma == 'udef'
         assert p.pos == 'q'
         assert p.sense == None
         assert p.short_form() == 'udef_q'
-        p = Pred.grammarpred('udef_q')
+        p = Pred.abstract('udef_q')
         assert p.string == 'udef_q'
         assert p.lemma == 'udef'
         assert p.pos == 'q'
         assert p.sense == None
         assert p.short_form() == 'udef_q'
-        p = Pred.grammarpred('abc_def_ghi_rel')
-        assert p.type == Pred.GRAMMARPRED
+        p = Pred.abstract('abc_def_ghi_rel')
+        assert p.type == Pred.ABSTRACT
         assert p.string == 'abc_def_ghi_rel'
         # pos must be a single character, so we get abc_def, ghi, rel
         assert p.lemma == 'abc_def'
@@ -369,28 +369,28 @@ class TestPred():
 
     def testSpred(self):
         p = spred('_dog_n_rel')
-        assert p.type == Pred.STRINGPRED
+        assert p.type == Pred.SURFACE
         assert p.string == '_dog_n_rel'
         assert p.lemma == 'dog'
         assert p.pos == 'n'
         assert p.sense == None
         assert p.short_form() == '_dog_n'
         p = spred('_犬_n_rel')
-        assert p.type == Pred.STRINGPRED
+        assert p.type == Pred.SURFACE
         assert p.string == '_犬_n_rel'
         assert p.lemma == '犬'
         assert p.pos == 'n'
         assert p.sense == None
         assert p.short_form() == '_犬_n'
         p = spred('"_dog_n_1_rel"')
-        assert p.type == Pred.STRINGPRED
+        assert p.type == Pred.SURFACE
         assert p.string == '"_dog_n_1_rel"'
         assert p.lemma == 'dog'
         assert p.pos == 'n'
         assert p.sense == '1'
         assert p.short_form() == '_dog_n_1'
         p = spred('"_dog_n_1"')
-        assert p.type == Pred.STRINGPRED
+        assert p.type == Pred.SURFACE
         assert p.string == '"_dog_n_1"'
         assert p.lemma == 'dog'
         assert p.pos == 'n'
@@ -398,7 +398,7 @@ class TestPred():
         assert p.short_form() == '_dog_n_1'
         # see https://github.com/delph-in/pydelphin/issues/129
         p = spred('_te_adjunct_rel')
-        assert p.type == Pred.STRINGPRED
+        assert p.type == Pred.SURFACE
         assert p.string == '_te_adjunct_rel'
         assert p.lemma == 'te'
         assert p.pos == None
@@ -410,11 +410,11 @@ class TestPred():
         #with pytest.raises(ValueError): spred('_dog_n_1_2_rel')
         repr(p)  # no error
 
-    def testStringOrGrammarPred(self):
-        p = Pred.string_or_grammar_pred('_dog_n_rel')
-        assert p.type == Pred.STRINGPRED
-        p = Pred.string_or_grammar_pred('pron_rel')
-        assert p.type == Pred.GRAMMARPRED
+    def testSurfaceOrAbstractPred(self):
+        p = Pred.surface_or_abstract_pred('_dog_n_rel')
+        assert p.type == Pred.SURFACE
+        p = Pred.surface_or_abstract_pred('pron_rel')
+        assert p.type == Pred.ABSTRACT
 
     def testRealPred(self):
         # basic, no sense arg
@@ -459,8 +459,8 @@ class TestPred():
         assert spred('_dog_n_rel') == '_dog_n_rel'
         assert '_dog_n_rel' == Pred.realpred(lemma='dog', pos='n')
         assert spred('"_dog_n_rel"') == spred("'_dog_n_rel")
-        assert Pred.grammarpred('pron_rel') == 'pron_rel'
-        assert Pred.string_or_grammar_pred('_dog_n_rel') != Pred.string_or_grammar_pred('dog_n_rel')
+        assert Pred.abstract('pron_rel') == 'pron_rel'
+        assert Pred.surface_or_abstract_pred('_dog_n_rel') != Pred.surface_or_abstract_pred('dog_n_rel')
         assert (spred('_dog_n_rel') == None) == False
         assert spred('_dog_n_1_rel') == spred('_Dog_N_1_rel')
         assert spred('_dog_n_1_rel') == spred('_dog_n_1')

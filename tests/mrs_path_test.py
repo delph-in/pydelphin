@@ -2,7 +2,7 @@
 from delphin.mrs import xmrs, path as mp
 from delphin.mrs.components import Pred, ElementaryPredication as EP
 
-sp = Pred.stringpred
+sp = Pred.surface
 
 def qeq(hi, lo): return (hi, 'qeq', lo)
 
