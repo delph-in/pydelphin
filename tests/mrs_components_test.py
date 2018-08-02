@@ -411,9 +411,9 @@ class TestPred():
         repr(p)  # no error
 
     def testSurfaceOrAbstractPred(self):
-        p = Pred.surface_or_abstract_pred('_dog_n_rel')
+        p = Pred.surface_or_abstract('_dog_n_rel')
         assert p.type == Pred.SURFACE
-        p = Pred.surface_or_abstract_pred('pron_rel')
+        p = Pred.surface_or_abstract('pron_rel')
         assert p.type == Pred.ABSTRACT
 
     def testRealPred(self):
@@ -460,7 +460,7 @@ class TestPred():
         assert '_dog_n_rel' == Pred.realpred(lemma='dog', pos='n')
         assert spred('"_dog_n_rel"') == spred("'_dog_n_rel")
         assert Pred.abstract('pron_rel') == 'pron_rel'
-        assert Pred.surface_or_abstract_pred('_dog_n_rel') != Pred.surface_or_abstract_pred('dog_n_rel')
+        assert Pred.surface_or_abstract('_dog_n_rel') != Pred.surface_or_abstract('dog_n_rel')
         assert (spred('_dog_n_rel') == None) == False
         assert spred('_dog_n_1_rel') == spred('_Dog_N_1_rel')
         assert spred('_dog_n_1_rel') == spred('_dog_n_1')

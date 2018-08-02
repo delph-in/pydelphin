@@ -540,7 +540,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
 
     @classmethod
     @deprecated(final_version='1.0.0', alternative='Pred.surface_or_abstract()')
-    def string_or_grammar(cls, predstr):
+    def string_or_grammar_pred(cls, predstr):
         """Instantiate a Pred from either its surface or abstract symbol."""
         return cls.surface_or_abstract(predstr)
 

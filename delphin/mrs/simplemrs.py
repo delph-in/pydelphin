@@ -280,7 +280,7 @@ def _read_ep(tokens, nid, vars_):
     _var_re = var_re
     # begin parsing
     _read_literals(tokens, '[')
-    pred = Pred.surface_or_abstract_pred(tokens.popleft())
+    pred = Pred.surface_or_abstract(tokens.popleft())
     lnk = _read_lnk(tokens)
     surface = label = None
     if tokens[0].startswith('"'):
