@@ -539,13 +539,13 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
         return cls(Pred.ABSTRACT, lemma, pos, sense, predstr)
 
     @classmethod
-    @deprecated(final_version='1.0.0', alternative='Pred.surface_or_abstract_pred()')
-    def string_or_grammar_pred(cls, predstr):
+    @deprecated(final_version='1.0.0', alternative='Pred.surface_or_abstract()')
+    def string_or_grammar(cls, predstr):
         """Instantiate a Pred from either its surface or abstract symbol."""
-        return cls.surface_or_abstract_pred(predstr)
+        return cls.surface_or_abstract(predstr)
 
     @classmethod
-    def surface_or_abstract_pred(cls, predstr):
+    def surface_or_abstract(cls, predstr):
         """Instantiate a Pred from either its surface or abstract symbol."""
         if predstr.strip('"').lstrip("'").startswith('_'):
             return cls.surface(predstr)

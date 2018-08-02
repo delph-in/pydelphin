@@ -541,7 +541,7 @@ class Xmrs(_LnkMixin):
                 rank[n] = 0
             elif pred.is_quantifier():
                 rank[n] = 0
-            elif pred.type == Pred.GRAMMARPRED:
+            elif pred.type == Pred.ABSTRACT:
                 rank[n] = 2
             else:
                 rank[n] = 1
@@ -746,7 +746,7 @@ class Mrs(Xmrs):
     >>>     top='h0',
     >>>     index='e2',
     >>>     rels=[ElementaryPredication(
-    >>>         Pred.stringpred('_rain_v_1_rel'),
+    >>>         Pred.surface('_rain_v_1_rel'),
     >>>         label='h1',
     >>>         args={'ARG0': 'e2'},
     >>>         vars={'e2': {'SF': 'prop-or-ques', 'TENSE': 'present'}}
@@ -822,7 +822,7 @@ class Mrs(Xmrs):
         def _ep(ep):
             return ElementaryPredication(
                 nodeid=None,
-                pred=Pred.string_or_grammar_pred(ep['predicate']),
+                pred=Pred.surface_or_abstract(ep['predicate']),
                 label=ep['label'],
                 args=ep.get('arguments', {}),
                 lnk=_lnk(ep.get('lnk')),
@@ -882,7 +882,7 @@ def Rmrs(top=None, index=None, xarg=None,
     >>>     index='e2',
     >>>     eps=[ElementaryPredication(
     >>>         10000,
-    >>>         Pred.stringpred('_rain_v_1_rel'),
+    >>>         Pred.surface('_rain_v_1_rel'),
     >>>         'h1'
     >>>     )],
     >>>     args={10000: {'ARG0': 'e2'}},
@@ -934,7 +934,7 @@ class Dmrs(Xmrs):
 
     Example:
 
-    >>> rain = Node(10000, Pred.stringpred('_rain_v_1_rel'),
+    >>> rain = Node(10000, Pred.surface('_rain_v_1_rel'),
     >>>             sortinfo={'cvarsort': 'e'})
     >>> ltop_link = Link(0, 10000, post='H')
     >>> d = Dmrs([rain], [ltop_link])
@@ -1056,7 +1056,7 @@ class Dmrs(Xmrs):
         def _node(obj):
             return Node(
                 obj.get('nodeid'),
-                Pred.string_or_grammar_pred(obj.get('predicate')),
+                Pred.surface_or_abstract(obj.get('predicate')),
                 sortinfo=obj.get('sortinfo'),
                 lnk=_lnk(obj.get('lnk')),
                 surface=obj.get('surface'),
@@ -1120,7 +1120,7 @@ class Dmrs(Xmrs):
                 nids.append(src)
                 nd[src] = {'pred': None, 'lnk': None, 'carg': None, 'si': []}
             if rel == 'predicate':
-                nd[src]['pred'] = Pred.string_or_grammar_pred(tgt)
+                nd[src]['pred'] = Pred.surface_or_abstract(tgt)
             elif rel == 'lnk':
                 cfrom, cto = tgt.strip('"<>').split(':')
                 nd[src]['lnk'] = Lnk.charspan(int(cfrom), int(cto))
