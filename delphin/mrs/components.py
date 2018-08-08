@@ -466,7 +466,7 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
         a Pred object
     Attributes:
         type: predicate type (Pred.ABSTRACT, Pred.REALPRED, 
-        and Pred.SURFACE)
+            and Pred.SURFACE)
         lemma: lemma component of the predicate
         pos: part-of-speech component of the predicate
         sense: sense component of the predicate
