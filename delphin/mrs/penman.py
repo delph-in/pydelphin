@@ -56,12 +56,12 @@ def loads(s, model):
     return xs
 
 
-def dump(fh, xs, model=None, properties=False, indent=True, **kwargs):
+def dump(destination, xs, model=None, properties=False, indent=True, **kwargs):
     """
     Serialize Xmrs (or subclass) objects to PENMAN and write to a file.
 
     Args:
-        fh: filename or file object
+        destination: filename or file object
         xs: iterator of :class:`~delphin.mrs.xmrs.Xmrs` objects to
             serialize
         model: Xmrs subclass used to get triples
@@ -73,10 +73,10 @@ def dump(fh, xs, model=None, properties=False, indent=True, **kwargs):
     text = dumps(
         xs, model=model, properties=properties, indent=indent, **kwargs
     )
-    if hasattr(fh, 'write'):
-        print(text, file=fh)
+    if hasattr(destination, 'write'):
+        print(text, file=destination)
     else:
-        with open(fh, 'w') as fh:
+        with open(destination, 'w') as fh:
             print(text, file=fh)
 
 

@@ -251,6 +251,14 @@ def _nest_level(in_pattern, out_pattern, tokens):
 
 
 def parse(f):
+    if hasattr(f, 'read'):
+        return _parse(f)
+    else:
+        with open(f) as fh:
+            return _parse(fh)
+
+
+def _parse(f):
     """
     Parse the open TDL file *f* and yield the type definitions.
     """
@@ -258,7 +266,7 @@ def parse(f):
         data = deque(data)
         try:
             if event == 'TYPEDEF':
-                yield parse_typedef(data)
+                yield _parse_typedef(data)
         except TdlParsingError as ex:
             ex.line_number = line_no
             if hasattr(f, 'name'):
@@ -266,14 +274,14 @@ def parse(f):
             raise
 
 
-def parse_typedef(tokens):
+def _parse_typedef(tokens):
     t = None
     identifier = None  # in case of StopIteration on first token
     try:
         identifier = tokens.popleft()
         assignment = tokens.popleft()
-        affixes = parse_affixes(tokens)  # only for inflectional rules
-        tdldef, corefs = parse_conjunction(tokens)
+        affixes = _parse_affixes(tokens)  # only for inflectional rules
+        tdldef, corefs = _parse_conjunction(tokens)
         # Now make coref paths a string instead of list
         corefs = _make_coreferences(corefs)
         #features = parse_conjunction(tokens)
@@ -299,7 +307,7 @@ def parse_typedef(tokens):
     return t
 
 
-def parse_affixes(tokens):
+def _parse_affixes(tokens):
     affixes = None
     if tokens[0] in ('%prefix', '%suffix'):
         affixes = []
@@ -311,7 +319,7 @@ def parse_affixes(tokens):
     return affixes
 
 
-def parse_conjunction(tokens):
+def _parse_conjunction(tokens):
     if tokens and tokens[0][:1] in ('\'"'):
         return tokens.popleft(), []  # basic string value
     supertypes = []
@@ -344,12 +352,12 @@ def parse_conjunction(tokens):
             continue
         # other terms may have features or other coreferences
         elif tokens[0] == '[':
-            feats, corefs = parse_avm(tokens)
+            feats, corefs = _parse_avm(tokens)
         elif tokens[0] == '<':
-            feats, corefs = parse_cons_list(tokens)
+            feats, corefs = _parse_cons_list(tokens)
             cls = TdlConsList
         elif tokens[0] == '<!':
-            feats, corefs = parse_diff_list(tokens)
+            feats, corefs = _parse_diff_list(tokens)
             cls = TdlDiffList
         # elif tokens[0][:1] in ('\'"'):
         #     raise TdlParsingError('String cannot be part of a conjunction.')
@@ -371,7 +379,7 @@ def parse_conjunction(tokens):
     return tdldef, coreferences
 
 
-def parse_avm(tokens):
+def _parse_avm(tokens):
     # [ attr-val (, attr-val)* ]
     features = []
     coreferences = []
@@ -380,7 +388,7 @@ def parse_avm(tokens):
         tokens.appendleft(',')  # to make the loop simpler
     while tokens[0] != ']':
         tokens.popleft()
-        attrval, corefs = parse_attr_val(tokens)
+        attrval, corefs = _parse_attr_val(tokens)
         features.append(attrval)
         coreferences.extend(corefs)
     # '[', '.', '"', '/', '<', '#'
@@ -388,19 +396,19 @@ def parse_avm(tokens):
     return features, coreferences
 
 
-def parse_attr_val(tokens):
+def _parse_attr_val(tokens):
     # PATH(.PATH)* val
     path = [tokens.popleft()]
     while tokens[0] == '.':
         tokens.popleft()
         path.append(tokens.popleft())
     path = '.'.join(path)  # put it back together (maybe shouldn'ta broke it)
-    value, corefs = parse_conjunction(tokens)
+    value, corefs = _parse_conjunction(tokens)
     corefs = [(c, [[path] + p for p in ps]) for c, ps in corefs]
     return ((path, value), corefs)
 
 
-def parse_cons_list(tokens):
+def _parse_cons_list(tokens):
     assert tokens.popleft() == '<'
     feats, last_path, coreferences = _parse_list(tokens, ('>', '.', '...'))
     if tokens[0] == '...':  # < ... > or < a, ... >
@@ -408,7 +416,7 @@ def parse_cons_list(tokens):
         # do nothing (don't terminate the list)
     elif tokens[0] == '.':  # e.g. < a . #x >
         tokens.popleft()
-        tdldef, corefs = parse_conjunction(tokens)
+        tdldef, corefs = _parse_conjunction(tokens)
         feats.append((last_path, tdldef))
         corefs = [(c, [[last_path] + p for p in ps]) for c, ps in corefs]
         coreferences.extend(corefs)
@@ -419,7 +427,7 @@ def parse_cons_list(tokens):
     assert tokens.popleft() == '>'
     return (feats, coreferences)
 
-def parse_diff_list(tokens):
+def _parse_diff_list(tokens):
     assert tokens.popleft() == '<!'
     feats, last_path, coreferences = _parse_list(tokens, ('!>'))
     if not feats:
@@ -443,7 +451,7 @@ def _parse_list(tokens, break_on):
     coreferences = []
     path = _list_head
     while tokens[0] not in break_on:
-        tdldef, corefs = parse_conjunction(tokens)
+        tdldef, corefs = _parse_conjunction(tokens)
         feats.append((path, tdldef))
         corefs = [(c, [[path] + p for p in ps]) for c, ps in corefs]
         coreferences.extend(corefs)
