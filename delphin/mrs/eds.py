@@ -413,14 +413,14 @@ def loads(s, single=False):
     return es
 
 
-def dump(fh, ms, single=False,
+def dump(destination, ms, single=False,
          properties=False, pretty_print=True,
          show_status=False, predicate_modifiers=False, **kwargs):
     """
     Serialize Xmrs objects to Eds and write to a file
 
     Args:
-        fh: filename or file object where data will be written
+        destination: filename or file object where data will be written
         ms: an iterator of :class:`~delphin.mrs.xmrs.Xmrs` objects to
             serialize (unless the *single* option is `True`)
         single (bool): if `True`, treat *ms* as a single
@@ -432,17 +432,17 @@ def dump(fh, ms, single=False,
             nodes
     """
     text = dumps(ms,
-                single=single,
-                properties=properties,
-                pretty_print=pretty_print,
-                show_status=show_status,
-                predicate_modifiers=predicate_modifiers,
-                **kwargs)
+                 single=single,
+                 properties=properties,
+                 pretty_print=pretty_print,
+                 show_status=show_status,
+                 predicate_modifiers=predicate_modifiers,
+                 **kwargs)
 
-    if hasattr(fh, 'write'):
-        print(text, file=fh)
+    if hasattr(destination, 'write'):
+        print(text, file=destination)
     else:
-        with open(fh, 'w') as fh:
+        with open(destination, 'w') as fh:
             print(text, file=fh)
 
 

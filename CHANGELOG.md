@@ -53,12 +53,12 @@
 
 * `delphin.mrs.query.intrinsic_variable()`; probably should have been
   deprecated in v0.4.1.
-* `delphin.mrs.components.string_or_grammar_pred()`; replaced with
-  `delphin.mrs.components.surface_or_abstract()`
-* `delphin.mrs.components.stringpred()`; replaced with
-  `delphin.mrs.components.surface()`
-* `delphin.mrs.components.grammarpred()`; replaced with
-  `delphin.mrs.components.abstract()`
+* `delphin.mrs.components.Pred.string_or_grammar_pred()`; replaced with
+  `delphin.mrs.components.Pred.surface_or_abstract()`
+* `delphin.mrs.components.Pred.stringpred()`; replaced with
+  `delphin.mrs.components.Pred.surface()`
+* `delphin.mrs.components.Pred.grammarpred()`; replaced with
+  `delphin.mrs.components.Pred.abstract()`
 
 ## [v0.7.2][]
 

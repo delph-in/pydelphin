@@ -99,13 +99,13 @@ def loads(s, single=False, version=_default_version,
         return ms
 
 
-def dump(fh, ms, single=False, version=_default_version, properties=True,
+def dump(destination, ms, single=False, version=_default_version, properties=True,
          pretty_print=False, color=False, **kwargs):
     """
     Serialize Xmrs objects to SimpleMRS and write to a file
 
     Args:
-        fh: filename or file object where data will be written
+        destination: filename or file object where data will be written
         ms: an iterator of Xmrs objects to serialize (unless the
             *single* option is `True`)
         single: if `True`, treat *ms* as a single Xmrs object
@@ -115,17 +115,17 @@ def dump(fh, ms, single=False, version=_default_version, properties=True,
         color: if `True`, colorize the output with ANSI color codes
     """
     text = dumps(ms,
-                single=single,
-                version=version,
-                properties=properties,
-                pretty_print=pretty_print,
-                color=color,
-                **kwargs)
+                 single=single,
+                 version=version,
+                 properties=properties,
+                 pretty_print=pretty_print,
+                 color=color,
+                 **kwargs)
 
-    if hasattr(fh, 'write'):
-        print(text, file=fh)
+    if hasattr(destination, 'write'):
+        print(text, file=destination)
     else:
-        with open(fh, 'w') as fh:
+        with open(destination, 'w') as fh:
             print(text, file=fh)
 
 

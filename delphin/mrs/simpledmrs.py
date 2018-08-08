@@ -39,12 +39,12 @@ from delphin.mrs.config import EQ_POST, CVARSORT, CONSTARG_ROLE
 #     return ms
 
 
-def dump(fh, ms, **kwargs):
+def dump(destination, ms, **kwargs):
     text = dumps(ms, **kwargs)
-    if hasattr(fh, 'write'):
-        print(text, file=fh)
+    if hasattr(destination, 'write'):
+        print(text, file=destination)
     else:
-        with open(fh, 'w') as fh:
+        with open(destination, 'w') as fh:
             print(text, file=fh)
 
 
