@@ -251,6 +251,14 @@ def _nest_level(in_pattern, out_pattern, tokens):
 
 
 def parse(f):
+    if hasattr(f, 'read'):
+        return _parse(f)
+    else:
+        with open(f) as fh:
+            return _parse(fh)
+
+
+def _parse(f):
     """
     Parse the open TDL file *f* and yield the type definitions.
     """

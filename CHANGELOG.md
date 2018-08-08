@@ -25,25 +25,36 @@
   hierarchy when looking for candidate nodes
 * `delphin.mrs.xmrs.Xmrs.from_xmrs()` and `delphin.mrs.eds.Eds.from_xmrs()`
   now take a `**kwargs` argument to facilitate the `convert` command (#160)
+* The following delphin.tdl functions are now private: `delphin.tdl._parse_avm()`,
+  `delphin.tdl._parse_affixes()`, `delphin.tdl._parse_typedef()`,
+  `delphin.tdl._parse_attr_val()`, `delphin.tdl._parse_cons_list()`,
+  `delphin.tdl._parse_conjunction()`, `delphin.tdl._parse_diff_list()` (#81)
 
 ### Fixed
 
 * Converting to PENMAN via the `convert` command should no longer crash for
   disconnected graphs, but print a log message to stderr, print a blank line
   to stdout, and then continue (#161)
-* Updated the docstrings for `delphin.mrs.xmrs.Xmrs.args()`, 
+* Updated the docstrings for `delphin.mrs.xmrs.Xmrs.args()`,
   `delphin.mrs.xmrs.Xmrs.outgoing_args()`, and `delphin.mrs.xmrs.Xmrs.incoming_args()`,
   from "DMRS-style undirected links" to "MOD/EQ links" and updated the Return
-  value of `Xmrs.args()` and `Xmrs.outgoing_args` from `{nodeid: {}}` to 
+  value of `Xmrs.args()` and `Xmrs.outgoing_args` from `{nodeid: {}}` to
   `{role: tgt}`(#133)
 * `delphin.mrs.compare.isomorphic()` compares predicates using a normalized form
 * Updated the code and the docstrings for references to 'string' and 'grammar'
   predicates to refer to 'surface' and 'abstract' predicates (#117)
+* `tdl.parse()` now accepts either a file or a filename as its argument (#104)
 
 ### Deprecated
 
 * `delphin.mrs.query.intrinsic_variable()`; probably should have been
   deprecated in v0.4.1.
+* `delphin.mrs.components.string_or_grammar_pred()`; replaced with
+  `delphin.mrs.components.surface_or_abstract()`
+* `delphin.mrs.components.stringpred()`; replaced with
+  `delphin.mrs.components.surface()`
+* `delphin.mrs.components.grammarpred()`; replaced with
+  `delphin.mrs.components.abstract()`
 
 ## [v0.7.2][]
 
