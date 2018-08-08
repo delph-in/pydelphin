@@ -40,7 +40,12 @@ from delphin.mrs.config import EQ_POST, CVARSORT, CONSTARG_ROLE
 
 
 def dump(fh, ms, **kwargs):
-    print(dumps(ms, **kwargs), file=fh)
+    text = dumps(ms, **kwargs)
+    if hasattr(fh, 'write'):
+        print(text, file=fh)
+    else:
+        with open(fh, 'w') as fh:
+            print(text, file=fh)
 
 
 def dumps(ms, single=False, properties=True, pretty_print=False, **kwargs):

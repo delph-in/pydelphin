@@ -61,7 +61,7 @@ def dump(fh, ms, single=False, properties=True, pretty_print=False, **kwargs):
     Serialize Xmrs objects to DMRX and write to a file
 
     Args:
-        fh: file object where data will be written
+        fh: filename or file object where data will be written
         ms: an iterator of Xmrs objects to serialize (unless the
             *single* option is `True`)
         single: if `True`, treat *ms* as a single Xmrs object
@@ -69,16 +69,17 @@ def dump(fh, ms, single=False, properties=True, pretty_print=False, **kwargs):
         properties: if `False`, suppress variable properties
         pretty_print: if `True`, add newlines and indentation
     """
-    print(
-        dumps(
-            ms,
-            single=single,
-            properties=properties,
-            pretty_print=pretty_print,
-            **kwargs
-        ),
-        file=fh
-    )
+    text = dumps(ms,
+                single=single,
+                properties=properties,
+                pretty_print=pretty_print,
+                **kwargs)
+
+    if hasattr(fh, 'write'):
+        print(text, file=fh)
+    else:
+        with open(fh, 'w') as fh:
+            print(text, file=fh)
 
 
 def dumps(ms, single=False, properties=True, pretty_print=False, **kwargs):

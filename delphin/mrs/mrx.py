@@ -66,7 +66,7 @@ def dump(fh, ms, single=False, properties=True,
     Serialize Xmrs objects to MRX and write to a file
 
     Args:
-        fh: file object where data will be written
+        fh: filename or file object where data will be written
         ms: an iterator of Xmrs objects to serialize (unless the
             *single* option is `True`)
         single: if `True`, treat *ms* as a single Xmrs object
@@ -76,16 +76,18 @@ def dump(fh, ms, single=False, properties=True,
             writing to a file (generally `"unicode"` is desired)
         pretty_print: if `True`, add newlines and indentation
     """
-    print(
-        dumps(
-            ms,
-            single=single,
-            properties=properties,
-            encoding=encoding,
-            pretty_print=pretty_print,
-            **kwargs),
-        file=fh
-    )
+    text = dumps(ms,
+                single=single,
+                properties=properties,
+                encoding=encoding,
+                pretty_print=pretty_print,
+                **kwargs)
+
+    if hasattr(fh, 'write'):
+        print(text, file=fh)
+    else:
+        with open(fh, 'w') as fh:
+            print(text, file=fh)
 
 
 def dumps(ms, single=False, properties=True,

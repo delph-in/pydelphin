@@ -420,7 +420,7 @@ def dump(fh, ms, single=False,
     Serialize Xmrs objects to Eds and write to a file
 
     Args:
-        fh: file object where data will be written
+        fh: filename or file object where data will be written
         ms: an iterator of :class:`~delphin.mrs.xmrs.Xmrs` objects to
             serialize (unless the *single* option is `True`)
         single (bool): if `True`, treat *ms* as a single
@@ -431,14 +431,19 @@ def dump(fh, ms, single=False,
         show_status (bool): if `True`, annotate disconnected graphs and
             nodes
     """
-    print(dumps(ms,
+    text = dumps(ms,
                 single=single,
                 properties=properties,
                 pretty_print=pretty_print,
                 show_status=show_status,
                 predicate_modifiers=predicate_modifiers,
-                **kwargs),
-          file=fh)
+                **kwargs)
+
+    if hasattr(fh, 'write'):
+        print(text, file=fh)
+    else:
+        with open(fh, 'w') as fh:
+            print(text, file=fh)
 
 
 def dumps(ms, single=False,

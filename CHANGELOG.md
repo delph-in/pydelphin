@@ -43,7 +43,11 @@
 * `delphin.mrs.compare.isomorphic()` compares predicates using a normalized form
 * Updated the code and the docstrings for references to 'string' and 'grammar'
   predicates to refer to 'surface' and 'abstract' predicates (#117)
-* `tdl.parse()` now accepts either a file or a filename as its argument (#104)
+* `delphin.tdl.parse()` now accepts either a file or a filename as its argument (#104)
+* The following dump methods now allow either a file or filename as their arguments like
+  `delphin.mrs.penman.dump()`: `delphin.mrs.eds.dump()`, `delphin.mrs.simplemrs.dump()`, `delphin.mrs.simpledmrs.dump()`, `delphin.mrs.mrx.dump()`, `delphin.mrs.dmrx.dump()`,
+  `delphin.mrs.prolog.dump()` (#152)
+
 
 ### Deprecated
 

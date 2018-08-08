@@ -105,7 +105,7 @@ def dump(fh, ms, single=False, version=_default_version, properties=True,
     Serialize Xmrs objects to SimpleMRS and write to a file
 
     Args:
-        fh: file object where data will be written
+        fh: filename or file object where data will be written
         ms: an iterator of Xmrs objects to serialize (unless the
             *single* option is `True`)
         single: if `True`, treat *ms* as a single Xmrs object
@@ -114,14 +114,19 @@ def dump(fh, ms, single=False, version=_default_version, properties=True,
         pretty_print: if `True`, add newlines and indentation
         color: if `True`, colorize the output with ANSI color codes
     """
-    print(dumps(ms,
+    text = dumps(ms,
                 single=single,
                 version=version,
                 properties=properties,
                 pretty_print=pretty_print,
                 color=color,
-                **kwargs),
-          file=fh)
+                **kwargs)
+
+    if hasattr(fh, 'write'):
+        print(text, file=fh)
+    else:
+        with open(fh, 'w') as fh:
+            print(text, file=fh)
 
 
 def dumps(ms, single=False, version=_default_version, properties=True,
