@@ -60,6 +60,7 @@ changes are prefixed with "**BREAKING**"
 * `delphin.interfaces.ace` now validates parser, transfer, and generator inputs
   and refuses to process invalid inputs (#155)
 * `delphin.interfaces.ace` handles whitespace in s-expressions a bit better
+* `itsdb.get_data_specifier()` now allows unicode arguments in Python2 (#164)
 
 ### Deprecated
 
