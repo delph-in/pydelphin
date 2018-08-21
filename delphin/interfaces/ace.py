@@ -61,6 +61,7 @@ interact with the :class:`AceProcess` subclass instances directly.
 
 import logging
 import os
+import argparse
 import re
 from subprocess import (
     check_call,
@@ -117,7 +118,11 @@ class AceProcess(Processor):
         if not os.path.isfile(grm):
             raise ValueError("Grammar file %s does not exist." % grm)
         self.grm = grm
+
         self.cmdargs = cmdargs or []
+        # validate the arguments
+        _ace_argparser.parse_args(self.cmdargs)
+
         self.executable = executable or 'ace'
         ace_version = self.ace_version
         if ace_version >= (0, 9, 14):
@@ -552,6 +557,39 @@ def generate(grm, datum, **kwargs):
         :class:`~delphin.interfaces.ParseResponse`
     """
     return next(generate_from_iterable(grm, [datum], **kwargs))
+
+
+# The following defines the command-line options available for users to
+# specify in AceProcess tasks. For a description of these options, see:
+#     http://moin.delph-in.net/AceOptions
+
+# thanks: https://stackoverflow.com/a/14728477/1441112
+class _ACEArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise ValueError(message)
+
+_ace_argparser = _ACEArgumentParser()
+_ace_argparser.add_argument('-n', type=int)
+_ace_argparser.add_argument('-1', action='store_const', const=1, dest='n')
+_ace_argparser.add_argument('-r')
+_ace_argparser.add_argument('-p', action='store_true')
+_ace_argparser.add_argument('-X', action='store_true')
+_ace_argparser.add_argument('-L', action='store_true')
+_ace_argparser.add_argument('-y', action='store_true')
+_ace_argparser.add_argument('--max-chart-megabytes', type=int)
+_ace_argparser.add_argument('--max-unpack-megabytes', type=int)
+_ace_argparser.add_argument('--timeout', type=int)
+_ace_argparser.add_argument('--disable-subsumption-test', action='store_true')
+_ace_argparser.add_argument('--show-realization-trees', action='store_true')
+_ace_argparser.add_argument('--show-realization-mrses', action='store_true')
+_ace_argparser.add_argument('--show-probability', action='store_true')
+_ace_argparser.add_argument('--disable-generalization', action='store_true')
+_ace_argparser.add_argument('--ubertagging', nargs='?', type=float)
+_ace_argparser.add_argument('--pcfg', type=argparse.FileType())
+_ace_argparser.add_argument('--rooted-derivations', action='store_true')
+_ace_argparser.add_argument('--udx', nargs='?', choices=('all'))
+_ace_argparser.add_argument('--yy-rules', action='store_true')
+_ace_argparser.add_argument('--max-words', type=int)
 
 
 def _ace_version(executable):

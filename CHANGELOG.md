@@ -2,6 +2,9 @@
 
 ## [Unreleased][unreleased]
 
+**Note**: there are some changes that may break backward compatibility; these
+changes are prefixed with "**BREAKING**"
+
 ### Added
 
 * `delphin.mrs.eds`: `dump()` and `dumps()` take a `show_status` parameter
@@ -30,6 +33,10 @@
   `delphin.tdl._parse_typedef()`, `delphin.tdl._parse_attr_val()`,
   `delphin.tdl._parse_cons_list()`, `delphin.tdl._parse_conjunction()`,
   `delphin.tdl._parse_diff_list()` (#81)
+* **BREAKING** `delphin.interfaces.ace.AceProcess` whitelists certain
+  command-line arguments for ACE; invalid arguments or values raise a
+  ValueError. This could break code that uses options not whitelisted,
+  but such code probably wouldn't work anyway. (#149)
 
 ### Fixed
 
