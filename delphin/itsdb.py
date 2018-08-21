@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 """
 Classes and functions for working with [incr tsdb()] profiles.
@@ -698,7 +698,7 @@ def _split_cols(colstring):
     if not colstring:
         return None
     colstring = colstring.lstrip(':')
-    return list(map(lambda unistr: unistr.strip(), colstring.split('@')))
+    return [col.strip() for col in colstring.split('@')]
 
 def decode_row(line, fields=None):
     """

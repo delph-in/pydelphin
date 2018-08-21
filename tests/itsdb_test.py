@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 from __future__ import print_function
 
@@ -304,6 +304,8 @@ def test_get_data_specifier():
     # for joined tables
     assert dataspec('tmp:item:i-id@output:o-surface') == ('tmp', ['item:i-id', 'output:o-surface'])
     assert dataspec(':item:i-id@output:o-surface') == (None, ['item:i-id', 'output:o-surface'])
+    # unicode (see #164)
+    assert dataspec(u'item:i-id') == ('item', ['i-id'])
 
 def test_escape():
     assert itsdb.escape('') == ''
