@@ -35,7 +35,7 @@ way of working with the data. Capabilities include:
     >>> # desegment each sentence
     >>> for record in ts['item']:
     ...     record['i-input'] = ''.join(record['i-input'].split())
-    ... 
+    ...
     >>> ts['item'][0]['i-input']
     '雨が降った．'
 
@@ -50,7 +50,7 @@ way of working with the data. Capabilities include:
     >>> from delphin.interfaces import ace
     >>> with ace.AceParser('jacy.dat') as cpu:
     ...     ts.process(cpu)
-    ... 
+    ...
     NOTE: parsed 126 / 135 sentences, avg 3167k, time 1.87536s
     >>> ts.write('new-profile')
 
@@ -698,7 +698,7 @@ def _split_cols(colstring):
     if not colstring:
         return None
     colstring = colstring.lstrip(':')
-    return list(map(str.strip, colstring.split('@')))
+    return list(map(lambda unistr: unistr.strip(), colstring.split('@')))
 
 
 def decode_row(line, fields=None):

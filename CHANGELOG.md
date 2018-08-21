@@ -47,6 +47,7 @@
 * The following dump methods now allow either a file or filename as their arguments like
   `delphin.mrs.penman.dump()`: `delphin.mrs.eds.dump()`, `delphin.mrs.simplemrs.dump()`, `delphin.mrs.simpledmrs.dump()`, `delphin.mrs.mrx.dump()`, `delphin.mrs.dmrx.dump()`,
   `delphin.mrs.prolog.dump()` (#152)
+* `itsdb.get_data_specifier()` now allows unicode arguments in Python2 (#164).
 
 
 ### Deprecated
