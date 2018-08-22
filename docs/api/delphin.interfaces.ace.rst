@@ -4,7 +4,7 @@ delphin.interfaces.ace
 
 .. seealso::
 
-  See :doc:`../tutorials/ace` for a more user-friendly introduction
+  See :doc:`../tutorials/ace` for a more user-friendly introduction.
 
 .. automodule:: delphin.interfaces.ace
 
@@ -38,6 +38,7 @@ delphin.interfaces.ace
   directly used.
 
   .. autoclass:: AceProcess
+    :show-inheritance:
     :members:
 
   .. autoclass:: AceParser

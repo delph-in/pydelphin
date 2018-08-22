@@ -168,6 +168,27 @@ object in PyDelphin is the same as with the other tasks.
 'It rains.'
 
 
+Tips and Tricks
+---------------
+
+Sometimes the input data needs to be modified before it can be parsed,
+such as the morphological segmentation of Japanese text. Users may also
+wish to modify the results of processing, such as to streamline an
+MRS--DMRS conversion pipeline. The former is an example of a
+preprocessor and the latter a postprocessor. There can also be
+"coprocessors" that execute alongside the original, such as for
+returning the result of a statistical parser when the original fails to
+reach a parse. It is straightforward to accomplish all of these
+configurations with Python and PyDelphin, but the resulting pipeline
+may not be compatible with other interfaces, such as
+:meth:`TestSuite.process() <delphin.itsdb.TestSuite.process>`. By using
+the :class:`delphin.interfaces.base.Process` class to wrap an
+:class:`~delphin.interfaces.ace.AceProcess` instance, these pre-, co-,
+and post-processors can be implemented in a more useful way. See
+:ref:`preprocessor-example` for an example of using
+:class:`~delphin.interfaces.base.Process` as a preprocessor.
+
+
 Troubleshooting
 ---------------
 
