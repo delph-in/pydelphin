@@ -27,7 +27,7 @@ author = u'Michael Wayne Goodman'
 # The short X.Y version
 version = u''
 # The full version, including alpha/beta/rc tags
-release = u'v0.7.2'
+release = u'v0.8.0'
 
 
 # -- General configuration ---------------------------------------------------

@@ -47,7 +47,7 @@ Here's a brief example of using the `itsdb` library:
 >>> prof = itsdb.TestSuite(expanduser('~/grammars/jacy/tsdb/gold/mrs'))
 >>> for row in prof['item']:
 ...     print(row['i-input'])
-... 
+...
 雨 が 降っ た ．
 太郎 が 吠え た ．
 窓 が 開い た ．
@@ -66,7 +66,7 @@ Here's an example of loading a SimpleMRS representation:
 'h1'
 >>> for p in m.preds():
 ...     print('{}|{}|{}|{}'.format(p.string, p.lemma, p.pos, p.sense))
-... 
+...
 udef_q_rel|udef|q|None
 "_ame_n_rel"|ame|n|None
 "_furu_v_1_rel"|furu|v|1
@@ -85,7 +85,7 @@ Here is TDL introspection:
 >>> from delphin import tdl
 >>> with open(expanduser('~/logon/lingo/erg/fundamentals.tdl'), 'r') as f:
 ...     types = {t.identifier: t for t in tdl.parse(f)}
-... 
+...
 >>> types['basic_word'].supertypes
 ['word_or_infl_rule', 'word_or_punct_rule']
 >>> types['basic_word'].features()
@@ -169,6 +169,7 @@ The following packages/modules are available:
 - [Guy Emerson](https://github.com/guyemerson/) (MRS)
 - [Alex Kuhnle](https://github.com/AlexKuhnle/) (MRS, ACE)
 - [Francis Bond](https://github.com/fcbond/) (LaTeX export)
+- [Angie McMillan-Major](https://github.com/mcmillanmajora/) (maintainer)
 
 ## Related Software
 
