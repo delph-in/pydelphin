@@ -47,6 +47,7 @@
 * The following dump methods now allow either a file or filename as their arguments like
   `delphin.mrs.penman.dump()`: `delphin.mrs.eds.dump()`, `delphin.mrs.simplemrs.dump()`, `delphin.mrs.simpledmrs.dump()`, `delphin.mrs.mrx.dump()`, `delphin.mrs.dmrx.dump()`,
   `delphin.mrs.prolog.dump()` (#152)
+* Non-ascii XML output is now able to be processed in Python2 (#106)
 
 
 ### Deprecated
