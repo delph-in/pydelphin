@@ -60,6 +60,7 @@ changes are prefixed with "**BREAKING**"
   `delphin.mrs.simplemrs.dump()`, `delphin.mrs.simpledmrs.dump()`,
   `delphin.mrs.mrx.dump()`, `delphin.mrs.dmrx.dump()`,
   `delphin.mrs.prolog.dump()` (#152)
+* Non-ascii XML output is now able to be processed in Python2 (#106)
 * `delphin.interfaces.ace` now validates parser, transfer, and generator inputs
   and refuses to process invalid inputs (#155)
 * `delphin.interfaces.ace` handles whitespace in s-expressions a bit better
