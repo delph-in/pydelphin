@@ -338,6 +338,8 @@ def repp(args):
 
 def _read_ace_parse(s):
     from delphin.mrs import simplemrs
+    if hasattr(s, 'decode'):
+        s = s.decode('utf-8')
     surface = None
     newline = False
     for line in s.splitlines():
