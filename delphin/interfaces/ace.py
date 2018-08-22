@@ -61,6 +61,7 @@ interact with the :class:`AceProcess` subclass instances directly.
 
 import logging
 import os
+import argparse
 import re
 from subprocess import (
     check_call,
@@ -117,7 +118,11 @@ class AceProcess(Processor):
         if not os.path.isfile(grm):
             raise ValueError("Grammar file %s does not exist." % grm)
         self.grm = grm
+
         self.cmdargs = cmdargs or []
+        # validate the arguments
+        _ace_argparser.parse_args(self.cmdargs)
+
         self.executable = executable or 'ace'
         ace_version = self.ace_version
         if ace_version >= (0, 9, 14):
@@ -255,17 +260,28 @@ class AceProcess(Processor):
 
         This is the recommended method for sending and receiving data
         to/from an ACE process as it reduces the chances of
-        over-filling or reading past the end of the buffer. If input
-        item identifiers need to be tracked throughout processing, see
-        :meth:`process_item`.
+        over-filling or reading past the end of the buffer. It also
+        performs a simple validation of the input to help ensure that
+        one complete item is processed at a time.
+
+        If input item identifiers need to be tracked throughout
+        processing, see :meth:`process_item`.
 
         Args:
             datum (str): the input sentence or MRS
         Returns:
             :class:`~delphin.interfaces.ParseResponse`
         """
-        self.send(datum)
-        result = self.receive()
+        validated = self._validate_input(datum)
+        if validated:
+            self.send(validated)
+            result = self.receive()
+        else:
+            result, lines = _make_response(
+                [('NOTE: PyDelphin could not validate the input and '
+                  'refused to send it to ACE'),
+                 'SKIP: {}'.format(datum)],
+                self.run_info)
         result['input'] = datum
         return result
 
@@ -315,6 +331,11 @@ class AceParser(AceProcess):
     task = 'parse'
     _termini = [re.compile(r'^$'), re.compile(r'^$')]
 
+    def _validate_input(self, datum):
+        # valid input for parsing is non-empty
+        # (this relies on an empty string evaluating to False)
+        return datum.strip()
+
     def _default_receive(self):
         lines = self._result_lines()
         response, lines = _make_response(lines, self.run_info)
@@ -353,6 +374,9 @@ class AceTransferer(AceProcess):
             tsdbinfo=False, **kwargs
         )
 
+    def _validate_input(self, datum):
+        return _possible_mrs(datum)
+
     def _default_receive(self):
         lines = self._result_lines()
         response, lines = _make_response(lines, self.run_info)
@@ -370,6 +394,9 @@ class AceGenerator(AceProcess):
     task = 'generate'
     _cmdargs = ['-e', '--tsdb-notes']
     _termini = [re.compile(r'NOTE: tsdb parse: ')]
+
+    def _validate_input(self, datum):
+        return _possible_mrs(datum)
 
     def _default_receive(self):
         show_tree = '--show-realization-trees' in self.cmdargs
@@ -532,6 +559,39 @@ def generate(grm, datum, **kwargs):
     return next(generate_from_iterable(grm, [datum], **kwargs))
 
 
+# The following defines the command-line options available for users to
+# specify in AceProcess tasks. For a description of these options, see:
+#     http://moin.delph-in.net/AceOptions
+
+# thanks: https://stackoverflow.com/a/14728477/1441112
+class _ACEArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise ValueError(message)
+
+_ace_argparser = _ACEArgumentParser()
+_ace_argparser.add_argument('-n', type=int)
+_ace_argparser.add_argument('-1', action='store_const', const=1, dest='n')
+_ace_argparser.add_argument('-r')
+_ace_argparser.add_argument('-p', action='store_true')
+_ace_argparser.add_argument('-X', action='store_true')
+_ace_argparser.add_argument('-L', action='store_true')
+_ace_argparser.add_argument('-y', action='store_true')
+_ace_argparser.add_argument('--max-chart-megabytes', type=int)
+_ace_argparser.add_argument('--max-unpack-megabytes', type=int)
+_ace_argparser.add_argument('--timeout', type=int)
+_ace_argparser.add_argument('--disable-subsumption-test', action='store_true')
+_ace_argparser.add_argument('--show-realization-trees', action='store_true')
+_ace_argparser.add_argument('--show-realization-mrses', action='store_true')
+_ace_argparser.add_argument('--show-probability', action='store_true')
+_ace_argparser.add_argument('--disable-generalization', action='store_true')
+_ace_argparser.add_argument('--ubertagging', nargs='?', type=float)
+_ace_argparser.add_argument('--pcfg', type=argparse.FileType())
+_ace_argparser.add_argument('--rooted-derivations', action='store_true')
+_ace_argparser.add_argument('--udx', nargs='?', choices=('all'))
+_ace_argparser.add_argument('--yy-rules', action='store_true')
+_ace_argparser.add_argument('--max-words', type=int)
+
+
 def _ace_version(executable):
     version = (0, 9, 0)  # initial public release
     try:
@@ -542,6 +602,31 @@ def _ace_version(executable):
         logging.error('Failed to get ACE version number.')
         raise
     return version
+
+
+def _possible_mrs(s):
+    start, end = -1, -1
+    depth = 0
+    for i, c in enumerate(s):
+        if c == '[':
+            if depth == 0:
+                start = i
+            depth += 1
+        elif c == ']':
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    # only valid if neither start nor end is -1
+    # note: this ignores any secondary MRSs on the same line
+    if start != -1 and end != -1:
+        # only log if taking a substring
+        if start != 0 and end != len(s):
+            logging.debug('Possible MRS found at <%d:%d>: %s', start, end, s)
+            s = s[start:end]
+        return s
+    else:
+        return False
 
 
 def _make_response(lines, run):
@@ -575,7 +660,7 @@ def _sexpr_data(line):
         if len(expr.data) != 2:
             logging.error('Malformed output from ACE: {}'.format(line))
             break
-        line = expr.remainder
+        line = expr.remainder.lstrip()
         yield expr.data
 
 

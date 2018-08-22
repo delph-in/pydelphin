@@ -14,6 +14,20 @@ from delphin.util import SExpr, stringtypes
 
 
 class Processor(object):
+    """
+    Base class for processors.
+
+    This class defines the basic interface for all PyDelphin processors,
+    such as :class:`~delphin.interfaces.ace.AceProcess` and
+    :class:`~delphin.interfaces.rest.DelphinRestClient`. It can also be
+    used to define preprocessor wrappers of other processors such that
+    it has the same interface, allowing it to be used, e.g., with
+    :meth:`TestSuite.process() <delphin.itsdb.TestSuite.process>`.
+
+    Attributes:
+        task: name of the task the processor performs (e.g. `"parse"`,
+            `"transfer"`, or `"generate"`)
+    """
     task = None
 
     def process_item(self, datum, keys=None):
