@@ -20,6 +20,8 @@ changes are prefixed with "**BREAKING**"
 * The `convert` command can take a `--predicate-modifiers` option which
   attempts to rejoin disconnected EDS graphs that fit certain criteria
 * Documentation for implementing an ACE preprocessor (#91)
+* `ace` as a `--from` codec for the `convert` subcommand, which reads
+  SimpleMRS strings from ACE output (#92)
 
 ### Changed
 

@@ -18,6 +18,7 @@ from delphin.mrs import xmrs, eds
 from delphin.mrs.components import Lnk
 from delphin import itsdb
 from delphin.repp import REPP
+from delphin.util import SExpr
 
 
 def main():
@@ -45,6 +46,7 @@ def convert(args):
     from delphin.extra import latex
     codecs = {
         'simplemrs': (simplemrs.loads, simplemrs.dumps),
+        'ace': (_read_ace_parse, None),
         'mrx': (mrx.loads, mrx.dumps),
         'dmrx': (dmrx.loads, dmrx.dumps),
         'eds': (eds.loads, eds.dumps),
@@ -331,6 +333,40 @@ def repp(args):
         do_repp(sys.stdin)
 
 ## Helper definitions
+
+# read simplemrs from ACE output
+
+def _read_ace_parse(s):
+    from delphin.mrs import simplemrs
+    surface = None
+    newline = False
+    for line in s.splitlines():
+        if line.startswith('SENT: '):
+            surface = line[6:]
+        # regular ACE output
+        elif line.startswith('['):
+            m = line.partition(' ;  ')[0].strip()
+            m = simplemrs.loads(m, single=True)
+            m.surface = surface
+            yield m
+        # with --tsdb-stdout
+        elif line.startswith('('):
+            while line:
+                expr = SExpr.parse(line)
+                line = expr.remainder.lstrip()
+                if len(expr.data) == 2 and expr.data[0] == ':results':
+                    for result in expr.data[1]:
+                        for key, val in result:
+                            if key == ':mrs':
+                                yield simplemrs.loads(val, single=True)
+        elif line == '\n':
+            if newline:
+                surface = None
+                newline = False
+            else:
+                newline = True
+        else:
+            pass
 
 # simulate json codecs for MRS and DMRS
 
