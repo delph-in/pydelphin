@@ -10,6 +10,22 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.tdl.parse()` now accepts a filename argument and returns a properly
   functioning generator (#104)
 
+### Added
+
+* `tests/tdl_test.py` unit tests intended to replace `tests/tdl_test.md`
+* `delphin.tdl.TdlType.docstring` contains a list of a type's docstrings
+
+### Changed
+
+* `delphin.tdl` now parses triple-quoted docstrings (#167); note that it
+  no longer parses the old-style docstrings
+
+### Removed
+
+* **BREAKING** `delphin.tdl.TdlDefinition.comment`; replaced by
+  `TdlType.docstring`
+
+
 ## [v0.8.0][]
 
 This release improves EDS support, cleans up the code, makes the codecs

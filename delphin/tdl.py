@@ -38,14 +38,12 @@ class TdlDefinition(TypedFeatureStructure):
 
     A TdlDefinition is like a
     :class:`~delphin.tfs.TypedFeatureStructure` but each structure may
-    have a list of supertypes instead of a type. It also allows for
-    comments.
+    have a list of supertypes instead of a type.
     """
 
-    def __init__(self, supertypes=None, featvals=None, comment=None):
+    def __init__(self, supertypes=None, featvals=None):
         TypedFeatureStructure.__init__(self, None, featvals=featvals)
         self.supertypes = list(supertypes or [])
-        self.comment = comment
 
     @classmethod
     def default(cls): return TdlDefinition()
@@ -134,13 +132,18 @@ class TdlType(TdlDefinition):
         definition (:class:`TdlDefinition`): definition of the type
         coreferences (list): (tag, paths) tuple of coreferences, where
             paths is a list of feature paths that share the tag
+        docstring (list): list of documentation strings
     """
-    def __init__(self, identifier, definition, coreferences=None):
+    def __init__(self, identifier, definition, coreferences=None,
+                 docstring=None):
         TdlDefinition.__init__(self, definition.supertypes,
-                               definition._avm.items(), definition.comment)
+                               definition._avm.items())
         self.identifier = identifier
         self.definition = definition
         self.coreferences = list(coreferences or [])
+        if docstring is None:
+            docstring = []
+        self.docstring = docstring
 
     def __repr__(self):
         return "<TdlType object '{}' at {}>".format(
@@ -150,12 +153,6 @@ class TdlType(TdlDefinition):
     # @property
     # def supertypes(self):
     #     return self.definition.supertypes
-
-    # @property
-    # def comment(self):
-    #     return self.definition.comment
-
-
 
 
 class TdlInflRule(TdlType):
@@ -174,7 +171,8 @@ class TdlInflRule(TdlType):
 break_characters = r'<>!=:.#&,[];$()^/'
 
 _tdl_re = re.compile(
-    r'("[^"\\]*(?:\\.[^"\\]*)*"'  # double-quoted "strings"
+    r'("""[^"\\]*(?:(?:\\.|"(?!")|""(?!"))[^"\\]*)*(?:""")?'  # """doc"""
+    r'|"[^"\\]*(?:\\.[^"\\]*)*"'  # double-quoted "strings"
     r"|'[^ \\]*(?:\\.[^ \\]*)*"  # single-quoted 'strings
     r'|[^\s{break_characters}]+'  # terms w/o break chars
     r'|#[^\s{break_characters}]+'  # coreferences
@@ -233,6 +231,11 @@ def _read_block(in_pattern, out_pattern, line, lines, terminator=None):
     block = []
     try:
         tokens = tokenize(line)
+        # temporary hack for multiline docstrings
+        while any(tok.startswith('"""') and not tok.endswith('"""')
+                  for tok in tokens):
+            line += next(lines)[1]
+            tokens = tokenize(line)
         lvl = _nest_level(in_pattern, out_pattern, tokens)
         while lvl > 0 or (terminator and tokens[-1] != terminator):
             block.extend(tokens)
@@ -287,15 +290,17 @@ def _parse_typedef(tokens):
         identifier = tokens.popleft()
         assignment = tokens.popleft()
         affixes = _parse_affixes(tokens)  # only for inflectional rules
-        tdldef, corefs = _parse_conjunction(tokens)
+        tdldef, corefs, doc = _parse_conjunction(tokens)
         # Now make coref paths a string instead of list
         corefs = _make_coreferences(corefs)
         #features = parse_conjunction(tokens)
+        if tokens[0].startswith('"""'):
+            doc.append(_parse_docstring(tokens))
         assert tokens.popleft() == '.'
         # :+ doesn't need supertypes
         if assignment != ':+' and len(tdldef.supertypes) == 0:
             raise TdlParsingError('Type definition requires supertypes.')
-        t = TdlType(identifier, tdldef, coreferences=corefs)
+        t = TdlType(identifier, tdldef, coreferences=corefs, docstring=doc)
     except AssertionError as ex:
         msg = 'Remaining tokens: {}'.format(list(tokens))
         #   previously used six library:
@@ -303,7 +308,7 @@ def _parse_typedef(tokens):
         #   use the following when Python2.7 support is dropped
         # raise TdlParsingError(msg, identifier=identifier) from ex
         raise TdlParsingError(msg, identifier=identifier)
-    except StopIteration as ex:
+    except (StopIteration, IndexError) as ex:
         msg = 'Unexpected termination.'
         #   previously used six library:
         # raise_from(TdlParsingError(msg, identifier=identifier or '?'), ex)
@@ -326,32 +331,32 @@ def _parse_affixes(tokens):
 
 
 def _parse_conjunction(tokens):
-    if tokens and tokens[0][:1] in ('\'"'):
-        return tokens.popleft(), []  # basic string value
+    if tokens and tokens[0][:1] in ('\'"') and tokens[0][:3] != '"""':
+        return tokens.popleft(), [], []  # basic string value
     supertypes = []
     features = []
     coreferences = []
-    comment = None
+    doc = []
 
     cls = TdlDefinition  # default type
-    tokens.appendleft('&')  # this just makes the loop simpler
-    while tokens[0] == '&':
 
-        tokens.popleft()  # get rid of '&'
+    # type-addendum with only a docstring
+    if tokens[0].startswith('"""') and tokens[1] == '.':
+        doc.append(_parse_docstring(tokens))
+        return cls(), coreferences, doc
+
+    tokens.appendleft('&')  # simplify the loop
+    while tokens[0] == '&':
+        tokens.popleft()  # remove '&'
+
         feats = []
         corefs = []
+        if tokens[0].startswith('"""'):
+            doc.append(_parse_docstring(tokens))
+
         if tokens[0] == '.':
             raise TdlParsingError('"." cannot appear after & in conjunction.')
 
-        # comments can appear after any supertype and before any avm, but let's
-        # be a bit more generous and just say they can appear at most once
-        #if tokens[0].startswith('"'):
-        #    if comment is not None:
-        #        raise TdlParsingError('Only one comment string is allowed.')
-        #    comment = tokens.popleft()
-
-        # comments aren't followed by "&", so pretend nothing happened (i.e.
-        # use if, not elif)
         if tokens[0].startswith('#'):
             # coreferences don't have features, so just add it and move on
             coreferences.append((tokens.popleft(), [[]]))
@@ -367,7 +372,7 @@ def _parse_conjunction(tokens):
             cls = TdlDiffList
         # elif tokens[0][:1] in ('\'"'):
         #     raise TdlParsingError('String cannot be part of a conjunction.')
-        else:
+        elif not tokens[0].startswith('"""'):
             supertypes.append(tokens.popleft())
 
         if feats is None:
@@ -380,9 +385,14 @@ def _parse_conjunction(tokens):
     if features is None and cls is TdlDefinition:
         tdldef = None
     else:
-        tdldef = cls(supertypes, features, comment=comment)
+        tdldef = cls(supertypes, features)
 
-    return tdldef, coreferences
+    return tdldef, coreferences, doc
+
+
+def _parse_docstring(tokens):
+    assert tokens[0].endswith('"""')
+    return tokens.popleft()[3:-3]
 
 
 def _parse_avm(tokens):
@@ -409,7 +419,7 @@ def _parse_attr_val(tokens):
         tokens.popleft()
         path.append(tokens.popleft())
     path = '.'.join(path)  # put it back together (maybe shouldn'ta broke it)
-    value, corefs = _parse_conjunction(tokens)
+    value, corefs, _ = _parse_conjunction(tokens)
     corefs = [(c, [[path] + p for p in ps]) for c, ps in corefs]
     return ((path, value), corefs)
 
@@ -422,7 +432,7 @@ def _parse_cons_list(tokens):
         # do nothing (don't terminate the list)
     elif tokens[0] == '.':  # e.g. < a . #x >
         tokens.popleft()
-        tdldef, corefs = _parse_conjunction(tokens)
+        tdldef, corefs, _ = _parse_conjunction(tokens)
         feats.append((last_path, tdldef))
         corefs = [(c, [[last_path] + p for p in ps]) for c, ps in corefs]
         coreferences.extend(corefs)
@@ -457,7 +467,7 @@ def _parse_list(tokens, break_on):
     coreferences = []
     path = _list_head
     while tokens[0] not in break_on:
-        tdldef, corefs = _parse_conjunction(tokens)
+        tdldef, corefs, _ = _parse_conjunction(tokens)
         feats.append((path, tdldef))
         corefs = [(c, [[path] + p for p in ps]) for c, ps in corefs]
         coreferences.extend(corefs)
