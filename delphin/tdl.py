@@ -168,7 +168,114 @@ class TdlInflRule(TdlType):
         self.affix = affix
 
 
-break_characters = r'<>!=:.#&,[];$()^/'
+# NOTE: be careful rearranging subpatterns in _tdl_lex_re; some must
+#       appear before others, e.g., """ before ", <! before <, etc.,
+#       to prevent short-circuiting from blocking the larger patterns
+# NOTE: some patterns only match the beginning (e.g., """, #|, etc.)
+#       as they require separate handling for proper lexing
+_tdl_lex_re = re.compile(r'''
+    # regex-pattern                    gid  description
+    (""")                            #   1  start of multiline docstring
+    |(\#\|)                          #   2  start of multiline comment
+    |;([^\n]*)                       #   3  single-line comment
+    |"([^"\\]*(?:\\.[^"\\]*)*)"      #   4  double-quoted "strings"
+    |'([^\s!"#$&'(),./:;<=>[\]^]+)   #   5  single-quoted 'symbols
+    |\^([^$\\]*(?:\\.|[^$\\]*)*)\$   #   6  regular expression
+    |(:=)                            #   7  type def operator
+    |(:\+)                           #   8  type addendum operator
+    |(\.\.\.)                        #   9  list ellipsis
+    |(\.)                            #  10  dot operator
+    |(&)                             #  11  conjunction operator
+    |(,)                             #  12  list delimiter
+    |(\[)                            #  13  AVM open
+    |(<!)                            #  14  diff list open
+    |(<)                             #  15  cons list open
+    |(\])                            #  16  AVM close
+    |(!>)                            #  17  diff list close
+    |(>)                             #  18  cons list close
+    |(\#)                            #  19  coreference
+    |%\s*\((.*)\)\s*$                #  20  letter-set or wild-card
+    |%(prefix|suffix)                #  21  start of affixing pattern
+    |\(([^ ]+\s+(?:[^ )\\]|\\.)+)\)  #  22  affix subpattern
+    |(\/)                            #  23  defaults (currently unused)
+    |([^\s!"#$&'(),./:;<=>[\]^]+)    #  24  identifiers and symbols
+    |([^\s])                         #  25  unexpected
+    ''',
+    flags=re.VERBOSE)
+
+def _lex(stream):
+    """
+    Lex the input stream according to _tdl_lex_re, with custom handling
+    for multiline patterns. Tokens are buffered by 1 to aid with
+    lookahead.
+
+    Yields
+        (gid, nextgid, token, line_number)
+    """
+    lines = enumerate(stream)
+    line_no = pos = prev_line_no = 0
+    prev_gid = prev_token = None
+    try:
+        while True:
+            if pos == 0:
+                line_no, line = next(lines)
+            matches = _tdl_lex_re.finditer(line, pos)
+            pos = 0  # reset; only used for multiline patterns
+            for m in matches:
+                gid = m.lastindex
+                yield (prev_gid, gid, prev_token, prev_line_no)
+                prev_gid = gid
+                if gid <= 2:  # potentially multiline patterns
+                    if gid == 1:  # docstring
+                        s, start_line_no, line_no, line, pos = _bounded(
+                            '"""', '"""', line, m.end(), line_no, lines)
+                    elif gid == 2:  # comment
+                        s, start_line_no, line_no, line, pos = _bounded(
+                            '#|', '|#', line, m.end(), line_no, lines)
+                    prev_token = s
+                    prev_line_no = start_line_no + 1
+                    break
+                elif gid == 25:
+                    raise TdlParsingError(
+                        ('Syntax error:\n  {}\n {}^'
+                         .format(line, ' ' * m.start())),
+                        line_number=line_no + 1)
+                else:
+                    # prev_token = None
+                    # if not (6 < gid < 20):
+                    #     prev_token = m.group(gid)
+                    prev_token = m.group(gid)
+                    prev_line_no = line_no + 1
+
+    except StopIteration:
+        if prev_gid is not None:
+            yield (prev_gid, None, prev_token, prev_line_no)
+
+
+def _bounded(p1, p2, line, pos, line_no, lines):
+    """Collect the contents of a bounded multiline string"""
+    substrings = []
+    start_line_no = line_no
+    end = pos
+    while not line.startswith(p2, end):
+        if line[end] == '\\':
+            end += 2
+        else:
+            end += 1
+        if end >= len(line):
+            substrings.append(line[pos:])
+            try:
+                line_no, line = next(lines)
+            except StopIteration:
+                pattern = 'docstring' if p1 == '"""' else 'block comment'
+                raise TdlParsingError('Unterminated {}'.format(pattern),
+                                      line_number=start_line_no)
+            pos = end = 0
+    substrings.append(line[pos:end])
+    end += len(p2)
+    return ''.join(substrings), start_line_no, line_no, line, end
+
+break_characters = r'<>!=:.#&,[];$()^/"'
 
 _tdl_re = re.compile(
     r'("""[^"\\]*(?:(?:\\.|"(?!")|""(?!"))[^"\\]*)*(?:""")?'  # """doc"""
