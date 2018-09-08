@@ -5,6 +5,10 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+### Fixed
+
+* `delphin.tdl.parse()` now accepts a filename argument and returns a properly functioning generator (#104)
+
 ## [v0.8.0][]
 
 This release improves EDS support, cleans up the code, makes the codecs

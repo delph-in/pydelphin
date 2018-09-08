@@ -252,10 +252,12 @@ def _nest_level(in_pattern, out_pattern, tokens):
 
 def parse(f):
     if hasattr(f, 'read'):
-        return _parse(f)
+        for event in _parse(f):
+            yield event
     else:
         with open(f) as fh:
-            return _parse(fh)
+            for event in _parse(fh):
+                yield event
 
 
 def _parse(f):
