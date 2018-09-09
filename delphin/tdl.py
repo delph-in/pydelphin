@@ -251,6 +251,13 @@ def _nest_level(in_pattern, out_pattern, tokens):
 
 
 def parse(f):
+    """
+    Parse the TDL file *f* and yield the type definitions.
+
+    If *f* is a filename, the file is opened and closed when the
+    generator has finished, otherwise *f* is an open file object
+    and will not be closed when the generator has finished.
+    """
     if hasattr(f, 'read'):
         for event in _parse(f):
             yield event
@@ -261,9 +268,6 @@ def parse(f):
 
 
 def _parse(f):
-    """
-    Parse the open TDL file *f* and yield the type definitions.
-    """
     for line_no, event, data in lex(f):
         data = deque(data)
         try:

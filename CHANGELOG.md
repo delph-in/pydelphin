@@ -7,7 +7,8 @@ these changes are prefixed with "**BREAKING**"
 
 ### Fixed
 
-* `delphin.tdl.parse()` now accepts a filename argument and returns a properly functioning generator (#104)
+* `delphin.tdl.parse()` now accepts a filename argument and returns a properly
+  functioning generator (#104)
 
 ## [v0.8.0][]
 
@@ -61,7 +62,7 @@ first release by the new maintainer, Angie McMillan-Major.
   `delphin.mrs.xmrs.Xmrs.incoming_args()`, from "DMRS-style undirected links"
   to "MOD/EQ links" and updated the return value of `Xmrs.args()` and
   `Xmrs.outgoing_args` from `{nodeid: {}}` to `{role: tgt}` (#133)
-* `delphin.mrs.compare.isomorphic()` compares predicates using a normalized form
+* `delphin.mrs.compare.isomorphic()` compares predicates using normalized form
 * Updated the code and the docstrings for references to 'string' and 'grammar'
   predicates to refer to 'surface' and 'abstract' predicates (#117)
 * `delphin.tdl.parse()` now accepts either a file or a filename argument (#104)
