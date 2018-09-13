@@ -19,7 +19,11 @@ inspect the types in a grammar and the constraints they apply.
   110. CSLI publications Stanford, 2002.
 """
 
+from __future__ import unicode_literals
+strtype = type(u'')
+
 import re
+import io
 from collections import deque, defaultdict
 import warnings
 
@@ -51,12 +55,12 @@ class Term(object):
             self.__class__.__name__, id(self))
 
 
-class TypeTerm(Term, str):
+class TypeTerm(Term, strtype):
     """
     Base class for :class:`Terms <Term>` for types, including strings.
     """
     def __new__(cls, string, docstring=None):
-        return str.__new__(cls, string)
+        return strtype.__new__(cls, string)
 
     def __init__(self, string, docstring=None):
         super(TypeTerm, self).__init__(docstring=docstring)
@@ -703,10 +707,11 @@ def _parse_tdl(tokens):
                     obj = InflRule(identifier, atype, affs, conjunction)
                 elif gid == 7 or gid == 8:
                     if token == ':<':
-                        warnings.warn(TdlWarning(
+                        warnings.warn(
                             'Subtype operator :< encountered at line {} for '
                             '{}; Continuing as if it were the := operator.'
-                            .format(line_no, identifier)))
+                            .format(line_no, identifier),
+                            TdlWarning)
                     if nextgid == 1 and _peek(tokens, n=1)[0] == 10:
                         # docstring will be handled after the if-block
                         conjunction = Conjunction()
@@ -771,10 +776,11 @@ def _parse_tdl_term(tokens):
     if gid == 4:  # string
         term = String(token, docstring=doc)
     elif gid == 5:  # quoted symbol
-        warnings.warn(TdlWarning(
+        warnings.warn(
             'Single-quoted symbol encountered at line {}; '
             'Continuing as if it were a regular symbol.'
-            .format(line_no)))
+            .format(line_no),
+            TdlWarning)
         term = TypeIdentifier(token, docstring=doc)
     elif gid == 6:  # regex
         term = Regex(token, docstring=doc)
@@ -981,7 +987,7 @@ def _parse(f):
             raise
 
 
-def parse(f, _parsefunc=_parse):
+def parse(f, encoding='utf-8', _parsefunc=_parse):
     """
     Parse the TDL file *f* and yield the type definitions.
 
@@ -993,7 +999,7 @@ def parse(f, _parsefunc=_parse):
         for event in _parsefunc(f):
             yield event
     else:
-        with open(f) as fh:
+        with io.open(f, encoding=encoding) as fh:
             for event in _parsefunc(fh):
                 yield event
 
