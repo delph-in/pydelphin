@@ -1,12 +1,13 @@
 
 class PyDelphinException(Exception):
-    """The base class for pyDelphin exceptions."""
+    """The base class for PyDelphin exceptions."""
     def __init__(self, *args, **kwargs):
         """Create a new PyDelphinException."""
         super(PyDelphinException, self).__init__(*args, **kwargs)
 
+
 class PyDelphinWarning(Warning):
-    """The base class for pyDelphin warnings."""
+    """The base class for PyDelphin warnings."""
     def __init__(self, *args, **kwargs):
         """Create a new PyDelphinWarning."""
         super(PyDelphinWarning, self).__init__(*args, **kwargs)
@@ -21,17 +22,21 @@ class XmrsError(PyDelphinException):
     """Raised when there is an error processing *MRS objects."""
     pass
 
+
 class XmrsSerializationError(XmrsError):
     """Raised when serializing *MRS objects fails."""
     pass
+
 
 class XmrsDeserializationError(XmrsError):
     """Raised when deserializing *MRS objects fails."""
     pass
 
+
 class XmrsStructureError(XmrsError):
     """Raised when a *MRS object is structurally ill-formed."""
     pass
+
 
 class XmrsWarning(PyDelphinWarning):
     """Warning class for *MRS processing."""
@@ -41,6 +46,7 @@ class XmrsWarning(PyDelphinWarning):
 class TdlError(PyDelphinException):
     """Raised when there is an error in processing TDL."""
     pass
+
 
 class TdlParsingError(TdlError):
     """Raised when parsing TDL text fails."""
@@ -72,6 +78,11 @@ class TdlParsingError(TdlError):
             self.identifier or 'type/rule definition',
             TdlError.__str__(self)
         )
+
+
+class TdlWarning(PyDelphinWarning):
+    """Raised when parsing unsupported TDL features."""
+    pass
 
 
 class REPPError(PyDelphinException):

@@ -1,29 +1,56 @@
 """
-Basic classes for modeling Typed Feature Structures.
+Basic classes for modeling feature structures.
 
-This module defines the TypedFeatureStructure class, which models an
-attribute value matrix (AVM) with a type. It allows one to access
-features through TDL-style dot notation, or through regular dictionary
-access.
+This module defines the :class:`FeatureStructure` and
+:class:`TypedFeatureStructure` classes, which model an attribute value
+matrix (AVM), with the latter including an associated type. They allow
+feature access through TDL-style dot notation regular dictionary keys.
+
 """
 
 class TypedFeatureStructure(object):
     """
-    A typed feature structure.
-
-    This class manages the access of nested features using
-    dot-delimited notation (e.g., `SYNSEM.LOCAL.CAT.HEAD`).
+    A typed :class:`FeatureStructure`.
 
     Args:
         type (str): type name
         featvals (dict, list): a mapping or iterable of feature paths
             to feature values
     """
-
     __slots__ = ['_type', '_avm']
 
     def __init__(self, type, featvals=None):
         self._type = type
+        super(TypedFeatureStructure, self).__init__(self, featvals)
+
+    def __repr__(self):
+        return '<TypedFeatureStructure object ({}) at {}>'.format(
+            self.type, id(self)
+        )
+
+    @property
+    def type(self):
+        return self._type
+    @type.setter
+    def type(self, value):
+        self._type = value
+
+
+class FeatureStructure(object):
+    """
+    A feature structure.
+
+    This class manages the access of nested features using
+    dot-delimited notation (e.g., `SYNSEM.LOCAL.CAT.HEAD`).
+
+    Args:
+        featvals (dict, list): a mapping or iterable of feature paths
+            to feature values
+    """
+
+    __slots__ = ['_avm']
+
+    def __init__(self, featvals=None):
         self._avm = {}
         if isinstance(featvals, dict):
             featvals = featvals.items()
@@ -34,9 +61,7 @@ class TypedFeatureStructure(object):
     def default(cls): return cls(None)
 
     def __repr__(self):
-        return '<TypedFeatureStructure object ({}) at {}>'.format(
-            self.type, id(self)
-        )
+        return '<FeatureStructure object at {}>'.format(id(self))
 
     def __setitem__(self, key, val):
         subkeys = key.split('.', 1)
@@ -67,13 +92,6 @@ class TypedFeatureStructure(object):
             else:
                 return True
         return False
-
-    @property
-    def type(self):
-        return self._type
-    @type.setter
-    def type(self, value):
-        self._type = value
 
     def get(self, key, default=None):
         """

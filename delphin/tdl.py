@@ -21,28 +21,356 @@ inspect the types in a grammar and the constraints they apply.
 
 import re
 from collections import deque, defaultdict
-from itertools import chain
+import warnings
 
-from delphin.exceptions import TdlError, TdlParsingError
-from delphin.tfs import TypedFeatureStructure
-
-_list_head = 'FIRST'
-_list_tail = 'REST'
-_diff_list_list = 'LIST'
-_diff_list_last = 'LAST'
+from delphin.exceptions import (TdlError, TdlParsingError, TdlWarning)
+from delphin.tfs import FeatureStructure
+from delphin.util import LookaheadIterator
 
 
-class TdlDefinition(TypedFeatureStructure):
+# Values for list expansion
+LIST_TYPE = '*list*'
+EMPTY_LIST_TYPE = '*null*'
+LIST_HEAD = 'FIRST'
+LIST_TAIL = 'REST'
+DIFF_LIST_LIST = 'LIST'
+DIFF_LIST_LAST = 'LAST'
+
+
+# Classes for TDL entities
+
+class Term(object):
+    """
+    Base class for the terms of a TDL conjunction.
+    """
+    def __init__(self, docstring=None):
+        self.docstring = docstring
+
+    def __repr__(self):
+        return "<{} object at {}>".format(
+            self.__class__.__name__, id(self))
+
+
+class TypeTerm(Term, str):
+    """
+    Base class for :class:`Terms <Term>` for types, including strings.
+    """
+    def __new__(cls, string, docstring=None):
+        return str.__new__(cls, string)
+
+    def __init__(self, string, docstring=None):
+        super(TypeTerm, self).__init__(docstring=docstring)
+
+
+class TypeIdentifier(TypeTerm):
+    """
+    Type identifiers, or type names.
+    """
+    pass
+
+
+class String(TypeTerm):
+    """
+    Double-quoted strings.
+    """
+    pass
+
+
+class Regex(TypeTerm):
+    """
+    Regular expression patterns.
+    """
+    pass
+
+
+class AVM(FeatureStructure, Term):
+    """
+    :class:`delphin.tfs.FeatureStructure` terms.
+    """
+
+    def __init__(self, featvals=None, docstring=None):
+        # super() doesn't work because I need to split the parameters
+        FeatureStructure.__init__(self, featvals)
+        Term.__init__(self, docstring=docstring)
+
+    @classmethod
+    def default(cls): return AVM()
+
+    def normalize(self):
+        """
+        Reduce trivial AVM conjunctions to just the AVM.
+
+        For example, in `[ ATTR1 [ ATTR2 val ] ]`, the value of `ATTR1`
+        is a conjunction with the sub-AVM, but this method removes that
+        conjunction so `ATTR1`'s value is just the AVM.
+        """
+        for attr in self._avm:
+            val = self._avm[attr]
+            if isinstance(val, Conjunction):
+                for term in val.terms:
+                    if isinstance(term, AVM):
+                        term.normalize()
+                if len(val.terms) == 1 and isinstance(val.terms[0], AVM):
+                    val.terms[0].normalize()
+                    self._avm[attr] = val.terms[0]
+            elif isinstance(val, AVM):
+                val.normalize()
+
+    def local_constraints(self):
+        """
+        Return the constraints defined in the local AVM.
+        """
+        cs = []
+        for feat, val in self._avm.items():
+            try:
+                if len(val.types()) > 0 and not val._avm:
+                    cs.append((feat, val))
+                else:
+                    for subfeat, subval in val.features():
+                        cs.append(('{}.{}'.format(feat, subfeat), subval))
+            except AttributeError:
+                cs.append((feat, val))
+        return cs
+
+
+class ConsList(AVM):
+    """
+    AVM subclass for cons-lists (``< ... >``)
+
+    Navigating the feature structure for lists can be cumbersome, so
+    this subclass of :class:`AVM` provides the :meth:`values` method
+    to collect the items nested inside the list and return them as a
+    Python list.
+
+    ============  ========  =================
+    TDL form      values    last
+    ============  ========  =================
+    `< >`         `None`    `EMPTY_LIST_TYPE`
+    `< ... >`     `None`    `LIST_TYPE`
+    `< a >`       `[a]`     `EMPTY_LIST_TYPE`
+    `< a, b >`    `[a, b]`  `EMPTY_LIST_TYPE`
+    `< a, ... >`  `[a]`     `LIST_TYPE`
+    `< a . b >`   `[a]`     `b`
+    ============  ========  =================
+    """
+    def __init__(self, values=None, end=LIST_TYPE, docstring=None):
+        super(ConsList, self).__init__(docstring=docstring)
+
+        if values is None:
+            values = []
+        self._last_path = ''
+        self.terminated = False
+        for value in values:
+            self.append(value)
+        self.terminate(end)
+
+    def values(self):
+        """
+        Return the list of values.
+        """
+        return [val for _, val in _collect_list_items(self)]
+
+    def append(self, value):
+        if self._avm is not None and not self.terminated:
+            path = self._last_path
+            if path:
+                path += '.'
+            self[path + LIST_HEAD] = value
+            self._last_path = path + LIST_TAIL
+        else:
+            raise TdlError('Cannot append to a closed list.')
+
+    def terminate(self, end):
+        # non-empty list
+        if self._last_path:
+            path = self._last_path + '.' + LIST_TAIL
+            self[path] = end
+        # empty list:
+        # < > set AVM to None (like having *null* as the type)
+        elif end == EMPTY_LIST_TYPE:
+            assert len(self._avm) == 0
+            self._avm = None
+        # < ... > leave AVM as is (able to be further specified)
+        elif end == LIST_TYPE:
+            pass
+        else:
+            raise TdlError('Empty list must be {} or {}'.format(
+                LIST_TYPE, EMPTY_LIST_TYPE))
+        # any value other than LIST_TYPE blocks future appends
+        self.terminated = end != LIST_TYPE
+
+
+class DiffList(AVM):
+    """
+    AVM subclass for diff-lists (``<! ... !>``)
+
+    Navigating the feature structure for lists can be cumbersome, so
+    this subclass of :class:`AVM` provides the :meth:`values` method
+    to collect the items nested inside the list and return them as a
+    Python list.
+    """
+    def __init__(self, values=None, docstring=None):
+        cr = Coreference(None)
+        if values:
+            # use ConsList to construct the list, but discard the class
+            tmplist = ConsList(values, end=cr)
+            dl_list = AVM()
+            dl_list._avm.update(tmplist._avm)
+        else:
+            dl_list = Conjunction([cr])
+        dl_last = Conjunction([cr])
+
+        featvals = [(DIFF_LIST_LIST, dl_list),
+                    (DIFF_LIST_LAST, dl_last)]
+        super(DiffList, self).__init__(
+            featvals, docstring=docstring)
+
+    def values(self):
+        """
+        Return the list of values.
+        """
+        return [val for _, val in _collect_list_items(self.get('LIST'))]
+
+
+def _collect_list_items(d):
+    if d is None or d.get(LIST_HEAD) is None: return []
+    vals = [(LIST_HEAD, d[LIST_HEAD])]
+    vals.extend((LIST_TAIL + '.' + path, val)
+                for path, val in _collect_list_items(d.get(LIST_TAIL)))
+    return vals
+
+
+class Coreference(Term):
+    """
+    TDL coreferences, which represent re-entrancies in AVMs.
+    """
+    def __init__(self, identifier, docstring=None):
+        super(Coreference, self).__init__(docstring=docstring)
+        self.identifier = identifier
+
+
+class Conjunction(object):
+    """
+    Conjunction of TDL terms.
+    """
+    def __init__(self, terms=None):
+        self._terms = []
+        if terms is not None:
+            for term in terms:
+                self.add(term)
+
+    def __repr__(self):
+        return "<Conjunction object at {}>".format(id(self))
+
+    @property
+    def terms(self):
+        return list(self._terms)
+
+    def add(self, term):
+        if isinstance(term, Conjunction):
+            for term_ in term.terms:
+                self.add(term_)
+        elif isinstance(term, Term):
+            self._terms.append(term)
+        else:
+            raise TypeError('Not a Term or Conjunction')
+
+    def types(self):
+        return [term for term in self._terms
+                if isinstance(term, (TypeIdentifier, String, Regex))]
+
+    def features(self):
+        featvals = []
+        for term in self._terms:
+            if isinstance(term, AVM):
+                featvals.extend(term.features())
+        return featvals
+
+    def string(self):
+        for term in self._terms:
+            if isinstance(t, String):
+                return term
+        return None  # conjunction does not have a string type (not an error)
+
+
+class Type(object):
+    """
+    A top-level Conjunction with an identifier.
+
+    Args:
+        identifier (str): type name
+        conjunction (list): type constraints
+        coreferences (list): (tag, paths) tuple of coreferences, where
+            paths is a list of feature paths that share the tag
+        docstring (list): list of documentation strings
+    """
+    def __init__(self, identifier, conjunction, coreferences=None,
+                 docstring=None):
+        self.identifier = identifier
+        self.conjunction = conjunction
+        self.coreferences = list(coreferences or [])
+        self.docstring = docstring
+
+    def __repr__(self):
+        return "<Type object '{}' at {}>".format(
+            self.identifier, id(self)
+        )
+
+    @property
+    def supertypes(self):
+        return self.conjunction.types()
+
+    def __contains__(self, key):
+        return key in self.conjunction
+
+    def __getitem__(self, key):
+        return self.conjunction.__getitem__(key)
+
+    def __setitem__(self, key, value):
+        return self.conjunction.__setitem__(key, value)
+
+    def documentation(self, level='first'):
+        docs = (t.docstring for t in list(self.conjunction.terms) + [self]
+                if t.docstring is not None)
+        if level.lower() == 'first':
+            doc = next(docs, None)
+        elif level.lower() == 'top':
+            doc = list(docs)
+        return doc
+
+    def features(self):
+        return self.conjunction.features()
+
+    def local_constraints(self):
+        return self.conjunction.local_constraints()
+
+
+class InflRule(Type):
+    """
+    TDL inflectional rule.
+
+    Args:
+        identifier (str): type name
+        affix (str): inflectional affixes
+    """
+    def __init__(self, identifier, affix_type, affix, terms, **kwargs):
+        TdlType.__init__(self, identifier, terms, **kwargs)
+        self.affix_type = affix_type
+        self.affix = affix
+
+
+# Old classes
+
+class TdlDefinition(FeatureStructure):
     """
     A typed feature structure with supertypes.
 
-    A TdlDefinition is like a
-    :class:`~delphin.tfs.TypedFeatureStructure` but each structure may
-    have a list of supertypes instead of a type.
+    A TdlDefinition is like a :class:`~delphin.tfs.FeatureStructure`
+    but each structure may have a list of supertypes.
     """
 
     def __init__(self, supertypes=None, featvals=None):
-        TypedFeatureStructure.__init__(self, None, featvals=featvals)
+        FeatureStructure.__init__(self, featvals=featvals)
         self.supertypes = list(supertypes or [])
 
     @classmethod
@@ -173,6 +501,8 @@ class TdlInflRule(TdlType):
 #       to prevent short-circuiting from blocking the larger patterns
 # NOTE: some patterns only match the beginning (e.g., """, #|, etc.)
 #       as they require separate handling for proper lexing
+# NOTE: only use one capture group () for each pattern; if grouping
+#       inside the pattern is necessary, use non-capture groups (?:)
 _tdl_lex_re = re.compile(r'''
     # regex-pattern                    gid  description
     (""")                            #   1  start of multiline docstring
@@ -181,7 +511,7 @@ _tdl_lex_re = re.compile(r'''
     |"([^"\\]*(?:\\.[^"\\]*)*)"      #   4  double-quoted "strings"
     |'([^\s!"#$&'(),./:;<=>[\]^]+)   #   5  single-quoted 'symbols
     |\^([^$\\]*(?:\\.|[^$\\]*)*)\$   #   6  regular expression
-    |(:=)                            #   7  type def operator
+    |(:[=<])                         #   7  type def operator
     |(:\+)                           #   8  type addendum operator
     |(\.\.\.)                        #   9  list ellipsis
     |(\.)                            #  10  dot operator
@@ -193,7 +523,7 @@ _tdl_lex_re = re.compile(r'''
     |(\])                            #  16  AVM close
     |(!>)                            #  17  diff list close
     |(>)                             #  18  cons list close
-    |(\#)                            #  19  coreference
+    |(\#[^\s!"#$&'(),./:;<=>[\]^]+)  #  19  coreference
     |%\s*\((.*)\)\s*$                #  20  letter-set or wild-card
     |%(prefix|suffix)                #  21  start of affixing pattern
     |\(([^ ]+\s+(?:[^ )\\]|\\.)+)\)  #  22  affix subpattern
@@ -203,18 +533,94 @@ _tdl_lex_re = re.compile(r'''
     ''',
     flags=re.VERBOSE)
 
+
+# Parsing helper functions
+
+def _is_comment(data):
+    """helper function for filtering out comments"""
+    return 2 <= data[0] <= 3
+
+
+def _peek(tokens, n=0):
+    """peek and drop comments"""
+    return tokens.peek(n=n, skip=_is_comment, drop=True)
+
+
+def _next(tokens):
+    """pop the next token, dropping comments"""
+    return tokens.next(skip=_is_comment)
+
+
+def _shift(tokens):
+    """pop the next token, then peek the gid of the following"""
+    after = tokens.peek(n=1, skip=_is_comment, drop=True)
+    tok = tokens._buffer.popleft()
+    return tok[0], tok[1], tok[2], after[0]
+
+
+def _accumulate(lexitems):
+    """
+    Yield lists of tokens based on very simple parsing that checks the
+    level of nesting within a structure. This is probably much faster
+    than the LookaheadIterator method, but it is less safe; an unclosed
+    list or AVM may cause it to build a list including the rest of the
+    file, or it may return a list that doesn't span a full definition.
+
+    As PyDelphin's goals for TDL parsing do not include speed, this
+    method is not currently used, although it is retained in the source
+    code as an example if future priorities change.
+    """
+    data = []
+    stack = []
+    break_on = 10
+    in_def = False
+    for item in lexitems:
+        gid = item[0]
+        # only yield comments outside of definitions
+        if gid in (2, 3):
+            if len(data) == 0:
+                yield [item]
+            else:
+                continue
+        elif gid == 20:
+            assert len(data) == 0
+            yield [item]
+        # the following just checks if the previous definition was not
+        # terminated when the next one is read in
+        elif gid in (7, 8):
+            if in_def:
+                yield data[:-1]
+                data = data[-1:] + [item]
+                stack = []
+                break_on = 10
+            else:
+                data.append(item)
+                in_def = True
+        else:
+            data.append(item)
+            if gid == break_on:
+                if len(stack) == 0:
+                    yield data
+                    data = []
+                    in_def = False
+                else:
+                    break_on = stack.pop()
+            elif gid in (13, 14, 15):
+                stack.append(break_on)
+                break_on = gid + 3
+    if data:
+        yield data
+
+
 def _lex(stream):
     """
-    Lex the input stream according to _tdl_lex_re, with custom handling
-    for multiline patterns. Tokens are buffered by 1 to aid with
-    lookahead.
+    Lex the input stream according to _tdl_lex_re.
 
     Yields
-        (gid, nextgid, token, line_number)
+        (gid, token, line_number)
     """
-    lines = enumerate(stream)
-    line_no = pos = prev_line_no = 0
-    prev_gid = prev_token = None
+    lines = enumerate(stream, 1)
+    line_no = pos = 0
     try:
         while True:
             if pos == 0:
@@ -223,8 +629,6 @@ def _lex(stream):
             pos = 0  # reset; only used for multiline patterns
             for m in matches:
                 gid = m.lastindex
-                yield (prev_gid, gid, prev_token, prev_line_no)
-                prev_gid = gid
                 if gid <= 2:  # potentially multiline patterns
                     if gid == 1:  # docstring
                         s, start_line_no, line_no, line, pos = _bounded(
@@ -232,24 +636,21 @@ def _lex(stream):
                     elif gid == 2:  # comment
                         s, start_line_no, line_no, line, pos = _bounded(
                             '#|', '|#', line, m.end(), line_no, lines)
-                    prev_token = s
-                    prev_line_no = start_line_no + 1
+                    yield (gid, s, line_no)
                     break
                 elif gid == 25:
                     raise TdlParsingError(
                         ('Syntax error:\n  {}\n {}^'
                          .format(line, ' ' * m.start())),
-                        line_number=line_no + 1)
+                        line_number=line_no)
                 else:
-                    # prev_token = None
+                    # token = None
                     # if not (6 < gid < 20):
-                    #     prev_token = m.group(gid)
-                    prev_token = m.group(gid)
-                    prev_line_no = line_no + 1
-
+                    #     token = m.group(gid)
+                    token = m.group(gid)
+                    yield (gid, token, line_no)
     except StopIteration:
-        if prev_gid is not None:
-            yield (prev_gid, None, prev_token, prev_line_no)
+        pass
 
 
 def _bounded(p1, p2, line, pos, line_no, lines):
@@ -275,6 +676,199 @@ def _bounded(p1, p2, line, pos, line_no, lines):
     end += len(p2)
     return ''.join(substrings), start_line_no, line_no, line, end
 
+
+# Parsing functions
+
+def _parse_tdl(tokens):
+    try:
+        line_no = 1
+        while True:
+            try:
+                gid, token, line_no = tokens.next()
+            except StopIteration:  # normal EOF
+                break
+            if gid == 2:
+                yield (line_no, 'BLOCKCOMMENT', token)
+            elif gid == 3:
+                yield (line_no, 'LINECOMMENT', token)
+            elif gid == 20:
+                yield (line_no, 'LETTERSET', token)
+            elif gid == 24:
+                identifier = token
+                gid, token, line_no, nextgid = _shift(tokens)
+
+                if gid == 7 and nextgid == 21:  # lex rule with affixes
+                    atype, affs = _parse_tdl_affixes(tokens)
+                    conjunction, nextgid = _parse_tdl_conjunction(tokens)
+                    obj = InflRule(identifier, atype, affs, conjunction)
+                elif gid == 7 or gid == 8:
+                    if token == ':<':
+                        warnings.warn(TdlWarning(
+                            'Subtype operator :< encountered at line {} for '
+                            '{}; Continuing as if it were the := operator.'
+                            .format(line_no, identifier)))
+                    if nextgid == 1 and _peek(tokens, n=1)[0] == 10:
+                        # docstring will be handled after the if-block
+                        conjunction = Conjunction()
+                    else:
+                        conjunction, nextgid =  _parse_tdl_conjunction(tokens)
+                    obj = Type(identifier, conjunction)
+                else:
+                    raise TdlParsingError("Expected: := or :+",
+                                          line_number=line_no)
+
+                if nextgid == 1:  # pre-dot docstring
+                    _, token, _, nextgid = _shift(tokens)
+                    obj.docstring = token
+                if nextgid != 10:  # . dot
+                    raise TdlParsingError('Expected: .', line_number=line_no)
+                tokens.next()
+
+                yield obj
+
+            else:
+                raise TdlParsingError(
+                    'Syntax error; unexpected token: {}'.format(token),
+                    line_number=line_no)
+
+    except StopIteration:
+        raise TdlParsingError('Unexpected end of input.')
+
+
+def _parse_tdl_affixes(tokens):
+    gid, token, line_no, nextgid = _shift(tokens)
+    assert gid == 21
+    affixtype = token
+    affixes = []
+    while nextgid == 22:
+        gid, token, line_no, nextgid = _shift(tokens)
+        match, replacement = token.split(None, 1)
+        affixes.append((match, replacement))
+    return affixtype, affixes
+
+def _parse_tdl_conjunction(tokens):
+    terms = []
+    while True:
+        term, nextgid = _parse_tdl_term(tokens)
+        terms.append(term)
+        if nextgid == 11:  # & operator
+            tokens.next()
+        else:
+            break
+    return Conjunction(terms), nextgid
+
+
+def _parse_tdl_term(tokens):
+    doc = None
+
+    gid, token, line_no, nextgid = _shift(tokens)
+
+    # docstrings are not part of the conjunction so check separately
+    if gid == 1:  # docstring
+        doc = token
+        gid, token, line_no, nextgid = _shift(tokens)
+
+    if gid == 4:  # string
+        term = String(token, docstring=doc)
+    elif gid == 5:  # quoted symbol
+        warnings.warn(TdlWarning(
+            'Single-quoted symbol encountered at line {}; '
+            'Continuing as if it were a regular symbol.'
+            .format(line_no)))
+        term = TypeIdentifier(token, docstring=doc)
+    elif gid == 6:  # regex
+        term = Regex(token, docstring=doc)
+    elif gid == 13:  # AVM open
+        featvals, nextgid = _parse_tdl_feature_structure(tokens)
+        term = AVM(featvals, docstring=doc)
+    elif gid == 14:  # diff list open
+        values, _, nextgid = _parse_tdl_list(tokens, break_gid=17)
+        term = DiffList(values, docstring=doc)
+    elif gid == 15:  # cons list open
+        values, end, nextgid = _parse_tdl_list(tokens, break_gid=18)
+        term = ConsList(values, end=end, docstring=doc)
+    elif gid == 19:  # coreference
+        term = Coreference(token, docstring=doc)
+    elif gid == 24:  # identifier
+        term = TypeIdentifier(token, docstring=doc)
+    else:
+        raise TdlParsingError('Expected a TDL conjunction term.',
+                              line_number=line_no)
+    return term, nextgid
+
+
+def _parse_tdl_feature_structure(tokens):
+    feats = []
+    gid, token, line_no, nextgid = _shift(tokens)
+    if gid != 16:  # ] feature structure terminator
+        while True:
+            if gid != 24:  # identifier (attribute name)
+                raise TdlParsingError('Expected a feature name',
+                                      line_number=line_no)
+            path = [token]
+            while nextgid == 10:  # . dot
+                tokens.next()
+                gid, token, line_no, nextgid = _shift(tokens)
+                assert gid == 24
+                path.append(token)
+            attr = '.'.join(path)
+
+            conjunction, nextgid = _parse_tdl_conjunction(tokens)
+            feats.append((attr, conjunction))
+
+            if nextgid == 12:  # , list delimiter
+                tokens.next()
+                gid, token, line_no, nextgid = _shift(tokens)
+            elif nextgid == 16:
+                gid, _, _, nextgid = _shift(tokens)
+                break
+            else:
+                raise TdlParsingError('Expected: , or ]',
+                                      line_number=line_no)
+
+    assert gid == 16
+
+    return feats, nextgid
+
+
+def _parse_tdl_list(tokens, break_gid):
+    values = []
+    end = None
+    nextgid = _peek(tokens)[0]
+    if nextgid == break_gid:
+        _, _, _, nextgid = _shift(tokens)
+    else:
+        while True:
+            if nextgid == 9:  # ... ellipsis
+                _, _, _, nextgid = _shift(tokens)
+                end = LIST_TYPE
+                break
+            else:
+                term, nextgid = _parse_tdl_conjunction(tokens)
+                values.append(term)
+
+            if nextgid == 10:  # . dot
+                tokens.next()
+                end, nextgid = _parse_tdl_conjunction(tokens)
+                break
+            elif nextgid == break_gid:
+                break
+            elif nextgid == 12:  # , comma delimiter
+                _, _, _, nextgid = _shift(tokens)
+            else:
+                raise TdlParsingError('Expected: comma or end of list')
+
+        gid, _, line_no, nextgid = _shift(tokens)
+        if gid != break_gid:
+            raise TdlParsingError('Expected: end of list',
+                                  line_number=line_no)
+
+    if len(values) == 0 and end is None:
+        end = EMPTY_LIST_TYPE
+
+    return values, end, nextgid
+
+
 break_characters = r'<>!=:.#&,[];$()^/"'
 
 _tdl_re = re.compile(
@@ -299,33 +893,33 @@ def tokenize(s):
     """
     Tokenize a string *s* of TDL code.
     """
-    return _tdl_re.findall(s)
+    return [m.group(m.lastindex) for m in _tdl_re.finditer(s)]
 
 
 def lex(stream):
-    lines = enumerate(stream)
+    lines = enumerate(stream, 1)
     line_no = 0
     try:
         while True:
             block = None
             line_no, line = next(lines)
             if re.match(r'^\s*;', line):
-                yield (line_no + 1, 'LINECOMMENT', line)
+                yield (line_no, 'LINECOMMENT', line)
             elif re.match(r'^\s*#\|', line):
                 block = []
                 while not re.match(r'.*\|#\s*$', line):
                     block.append(line)
                     _, line = next(lines)
                 block.append(line)  # also add the last match
-                yield (line_no + 1, 'BLOCKCOMMENT', ''.join(block))
+                yield (line_no, 'BLOCKCOMMENT', ''.join(block))
             elif re.match(r'^\s*$', line):
                 continue
             elif re.match(r'^\s*%', line):
                 block = _read_block('(', ')', line, lines)
-                yield (line_no + 1, 'LETTERSET', block)
+                yield (line_no, 'LETTERSET', block)
             else:
                 block = _read_block('[', ']', line, lines, terminator='.')
-                yield (line_no + 1, 'TYPEDEF', block)
+                yield (line_no, 'TYPEDEF', block)
 
     except StopIteration:
         if block:
@@ -338,11 +932,14 @@ def _read_block(in_pattern, out_pattern, line, lines, terminator=None):
     block = []
     try:
         tokens = tokenize(line)
-        # temporary hack for multiline docstrings
-        while any(tok.startswith('"""') and not tok.endswith('"""')
-                  for tok in tokens):
-            line += next(lines)[1]
-            tokens = tokenize(line)
+        # fixup for multiline docstrings and comments
+        tail = tokens[-1]
+        while tail.startswith('"""') and not tail.endswith('"""'):
+            tokens[-1:] = tokenize(tail + next(lines)[1])
+            tail = tokens[-1]
+        while tail.startswith('#|') and not tail.endswith('|#'):
+            tokens[-1:] = tokenize(tail + next(lines)[1])
+            tail = tokens[-1]
         lvl = _nest_level(in_pattern, out_pattern, tokens)
         while lvl > 0 or (terminator and tokens[-1] != terminator):
             block.extend(tokens)
@@ -360,21 +957,15 @@ def _nest_level(in_pattern, out_pattern, tokens):
     return sum(lookup.get(tok, 0) for tok in tokens)
 
 
-def parse(f):
-    """
-    Parse the TDL file *f* and yield the type definitions.
-
-    If *f* is a filename, the file is opened and closed when the
-    generator has finished, otherwise *f* is an open file object
-    and will not be closed when the generator has finished.
-    """
-    if hasattr(f, 'read'):
-        for event in _parse(f):
-            yield event
-    else:
-        with open(f) as fh:
-            for event in _parse(fh):
-                yield event
+def _parse2(f):
+    tokens = LookaheadIterator(_lex(f))
+    try:
+        for data in _parse_tdl(tokens):
+            yield data
+    except TdlParsingError as ex:
+        if hasattr(f, 'name'):
+            ex.filename = f.name
+        raise
 
 
 def _parse(f):
@@ -388,6 +979,23 @@ def _parse(f):
             if hasattr(f, 'name'):
                 ex.filename = f.name
             raise
+
+
+def parse(f, _parsefunc=_parse):
+    """
+    Parse the TDL file *f* and yield the type definitions.
+
+    If *f* is a filename, the file is opened and closed when the
+    generator has finished, otherwise *f* is an open file object
+    and will not be closed when the generator has finished.
+    """
+    if hasattr(f, 'read'):
+        for event in _parsefunc(f):
+            yield event
+    else:
+        with open(f) as fh:
+            for event in _parsefunc(fh):
+                yield event
 
 
 def _parse_typedef(tokens):
@@ -555,16 +1163,16 @@ def _parse_diff_list(tokens):
     feats, last_path, coreferences = _parse_list(tokens, ('!>'))
     if not feats:
         # always have the LIST path
-        feats.append((_diff_list_list, TdlDefinition()))
-        last_path = _diff_list_list
+        feats.append((DIFF_LIST_LIST, TdlDefinition()))
+        last_path = DIFF_LIST_LIST
     else:
         # prepend 'LIST' to all paths
-        feats = [('.'.join([_diff_list_list, path]), val)
+        feats = [('.'.join([DIFF_LIST_LIST, path]), val)
                  for path, val in feats]
-        last_path = '{}.{}'.format(_diff_list_list, last_path)
+        last_path = '{}.{}'.format(DIFF_LIST_LIST, last_path)
     # always have the LAST path
-    feats.append((_diff_list_last, TdlDefinition()))
-    coreferences.append((None, [[last_path], [_diff_list_last]]))
+    feats.append((DIFF_LIST_LAST, TdlDefinition()))
+    coreferences.append((None, [[last_path], [DIFF_LIST_LAST]]))
     assert tokens.popleft() == '!>'
     return (feats, coreferences)
 
@@ -572,18 +1180,18 @@ def _parse_diff_list(tokens):
 def _parse_list(tokens, break_on):
     feats = []
     coreferences = []
-    path = _list_head
+    path = LIST_HEAD
     while tokens[0] not in break_on:
         tdldef, corefs, _ = _parse_conjunction(tokens)
         feats.append((path, tdldef))
         corefs = [(c, [[path] + p for p in ps]) for c, ps in corefs]
         coreferences.extend(corefs)
         if tokens[0] == ',':
-            path = '{}.{}'.format(_list_tail, path)
+            path = '{}.{}'.format(LIST_TAIL, path)
             tokens.popleft()
         elif tokens[0] == '.':
             break
-    path = path.replace(_list_head, _list_tail)
+    path = path.replace(LIST_HEAD, LIST_TAIL)
     return (feats, path, coreferences)
 
 
