@@ -52,6 +52,7 @@ class FeatureStructure(object):
 
     def __init__(self, featvals=None):
         self._avm = {}
+        self._feats = []
         if isinstance(featvals, dict):
             featvals = featvals.items()
         for feat, val in list(featvals or []):
@@ -64,15 +65,18 @@ class FeatureStructure(object):
         return '<FeatureStructure object at {}>'.format(id(self))
 
     def __setitem__(self, key, val):
+        avm = self._avm
         subkeys = key.split('.', 1)
         subkey = subkeys[0].upper()
+        if subkey not in avm:
+            self._feats.append(subkey)
         if len(subkeys) == 1:
-            self._avm[subkey] = val
+            avm[subkey] = val
         else:
-            if subkey in self._avm:
-                subdef = self._avm[subkey]
+            if subkey in avm:
+                subdef = avm[subkey]
             else:
-                subdef = self._avm[subkey] = self.default()
+                subdef = avm[subkey] = self.default()
             subdef[subkeys[1]] = val
 
     def __getitem__(self, key):
@@ -117,7 +121,12 @@ class FeatureStructure(object):
         Return the list of tuples of feature paths and feature values.
         """
         fs = []
-        for feat, val in self._avm.items():
+        if len(self._feats) == len(self._avm):
+            feats = self._feats
+        else:
+            feats = list(self._avm)
+        for feat in feats:
+            val = self._avm[feat]
             try:
                 if val._is_notable():
                     fs.append((feat, val))
