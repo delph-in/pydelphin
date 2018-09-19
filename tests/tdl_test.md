@@ -245,13 +245,13 @@ For convenience:
 >>> t = parsetdl('type-name := supertype.')
 >>> t.identifier
 'type-name'
->>> t.supertypes
-['supertype']
+>>> t.supertypes  # doctest: +ELLIPSIS
+[<TypeIdentifier object (supertype) at ...>]
 >>> t = parsetdl('type := super1 & super2.')
 >>> t.identifier
 'type'
->>> t.supertypes
-['super1', 'super2']
+>>> t.supertypes  # doctest: +ELLIPSIS
+[<TypeIdentifier object (super1) at ...>, <TypeIdentifier object (super2) at ...>]
 
 ```
 
@@ -272,10 +272,10 @@ Simple feature and value; attribute names are case-insensitive:
 >>> t = parsetdl('type := super & [ ATTR val ].')
 >>> list(t.features())  # doctest: +ELLIPSIS
 [('ATTR', <Conjunction object ...>)]
->>> t['ATTR'].types()
-['val']
->>> t['attr'].types()
-['val']
+>>> t['ATTR'].types()  # doctest: +ELLIPSIS
+[<TypeIdentifier object (val) at ...>]
+>>> t['attr'].types()  # doctest: +ELLIPSIS
+[<TypeIdentifier object (val) at ...>]
 
 ```
 
@@ -286,7 +286,7 @@ String values are not primitives:
 >>> list(t.features())  # doctest: +ELLIPSIS
 [('ATTR', <Conjunction object at ...>)]
 >>> t['ATTR'].string()
-'val'
+<String object ("val") at ...>
 
 ```
 
@@ -307,16 +307,14 @@ retrieved using either dot-notation or as separate keys:
 >>> t = parsetdl('type := super & [ ATTR.SUB val ].')
 >>> list(t.features())  # doctest: +ELLIPSIS
 [('ATTR.SUB', <Conjunction object ...>)]
->>> list(t.local_constraints())  # doctest: +ELLIPSIS
-[('ATTR.SUB', <Conjunction object ...>)]
 >>> list(t['ATTR'].features())  # doctest: +ELLIPSIS
 [('SUB', <Conjunction object ...>)]
 >>> t['ATTR'].types()
 []
 >>> t['ATTR.SUB'].types()
-['val']
+[<TypeIdentifier object (val) at ...>]
 >>> t['ATTR']['SUB'].types()
-['val']
+[<TypeIdentifier object (val) at ...>]
 
 ```
 
@@ -326,17 +324,15 @@ do the same thing when the feature values are simple:
 ```python
 >>> t = parsetdl('type := super & [ ATTR [ SUB val ] ].')
 >>> list(t.features())  # doctest: +ELLIPSIS
-[('ATTR.SUB', <Conjunction object ...>)]
->>> list(t.local_constraints())  # doctest: +ELLIPSIS
-[('ATTR.SUB', <Conjunction object ...>)]
+[('ATTR', <Conjunction object ...>)]
 >>> list(t['ATTR'].features())  # doctest: +ELLIPSIS
 [('SUB', <Conjunction object ...>)]
 >>> t['ATTR'].types()
 []
 >>> t['ATTR.SUB'].types()
-['val']
+[<TypeIdentifier object (val) at ...>]
 >>> t['ATTR']['SUB'].types()
-['val']
+[<TypeIdentifier object (val) at ...>]
 
 ```
 
@@ -382,7 +378,7 @@ Features can be set with the standard Python syntax:
 ```python
 >>> t = parsetdl('type := super & [ ATTR val ].')
 >>> t['ATTR'].types()
-['val']
+[<TypeIdentifier object (val) at ...>]
 >>> t['ATTR'] = "string"
 >>> t['ATTR']
 'string'
@@ -403,15 +399,13 @@ constraints on the type:
 ```python
 >>> t = parsetdl('type := super & [ ATTR t & [ SUB val ] ].')
 >>> t.supertypes
-['super']
+[<TypeIdentifier object (super) at ...>]
 >>> t['ATTR'].types()
-['t']
+[<TypeIdentifier object (t) at ...>]
 >>> t['ATTR.SUB'].types()
-['val']
+[<TypeIdentifier object (val) at ...>]
 >>> list(t.features())  # doctest: +ELLIPSIS
 [('ATTR', <Conjunction object ...>)]
->>> list(t.local_constraints())  # doctest: +ELLIPSIS
-[('ATTR.SUB', <Conjunction object ...>)]
 
 ```
 

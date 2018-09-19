@@ -8,6 +8,7 @@ feature access through TDL-style dot notation regular dictionary keys.
 
 """
 
+
 class TypedFeatureStructure(object):
     """
     A typed :class:`FeatureStructure`.
@@ -31,6 +32,7 @@ class TypedFeatureStructure(object):
     @property
     def type(self):
         return self._type
+
     @type.setter
     def type(self, value):
         self._type = value
@@ -59,10 +61,20 @@ class FeatureStructure(object):
             self[feat] = val
 
     @classmethod
-    def default(cls): return cls(None)
+    def _default(cls): return cls(None)
 
     def __repr__(self):
         return '<FeatureStructure object at {}>'.format(id(self))
+
+    def __eq__(self, other):
+        if not isinstance(other, FeatureStructure):
+            return NotImplemented
+        return self._avm == other._avm
+
+    def __ne__(self, other):
+        if not isinstance(other, FeatureStructure):
+            return NotImplemented
+        return self._avm != other._avm
 
     def __setitem__(self, key, val):
         avm = self._avm
@@ -76,7 +88,7 @@ class FeatureStructure(object):
             if subkey in avm:
                 subdef = avm[subkey]
             else:
-                subdef = avm[subkey] = self.default()
+                subdef = avm[subkey] = self._default()
             subdef[subkeys[1]] = val
 
     def __getitem__(self, key):
@@ -121,18 +133,19 @@ class FeatureStructure(object):
         Return the list of tuples of feature paths and feature values.
         """
         fs = []
-        if len(self._feats) == len(self._avm):
-            feats = self._feats
-        else:
-            feats = list(self._avm)
-        for feat in feats:
-            val = self._avm[feat]
-            try:
-                if val._is_notable():
+        if self._avm is not None:
+            if len(self._feats) == len(self._avm):
+                feats = self._feats
+            else:
+                feats = list(self._avm)
+            for feat in feats:
+                val = self._avm[feat]
+                try:
+                    if val._is_notable():
+                        fs.append((feat, val))
+                    else:
+                        for subfeat, subval in val.features():
+                            fs.append(('{}.{}'.format(feat, subfeat), subval))
+                except AttributeError:
                     fs.append((feat, val))
-                else:
-                    for subfeat, subval in val.features():
-                        fs.append(('{}.{}'.format(feat, subfeat), subval))
-            except AttributeError:
-                fs.append((feat, val))
         return fs

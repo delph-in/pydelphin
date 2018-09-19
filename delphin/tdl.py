@@ -20,7 +20,6 @@ inspect the types in a grammar and the constraints they apply.
 """
 
 from __future__ import unicode_literals
-str = type(u'')
 
 import re
 import io
@@ -32,6 +31,7 @@ from delphin.exceptions import (TdlError, TdlParsingError, TdlWarning)
 from delphin.tfs import FeatureStructure
 from delphin.util import LookaheadIterator
 
+str = type(u'')  # short-term fix for Python 2
 
 # Values for list expansion
 LIST_TYPE = '*list*'
@@ -43,14 +43,13 @@ DIFF_LIST_LAST = 'LAST'
 
 # Values for serialization
 _base_indent = 2  # indent when an AVM starts on the next line
-_max_inline_features = 2  # number of AVM features that may appear inline
 _max_inline_list_items = 3  # number of list items that may appear inline
 _line_width = 79  # try not to go beyond this number of characters
 
 
 # Classes for TDL entities
 
-class Term(object):
+class _Term(object):
     """
     Base class for the terms of a TDL conjunction.
     """
@@ -61,28 +60,41 @@ class Term(object):
         return "<{} object at {}>".format(
             self.__class__.__name__, id(self))
 
-    def format(self, indent=_base_indent, secondary_indent=None):
-        if self.docstring is not None:
-            return '{}\n{}{}'.format(
-                _format_docstring(self.docstring, indent),
-                indent,
-                str(self))
+    def __and__(self, other):
+        if isinstance(other, _Term):
+            return Conjunction([self, other])
+        elif isinstance(other, Conjunction):
+            return Conjunction([self] + other._terms)
         else:
-            return str(self)
+            return NotImplemented
 
 
-class TypeTerm(Term, str):
+class _TypeTerm(_Term, str):
     """
-    Base class for :class:`Terms <Term>` for types, including strings.
+    Base class for type terms (identifiers, strings and regexes).
     """
     def __new__(cls, string, docstring=None):
         return str.__new__(cls, string)
 
     def __init__(self, string, docstring=None):
-        super(TypeTerm, self).__init__(docstring=docstring)
+        super(_TypeTerm, self).__init__(docstring=docstring)
+
+    def __repr__(self):
+        return "<{} object ({}) at {}>".format(
+            self.__class__.__name__, self, id(self))
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+        return str.__eq__(self, other)
+
+    def __ne__(self, other):
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+        return str.__ne__(self, other)
 
 
-class TypeIdentifier(TypeTerm):
+class TypeIdentifier(_TypeTerm):
     """
     Type identifiers, or type names.
     """
@@ -92,8 +104,20 @@ class TypeIdentifier(TypeTerm):
     def __unicode__(self):
         return self.__str__()
 
+    def __eq__(self, other):
+        if (isinstance(other, _TypeTerm) and
+                not isinstance(other, TypeIdentifier)):
+            return NotImplemented
+        return self.lower() == other.lower()
 
-class String(TypeTerm):
+    def __ne__(self, other):
+        if (isinstance(other, _TypeTerm) and
+                not isinstance(other, TypeIdentifier)):
+            return NotImplemented
+        return self.lower() != other.lower()
+
+
+class String(_TypeTerm):
     """
     Double-quoted strings.
     """
@@ -104,7 +128,7 @@ class String(TypeTerm):
         return self.__str__()
 
 
-class Regex(TypeTerm):
+class Regex(_TypeTerm):
     """
     Regular expression patterns.
     """
@@ -115,18 +139,26 @@ class Regex(TypeTerm):
         return self.__str__()
 
 
-class AVM(FeatureStructure, Term):
+class AVM(FeatureStructure, _Term):
     """
-    :class:`delphin.tfs.FeatureStructure` terms.
+    A feature structure as used in TDL.
     """
 
     def __init__(self, featvals=None, docstring=None):
         # super() doesn't work because I need to split the parameters
         FeatureStructure.__init__(self, featvals)
-        Term.__init__(self, docstring=docstring)
+        _Term.__init__(self, docstring=docstring)
 
     @classmethod
-    def default(cls): return AVM()
+    def _default(cls): return AVM()
+
+    def __setitem__(self, key, val):
+        if isinstance(val, (_TypeTerm, Coreference)):
+            val = Conjunction([val])
+        elif not (val is None or isinstance(val, (AVM, Conjunction))):
+            raise TypeError('invalid attribute value type: {}'.format(
+                val.__class__.__name__))
+        super(AVM, self).__setitem__(key, val)
 
     def normalize(self):
         """
@@ -139,47 +171,11 @@ class AVM(FeatureStructure, Term):
         for attr in self._avm:
             val = self._avm[attr]
             if isinstance(val, Conjunction):
-                for term in val.terms:
-                    if isinstance(term, AVM):
-                        term.normalize()
+                val.normalize()
                 if len(val.terms) == 1 and isinstance(val.terms[0], AVM):
-                    val.terms[0].normalize()
                     self._avm[attr] = val.terms[0]
             elif isinstance(val, AVM):
                 val.normalize()
-
-    def local_constraints(self):
-        """
-        Return the constraints defined in the local AVM.
-        """
-        cs = []
-        if len(self._feats) == len(self._avm):
-            feats = self._feats
-        else:
-            feats = list(self._avm)
-        for feat in feats:
-            val = self._avm[feat]
-            try:
-                if len(val.types()) > 0 and not val._avm:
-                    cs.append((feat, val))
-                else:
-                    for subfeat, subval in val.features():
-                        cs.append(('{}.{}'.format(feat, subfeat), subval))
-            except AttributeError:
-                cs.append((feat, val))
-        return cs
-
-    def format(self, indent=_base_indent, secondary_indent=None):
-        lines = _preformat_avm(self, indent=indent)
-        docstring = _format_docstring(self.docstring, indent)
-        if docstring:
-            docstring = docstring + '\n' + ' ' * indent
-        if not lines:
-            return '{}[ ]'.format(docstring)
-        else:
-            return '{}[ {} ]'.format(
-                docstring,
-                (',\n' + ' ' * (indent + 2)).join(lines))
 
 
 class ConsList(AVM):
@@ -213,6 +209,9 @@ class ConsList(AVM):
             self.append(value)
         self.terminate(end)
 
+    def __len__(self):
+        return len(self.values())
+
     def values(self):
         """
         Return the list of values.
@@ -220,7 +219,12 @@ class ConsList(AVM):
         if self._avm is None:
             return []
         else:
-            return [val for _, val in _collect_list_items(self)]
+            vals = [val for _, val in _collect_list_items(self)]
+            # the < a . b > notation puts b on the last REST path,
+            # which is not returned by _collect_list_items()
+            if self.terminated and self[self._last_path] is not None:
+                vals.append(self[self._last_path])
+            return vals
 
     def append(self, value):
         if self._avm is not None and not self.terminated:
@@ -229,52 +233,27 @@ class ConsList(AVM):
                 path += '.'
             self[path + LIST_HEAD] = value
             self._last_path = path + LIST_TAIL
+            self[self._last_path] = AVM()
         else:
             raise TdlError('Cannot append to a closed list.')
 
     def terminate(self, end):
-        # non-empty list
-        if self._last_path:
-            self._last_path += '.' + LIST_TAIL
-            self[self._last_path] = end
-        # empty list:
-        # < > set AVM to None (like having *null* as the type)
+        if self.terminated:
+            raise TdlError('Cannot terminate a closed list.')
+        if end == LIST_TYPE:
+            self.terminated = False
         elif end == EMPTY_LIST_TYPE:
-            assert len(self._avm) == 0
-            self._avm = None
-        # < ... > leave AVM as is (able to be further specified)
-        elif end == LIST_TYPE:
-            pass
+            if self._last_path:
+                self[self._last_path] = None
+            else:
+                self._avm = None
+            self.terminated = True
+        elif self._last_path:
+            self[self._last_path] = end
+            self.terminated = True
         else:
             raise TdlError('Empty list must be {} or {}'.format(
                 LIST_TYPE, EMPTY_LIST_TYPE))
-        # any value other than LIST_TYPE blocks future appends
-        self.terminated = end != LIST_TYPE
-
-    def format(self, indent=_base_indent, secondary_indent=None):
-        values = [val.format(indent=indent + 2)  # 2 = len('< ')
-                  for val in self.values()]
-        if not self.terminated:
-            if values:
-                end = ', ...'
-            else:
-                values = ['...']
-        elif self._avm is not None and self[self._last_path] is not None:
-            end = ' . ' + values[-1]
-            values = values[:-1]
-        else:
-            end = ''
-
-        if not values:  # only if no values and terminated
-            return '< >'
-        elif (len(values) <= _max_inline_list_items and
-              sum(len(v) + 2 for v in values) + 2 + indent <= _line_width):
-            return '< {} >'.format(', '.join(values) + end)
-        else:
-            i = ' ' * (indent + 2)  # 2 = len('< ')
-            lines = ['< {}'.format(values[0])]
-            lines.extend(i + val for val in values[1:])
-            return ',\n'.join(lines) + end + ' >'
 
 
 class DiffList(AVM):
@@ -294,8 +273,10 @@ class DiffList(AVM):
             dl_list = AVM()
             dl_list._avm.update(tmplist._avm)
             dl_list._feats = tmplist._feats
+            self.last = 'LIST.' + tmplist._last_path
         else:
             dl_list = Conjunction([cr])
+            self.last = 'LIST'
         dl_last = Conjunction([cr])
 
         featvals = [(DIFF_LIST_LIST, dl_list),
@@ -303,18 +284,8 @@ class DiffList(AVM):
         super(DiffList, self).__init__(
             featvals, docstring=docstring)
 
-    def format(self, indent=_base_indent, secondary_indent=None):
-        values = [val.format(indent=indent + 3) for val in self.values()]
-        if not values:
-            return '<! !>'
-        elif (len(values) <= _max_inline_list_items and
-              sum(len(v) + 2 for v in values) + 4 + indent <= _line_width):
-            return '<! {} !>'.format(', '.join(values))
-        else:
-            i = ' ' * (indent + 3)  # 3 = len('<! ')
-            lines = ['<! {}'.format(values[0])]
-            lines.extend(i + val for val in values[1:])
-            return ',\n'.join(lines) + ' !>'
+    def __len__(self):
+        return len(self.values())
 
     def values(self):
         """
@@ -333,7 +304,7 @@ def _collect_list_items(d):
     return vals
 
 
-class Coreference(Term):
+class Coreference(_Term):
     """
     TDL coreferences, which represent re-entrancies in AVMs.
     """
@@ -345,6 +316,7 @@ class Coreference(Term):
         if self.identifier is not None:
             return '#' + str(self.identifier)
         return ''
+
 
 class Conjunction(object):
     """
@@ -359,12 +331,64 @@ class Conjunction(object):
     def __repr__(self):
         return "<Conjunction object at {}>".format(id(self))
 
-    def format(self, indent=_base_indent, secondary_indent=None):
-        if len(self._terms) == 0:
-            return ''
-        lines = _preformat_conjunction(self, indent, secondary_indent)
-        return (' &\n' + ' ' * indent).join(
-            ' & '.join(line) for line in lines if line)
+    def __and__(self, other):
+        if isinstance(other, Conjunction):
+            return Conjunction(self._terms + other._terms)
+        elif isinstance(other, _Term):
+            return Conjunction(self._terms + [other])
+        else:
+            return NotImplemented
+
+    def __eq__(self, other):
+        if not isinstance(other, Conjunction):
+            return NotImplemented
+        return self._terms == other._terms
+
+    def __ne__(self, other):
+        if not isinstance(other, Conjunction):
+            return NotImplemented
+        return self._terms != other._terms
+
+    def __contains__(self, key):
+        return any(key in term
+                   for term in self._terms
+                   if isinstance(term, AVM))
+
+    def __getitem__(self, key):
+        terms = []
+        for term in self._terms:
+            if isinstance(term, AVM):
+                val = term.get(key)
+                if val is not None:
+                    terms.append(val)
+        if len(terms) == 0:
+            raise KeyError(key)
+        return Conjunction(terms)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def normalize(self):
+        """
+        Rearrange the conjunction to a conventional form.
+        """
+        corefs = []
+        types = []
+        avms = []
+        for term in self._terms:
+            if isinstance(term, _TypeTerm):
+                types.append(term)
+            elif isinstance(term, AVM):
+                term.normalize()
+                avms.append(term)
+            elif isinstance(term, Coreference):
+                corefs.append(term)
+            else:
+                raise TdlError('unexpected term {}'.format(term))
+        self._terms = corefs + types + avms
 
     @property
     def terms(self):
@@ -374,7 +398,7 @@ class Conjunction(object):
         if isinstance(term, Conjunction):
             for term_ in term.terms:
                 self.add(term_)
-        elif isinstance(term, Term):
+        elif isinstance(term, _Term):
             self._terms.append(term)
         else:
             raise TypeError('Not a Term or Conjunction')
@@ -392,7 +416,7 @@ class Conjunction(object):
 
     def string(self):
         for term in self._terms:
-            if isinstance(t, String):
+            if isinstance(term, String):
                 return term
         return None  # conjunction does not have a string type (not an error)
 
@@ -411,24 +435,20 @@ class TypeDefinition(object):
 
     _operator = ':='
 
-    def __init__(self, identifier, conjunction, coreferences=None,
-                 docstring=None):
+    def __init__(self, identifier, conjunction, docstring=None):
         self.identifier = identifier
+
+        if isinstance(conjunction, _Term):
+            conjunction = Conjunction([conjunction])
+        assert isinstance(conjunction, Conjunction)
         self.conjunction = conjunction
-        self.coreferences = list(coreferences or [])
+
         self.docstring = docstring
 
     def __repr__(self):
         return "<Type object '{}' at {}>".format(
             self.identifier, id(self)
         )
-
-    def format(self):
-        return '{} {} {}{}.'.format(
-            self.identifier,
-            self._operator,
-            _format_typedef(self.conjunction, len(self.identifier) + 4),
-            _format_docstring(self.docstring, _base_indent))
 
     @property
     def supertypes(self):
@@ -455,12 +475,14 @@ class TypeDefinition(object):
     def features(self):
         return self.conjunction.features()
 
-    def local_constraints(self):
-        return self.conjunction.local_constraints()
-
 
 class TypeAddendum(TypeDefinition):
     _operator = ':+'
+
+    def __init__(self, identifier, conjunction=None, docstring=None):
+        if conjunction is None:
+            conjunction = Conjunction()
+        super(TypeAddendum, self).__init__(identifier, conjunction, docstring)
 
 
 class LexicalRuleDefinition(TypeDefinition):
@@ -538,7 +560,8 @@ class TdlConsList(TdlDefinition):
         Return the list of values.
         """
         def collect(d):
-            if d is None or d.get('FIRST') is None: return []
+            if d is None or d.get('FIRST') is None:
+                return []
             vals = [d['FIRST']]
             vals.extend(collect(d.get('REST')))
             return vals
@@ -562,7 +585,8 @@ class TdlDiffList(TdlDefinition):
         Return the list of values.
         """
         def collect(d):
-            if d is None or d.get('FIRST') is None: return []
+            if d is None or d.get('FIRST') is None:
+                return []
             vals = [d['FIRST']]
             vals.extend(collect(d.get('REST')))
             return vals
@@ -621,8 +645,8 @@ class TdlInflRule(TdlType):
 #       as they require separate handling for proper lexing
 # NOTE: only use one capture group () for each pattern; if grouping
 #       inside the pattern is necessary, use non-capture groups (?:)
-_tdl_lex_re = re.compile(r'''
-    # regex-pattern                    gid  description
+_tdl_lex_re = re.compile(
+    r'''# regex-pattern                gid  description
     (""")                            #   1  start of multiline docstring
     |(\#\|)                          #   2  start of multiline comment
     |;([^\n]*)                       #   3  single-line comment
@@ -820,6 +844,7 @@ def _parse_tdl(tokens):
                     conjunction, nextgid = _parse_tdl_conjunction(tokens)
                     obj = LexicalRuleDefinition(
                         identifier, atype, affs, conjunction)
+
                 elif gid == 7:
                     if token == ':<':
                         warnings.warn(
@@ -827,15 +852,21 @@ def _parse_tdl(tokens):
                             '{}; Continuing as if it were the := operator.'
                             .format(line_no, identifier),
                             TdlWarning)
-                    conjunction, nextgid =  _parse_tdl_conjunction(tokens)
+                    conjunction, nextgid = _parse_tdl_conjunction(tokens)
+                    if len(conjunction.types()) == 0:
+                        raise TdlParsingError('No supertypes defined.',
+                                              identifier=identifier,
+                                              line_number=line_no)
                     obj = TypeDefinition(identifier, conjunction)
+
                 elif gid == 8:
                     if nextgid == 1 and _peek(tokens, n=1)[0] == 10:
                         # docstring will be handled after the if-block
                         conjunction = Conjunction()
                     else:
-                        conjunction, nextgid =  _parse_tdl_conjunction(tokens)
+                        conjunction, nextgid = _parse_tdl_conjunction(tokens)
                     obj = TypeAddendum(identifier, conjunction)
+
                 else:
                     raise TdlParsingError("Expected: := or :+",
                                           line_number=line_no)
@@ -868,6 +899,7 @@ def _parse_tdl_affixes(tokens):
         match, replacement = token.split(None, 1)
         affixes.append((match, replacement))
     return affixtype, affixes
+
 
 def _parse_tdl_conjunction(tokens):
     terms = []
@@ -1132,7 +1164,7 @@ def _parse_typedef(tokens):
         tdldef, corefs, doc = _parse_conjunction(tokens)
         # Now make coref paths a string instead of list
         corefs = _make_coreferences(corefs)
-        #features = parse_conjunction(tokens)
+        # features = parse_conjunction(tokens)
         if tokens[0].startswith('"""'):
             doc.append(_parse_docstring(tokens))
         assert tokens.popleft() == '.'
@@ -1140,14 +1172,14 @@ def _parse_typedef(tokens):
         if assignment != ':+' and len(tdldef.supertypes) == 0:
             raise TdlParsingError('Type definition requires supertypes.')
         t = TdlType(identifier, tdldef, coreferences=corefs, docstring=doc)
-    except AssertionError as ex:
+    except AssertionError:
         msg = 'Remaining tokens: {}'.format(list(tokens))
         #   previously used six library:
         # raise_from(TdlParsingError(msg, identifier=identifier), ex)
         #   use the following when Python2.7 support is dropped
         # raise TdlParsingError(msg, identifier=identifier) from ex
         raise TdlParsingError(msg, identifier=identifier)
-    except (StopIteration, IndexError) as ex:
+    except (StopIteration, IndexError):
         msg = 'Unexpected termination.'
         #   previously used six library:
         # raise_from(TdlParsingError(msg, identifier=identifier or '?'), ex)
@@ -1344,43 +1376,139 @@ def _make_coreferences(corefs):
 
 # Serialization helpers
 
-def _preformat_avm(avm, indent):
+def format(obj):
+    if isinstance(obj, TypeDefinition):
+        return _format_typedef(obj)
+    elif isinstance(obj, Conjunction):
+        return _format_conjunction(obj, 0)
+    elif isinstance(obj, _Term):
+        return _format_term(obj, 0)
+
+
+def _format_term(term, indent):
+    fmt = {
+        TypeIdentifier: _format_str,
+        String: _format_str,
+        Regex: _format_str,
+        Coreference: _format_str,
+        AVM: _format_avm,
+        ConsList: _format_conslist,
+        DiffList: _format_difflist,
+    }.get(term.__class__, None)
+
+    if fmt is None:
+        raise TdlError('not a valid term: {}'
+                       .format(term.__class__.__name__))
+
+    if term.docstring is not None:
+        return '{}\n{}{}'.format(
+            _format_docstring(term.docstring, indent),
+            ' ' * indent,
+            fmt(term, indent))
+    else:
+        return fmt(term, indent)
+
+
+def _format_str(term, indent):
+    return str(term)
+
+
+def _format_avm(avm, indent):
     lines = []
     for feat, val in avm.features():
-        val = val.format(indent=indent + len(feat) + 3,
-                         secondary_indent=indent + 2)
+        val = _format_conjunction(val, indent + len(feat) + 3)
         if not val.startswith('\n'):
             feat += ' '
         lines.append(feat + val)
-    return lines
+    if not lines:
+        return '[ ]'
+    else:
+        return '[ {} ]'.format((',\n' + ' ' * (indent + 2)).join(lines))
 
 
-def _preformat_conjunction(conj, indent, secondary_indent):
-    tokens = []
-    width = indent
-    for term in conj._terms:
-        tok = term.format(indent=width, secondary_indent=secondary_indent)
-        flen = max(len(s) for s in tok.splitlines())
-        width += flen + 3
-        tokens.append(tok)
-    return [tokens]
+def _format_conslist(cl, indent):
+    values = [_format_conjunction(val, indent + 2)  # 2 = len('< ')
+              for val in cl.values()]
+    end = ''
+    if not cl.terminated:
+        if values:
+            end = ', ...'
+        else:
+            values = ['...']
+    elif cl._avm is not None and cl[cl._last_path] is not None:
+        end = ' . ' + values[-1]
+        values = values[:-1]
+
+    if not values:  # only if no values and terminated
+        return '< >'
+    elif (len(values) <= _max_inline_list_items and
+          sum(len(v) + 2 for v in values) + 2 + indent <= _line_width):
+        return '< {} >'.format(', '.join(values) + end)
+    else:
+        i = ' ' * (indent + 2)  # 2 = len('< ')
+        lines = ['< {}'.format(values[0])]
+        lines.extend(i + val for val in values[1:])
+        return ',\n'.join(lines) + end + ' >'
 
 
-def _format_typedef(conj, offset):
+def _format_difflist(dl, indent):
+    values = [_format_conjunction(val, indent + 3)  # 3 == len('<! ')
+              for val in dl.values()]
+    if not values:
+        return '<! !>'
+    elif (len(values) <= _max_inline_list_items and
+          sum(len(v) + 2 for v in values) + 4 + indent <= _line_width):
+        return '<! {} !>'.format(', '.join(values))
+    else:
+        # i = ' ' * (indent + 3)  # 3 == len('<! ')
+        return '<! {} !>'.format(
+            (',\n' + ' ' * (indent + 3)).join(values))
+        #     values[0])]
+        # lines.extend(i + val for val in values[1:])
+        # return ',\n'.join(lines) + ' !>'
+
+
+def _format_conjunction(conj, indent):
+    if isinstance(conj, _Term):
+        return _format_term(conj, indent)
+    elif len(conj._terms) == 0:
+        return ''
+    else:
+        tokens = []
+        width = indent
+        for term in conj._terms:
+            tok = _format_term(term, width)
+            flen = max(len(s) for s in tok.splitlines())
+            width += flen + 3  # 3 == len(' & ')
+            tokens.append(tok)
+        lines = [tokens]  # all terms joined without newlines (for now)
+        return (' &\n' + ' ' * indent).join(
+            ' & '.join(line) for line in lines if line)
+
+
+def _format_typedef(td):
+    offset = len(td.identifier) + 4  # 4 == len(' := ')
     parts = [[]]
-    for term in conj.terms:
+    for term in td.conjunction.terms:
         if isinstance(term, AVM) and len(parts) == 1:
             parts.append([])
         parts[-1].append(term)
 
+    if parts[0] == []:
+        parts = [parts[1]]
     assert len(parts) <= 2
     if len(parts) == 1:
-        return conj.format(indent=offset)
+        formatted_conj = _format_conjunction(td.conjunction, offset)
     else:
-        return '{} &\n{}{}'.format(
-            Conjunction(parts[0]).format(indent=offset),
+        formatted_conj = '{} &\n{}{}'.format(
+            _format_conjunction(Conjunction(parts[0]), offset),
             ' ' * _base_indent,
-            Conjunction(parts[1]).format(indent=_base_indent))
+            _format_conjunction(Conjunction(parts[1]), _base_indent))
+    return '{} {} {}{}.'.format(
+        td.identifier,
+        td._operator,
+        formatted_conj,
+        _format_docstring(td.docstring, _base_indent))
 
 
 def _format_docstring(doc, indent):
