@@ -29,7 +29,7 @@ import warnings
 
 from delphin.exceptions import (TdlError, TdlParsingError, TdlWarning)
 from delphin.tfs import FeatureStructure
-from delphin.util import LookaheadIterator
+from delphin.util import LookaheadIterator, deprecated
 
 str = type(u'')  # short-term fix for Python 2
 
@@ -49,7 +49,7 @@ _line_width = 79  # try not to go beyond this number of characters
 
 # Classes for TDL entities
 
-class _Term(object):
+class Term(object):
     """
     Base class for the terms of a TDL conjunction.
     """
@@ -61,7 +61,7 @@ class _Term(object):
             self.__class__.__name__, id(self))
 
     def __and__(self, other):
-        if isinstance(other, _Term):
+        if isinstance(other, Term):
             return Conjunction([self, other])
         elif isinstance(other, Conjunction):
             return Conjunction([self] + other._terms)
@@ -69,7 +69,7 @@ class _Term(object):
             return NotImplemented
 
 
-class _TypeTerm(_Term, str):
+class _TypeTerm(Term, str):
     """
     Base class for type terms (identifiers, strings and regexes).
     """
@@ -139,7 +139,7 @@ class Regex(_TypeTerm):
         return self.__str__()
 
 
-class AVM(FeatureStructure, _Term):
+class AVM(FeatureStructure, Term):
     """
     A feature structure as used in TDL.
     """
@@ -147,7 +147,7 @@ class AVM(FeatureStructure, _Term):
     def __init__(self, featvals=None, docstring=None):
         # super() doesn't work because I need to split the parameters
         FeatureStructure.__init__(self, featvals)
-        _Term.__init__(self, docstring=docstring)
+        Term.__init__(self, docstring=docstring)
 
     @classmethod
     def _default(cls): return AVM()
@@ -304,7 +304,7 @@ def _collect_list_items(d):
     return vals
 
 
-class Coreference(_Term):
+class Coreference(Term):
     """
     TDL coreferences, which represent re-entrancies in AVMs.
     """
@@ -334,7 +334,7 @@ class Conjunction(object):
     def __and__(self, other):
         if isinstance(other, Conjunction):
             return Conjunction(self._terms + other._terms)
-        elif isinstance(other, _Term):
+        elif isinstance(other, Term):
             return Conjunction(self._terms + [other])
         else:
             return NotImplemented
@@ -398,7 +398,7 @@ class Conjunction(object):
         if isinstance(term, Conjunction):
             for term_ in term.terms:
                 self.add(term_)
-        elif isinstance(term, _Term):
+        elif isinstance(term, Term):
             self._terms.append(term)
         else:
             raise TypeError('Not a Term or Conjunction')
@@ -438,7 +438,7 @@ class TypeDefinition(object):
     def __init__(self, identifier, conjunction, docstring=None):
         self.identifier = identifier
 
-        if isinstance(conjunction, _Term):
+        if isinstance(conjunction, Term):
             conjunction = Conjunction([conjunction])
         assert isinstance(conjunction, Conjunction)
         self.conjunction = conjunction
@@ -493,10 +493,30 @@ class LexicalRuleDefinition(TypeDefinition):
         identifier (str): type name
         affix (str): inflectional affixes
     """
-    def __init__(self, identifier, affix_type, affix, terms, **kwargs):
-        TdlType.__init__(self, identifier, terms, **kwargs)
+    def __init__(self,
+                 identifier,
+                 affix_type,
+                 patterns,
+                 conjunction,
+                 **kwargs):
+        super(LexicalRuleDefinition, self).__init__(
+            identifier, conjunction, **kwargs)
         self.affix_type = affix_type
-        self.affix = affix
+        self.patterns = patterns
+
+
+class MorphSet(object):
+    def __init__(self, var, characters):
+        self.var = var
+        self.characters = characters
+
+
+class LetterSet(MorphSet):
+    pass
+
+
+class WildCard(MorphSet):
+    pass
 
 
 # Old classes
@@ -509,12 +529,13 @@ class TdlDefinition(FeatureStructure):
     but each structure may have a list of supertypes.
     """
 
+    @deprecated(final_version='v1.0.0', alternative='Conjunction')
     def __init__(self, supertypes=None, featvals=None):
         FeatureStructure.__init__(self, featvals=featvals)
         self.supertypes = list(supertypes or [])
 
     @classmethod
-    def default(cls): return TdlDefinition()
+    def _default(cls): return TdlDefinition()
 
     def __repr__(self):
         return '<TdlDefinition object at {}>'.format(id(self))
@@ -604,6 +625,8 @@ class TdlType(TdlDefinition):
             paths is a list of feature paths that share the tag
         docstring (list): list of documentation strings
     """
+
+    @deprecated(final_version='v1.0.0', alternative='TypeDefinition')
     def __init__(self, identifier, definition, coreferences=None,
                  docstring=None):
         TdlDefinition.__init__(self, definition.supertypes,
@@ -633,6 +656,8 @@ class TdlInflRule(TdlType):
         identifier (str): type name
         affix (str): inflectional affixes
     """
+
+    @deprecated(final_version='v1.0.0', alternative='LexicalRuleDefinition')
     def __init__(self, identifier, affix=None, **kwargs):
         TdlType.__init__(self, identifier, **kwargs)
         self.affix = affix
@@ -834,16 +859,16 @@ def _parse_tdl(tokens):
             elif gid == 3:
                 yield (line_no, 'LINECOMMENT', token)
             elif gid == 20:
-                yield (line_no, 'LETTERSET', token)
+                yield (line_no, 'LETTERSET', _parse_letterset(token, line_no))
             elif gid == 24:
                 identifier = token
                 gid, token, line_no, nextgid = _shift(tokens)
 
                 if gid == 7 and nextgid == 21:  # lex rule with affixes
-                    atype, affs = _parse_tdl_affixes(tokens)
+                    atype, pats = _parse_tdl_affixes(tokens)
                     conjunction, nextgid = _parse_tdl_conjunction(tokens)
                     obj = LexicalRuleDefinition(
-                        identifier, atype, affs, conjunction)
+                        identifier, atype, pats, conjunction)
 
                 elif gid == 7:
                     if token == ':<':
@@ -878,7 +903,7 @@ def _parse_tdl(tokens):
                     raise TdlParsingError('Expected: .', line_number=line_no)
                 tokens.next()
 
-                yield obj
+                yield (line_no, 'TYPEDEF', obj)
 
             else:
                 raise TdlParsingError(
@@ -887,6 +912,22 @@ def _parse_tdl(tokens):
 
     except StopIteration:
         raise TdlParsingError('Unexpected end of input.')
+
+
+def _parse_letterset(token, line_no):
+    m = re.match(
+        r'\s*(letter-set|wild-card)\s*\((!.)\s+(.*?)\)\s*\)\s*$', token)
+    if m is None or m.group(1) not in ('letter-set', 'wild-card'):
+        raise TdlParsingError(
+            'invalid letter-set or wild-card: {}'.format(token),
+            line_number=line_no)
+    var = m.group(2)
+    chars = m.group(3)
+    if m.group(1) == 'letter-set':
+        return LetterSet(var, chars)
+    else:
+        assert m.group(1) == 'wild-card'
+        return WildCard(var, chars)
 
 
 def _parse_tdl_affixes(tokens):
@@ -1045,6 +1086,7 @@ _tdl_start_comment_re = re.compile(r'^\s*;|^\s*#\|')
 _tdl_end_comment_re = re.compile(r'.*#\|\s*$')
 
 
+@deprecated(final_version='v1.0.0')
 def tokenize(s):
     """
     Tokenize a string *s* of TDL code.
@@ -1052,6 +1094,7 @@ def tokenize(s):
     return [m.group(m.lastindex) for m in _tdl_re.finditer(s)]
 
 
+@deprecated(final_version='v1.0.0')
 def lex(stream):
     lines = enumerate(stream, 1)
     line_no = 0
@@ -1116,14 +1159,16 @@ def _nest_level(in_pattern, out_pattern, tokens):
 def _parse2(f):
     tokens = LookaheadIterator(_lex(f))
     try:
-        for data in _parse_tdl(tokens):
-            yield data
+        for line_no, event, data in _parse_tdl(tokens):
+            if event in ('TYPEDEF', 'LETTERSET'):
+                yield data
     except TdlParsingError as ex:
         if hasattr(f, 'name'):
             ex.filename = f.name
         raise
 
 
+@deprecated(final_version='v1.0.0', alternative='_parse2')
 def _parse(f):
     for line_no, event, data in lex(f):
         data = deque(data)
@@ -1137,7 +1182,7 @@ def _parse(f):
             raise
 
 
-def parse(f, encoding='utf-8', _parsefunc=_parse2):
+def parse(f, encoding='utf-8', _parsefunc=_parse):
     """
     Parse the TDL file *f* and yield the type definitions.
 
@@ -1314,6 +1359,7 @@ def _parse_cons_list(tokens):
     assert tokens.popleft() == '>'
     return (feats, coreferences)
 
+
 def _parse_diff_list(tokens):
     assert tokens.popleft() == '<!'
     feats, last_path, coreferences = _parse_list(tokens, ('!>'))
@@ -1381,8 +1427,12 @@ def format(obj):
         return _format_typedef(obj)
     elif isinstance(obj, Conjunction):
         return _format_conjunction(obj, 0)
-    elif isinstance(obj, _Term):
+    elif isinstance(obj, Term):
         return _format_term(obj, 0)
+    elif isinstance(obj, LetterSet):
+        return '%(letter-set ({} {}))'.format(obj.var, obj.characters)
+    elif isinstance(obj, WildCard):
+        return '%(wild-card ({} {}))'.format(obj.var, obj.characters)
 
 
 def _format_term(term, indent):
@@ -1469,7 +1519,7 @@ def _format_difflist(dl, indent):
 
 
 def _format_conjunction(conj, indent):
-    if isinstance(conj, _Term):
+    if isinstance(conj, Term):
         return _format_term(conj, indent)
     elif len(conj._terms) == 0:
         return ''
@@ -1487,7 +1537,17 @@ def _format_conjunction(conj, indent):
 
 
 def _format_typedef(td):
-    offset = len(td.identifier) + 4  # 4 == len(' := ')
+    if hasattr(td, 'affix_type'):
+        patterns = ' '.join('({} {})'.format(a, b) for a, b in td.patterns)
+        body = _format_typedef_body(td, 2)
+        return '{} {}\n%{} {}\n  {}.'.format(
+            td.identifier, td._operator, td.affix_type, patterns, body)
+    else:
+        body = _format_typedef_body(td, len(td.identifier) + 4)
+        return '{} {} {}.'.format(td.identifier, td._operator, body)
+
+
+def _format_typedef_body(td, offset):
     parts = [[]]
     for term in td.conjunction.terms:
         if isinstance(term, AVM) and len(parts) == 1:
@@ -1504,11 +1564,13 @@ def _format_typedef(td):
             _format_conjunction(Conjunction(parts[0]), offset),
             ' ' * _base_indent,
             _format_conjunction(Conjunction(parts[1]), _base_indent))
-    return '{} {} {}{}.'.format(
-        td.identifier,
-        td._operator,
-        formatted_conj,
-        _format_docstring(td.docstring, _base_indent))
+
+    if td.docstring is not None:
+        docstring = '\n  ' + _format_docstring(td.docstring, 2)
+    else:
+        docstring = ''
+
+    return formatted_conj + docstring
 
 
 def _format_docstring(doc, indent):
@@ -1522,11 +1584,3 @@ def _format_docstring(doc, indent):
             lines = lines[:-1]
     ind = ' ' * indent
     return '"""\n{0}{1}\n{0}"""'.format(ind, ('\n' + ind).join(lines))
-
-
-def _indent(s, amount, include_first=False):
-    lines = s.splitlines(True)
-    if include_first:
-        lines = [''] + lines
-    indent = ' ' * amount
-    return indent.join(lines)

@@ -8,7 +8,7 @@ import pytest
 
 from delphin import tdl
 from delphin.tdl import (
-    _Term,
+    Term,
     Regex,
     String,
     TypeIdentifier,
@@ -17,6 +17,8 @@ from delphin.tdl import (
     DiffList,
     Coreference,
     Conjunction,
+    LetterSet,
+    WildCard,
     TypeDefinition,
     TypeAddendum,
     LexicalRuleDefinition
@@ -25,11 +27,11 @@ from delphin.exceptions import TdlError, TdlWarning
 
 
 def tdlparse(s):
-    return next(tdl.parse(StringIO(s)))
+    return next(tdl.parse(StringIO(s), _parsefunc=tdl._parse2))
 
 
 def test_Term():
-    q = _Term(docstring='hi')
+    q = Term(docstring='hi')
     assert q.docstring == 'hi'
 
     r = Regex('r*')
@@ -39,13 +41,13 @@ def test_Term():
     cl = ConsList()
     dl = DiffList()
     c = Coreference(None)
-    assert isinstance(r, _Term)
-    assert isinstance(s, _Term)
-    assert isinstance(t, _Term)
-    assert isinstance(a, _Term)
-    assert isinstance(cl, _Term)
-    assert isinstance(dl, _Term)
-    assert isinstance(c, _Term)
+    assert isinstance(r, Term)
+    assert isinstance(s, Term)
+    assert isinstance(t, Term)
+    assert isinstance(a, Term)
+    assert isinstance(cl, Term)
+    assert isinstance(dl, Term)
+    assert isinstance(c, Term)
     assert isinstance(r & s, Conjunction)
     assert (r & s).terms == [r, s]
     assert isinstance(s & t, Conjunction)
@@ -488,6 +490,26 @@ def test_parse_typeaddendum():
         tdlparse('a :+ b &.')
 
 
+def test_parse_lexicalruledefinition():
+    # no problems
+    lr = tdlparse('a := %prefix no-pattern-rule.')
+    assert lr.affix_type == 'prefix'
+    assert lr.patterns == []
+    lr = tdlparse('a := %suffix (y ies) y-plural-rule.')
+    assert lr.affix_type == 'suffix'
+    assert lr.patterns == [('y', 'ies')]
+    lr = tdlparse('a := %suffix (y ies) (!c !cs) (?i us) silly-plural-rule.')
+    assert lr.affix_type == 'suffix'
+    assert lr.patterns == [('y', 'ies'), ('!c', '!cs'), ('?i', 'us')]
+    # problems (most tests covered by type definition)
+    with pytest.raises(TdlError):
+        tdlparse('a := %infix (i a) infix-rule.')
+    with pytest.raises(TdlError):
+        tdlparse('a := %prefix (a) bad-rule.')
+    with pytest.raises(TdlError):
+        tdlparse('a := %prefix (a b c) bad-rule.')
+
+
 def test_parse_docstrings():
     t = tdlparse('a := b.')
     assert t.documentation() is None
@@ -594,3 +616,67 @@ def test_format_Conjunction():
     assert tdl.format(Conjunction([TypeIdentifier('a')])) == 'a'
     assert tdl.format(
         Conjunction([TypeIdentifier('a'), TypeIdentifier('b')])) == 'a & b'
+
+
+def test_format_typedefs():
+    t = TypeDefinition(
+        'id',
+        Conjunction([TypeIdentifier('a', docstring='a doc'),
+                     AVM([('ATTR', TypeIdentifier('b'))])]),
+        docstring='t doc')
+    t2 = TypeDefinition(
+        'id',
+        Conjunction([TypeIdentifier('a'),
+                     AVM([('ATTR', TypeIdentifier('b'))],
+                         docstring='a doc')]),
+        docstring='t doc')
+    a = TypeAddendum(
+        'id',
+        Conjunction([AVM([('ATTR', TypeIdentifier('b', docstring='b doc'))])]),
+        docstring='t doc')
+    lr = LexicalRuleDefinition(
+        'id', affix_type='suffix', patterns=[('a', 'b'), ('c', 'd')],
+        conjunction=Conjunction([TypeIdentifier('a', docstring='a doc')]),
+        docstring='lr doc')
+
+    assert tdl.format(t) == (
+        'id := """\n'
+        '      a doc\n'
+        '      """\n'
+        '      a &\n'
+        '  [ ATTR b ]\n'
+        '  """\n'
+        '  t doc\n'
+        '  """.')
+    assert tdl.format(t2) == (
+        'id := a &\n'
+        '  """\n'
+        '  a doc\n'
+        '  """\n'
+        '  [ ATTR b ]\n'
+        '  """\n'
+        '  t doc\n'
+        '  """.')
+    assert tdl.format(a) == (
+        'id :+ [ ATTR """\n'
+        '             b doc\n'
+        '             """\n'
+        '             b ]\n'
+        '  """\n'
+        '  t doc\n'
+        '  """.')
+    assert tdl.format(lr) == (
+        'id :=\n'
+        '%suffix (a b) (c d)\n'
+        '  """\n'
+        '  a doc\n'
+        '  """\n'
+        '  a\n'
+        '  """\n'
+        '  lr doc\n'
+        '  """.')
+
+
+def test_format_morphsets():
+    assert tdl.format(LetterSet('!b', 'abc')) == '%(letter-set (!b abc))'
+    assert tdl.format(WildCard('?b', 'abc')) == '%(wild-card (?b abc))'
