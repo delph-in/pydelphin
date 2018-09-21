@@ -180,3 +180,4 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 # -- Options for Napoleon extension ------------------------------------------
 
 napoleon_use_rtype = False
+

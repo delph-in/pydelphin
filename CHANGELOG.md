@@ -14,11 +14,48 @@ these changes are prefixed with "**BREAKING**"
 
 * `tests/tdl_test.py` unit tests intended to replace `tests/tdl_test.md`
 * `delphin.tdl.TdlType.docstring` contains a list of a type's docstrings
+* `delphin.tdl.parse()` now takes an `encoding` parameter (#172)
+* `delphin.tdl.iterparse()` for new-style TDL parsing (#153, #167, #168, #170)
+* `delphin.tdl.format()` for TDL serialization (#82)
+* Updated TDL entity classes: (#168)
+  - `delphin.tdl.Term`
+  - `delphin.tdl.TypeIdentifier`
+  - `delphin.tdl.String`
+  - `delphin.tdl.Regex`
+  - `delphin.tdl.AVM`
+  - `delphin.tdl.ConsList`
+  - `delphin.tdl.DiffList`
+  - `delphin.tdl.Coreference`
+  - `delphin.tdl.Conjunction`
+  - `delphin.tdl.TypeDefinition`
+  - `delphin.tdl.TypeAddendum`
+  - `delphin.tdl.LexicalRuleDefinition`
+  - `delphin.tdl.LetterSet`
+  - `delphin.tdl.WildCard`
+* TDL parameters:
+  - `delphin.tdl.LIST_TYPE` (default: `"*list*"`)
+  - `delphin.tdl.EMPTY_LIST_TYPE` (default: `"*null*"`)
+  - `delphin.tdl.LIST_HEAD` (default: `"FIRST"`)
+  - `delphin.tdl.LIST_TAIL` (default: `"REST"`)
+  - `delphin.tdl.DIFF_LIST_LIST` (default: `"LIST"`)
+  - `delphin.tdl.DIFF_LIST_LAST` (default: `"LAST"`)
+* `delphin.tfs.FeatureStructure`, since the type of `TypedFeatureStructure`
+  was unused; `TypedFeatureStructure` now inherits from `FeatureStructure`
+* `delphin.exceptions.TdlWarning` for notifications about deprecated TDL
+  syntaxes
+* `delphin.util.LookaheadIterator` for parsing with arbitrary lookahead
 
 ### Changed
 
 * `delphin.tdl` now parses triple-quoted docstrings (#167); note that it
   no longer parses the old-style docstrings
+* `delphin.tdl.TdlDefinition` inherits from `delphin.tfs.FeatureStructure`
+
+### Deprecated
+
+* `delphin.tdl.parse()` (#168)
+* `delphin.tdl.lex()` (#168)
+* `delphin.tdl.tokenize()` (#168)
 
 ### Removed
 

@@ -23,11 +23,11 @@ from delphin.tdl import (
     TypeAddendum,
     LexicalRuleDefinition
 )
-from delphin.exceptions import TdlError, TdlWarning
+from delphin.exceptions import TdlError, TdlParsingError, TdlWarning
 
 
 def tdlparse(s):
-    return next(tdl.parse(StringIO(s), _parsefunc=tdl._parse2))
+    return next(obj for _, obj, _ in tdl.iterparse(StringIO(s)))
 
 
 def test_Term():
@@ -77,7 +77,6 @@ def test_TypeIdentifier():
     t = TypeIdentifier('t2', docstring='doc')
     assert t == 't2'
     assert t == TypeIdentifier('t2', docstring='foo')
-    assert str(t) == 't2'
 
 
 def test_String():
@@ -92,13 +91,10 @@ def test_String():
     assert t != Regex('s')
     assert t == 's'
     assert t != 'S'
-    # string formatting
-    assert str(t) == '"s"'
 
     t = String('s2', docstring='doc')
     assert t == 's2'
     assert t == String('s2', docstring='foo')
-    assert str(t) == '"s2"'
 
 
 def test_Regex():
@@ -113,13 +109,10 @@ def test_Regex():
     assert t != String('r')
     assert t == 'r'
     assert t != 'R'
-    # string formatting
-    assert str(t) == '^r$'
 
     t = Regex('r2', docstring='doc')
     assert t == 'r2'
     assert t == Regex('r2', docstring='foo')
-    assert str(t) == '^r2$'
 
 
 def test_AVM():
@@ -302,121 +295,67 @@ def test_parse_no_features():
 
 def test_parse_string_features():
     t = tdlparse('a := b & [ ATTR "val" ].')
-    assert len(t.features()) == 1
-    _, val = t.features()[0]
-    assert isinstance(val, Conjunction)
-    assert len(val.types()) == 1
-    assert isinstance(val.types()[0], String)
-    assert val.types()[0] == 'val'
+    assert isinstance(t['ATTR'], String)
+    assert t['ATTR'] == 'val'
 
 
 def test_quoted_symbol():
     with pytest.warns(TdlWarning):
         t = tdlparse("a := b & [ ATTR 'val ].")
-    assert len(t.features()) == 1
-    _, val = t.features()[0]
-    assert isinstance(val, Conjunction)
-    assert len(val.types()) == 1
-    assert isinstance(val.types()[0], TypeIdentifier)
-    assert val.types()[0] == 'val'
+    assert isinstance(t['ATTR'], TypeIdentifier)
+    assert t['ATTR'] == 'val'
 
 
 def test_parse_type_features():
     t = tdlparse('a := b & [ ATTR val ].')
-    assert len(t.features()) == 1
-    feat, val = t.features()[0]
-    assert feat == 'ATTR'
-    assert isinstance(val, Conjunction)
-    assert len(val.features()) == 0
-    assert val.types() == ['val']
+    assert isinstance(t['ATTR'], TypeIdentifier)
+    assert t['ATTR'] == 'val'
 
     # integers are not primitives
     t = tdlparse('a := b & [ ATTR 1 ].')
-    feat, val = t.features()[0]
-    assert isinstance(val, Conjunction)
-    assert val.types() == ['1']
-    assert isinstance(val.types()[0], TypeIdentifier)
+    assert isinstance(t['ATTR'], TypeIdentifier)
+    assert t['ATTR'] == '1'
 
     t = tdlparse('a := b & [ ATTR val1 & val2].')
-    assert len(t.features()) == 1
-    feat, val = t.features()[0]
-    assert len(val.types()) == 2
-    assert val.types() == ['val1', 'val2']
+    assert isinstance(t['ATTR'], Conjunction)
+    assert t['ATTR'].terms == ['val1', 'val2']
 
 
 def test_parse_multiple_features():
     t = tdlparse('a := b & [ ATTR1 1, ATTR2 2].')
     assert len(t.features()) == 2
-    feat, val = t.features()[0]
-    assert feat == 'ATTR1'
-    assert val.types() == ['1']
-    feat, val = t.features()[1]
-    assert feat == 'ATTR2'
-    assert val.types() == ['2']
+    assert t['ATTR1'] == '1'
+    assert t['ATTR2'] == '2'
 
 
 def test_parse_multiple_avms():
     t = tdlparse('a := b & [ ATTR1 1 ] & [ ATTR2 2].')
+    assert len(t.conjunction.terms) == 3
     assert len(t.features()) == 2
-    feat, val = t.features()[0]
-    assert feat == 'ATTR1'
-    assert val.types() == ['1']
-    feat, val = t.features()[1]
-    assert feat == 'ATTR2'
-    assert val.types() == ['2']
+    assert t['ATTR1'] == '1'
+    assert t['ATTR2'] == '2'
 
 
 def test_parse_feature_path():
     t = tdlparse('a := b & [ ATTR1.ATTR2 2 ].')
-    assert len(t.features()) == 1
-    feat, val = t.features()[0]
-    assert feat == 'ATTR1.ATTR2'
-    assert isinstance(val, Conjunction)
-    assert val.types() == ['2']
+    assert isinstance(t['ATTR1'], AVM)
+    assert isinstance(t['ATTR1.ATTR2'], TypeIdentifier)
+    assert t['ATTR1.ATTR2'] == t['ATTR1']['ATTR2'] == '2'
 
     t = tdlparse('a := b & [ ATTR1 [ ATTR2 2 ] ].')
-    assert len(t.features()) == 1
-    feat, val = t.features()[0]
-    assert feat == 'ATTR1'
-    assert isinstance(val, Conjunction)
-    assert len(val.terms) == 1
-    assert isinstance(val.terms[0], AVM)
-    assert len(val.terms[0].features()) == 1
-    feat, val = val.terms[0].features()[0]
-    assert feat == 'ATTR2'
-    assert val.types() == ['2']
+    assert isinstance(t['ATTR1'], AVM)
+    assert isinstance(t['ATTR1.ATTR2'], TypeIdentifier)
+    assert t['ATTR1.ATTR2'] == t['ATTR1']['ATTR2'] == '2'
 
     t = tdlparse('a := b & [ ATTR1 [ ATTR2 2, ATTR3 3 ] ].')
-    assert len(t.features()) == 1
-    feat, val = t.features()[0]
-    assert feat == 'ATTR1'
-    assert isinstance(val, Conjunction)
-    assert len(val.terms) == 1
-    assert isinstance(val.terms[0], AVM)
-    fs = val.terms[0]
-    assert len(fs.features()) == 2
-    feat, val = fs.features()[0]
-    assert feat == 'ATTR2'
-    assert isinstance(val, Conjunction)
-    assert val.types() == ['2']
-    feat, val = fs.features()[1]
-    assert feat == 'ATTR3'
-    assert isinstance(val, Conjunction)
-    assert val.types() == ['3']
+    assert isinstance(t['ATTR1'], AVM)
+    assert t['ATTR1.ATTR2'] == '2'
+    assert t['ATTR1.ATTR3'] == '3'
 
     t = tdlparse('a := b & [ ATTR1.ATTR2 2, ATTR1.ATTR3 3 ].')
-    assert len(t.features()) == 1
-    feat, val = t.features()[0]
-    assert feat == 'ATTR1'
-    assert isinstance(val, AVM)
-    fs = val
-    assert len(fs.features()) == 2
-    feat, val = fs.features()[0]
-    assert feat == 'ATTR2'
-    assert val.types() == ['2']
-    feat, val = fs.features()[1]
-    assert feat == 'ATTR3'
-    assert val.types() == ['3']
+    assert isinstance(t['ATTR1'], AVM)
+    assert t['ATTR1.ATTR2'] == '2'
+    assert t['ATTR1.ATTR3'] == '3'
 
 
 def test_parse_coreferences():
@@ -438,42 +377,42 @@ def test_parse_typedef():
     with pytest.warns(TdlWarning):
         tdlparse('a :< b.')
     # problems
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a :=')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := .')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b &')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b &.')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & [')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & [ ]')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & [ ] ].')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & [ ATTR')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & [ ATTR ].')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & [ ATTR val')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & [ ATTR val ]')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & [ ATTR val,')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & [ ATTR val.')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & [ ATTR val, ]')
     # syntactically coherent but missing required elements
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := [ ].')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := """doc""".')
 
 
@@ -484,9 +423,9 @@ def test_parse_typeaddendum():
     tdlparse('a :+ [ ATTR val ].')
     tdlparse('a :+ b & [ ATTR val, ATTR2.ATTR3 "val" ].')
     # problems (most tests covered by type definition)
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a :+ .')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a :+ b &.')
 
 
@@ -502,11 +441,11 @@ def test_parse_lexicalruledefinition():
     assert lr.affix_type == 'suffix'
     assert lr.patterns == [('y', 'ies'), ('!c', '!cs'), ('?i', 'us')]
     # problems (most tests covered by type definition)
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := %infix (i a) infix-rule.')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := %prefix (a) bad-rule.')
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := %prefix (a b c) bad-rule.')
 
 
@@ -541,10 +480,10 @@ def test_parse_docstrings():
 
     # parsing errors
 
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b & """doc""".')
 
-    with pytest.raises(TdlError):
+    with pytest.raises(TdlParsingError):
         tdlparse('a := b """doc""" & c.')
 
     # with pytest.raises(TdlError):
@@ -554,6 +493,42 @@ def test_parse_docstrings():
     t = tdlparse('a := b & [ ATTR """doc""" val ].')
     assert t.documentation() is None
     assert t.documentation(level='top') == []
+
+
+def test_parse_letterset():
+    ls = tdlparse(r'%(letter-set (!a ab\)c))')
+    assert isinstance(ls, LetterSet)
+    assert ls.var == '!a'
+    assert ls.characters == 'ab)c'
+    with pytest.raises(TdlParsingError):
+        tdlparse('%letter-set (!a abc)')
+    with pytest.raises(TdlParsingError):
+        tdlparse('%(letter-set (?a abc))')
+    with pytest.raises(TdlParsingError):
+        tdlparse('%(letter-set (!a ab c))')
+
+
+def test_parse_wildcard():
+    wc = tdlparse(r'%(wild-card (?a ab\)c))')
+    assert isinstance(wc, WildCard)
+    assert wc.var == '?a'
+    assert wc.characters == 'ab)c'
+    with pytest.raises(TdlParsingError):
+        tdlparse('%wild-card (?a abc)')
+    with pytest.raises(TdlParsingError):
+        tdlparse('%(wild-card (!a abc))')
+    with pytest.raises(TdlParsingError):
+        tdlparse('%(wild-card (?a ab c))')
+
+
+def test_parse_linecomment():
+    lc = tdlparse('; this is a comment\n')
+    assert lc == ' this is a comment'
+
+
+def test_parse_blockcomment():
+    bc = tdlparse('#| this is a comment\n   on multiple lines|#')
+    assert bc == ' this is a comment\n   on multiple lines'
 
 
 def test_format_TypeTerms():

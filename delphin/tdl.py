@@ -4,19 +4,33 @@
 Classes and functions for parsing and inspecting TDL.
 
 This module makes it easy to inspect what is written on definitions in
-Type Description Language [TDL]_, but it doesn't interpret type
+Type Description Language (TDL), but it doesn't interpret type
 hierarchies (such as by performing unification, subsumption
 calculations, or creating GLB types). That is, while it wouldn't be
 useful for creating a parser, it is useful if you want to statically
 inspect the types in a grammar and the constraints they apply.
 
-.. [TDL] Hans-Ulrich Krieger and Ulrich Schäfer. TDL: a type
-  description language for constraint-based grammars. In Proceedings of
-  the 15th conference on Computational linguistics, volume 2, pages
+TDL was originally described in Krieger and Schäfer, 1994 [KS1994]_,
+but it describes many features not in use by the DELPH-IN variant,
+such as disjunction. Copestake, 2002 [COP2002]_ better describes the
+subset in use by DELPH-IN, but it has become outdated and its TDL
+syntax description is inaccurate in places, but it is still a great
+resource for understanding the interpretation of TDL grammar
+descriptions. The TdlRfc_ page of the `DELPH-IN Wiki`_ contains the
+most up-to-date description of the TDL syntax used by DELPH-IN
+grammars, including features such as documentation strings and regular
+expressions.
+
+.. [KS1994] Hans-Ulrich Krieger and Ulrich Schäfer.  TDL: a type
+  description language for constraint-based grammars. In Proceedings
+  of the 15th conference on Computational linguistics, volume 2, pages
   893–899. Association for Computational Linguistics, 1994.
 
-  Ann Copestake. Implementing typed feature structure grammars, volume
-  110. CSLI publications Stanford, 2002.
+.. [COP2002] Ann Copestake. Implementing typed feature structure
+  grammars, volume 110. CSLI publications Stanford, 2002.
+
+.. _TdlRfc: http://moin.delph-in.net/TdlRfc
+.. _`DELPH-IN Wiki`: http://moin.delph-in.net/
 """
 
 from __future__ import unicode_literals
@@ -34,12 +48,12 @@ from delphin.util import LookaheadIterator, deprecated
 str = type(u'')  # short-term fix for Python 2
 
 # Values for list expansion
-LIST_TYPE = '*list*'
-EMPTY_LIST_TYPE = '*null*'
-LIST_HEAD = 'FIRST'
-LIST_TAIL = 'REST'
-DIFF_LIST_LIST = 'LIST'
-DIFF_LIST_LAST = 'LAST'
+LIST_TYPE = '*list*'        #: type of lists in TDL
+EMPTY_LIST_TYPE = '*null*'  #: type of list terminators
+LIST_HEAD = 'FIRST'         #: feature for list items
+LIST_TAIL = 'REST'          #: feature for list tails
+DIFF_LIST_LIST = 'LIST'     #: feature for diff-list lists
+DIFF_LIST_LAST = 'LAST'     #: feature for the last path in a diff-list
 
 # Values for serialization
 _base_indent = 2  # indent when an AVM starts on the next line
@@ -52,6 +66,18 @@ _line_width = 79  # try not to go beyond this number of characters
 class Term(object):
     """
     Base class for the terms of a TDL conjunction.
+
+    All terms are defined to handle the binary '&' operator, which
+    puts both into a Conjunction:
+
+    >>> TypeIdentifier('a') & TypeIdentifier('b')
+    <Conjunction object at 140008950372168>
+
+    Args:
+        docstring (str): documentation string
+
+    Attributes:
+        docstring (str): documentation string
     """
     def __init__(self, docstring=None):
         self.docstring = docstring
@@ -69,15 +95,29 @@ class Term(object):
             return NotImplemented
 
 
-class _TypeTerm(Term, str):
+class TypeTerm(Term, str):
     """
     Base class for type terms (identifiers, strings and regexes).
+
+    This subclass of :class:`Term` also inherits from :py:class:`str`
+    and forms the superclass of the string-based terms
+    :class:`TypeIdentifier`, :class:`String`, and :class:`Regex`.
+    Its purpose is to handle the correct instantiation of both the
+    :class:`Term` and :py:class:`str` supertypes and to define
+    equality comparisons such that different kinds of type terms with
+    the same string value are not considered equal:
+
+    >>> String('a') == String('a')
+    True
+    >>> String('a') == TypeIdentifier('a')
+    False
+
     """
     def __new__(cls, string, docstring=None):
         return str.__new__(cls, string)
 
     def __init__(self, string, docstring=None):
-        super(_TypeTerm, self).__init__(docstring=docstring)
+        super(TypeTerm, self).__init__(docstring=docstring)
 
     def __repr__(self):
         return "<{} object ({}) at {}>".format(
@@ -94,46 +134,67 @@ class _TypeTerm(Term, str):
         return str.__ne__(self, other)
 
 
-class TypeIdentifier(_TypeTerm):
+class TypeIdentifier(TypeTerm):
     """
     Type identifiers, or type names.
+
+    Unlike other :class:`TypeTerms <TypeTerm>`, TypeIdentifiers use
+    case-insensitive comparisons:
+
+    >>> TypeIdentifier('MY-TYPE') == TypeIdentifier('my-type')
+    True
+
+    Args:
+        string (str): type name
+        docstring (str): documentation string
+
+    Attributes:
+        docstring (str): documentation string
     """
-    def __str__(self):
-        return str.__str__(self)
 
     def __unicode__(self):
         return self.__str__()
 
     def __eq__(self, other):
-        if (isinstance(other, _TypeTerm) and
+        if (isinstance(other, TypeTerm) and
                 not isinstance(other, TypeIdentifier)):
             return NotImplemented
         return self.lower() == other.lower()
 
     def __ne__(self, other):
-        if (isinstance(other, _TypeTerm) and
+        if (isinstance(other, TypeTerm) and
                 not isinstance(other, TypeIdentifier)):
             return NotImplemented
         return self.lower() != other.lower()
 
 
-class String(_TypeTerm):
+class String(TypeTerm):
     """
     Double-quoted strings.
+
+    Args:
+        string (str): type name
+        docstring (str): documentation string
+
+    Attributes:
+        docstring (str): documentation string
     """
-    def __str__(self):
-        return '"{}"'.format(str.__str__(self))
 
     def __unicode__(self):
         return self.__str__()
 
 
-class Regex(_TypeTerm):
+class Regex(TypeTerm):
     """
     Regular expression patterns.
+
+    Args:
+        string (str): type name
+        docstring (str): documentation string
+
+    Attributes:
+        docstring (str): documentation string
     """
-    def __str__(self):
-        return '^{}$'.format(str.__str__(self))
 
     def __unicode__(self):
         return self.__str__()
@@ -142,6 +203,14 @@ class Regex(_TypeTerm):
 class AVM(FeatureStructure, Term):
     """
     A feature structure as used in TDL.
+
+    Args:
+        featvals (list, dict): a sequence of `(attribute, value)` pairs
+            or an attribute to value mapping
+        docstring (str): documentation string
+
+    Attributes:
+        docstring (str): documentation string
     """
 
     def __init__(self, featvals=None, docstring=None):
@@ -153,9 +222,7 @@ class AVM(FeatureStructure, Term):
     def _default(cls): return AVM()
 
     def __setitem__(self, key, val):
-        if isinstance(val, (_TypeTerm, Coreference)):
-            val = Conjunction([val])
-        elif not (val is None or isinstance(val, (AVM, Conjunction))):
+        if not (val is None or isinstance(val, (Term, Conjunction))):
             raise TypeError('invalid attribute value type: {}'.format(
                 val.__class__.__name__))
         super(AVM, self).__setitem__(key, val)
@@ -164,9 +231,10 @@ class AVM(FeatureStructure, Term):
         """
         Reduce trivial AVM conjunctions to just the AVM.
 
-        For example, in `[ ATTR1 [ ATTR2 val ] ]`, the value of `ATTR1`
-        is a conjunction with the sub-AVM, but this method removes that
-        conjunction so `ATTR1`'s value is just the AVM.
+        For example, in `[ ATTR1 [ ATTR2 val ] ]` the value of `ATTR1`
+        could be a conjunction with the sub-AVM `[ ATTR2 val ]`. This
+        method removes the conjunction so the sub-AVM nests directly
+        (equivalent to `[ ATTR1.ATTR2 val ]` in TDL).
         """
         for attr in self._avm:
             val = self._avm[attr]
@@ -182,21 +250,35 @@ class ConsList(AVM):
     """
     AVM subclass for cons-lists (``< ... >``)
 
-    Navigating the feature structure for lists can be cumbersome, so
-    this subclass of :class:`AVM` provides the :meth:`values` method
-    to collect the items nested inside the list and return them as a
-    Python list.
+    This provides a more intuitive interface for creating and
+    accessing the values of list structures in TDL. Some combinations
+    of the *values* and *end* parameters correspond to various TDL
+    forms as described in the table below:
 
-    ============  ========  =================
-    TDL form      values    last
-    ============  ========  =================
-    `< >`         `None`    `EMPTY_LIST_TYPE`
-    `< ... >`     `None`    `LIST_TYPE`
-    `< a >`       `[a]`     `EMPTY_LIST_TYPE`
-    `< a, b >`    `[a, b]`  `EMPTY_LIST_TYPE`
-    `< a, ... >`  `[a]`     `LIST_TYPE`
-    `< a . b >`   `[a]`     `b`
-    ============  ========  =================
+    ============  ========  =================  ======
+    TDL form      values    end                state
+    ============  ========  =================  ======
+    `< >`         `None`    `EMPTY_LIST_TYPE`  closed
+    `< ... >`     `None`    `LIST_TYPE`        open
+    `< a >`       `[a]`     `EMPTY_LIST_TYPE`  closed
+    `< a, b >`    `[a, b]`  `EMPTY_LIST_TYPE`  closed
+    `< a, ... >`  `[a]`     `LIST_TYPE`        open
+    `< a . b >`   `[a]`     `b`                closed
+    ============  ========  =================  ======
+
+    Args:
+        values (list): a sequence of :class:`Conjunction` or
+            :class:`Term` objects to be placed in the AVM of the list.
+        end (str, :class:`Conjunction`, :class:`Term`): last item in
+            the list (default: :data:`LIST_TYPE`) which determines if
+            the list is open or closed
+        docstring (str): documentation string
+
+    Attributes:
+        terminated (bool): if `False`, the list can be further
+            extended by following the :data:`LIST_TAIL` features.
+        docstring (str): documentation string
+
     """
     def __init__(self, values=None, end=LIST_TYPE, docstring=None):
         super(ConsList, self).__init__(docstring=docstring)
@@ -214,7 +296,7 @@ class ConsList(AVM):
 
     def values(self):
         """
-        Return the list of values.
+        Return the list of values in the ConsList feature structure.
         """
         if self._avm is None:
             return []
@@ -227,6 +309,14 @@ class ConsList(AVM):
             return vals
 
     def append(self, value):
+        """
+        Append an item to the end of an open ConsList.
+
+        Args:
+            value (:class:`Conjunction`, :class:`Term`): item to add
+        Raises:
+            :class:`TdlError`: when appending to a closed list
+        """
         if self._avm is not None and not self.terminated:
             path = self._last_path
             if path:
@@ -238,6 +328,23 @@ class ConsList(AVM):
             raise TdlError('Cannot append to a closed list.')
 
     def terminate(self, end):
+        """
+        Set the value of the tail of the list.
+
+        Adding values via :meth:`append` places them on the `FIRST`
+        feature of some level of the feature structure (e.g.,
+        `REST.FIRST`), while :meth:`terminate` places them on the
+        final `REST` feature (e.g., `REST.REST`). If *end* is a
+        :class:`Conjunction` or :class:`Term`, it is typically a
+        :class:`Coreference`, otherwise *end* is set to
+        `tdl.EMPTY_LIST_TYPE` or `tdl.LIST_TYPE`. This method does
+        not necessarily close the list; if *end* is `tdl.LIST_TYPE`,
+        the list is left open, otherwise it is closed.
+
+        Args:
+            end (str, :class:`Conjunction`, :class:`Term`): value to
+            use as the end of the list.
+        """
         if self.terminated:
             raise TdlError('Cannot terminate a closed list.')
         if end == LIST_TYPE:
@@ -260,10 +367,21 @@ class DiffList(AVM):
     """
     AVM subclass for diff-lists (``<! ... !>``)
 
-    Navigating the feature structure for lists can be cumbersome, so
-    this subclass of :class:`AVM` provides the :meth:`values` method
-    to collect the items nested inside the list and return them as a
-    Python list.
+    As with :class:`ConsList`, this provides a more intuitive
+    interface for creating and accessing the values of list structures
+    in TDL. Unlike :class:`ConsList`, DiffLists are always closed
+    lists with the last item coreferenced with the `LAST` feature,
+    which allows for the joining of two diff-lists.
+
+    Args:
+        values (list): a sequence of :class:`Conjunction` or
+            :class:`Term` objects to be placed in the AVM of the list
+        docstring (str): documentation string
+
+    Attributes:
+        last (str): the feature path to the list position coreferenced
+            by the value of the :data:`DIFF_LIST_LAST` feature.
+        docstring (str): documentation string
     """
     def __init__(self, values=None, docstring=None):
         cr = Coreference(None)
@@ -275,9 +393,9 @@ class DiffList(AVM):
             dl_list._feats = tmplist._feats
             self.last = 'LIST.' + tmplist._last_path
         else:
-            dl_list = Conjunction([cr])
+            dl_list = cr
             self.last = 'LIST'
-        dl_last = Conjunction([cr])
+        dl_last = cr
 
         featvals = [(DIFF_LIST_LIST, dl_list),
                     (DIFF_LIST_LAST, dl_last)]
@@ -289,7 +407,7 @@ class DiffList(AVM):
 
     def values(self):
         """
-        Return the list of values.
+        Return the list of values in the DiffList feature structure.
         """
         return [val for _, val
                 in _collect_list_items(self.get(DIFF_LIST_LIST))]
@@ -307,6 +425,16 @@ def _collect_list_items(d):
 class Coreference(Term):
     """
     TDL coreferences, which represent re-entrancies in AVMs.
+
+    Args:
+        identifier (str): identifier or tag associated with the
+            coreference; for internal use (e.g., in :class:`DiffList`
+            objects), the identifier may be `None`
+        docstring (str): documentation string
+
+    Attributes:
+        identifier (str): corefernce identifier or tag
+        docstring (str): documentation string
     """
     def __init__(self, identifier, docstring=None):
         super(Coreference, self).__init__(docstring=docstring)
@@ -314,13 +442,16 @@ class Coreference(Term):
 
     def __str__(self):
         if self.identifier is not None:
-            return '#' + str(self.identifier)
+            return str(self.identifier)
         return ''
 
 
 class Conjunction(object):
     """
     Conjunction of TDL terms.
+
+    Args:
+        terms (list): sequence of :class:`Term` objects
     """
     def __init__(self, terms=None):
         self._terms = []
@@ -340,7 +471,9 @@ class Conjunction(object):
             return NotImplemented
 
     def __eq__(self, other):
-        if not isinstance(other, Conjunction):
+        if isinstance(other, Term) and len(self._terms) == 1:
+            return self._terms[0] == other
+        elif not isinstance(other, Conjunction):
             return NotImplemented
         return self._terms == other._terms
 
@@ -363,9 +496,19 @@ class Conjunction(object):
                     terms.append(val)
         if len(terms) == 0:
             raise KeyError(key)
-        return Conjunction(terms)
+        elif len(terms) == 1:
+            return terms[0]
+        else:
+            return Conjunction(terms)
 
     def get(self, key, default=None):
+        """
+        Get the value of attribute *key* in any AVM in the conjunction.
+
+        Args:
+            key: attribute path to search
+            default: value to return if *key* is not defined on any AVM
+        """
         try:
             return self[key]
         except KeyError:
@@ -374,12 +517,16 @@ class Conjunction(object):
     def normalize(self):
         """
         Rearrange the conjunction to a conventional form.
+
+        This puts any coreference(s) first, followed by type terms,
+        then followed by AVM(s) (including lists). AVMs are
+        normalized via :meth:`AVM.normalize`.
         """
         corefs = []
         types = []
         avms = []
         for term in self._terms:
-            if isinstance(term, _TypeTerm):
+            if isinstance(term, TypeTerm):
                 types.append(term)
             elif isinstance(term, AVM):
                 term.normalize()
@@ -392,9 +539,20 @@ class Conjunction(object):
 
     @property
     def terms(self):
+        """The list of terms in the conjunction."""
         return list(self._terms)
 
     def add(self, term):
+        """
+        Add a term to the conjunction.
+
+        Args:
+            term (:class:`Term`, :class:`Conjunction`): term to add;
+                if a :class:`Conjunction`, all of its terms are added
+                to the current conjunction.
+        Raises:
+            :class:`TypeError`: when *term* is an invalid type
+        """
         if isinstance(term, Conjunction):
             for term_ in term.terms:
                 self.add(term_)
@@ -404,10 +562,12 @@ class Conjunction(object):
             raise TypeError('Not a Term or Conjunction')
 
     def types(self):
+        """Return the list of type terms in the conjunction."""
         return [term for term in self._terms
                 if isinstance(term, (TypeIdentifier, String, Regex))]
 
     def features(self):
+        """Return the list of feature-value pairs in the conjunction."""
         featvals = []
         for term in self._terms:
             if isinstance(term, AVM):
@@ -415,9 +575,12 @@ class Conjunction(object):
         return featvals
 
     def string(self):
+        """
+        Return the first string term in the conjunction, or `None`.
+        """
         for term in self._terms:
             if isinstance(term, String):
-                return term
+                return str(term)
         return None  # conjunction does not have a string type (not an error)
 
 
@@ -427,10 +590,14 @@ class TypeDefinition(object):
 
     Args:
         identifier (str): type name
-        conjunction (list): type constraints
-        coreferences (list): (tag, paths) tuple of coreferences, where
-            paths is a list of feature paths that share the tag
-        docstring (list): list of documentation strings
+        conjunction (:class:`Conjunction`, :class:`Term`): type
+            constraints
+        docstring (str): documentation string
+
+    Attributes:
+        identifier (str): type identifier
+        conjunction (:class:`Conjunction`): type constraints
+        docstring (str): documentation string
     """
 
     _operator = ':='
@@ -446,13 +613,18 @@ class TypeDefinition(object):
         self.docstring = docstring
 
     def __repr__(self):
-        return "<Type object '{}' at {}>".format(
-            self.identifier, id(self)
+        return "<{} object '{}' at {}>".format(
+            self.__class__.__name__, self.identifier, id(self)
         )
 
     @property
     def supertypes(self):
+        """The list of supertypes for the type."""
         return self.conjunction.types()
+
+    def features(self):
+        """Return the list of feature-value pairs in the conjunction."""
+        return self.conjunction.features()
 
     def __contains__(self, key):
         return key in self.conjunction
@@ -464,6 +636,21 @@ class TypeDefinition(object):
         return self.conjunction.__setitem__(key, value)
 
     def documentation(self, level='first'):
+        """
+        Return the documentation of the type.
+
+        By default, this is the first docstring on a top-level term.
+        By setting *level* to `"top"`, the list of all docstrings on
+        top-level terms is returned, including the type's `docstring`
+        value, if not `None`, as the last item. The docstring for the
+        type itself is available via :attr:`TypeDefinition.docstring`.
+
+        Args:
+            level (str): `"first"` or `"top"`
+        Returns:
+            a single docstring or a list of docstrings
+
+        """
         docs = (t.docstring for t in list(self.conjunction.terms) + [self]
                 if t.docstring is not None)
         if level.lower() == 'first':
@@ -472,11 +659,28 @@ class TypeDefinition(object):
             doc = list(docs)
         return doc
 
-    def features(self):
-        return self.conjunction.features()
-
 
 class TypeAddendum(TypeDefinition):
+    """
+    An addendum to an existing type definition.
+
+    Type addenda, unlike :class:`type definitions <TypeDefinition>`,
+    do not require supertypes, or even any feature constraints. An
+    addendum, however, must have at least one supertype, AVM, or
+    docstring.
+
+    Args:
+        identifier (str): type name
+        conjunction (:class:`Conjunction`, :class:`Term`): type
+            constraints
+        docstring (str): documentation string
+
+    Attributes:
+        identifier (str): type identifier
+        conjunction (:class:`Conjunction`): type constraints
+        docstring (str): documentation string
+    """
+
     _operator = ':+'
 
     def __init__(self, identifier, conjunction=None, docstring=None):
@@ -487,12 +691,24 @@ class TypeAddendum(TypeDefinition):
 
 class LexicalRuleDefinition(TypeDefinition):
     """
-    TDL inflectional rule.
+    An inflecting lexical rule definition.
 
     Args:
         identifier (str): type name
-        affix (str): inflectional affixes
+        affix_type (str): `"prefix"` or `"suffix"`
+        patterns (list): sequence of `(match, replacement)` pairs
+        conjunction (:class:`Conjunction`, :class:`Term`): conjunction
+            of constraints applied by the rule
+        docstring (str): documentation string
+
+    Attributes:
+        identifier (str): type identifier
+        affix_type (str): `"prefix"` or `"suffix"`
+        patterns (list): sequence of `(match, replacement)` pairs
+        conjunction (:class:`Conjunction`): type constraints
+        docstring (str): documentation string
     """
+
     def __init__(self,
                  identifier,
                  affix_type,
@@ -505,17 +721,52 @@ class LexicalRuleDefinition(TypeDefinition):
         self.patterns = patterns
 
 
-class MorphSet(object):
+class _MorphSet(object):
     def __init__(self, var, characters):
         self.var = var
         self.characters = characters
 
 
-class LetterSet(MorphSet):
+class LetterSet(_MorphSet):
+    """
+    A capturing character class for inflectional lexical rules.
+
+    LetterSets define a pattern (e.g., `"!a"`) that may match any one
+    of its associated characters. Unlike :class:`WildCard` patterns,
+    LetterSet variables also appear in the replacement pattern of an
+    affixing rule, where they insert the character matched by the
+    corresponding letter set.
+
+    Args:
+        var (str): variable used in affixing rules (e.g., `"!a"`)
+        characters (str): string or collection of characters that may
+            match an input character
+
+    Attributes:
+        var (str): letter-set variable
+        characters (str): characters included in the letter-set
+    """
     pass
 
 
-class WildCard(MorphSet):
+class WildCard(_MorphSet):
+    """
+    A non-capturing character class for inflectional lexical rules.
+
+    WildCards define a pattern (e.g., `"?a"`) that may match any one
+    of its associated characters. Unlike :class:`LetterSet` patterns,
+    WildCard variables may not appear in the replacement pattern of an
+    affixing rule.
+
+    Args:
+        var (str): variable used in affixing rules (e.g., `"!a"`)
+        characters (str): string or collection of characters that may
+            match an input character
+
+    Attributes:
+        var (str): wild-card variable
+        characters (str): characters included in the wild-card
+    """
     pass
 
 
@@ -845,6 +1096,55 @@ def _bounded(p1, p2, line, pos, line_no, lines):
 
 
 # Parsing functions
+def iterparse(source, encoding='utf-8'):
+    """
+    Parse the TDL file *source* and iteratively yield parse events.
+
+    If *source* is a filename, the file is opened and closed when the
+    generator has finished, otherwise *source* is an open file object
+    and will not be closed when the generator has finished.
+
+    Parse events are `(event, object, lineno)` tuples, where `event`
+    is a string (`"TypeDefinition"`, `"TypeAddendum"`,
+    `"LexicalRuleDefinition"`, `"LetterSet"`, `"WildCard"`,
+    `"LineComment"`, or `"BlockComment"`), `object` is the interpreted
+    TDL object, and `lineno` is the line number where the entity began
+    in *source*.
+
+    Args:
+        source (str, file): a filename or open file object
+        encoding (str): the encoding of the file (default: `"utf-8"`;
+            ignored if *source* is an open file)
+    Yields:
+        `(event, object, lineno)` tuples
+    Example:
+        >>> lex = {}
+        >>> for event, obj, lineno in tdl.iterparse('erg/lexicon.tdl'):
+        ...     if event == 'TypeDefinition':
+        ...         lex[obj.identifier] = obj
+        ... 
+        >>> lex['eucalyptus_n1']['SYNSEM.LKEYS.KEYREL.PRED']
+        <String object (_eucalyptus_n_1_rel) at 140625748595960>
+    """
+    if hasattr(source, 'read'):
+        for event in _parse2(source):
+            yield event
+    else:
+        with io.open(source, encoding=encoding) as fh:
+            for event in _parse2(fh):
+                yield event
+
+
+def _parse2(f):
+    tokens = LookaheadIterator(_lex(f))
+    try:
+        for event in _parse_tdl(tokens):
+            yield event
+    except TdlParsingError as ex:
+        if hasattr(f, 'name'):
+            ex.filename = f.name
+        raise
+
 
 def _parse_tdl(tokens):
     try:
@@ -855,11 +1155,12 @@ def _parse_tdl(tokens):
             except StopIteration:  # normal EOF
                 break
             if gid == 2:
-                yield (line_no, 'BLOCKCOMMENT', token)
+                yield ('BlockComment', token, line_no)
             elif gid == 3:
-                yield (line_no, 'LINECOMMENT', token)
+                yield ('LineComment', token, line_no)
             elif gid == 20:
-                yield (line_no, 'LETTERSET', _parse_letterset(token, line_no))
+                obj = _parse_letterset(token, line_no)
+                yield (obj.__class__.__name__, obj, line_no)
             elif gid == 24:
                 identifier = token
                 gid, token, line_no, nextgid = _shift(tokens)
@@ -878,6 +1179,8 @@ def _parse_tdl(tokens):
                             .format(line_no, identifier),
                             TdlWarning)
                     conjunction, nextgid = _parse_tdl_conjunction(tokens)
+                    if isinstance(conjunction, Term):
+                        conjunction = Conjunction([conjunction])
                     if len(conjunction.types()) == 0:
                         raise TdlParsingError('No supertypes defined.',
                                               identifier=identifier,
@@ -903,7 +1206,7 @@ def _parse_tdl(tokens):
                     raise TdlParsingError('Expected: .', line_number=line_no)
                 tokens.next()
 
-                yield (line_no, 'TYPEDEF', obj)
+                yield (obj.__class__.__name__, obj, line_no)
 
             else:
                 raise TdlParsingError(
@@ -915,19 +1218,20 @@ def _parse_tdl(tokens):
 
 
 def _parse_letterset(token, line_no):
-    m = re.match(
-        r'\s*(letter-set|wild-card)\s*\((!.)\s+(.*?)\)\s*\)\s*$', token)
-    if m is None or m.group(1) not in ('letter-set', 'wild-card'):
-        raise TdlParsingError(
-            'invalid letter-set or wild-card: {}'.format(token),
-            line_number=line_no)
-    var = m.group(2)
-    chars = m.group(3)
-    if m.group(1) == 'letter-set':
-        return LetterSet(var, chars)
+    end = r'\s+((?:[^) \\]|\\.)+)\)\s*$'
+    m = re.match(r'\s*letter-set\s*\((!.)' + end, token)
+    if m is not None:
+        chars = re.sub(r'\\(.)', r'\1', m.group(2))
+        return LetterSet(m.group(1), chars)
     else:
-        assert m.group(1) == 'wild-card'
-        return WildCard(var, chars)
+        m = re.match(r'\s*wild-card\s*\((\?.)' + end, token)
+        if m is not None:
+            chars = re.sub(r'\\(.)', r'\1', m.group(2))
+            return WildCard(m.group(1), chars)
+    # if execution reached here there was a problems
+    raise TdlParsingError(
+        'invalid letter-set or wild-card: {}'.format(token),
+        line_number=line_no)
 
 
 def _parse_tdl_affixes(tokens):
@@ -951,7 +1255,10 @@ def _parse_tdl_conjunction(tokens):
             tokens.next()
         else:
             break
-    return Conjunction(terms), nextgid
+    if len(terms) == 1:
+        return terms[0], nextgid
+    else:
+        return Conjunction(terms), nextgid
 
 
 def _parse_tdl_term(tokens):
@@ -1156,19 +1463,29 @@ def _nest_level(in_pattern, out_pattern, tokens):
     return sum(lookup.get(tok, 0) for tok in tokens)
 
 
-def _parse2(f):
-    tokens = LookaheadIterator(_lex(f))
-    try:
-        for line_no, event, data in _parse_tdl(tokens):
-            if event in ('TYPEDEF', 'LETTERSET'):
-                yield data
-    except TdlParsingError as ex:
-        if hasattr(f, 'name'):
-            ex.filename = f.name
-        raise
+@deprecated(final_version='v1.0.0', alternative='iterparse()')
+def parse(f, encoding='utf-8'):
+    """
+    Parse the TDL file *f* and yield the interpreted contents.
+
+    If *f* is a filename, the file is opened and closed when the
+    generator has finished, otherwise *f* is an open file object and
+    will not be closed when the generator has finished.
+
+    Args:
+        f (str, file): a filename or open file object
+        encoding (str): the encoding of the file (default: `"utf-8"`;
+            ignored if *f* is an open file)
+    """
+    if hasattr(f, 'read'):
+        for event in _parse(f):
+            yield event
+    else:
+        with io.open(f, encoding=encoding) as fh:
+            for event in _parse(fh):
+                yield event
 
 
-@deprecated(final_version='v1.0.0', alternative='_parse2')
 def _parse(f):
     for line_no, event, data in lex(f):
         data = deque(data)
@@ -1180,23 +1497,6 @@ def _parse(f):
             if hasattr(f, 'name'):
                 ex.filename = f.name
             raise
-
-
-def parse(f, encoding='utf-8', _parsefunc=_parse):
-    """
-    Parse the TDL file *f* and yield the type definitions.
-
-    If *f* is a filename, the file is opened and closed when the
-    generator has finished, otherwise *f* is an open file object
-    and will not be closed when the generator has finished.
-    """
-    if hasattr(f, 'read'):
-        for event in _parsefunc(f):
-            yield event
-    else:
-        with io.open(f, encoding=encoding) as fh:
-            for event in _parsefunc(fh):
-                yield event
 
 
 def _parse_typedef(tokens):
@@ -1423,6 +1723,25 @@ def _make_coreferences(corefs):
 # Serialization helpers
 
 def format(obj):
+    """
+    Serialize TDL objects to strings.
+
+    Args:
+        obj: instance of :class:`Term`, :class:`Conjunction`, or
+            :class:`TypeDefinition` classes or subclasses
+    Returns:
+        str: serialized form of *obj*
+    Example:
+        >>> conj = tdl.Conjunction([
+        ...     tdl.TypeIdentifier('lex-item'),
+        ...     tdl.AVM([('SYNSEM.LOCAL.CAT.HEAD.MOD',
+        ...               tdl.ConsList(end=tdl.EMPTY_LIST_TYPE))])
+        ... ])
+        >>> t = tdl.TypeDefinition('non-mod-lex-item', conj)
+        >>> print(format(t))
+        non-mod-lex-item := lex-item &
+          [ SYNSEM.LOCAL.CAT.HEAD.MOD < > ].
+    """
     if isinstance(obj, TypeDefinition):
         return _format_typedef(obj)
     elif isinstance(obj, Conjunction):
@@ -1437,10 +1756,10 @@ def format(obj):
 
 def _format_term(term, indent):
     fmt = {
-        TypeIdentifier: _format_str,
-        String: _format_str,
-        Regex: _format_str,
-        Coreference: _format_str,
+        TypeIdentifier: _format_id,
+        String: _format_string,
+        Regex: _format_regex,
+        Coreference: _format_coref,
         AVM: _format_avm,
         ConsList: _format_conslist,
         DiffList: _format_difflist,
@@ -1459,8 +1778,10 @@ def _format_term(term, indent):
         return fmt(term, indent)
 
 
-def _format_str(term, indent):
-    return str(term)
+def _format_id(term, indent): return str(term)
+def _format_string(term, indent): return '"{!s}"'.format(term)
+def _format_regex(term, indent): return '^{!s}$'.format(term)
+def _format_coref(term, indent): return '#{!s}'.format(term)
 
 
 def _format_avm(avm, indent):

@@ -394,24 +394,33 @@ not do any interpretation. It can be useful for static code analysis.
 
 >>> from delphin import tdl
 >>> lex = {}
->>> with open('erg/lexicon.tdl') as fh:
-...     for entry in tdl.parse(fh):
-...         lex[entry.identifier] = entry
+>>> for event, obj, lineno in tdl.iterparse('erg/lexicon.tdl'):
+...     if event == 'TypeDefinition':
+...         lex[obj.identifier] = obj
 ... 
 >>> len(lex)
-38259
+40234
 >>> lex['cactus_n1']
-<TdlType object 'cactus_n1' at 140244752819832>
+<TypeDefinition object 'cactus_n1' at 140226925196400>
 >>> lex['cactus_n1'].supertypes
-['n_-_c_le']
->>> lex['cactus_n1']['ORTH']
-<TdlConsList object at 140244752818320>
+[<TypeIdentifier object (n_-_c_le) at 140226925284232>]
+>>> lex['cactus_n1'].features()
+[('ORTH', <ConsList object at 140226925534472>), ('SYNSEM', <AVM object at 140226925299464>)]
+>>> lex['cactus_n1']['ORTH'].features()
+[('FIRST', <String object (cactus) at 140226925284352>), ('REST', None)]
 >>> lex['cactus_n1']['ORTH'].values()
-['"cactus"']
->>> lex['cactus_n1'].local_constraints()
-[('ORTH.FIRST', '"cactus"'), ('ORTH.REST', None), ('SYNSEM.LKEYS.KEYREL.PRED', '"_cactus_n_1_rel"'), ('SYNSEM.PHON.ONSET', <TdlDefinition object at 140244752818608>)]
+[<String object (cactus) at 140226925284352>]
+>>> lex['cactus_n1']['ORTH.FIRST']
+<String object (cactus) at 140226925284352>
+>>> print(tdl.format(lex['cactus_n1']))
+cactus_n1 := n_-_c_le &
+  [ ORTH < "cactus" >,
+    SYNSEM [ LKEYS.KEYREL.PRED "_cactus_n_1_rel",
+             LOCAL.AGR.PNG png-irreg,
+             PHON.ONSET con ] ].
 
 .. seealso::
+  - A semi-formal specification of TDL: http://moin.delph-in.net/TdlRfc
   - A grammar-engineering FAQ about TDL: http://moin.delph-in.net/GeFaqTdlSyntax
   - :mod:`delphin.tdl` module
 

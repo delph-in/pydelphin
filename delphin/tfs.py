@@ -1,3 +1,6 @@
+
+from __future__ import unicode_literals
+
 """
 Basic classes for modeling feature structures.
 
@@ -64,7 +67,7 @@ class FeatureStructure(object):
     def _default(cls): return cls(None)
 
     def __repr__(self):
-        return '<FeatureStructure object at {}>'.format(id(self))
+        return '<{} object at {}>'.format(self.__class__.__name__, id(self))
 
     def __eq__(self, other):
         if not isinstance(other, FeatureStructure):
@@ -126,7 +129,7 @@ class FeatureStructure(object):
         avm to get the next value. A notable TypedFeatureStructure is
         one with more than one sub-feature.
         """
-        return len(self._avm) != 1
+        return self._avm is None or len(self._avm) != 1
 
     def features(self):
         """
