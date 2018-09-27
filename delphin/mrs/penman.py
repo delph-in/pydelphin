@@ -100,6 +100,7 @@ def dumps(xs, model=None, properties=False, indent=True, **kwargs):
     if not xs:
         return ''
 
+    given_class = xs[0].__class__  # assume they are all the same
     if model is None:
         model = xs[0].__class__
 
@@ -108,12 +109,15 @@ def dumps(xs, model=None, properties=False, indent=True, **kwargs):
             '{} class does not implement to_triples()'.format(model.__name__)
         )
 
+    # convert MRS to DMRS if necessary; EDS cannot convert
+    if given_class.__name__ in ('Mrs', 'Xmrs'):
+        xs = [model.from_xmrs(x, **kwargs) for x in xs]
+    elif given_class.__name__ == 'Eds' and model.__name__ != 'Eds':
+        raise ValueError('Cannot convert EDS to non-EDS')
+
     codec = XMRSCodec()
     graphs = [
-        codec.triples_to_graph(
-            model.to_triples(model.from_xmrs(x, **kwargs),
-                             properties=properties)
-        )
+        codec.triples_to_graph(model.to_triples(x, properties=properties))
         for x in xs
     ]
 

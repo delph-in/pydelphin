@@ -481,7 +481,7 @@ class TestSuite(object):
         elif relations is None and path is not None:
             relations = os.path.join(self._path, _relations_filename)
             self.relations = Relations.from_file(relations)
-        elif isinstance(relations, stringtypes):
+        elif relations is not None and os.path.isfile(relations):
             self.relations = Relations.from_file(relations)
         else:
             raise ItsdbError(
@@ -836,7 +836,9 @@ def _open_table(tbl_filename, encoding):
     if path.endswith('.gz'):
         # gzip.open() cannot use mode='rt' until Python2.7 support
         # is gone; until then use TextIOWrapper
-        with TextIOWrapper(GzipFile(path, mode='r'), encoding=encoding) as f:
+        gzfile = GzipFile(path, mode='r')
+        gzfile.read1 = gzfile.read  # Python2 hack
+        with TextIOWrapper(gzfile, encoding=encoding) as f:
             yield f
     else:
         with io.open(tbl_filename, encoding=encoding) as f:

@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 """
 This module contains classes and methods related to Minimal Recursion
@@ -67,7 +67,7 @@ def convert(txt, src_fmt, tgt_fmt, single=True, **kwargs):
         kwargs: Any other keyword arguments to pass to the serializer
             of the target format. See Notes.
     Returns:
-      A string in the target format.
+        A string in the target format.
     Notes:
         src_fmt and tgt_fmt may be one of the following:
 

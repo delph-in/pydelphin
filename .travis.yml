@@ -11,7 +11,7 @@ matrix:
     - python: "3.6"
       env: TOXENV=py36
 install:
-  - pip install -q 'setuptools>=36.0.1' 'pytest>=2.8.0' 'tox>=3.3.0'
+  - pip install -q 'setuptools>=36.0.1' 'pytest>=3.6.0' 'tox>=3.3.0'
   - python setup.py -q install
 script: tox
 

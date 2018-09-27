@@ -9,6 +9,8 @@ these changes are prefixed with "**BREAKING**"
 
 * `delphin.tdl.parse()` now accepts a filename argument and returns a properly
   functioning generator (#104)
+* `delphin.itsdb` works better with gzipped tables with Python 2
+* `delphin.mrs.penman` no longer calls `Eds.from_xmrs(x)` when `x` is an `Eds`
 
 ### Added
 
@@ -44,6 +46,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.exceptions.TdlWarning` for notifications about deprecated TDL
   syntaxes
 * `delphin.util.LookaheadIterator` for parsing with arbitrary lookahead
+* `delphin.commands` module to contain logic for `delphin` commands (#140)
+* `tests/commands_test.py` to test invocation of commands (but not results)
 
 ### Changed
 
