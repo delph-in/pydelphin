@@ -272,3 +272,43 @@ class LookaheadIterator(object):
             self._buffer_fill(n + 1)
             datum = buffer[n]
         return datum
+
+
+# modified from https://www.python.org/dev/peps/pep-0263/#defining-the-encoding
+_encoding_symbol_re = re.compile(
+    r'^[ \t\f]*.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)', re.IGNORECASE)
+
+import codecs, io
+
+def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
+    encoding = None
+    with io.open(filename, 'rb') as fh:
+        line1 = next(fh)
+        re_match1 = _encoding_symbol_re.search(line1)
+        line1_comment = line1.contains(comment_char)
+        if line1_comment and re_match1:
+            encoding = _check_encoding(re_match1.group(1))
+            if not encoding and line1 != "":
+                line2 = next(fh)
+                re_match2 = _encoding_symbol_re.search(line2)
+                line2_comment = line2.contains(comment_char)
+                if line2_comment and re_match2:
+                    encoding = _check_encoding(re_match2.group(1))
+        if not encoding and (line1_comment or line2_comment):
+                raise ValueError("Comment line detected but encoding not found")
+
+        if line1.contains(codecs.BOM_UTF8):
+            if encoding and encoding.lower() != 'utf-8':
+                raise ValueError("Declared encoding does not match BOM")
+            else:
+                encoding = 'utf-8'
+
+    if not encoding:
+        encoding = default_encoding
+
+    return encoding.lower()
+
+
+def _check_encoding(encoding):
+    codecs.lookup(encoding)
+    return encoding
