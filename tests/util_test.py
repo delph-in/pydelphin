@@ -140,7 +140,7 @@ def invalid3_file(tmpdir):
     f.write(codecs.BOM_UTF8 + '; coding: latin-1')
     return str(f)
 
-
+@pytest.fixture
 def test_detect_encoding(empty_file, nocomment_file, utf8_file, utf8var1_file,
     utf8var2_file, shiftjis_file, eucjp_file, latin1_file, invalid1_file):
     assert detect_encoding(empty_file) == 'utf-8'
