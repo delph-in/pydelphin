@@ -88,3 +88,35 @@ class TdlWarning(PyDelphinWarning):
 class REPPError(PyDelphinException):
     """Raised when there is an error in tokenizing with REPP."""
     pass
+
+class TSQLSyntaxError(PyDelphinException):
+    def __init__(self, *args, **kwargs):
+        # Python2 doesn't allow parameters like:
+        #   (*args, key=val, **kwargs)
+        # so do this manaully.
+        lineno = offset = 0
+        text = None
+        if 'lineno' in kwargs:
+            lineno = kwargs['lineno']
+            del kwargs['lineno']
+        if 'offset' in kwargs:
+            offset = kwargs['offset']
+            del kwargs['offset']
+        if 'text' in kwargs:
+            text = kwargs['text']
+            del kwargs['text']
+
+        super(TSQLSyntaxError, self).__init__(*args, **kwargs)
+        self.lineno = lineno
+        self.offset = offset
+        self.text = text
+
+    def __str__(self):
+        display = ''
+        if self.text is not None:
+            display = '\n  {}\n  {}^'.format(self.text, ' ' * self.offset)
+        return ('At line {}, position {}:{}\n{}'
+                .format(self.lineno or '?',
+                        self.offset or '?',
+                        display,
+                        super(TSQLSyntaxError, self).__str__()))
