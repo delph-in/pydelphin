@@ -16,6 +16,37 @@ def select(query, ts):
     return queryobj
 
 
+def _id_path(src, tgt, rels):
+    """
+    Find the path of id fields connecting two tables.
+
+    This is just a basic breadth-first-search. The relations file
+    should be small enough to not be a problem.
+    """
+    paths = [[(src, key)] for key in rels[src].keys()]
+    tgtkeys = set(rels[tgt].keys())
+    visited = set([src])
+    while True:
+        newpaths = []
+        for path in paths:
+            laststep = path[-1]
+            if laststep[1] in tgtkeys:
+                return path
+            else:
+                for table in set(rels.find(laststep[1])) - visited:
+                    visited.add(table)
+                    keys = rels[table].keys()
+                    if len(keys) > 1:
+                        for key in rels[table].keys():
+                            step = (table, key)
+                            if step not in path:
+                                newpaths.append(path + [step])
+        if newpaths:
+            paths = newpaths
+        else:
+            break
+
+
 _keywords = list(map(re.escape,
                      ('info', 'set', 'retrieve', 'select', 'insert',
                       'from', 'where', 'report', '*', '.')))

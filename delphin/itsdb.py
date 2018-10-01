@@ -214,8 +214,10 @@ class Relations(object):
     """
 
     def __init__(self, tables):
+        tables = [(t[0], Relation(*t)) for t in tables]
         self.tables = tuple(t[0] for t in tables)
-        self._data = dict((t[0], Relation(*t)) for t in tables)
+        self._data = dict(tables)
+        self._field_map = _make_field_map(t[1] for t in tables)
 
     @classmethod
     def from_file(cls, source):
@@ -288,6 +290,20 @@ class Relations(object):
     def items(self):
         """Return a list of (table, :class:`Relation`) for each table."""
         return [(table, self[table]) for table in self]
+
+    def find(self, fieldname):
+        """
+        Return the list of tables that define the field *fieldname*.
+        """
+        return self._field_map.get(fieldname, [])
+
+
+def _make_field_map(rels):
+    g = {}
+    for rel in rels:
+        for field in rel:
+            g.setdefault(field.name, []).append(rel.name)
+    return g
 
 
 ##############################################################################
