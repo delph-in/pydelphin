@@ -362,6 +362,32 @@ def test_match_rows():
             ('30', [], [{'i-id': '30', 'i-input': 'd'}])
         ]
 
+def test_join(single_item_profile):
+    p = itsdb.TestSuite(single_item_profile)
+
+    j = itsdb.join(p['parse'], p['result'])
+    assert j.name == 'parse+result'
+    assert len(j) == 1
+    assert len(j.fields) == len(p['parse'].fields) + len(p['result'].fields)
+    r = j[0]
+    assert r['parse:run-id'] == r['run-id']
+    assert r['result:mrs'] == r['mrs']
+    assert r['parse:parse-id'] == r['result:parse-id']
+    with pytest.raises(itsdb.ItsdbError):
+        r['parse-id']
+
+    j2 = itsdb.join(p['item'], j)
+    assert j2.name == 'item+parse+result'
+    assert len(j2) == 1
+    assert len(j2.fields) == len(j.fields) + len(p['item'].fields)
+    r = j2[0]
+    assert r['item:i-input'] == r['i-input']
+    assert r['item:i-id'] == r['parse:i-id']
+
+    j3 = itsdb.join(j, p['item'])
+    assert j3.name == 'parse+result+item'
+
+
 ## Deprecated
 
 def test_get_relations(empty_profile):

@@ -201,6 +201,38 @@ class Relation(tuple):
         return self._keys
 
 
+class _RelationJoin(Relation):
+    def __new__(cls, rel1, rel2):
+        name = '{}+{}'.format(rel1.name, rel2.name)
+        # the relation of the joined table
+        fields = []
+        for rel in (rel1, rel2):
+            if isinstance(rel, _RelationJoin):
+                fields.extend(rel)
+            else:
+                fields.extend(Field(rel.name + ':' + f[0], *f[1:])
+                              for f in rel)
+        r = super(_RelationJoin, cls).__new__(cls, name, fields)
+        return r
+
+    def index(self, fieldname):
+        if ':' not in fieldname:
+            qfieldnames = []
+            for table in self.name.split('+'):
+                qfieldname = table + ':' + fieldname
+                if qfieldname in self._index:
+                    qfieldnames.append(qfieldname)
+            if len(qfieldnames) > 1:
+                raise ItsdbError(
+                    "ambiguous field name; include the table name "
+                    "(e.g., 'item:i-id' instead of 'i-id')")
+            elif len(qfieldnames) == 1:
+                fieldname = qfieldnames[0]
+            else:
+                pass  # lookup should return KeyError
+        return self._index[fieldname]
+
+
 class Relations(object):
     """
     A [incr tsdb()] database schema.
@@ -1006,27 +1038,20 @@ def join(table1, table2, on=None, how='inner', name=None):
         table2 (:class:`Table`): the right table to join
         on (str): the shared key to use for joining; if `None`, find
             shared keys using the schemata of the tables
-        how (str): the method used for joining (`"inner"` or
-            `"left"`)
+        how (str): the method used for joining (`"inner"` or `"left"`)
         name (str): the name assigned to the resulting table
     """
     if how not in ('inner', 'left'):
         ItsdbError('Only \'inner\' and \'left\' join methods are allowed.')
-    # the name of the joined table
-    if name is None:
-        name = '{}+{}'.format(table1.name, table2.name)
     # the relation of the joined table
-    prefixes = (table1.name + ':', table2.name + ':')
-    fields = Relation(
-        name,
-        [Field(prefixes[0] + f.name, *f[1:]) for f in table1.fields] +
-        [Field(prefixes[1] + f.name, *f[1:]) for f in table2.fields]
-    )
+    relation = _RelationJoin(table1.fields, table2.fields)
     # validate and normalize the pivot
     if isinstance(on, stringtypes):
         on = _split_cols(on)
     if not on:
-        on = set(table1.fields.keys()).intersection(table2.fields.keys())
+        t1keys = [k.rpartition(':')[2] for k in table1.fields.keys()]
+        t2keys = [k.rpartition(':')[2] for k in table2.fields.keys()]
+        on = set(t1keys).intersection(t2keys)
         if not on:
             raise ItsdbError(
                 'No shared key to join on in the \'{}\' and \'{}\' tables.'
@@ -1046,7 +1071,7 @@ def join(table1, table2, on=None, how='inner', name=None):
         if how == 'left' or k in right:
             joined.extend(lrec + rrec for rrec in right.get(k, [rfill]))
 
-    return Table(name, fields, joined)
+    return Table(relation.name, relation, joined)
 
 
 
