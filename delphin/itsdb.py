@@ -92,7 +92,9 @@ from contextlib import contextmanager
 
 
 from delphin.exceptions import ItsdbError
-from delphin.util import safe_int, stringtypes, deprecated
+from delphin.util import (
+    safe_int, stringtypes, deprecated, parse_datetime
+)
 from delphin.interfaces.base import FieldMapper
 
 ##############################################################################
@@ -192,6 +194,9 @@ class Relation(tuple):
         tr._keys = tuple(f.name for f in fields if f.key)
         return tr
 
+    def __contains__(self, name):
+        return name in self._index
+
     def index(self, fieldname):
         """Return the Field given by *fieldname*."""
         return self._index[fieldname]
@@ -202,18 +207,41 @@ class Relation(tuple):
 
 
 class _RelationJoin(Relation):
-    def __new__(cls, rel1, rel2):
+    def __new__(cls, rel1, rel2, on=None):
+        if set(rel1.name.split('+')).intersection(rel2.name.split('+')):
+            raise ItsdbError('Cannot join tables with the same name; '
+                             'try renaming the table.')
+
         name = '{}+{}'.format(rel1.name, rel2.name)
-        # the relation of the joined table
-        fields = []
-        for rel in (rel1, rel2):
-            if isinstance(rel, _RelationJoin):
-                fields.extend(rel)
-            else:
-                fields.extend(Field(rel.name + ':' + f[0], *f[1:])
-                              for f in rel)
+        # the relation of the joined table, merging shared columns in *on*
+        if isinstance(on, stringtypes):
+            on = _split_cols(on)
+        elif on is None:
+            on = []
+
+        fields = _prefixed_relation_fields(rel1, on, False)
+        fields.extend(_prefixed_relation_fields(rel2, on, True))
         r = super(_RelationJoin, cls).__new__(cls, name, fields)
+
+        # reset _keys to be a unique tuple of column-only forms
+        keys = list(rel1.keys())
+        seen = set(keys)
+        for key in rel2.keys():
+            if key not in seen:
+                keys.append(key)
+                seen.add(key)
+        r._keys = tuple(keys)
+
         return r
+
+    def __contains__(self, name):
+        try:
+            self.index(name)
+        except KeyError:
+            return False
+        except ItsdbError:
+            pass  # ambiguous field name
+        return True
 
     def index(self, fieldname):
         if ':' not in fieldname:
@@ -230,7 +258,28 @@ class _RelationJoin(Relation):
                 fieldname = qfieldnames[0]
             else:
                 pass  # lookup should return KeyError
+        elif fieldname not in self._index:
+            # join keys don't get prefixed
+            uqfieldname = fieldname.rpartition(':')[2]
+            if uqfieldname in self._keys:
+                fieldname = uqfieldname
         return self._index[fieldname]
+
+
+def _prefixed_relation_fields(relation, on, drop):
+    fields = []
+    already_joined = isinstance(relation, _RelationJoin)
+    for f in relation:
+        table, _, fieldname = f[0].rpartition(':')
+        if already_joined :
+            prefix = table + ':' if table else ''
+        else:
+            prefix = relation.name + ':'
+        if fieldname in on and not drop:
+            fields.append(Field(fieldname, *f[1:]))
+        elif fieldname not in on:
+            fields.append(Field(prefix + fieldname, *f[1:]))
+    return fields
 
 
 class Relations(object):
@@ -780,7 +829,10 @@ def decode_row(line, fields=None):
                     col = int(col)
                 elif dt == ':float':
                     col = float(col)
-                # other casts? date?
+                elif dt == ':date':
+                    dt = parse_datetime(col)
+                    col = dt if dt is not None else col
+                # other casts? :position?
             cols[i] = col
     return cols
 
@@ -1027,8 +1079,8 @@ def join(table1, table2, on=None, how='inner', name=None):
     Fields in the resulting table have their names prefixed with their
     corresponding table name. For example, when joining `item` and
     `parse` tables, the `i-input` field of the `item` table will be
-    named `item:i-input` in the resulting Table. Note that this means
-    the shared keys will appear twice---once for each table.
+    named `item:i-input` in the resulting Table. Pivot fields (those
+    in *on*) are only stored once without the prefix.
 
     Both inner and left joins are possible by setting the *how*
     parameter to `inner` and `left`, respectively.
@@ -1043,36 +1095,39 @@ def join(table1, table2, on=None, how='inner', name=None):
     """
     if how not in ('inner', 'left'):
         ItsdbError('Only \'inner\' and \'left\' join methods are allowed.')
-    # the relation of the joined table
-    relation = _RelationJoin(table1.fields, table2.fields)
     # validate and normalize the pivot
-    if isinstance(on, stringtypes):
-        on = _split_cols(on)
-    if not on:
-        t1keys = [k.rpartition(':')[2] for k in table1.fields.keys()]
-        t2keys = [k.rpartition(':')[2] for k in table2.fields.keys()]
-        on = set(t1keys).intersection(t2keys)
-        if not on:
-            raise ItsdbError(
-                'No shared key to join on in the \'{}\' and \'{}\' tables.'
-                .format(table1.name, table2.name)
-            )
-    on = sorted(on)
-    key = lambda rec: tuple(rec.get(k) for k in on)
+    on = _join_pivot(on, table1, table2)
+    # the relation of the joined table
+    relation = _RelationJoin(table1.fields, table2.fields, on=on)
     # get key mappings to the right side (useful for inner and left joins)
+    get_key = lambda rec: tuple(rec.get(k) for k in on)
+    key_indices = set(table2.fields.index(k) for k in on)
     right = defaultdict(list)
     for rec in table2:
-        right[key(rec)].append(rec)
+        right[get_key(rec)].append([c for i, c in enumerate(rec)
+                                    if i not in key_indices])
     # build joined table
-    rfill = [f.default_value() for f in table2.fields]
+    rfill = [f.default_value() for f in table2.fields if f.name not in on]
     joined = []
     for lrec in table1:
-        k = key(lrec)
+        k = get_key(lrec)
         if how == 'left' or k in right:
             joined.extend(lrec + rrec for rrec in right.get(k, [rfill]))
 
     return Table(relation.name, relation, joined)
 
+
+def _join_pivot(on, table1, table2):
+    if isinstance(on, stringtypes):
+        on = _split_cols(on)
+    if not on:
+        on = set(table1.fields.keys()).intersection(table2.fields.keys())
+        if not on:
+            raise ItsdbError(
+                'No shared key to join on in the \'{}\' and \'{}\' tables.'
+                .format(table1.name, table2.name)
+            )
+    return sorted(on)
 
 
 ##############################################################################
