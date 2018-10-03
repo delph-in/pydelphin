@@ -15,12 +15,15 @@ def query(query, ts):
 
 def select(query, ts):
     queryobj = _parse_select(LookaheadIterator(_lex(query)))
+    projection = queryobj['projection']
     # start with 'from' tables, apply constraints, join projection
     table = _select_from(queryobj['tables'], None, ts)
     table = _select_where(queryobj['where'], table, ts)
-    table = _select_projection(queryobj['projection'], table, ts)
+    table = _select_projection(projection, table, ts)
     # finally select the relevant columns from the joined table
-    return itsdb.select_rows(queryobj['projection'], table)
+    if projection == '*':
+        projection = [f.name for f in table.fields]
+    return itsdb.select_rows(projection, table)
 
 
 def _select_from(tables, table, ts):
@@ -82,8 +85,9 @@ def _process_condition(condition):
 
 
 def _select_projection(projection, table, ts):
-    for p in projection:
-        table = _join_if_missing(table, p, ts, 'inner')
+    if projection != '*':
+        for p in projection:
+            table = _join_if_missing(table, p, ts, 'inner')
     return table
 
 

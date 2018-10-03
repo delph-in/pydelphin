@@ -149,6 +149,9 @@ def test_select(ts0):
     res = ts['result']
     assert list(tsql.select('i-id mrs', ts)) == [
         [10, res[0]['mrs']], [30, res[1]['mrs']]]
+    with pytest.raises(tsql.TSQLSyntaxError):
+        tsql.select('*', ts)
+    assert list(tsql.select('* from item', ts)) == ts['item']
 
 
 def test_select_where(ts0):
