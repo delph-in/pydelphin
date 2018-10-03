@@ -11,24 +11,40 @@ import pytest
 from delphin.interfaces.base import Processor, ParseResponse
 from delphin import itsdb
 
-_simple_relations = '''
-item:
+_simple_relations = '''item:
   i-id :integer :key
   i-input :string
 
 run:
-  run-id :integer :key    # unique test run identifier
+  run-id :integer :key                  # unique test run identifier
 
 parse:
-  parse-id :integer :key  # unique parse identifier
-  run-id :integer :key    # test run for this parse
-  i-id :integer :key      # item parsed
+  parse-id :integer :key                # unique parse identifier
+  run-id :integer :key                  # test run for this parse
+  i-id :integer :key                    # item parsed
 
 result:
-  parse-id :integer :key  # parse for this result
-  result-id :integer      # result identifier
-  mrs :string             # MRS for this reading
+  parse-id :integer :key                # parse for this result
+  result-id :integer                    # result identifier
+  mrs :string                           # MRS for this reading
 '''
+
+_alt_relations = '''item:
+  i-id :integer :key
+  i-input :string
+  i-date :date
+
+parse:
+  parse-id :integer :key                # unique parse identifier
+  run-id :integer :key                  # test run for this parse
+  i-id :integer :key                    # item parsed
+
+result:
+  parse-id :integer :key                # parse for this result
+  result-id :integer                    # result identifier
+  mrs :string                           # MRS for this reading
+'''
+
 
 @pytest.fixture
 def parser_cpu():
@@ -95,34 +111,32 @@ def parser_cpu():
     return DummyParser()
 
 @pytest.fixture
-def empty_profile():
-    d = tempfile.mkdtemp()
-    print(_simple_relations, file=open(os.path.join(d, 'relations'), 'w'))
-    return d
+def empty_profile(tmpdir):
+    ts = tmpdir.mkdir('empty')
+    ts.join('relations').write(_simple_relations)
+    return str(ts)
 
 @pytest.fixture
-def single_item_skeleton():
-    d = tempfile.mkdtemp()
-    print(_simple_relations, file=open(os.path.join(d, 'relations'), 'w'))
-    print('0@The dog barks.', file=open(os.path.join(d, 'item'), 'w'))
-    return d
+def single_item_skeleton(tmpdir):
+    ts = tmpdir.mkdir('skeleton')
+    ts.join('relations').write(_simple_relations)
+    ts.join('item').write('0@The dog barks.')
+    return str(ts)
 
 @pytest.fixture
-def single_item_profile():
-    d = tempfile.mkdtemp()
-    print(_simple_relations, file=open(os.path.join(d, 'relations'), 'w'))
-    print('0@The dog barks.', file=open(os.path.join(d, 'item'), 'w'))
-    print('0', file=open(os.path.join(d, 'run'), 'w'))
-    print('0@0@0', file=open(os.path.join(d, 'parse'), 'w'))
-    print(
+def single_item_profile(tmpdir):
+    ts = tmpdir.mkdir('single')
+    ts.join('relations').write(_simple_relations)
+    ts.join('item').write('0@The dog barks.')
+    ts.join('run').write('0')
+    ts.join('parse').write('0@0@0')
+    ts.join('result').write(
         '0@0@[ LTOP: h0 INDEX: e2 RELS: < '
         '[ _the_q<0:3> LBL: h4 ARG0: x3 RSTR: h5 BODY: h6 ] '
         '[ _dog_n_1<4:7> LBL: h7 ARG0: x3 ] '
         '[ _bark_v_1<8:14> LBL: h1 ARG0: e2 ARG1: x3 ] > '
-        'HCONS: < h0 qeq h1 h5 qeq h7 > ]',
-        file=open(os.path.join(d, 'result'), 'w')
-    )
-    return d
+        'HCONS: < h0 qeq h1 h5 qeq h7 > ]')
+    return str(ts)
 
 def test_Field():
     f = itsdb.Field('x', ':y', True, False, 'a comment')
@@ -262,7 +276,7 @@ class TestSuite(object):
         t.reload()
         assert t['item'][0]['i-input'] == 'The dog barks.'
 
-    def test_write(self, single_item_profile):
+    def test_write(self, single_item_profile, tmpdir):
         t = itsdb.TestSuite(single_item_profile)
         assert t['item'][0]['i-input'] == 'The dog barks.'
         t['item'][0]['i-input'] = 'The dog sleeps.'
@@ -283,6 +297,14 @@ class TestSuite(object):
         t.write({'item': [record]})
         t.reload()
         assert t['item'][0]['i-input'] == 'The cat meows.'
+        d = tmpdir.mkdir('alt')
+        altrels = itsdb.Relations.from_string(_alt_relations)
+        t.write(path=str(d), relations=altrels)
+        assert d.join('relations').read() == _alt_relations
+        assert sorted(x.basename for x in d.listdir()) == [
+            'item', 'parse', 'relations', 'result']
+        ts = itsdb.TestSuite(str(d))
+        assert 'i-date' in ts['item'].fields
 
     def test_process(self, parser_cpu, single_item_skeleton):
         ts = itsdb.TestSuite(single_item_skeleton)

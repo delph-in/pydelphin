@@ -656,7 +656,8 @@ class TestSuite(object):
             cols = [f.name for f in self.relations[table]]
         return select_rows(cols, self[table], mode=mode)
 
-    def write(self, tables=None, path=None, append=False, gzip=None):
+    def write(self, tables=None, path=None, relations=None,
+              append=False, gzip=None):
         """
         Write the testsuite to disk.
 
@@ -666,6 +667,8 @@ class TestSuite(object):
                 all tables will be written
             path: the destination directory; if `None` use the path
                 assigned to the TestSuite
+            relations: a :class:`Relations` object or path to a
+                relations file to be used when writing the tables
             append: if `True`, append to rather than overwrite tables
             gzip: compress non-empty tables with gzip
         Examples:
@@ -684,27 +687,32 @@ class TestSuite(object):
             pass
         elif isinstance(tables, Sequence):
             tables = dict((table, self[table]) for table in tables)
+        if relations is None:
+            relations = self.relations
+        elif isinstance(relations, stringtypes):
+            relations = Relations.from_file(relations)
 
         # prepare destination
         if not os.path.exists(path):
             os.makedirs(path)
         # raise error if path != self._path?
-        if not os.path.isfile(os.path.join(path, _relations_filename)):
-            with open(os.path.join(path, _relations_filename), 'w') as fh:
-                print(str(self.relations), file=fh)
+        with open(os.path.join(path, _relations_filename), 'w') as fh:
+            print(str(relations), file=fh)
 
-        for tablename, data in tables.items():
-            # reload table from disk if it is invalidated
-            if data is None:
-                data = self[tablename]
-            _write_table(
-                path,
-                tablename,
-                data,
-                self.relations[tablename],
-                gzip=gzip,
-                encoding=self.encoding
-            )
+        for tablename, relation in relations.items():
+            if tablename in tables:
+                data = tables[tablename]
+                # reload table from disk if it is invalidated
+                if data is None:
+                    data = self[tablename]
+                _write_table(
+                    path,
+                    tablename,
+                    data,
+                    relation,
+                    gzip=gzip,
+                    encoding=self.encoding
+                )
 
     def process(self, cpu, selector=None, source=None, fieldmapper=None):
         """
