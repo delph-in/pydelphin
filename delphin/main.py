@@ -69,6 +69,7 @@ def call_select(args):
         args.DATASPEC,
         args.TESTSUITE,
         join=args.join,
+        tsql=args.tsql,
         filters=_make_itsdb_actions(args.filter),
         applicators=_make_itsdb_actions(args.apply),
         mode='row')
@@ -256,6 +257,9 @@ select_parser.add_argument(
     help=('join two tables with a shared key (e.g. parse,result); '
           'the DATASPEC argument then requires explicit tables '
           '(e.g. parse:i-id@result:mrs)'))
+select_parser.add_argument(
+    '--tsql', action='store_true',
+    help='use DATASPEC as a TSQL select query')
 
 # mkprof subparser
 mkprof_parser = argparse.ArgumentParser(add_help=False)

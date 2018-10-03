@@ -13,7 +13,7 @@ def query(query, ts):
     return queryobj
 
 
-def select(query, ts):
+def select(query, ts, mode='list'):
     queryobj = _parse_select(LookaheadIterator(_lex(query)))
     projection = queryobj['projection']
     # start with 'from' tables, apply constraints, join projection
@@ -23,7 +23,7 @@ def select(query, ts):
     # finally select the relevant columns from the joined table
     if projection == '*':
         projection = [f.name for f in table.fields]
-    return itsdb.select_rows(projection, table)
+    return itsdb.select_rows(projection, table, mode=mode)
 
 
 def _select_from(tables, table, ts):

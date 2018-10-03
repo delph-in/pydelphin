@@ -248,7 +248,7 @@ def _read_ace_parse(s):
 ###############################################################################
 ### SELECT ####################################################################
 
-def select(dataspec, testsuite, join=None,
+def select(dataspec, testsuite, join=None, tsql=False,
            filters=None, applicators=None, mode='list'):
     """
     Select data from [incr tsdb()] profiles.
@@ -261,6 +261,7 @@ def select(dataspec, testsuite, join=None,
         join (tuple): 2-tuple of table names to join; the *dataspec*
             should then include the table name for all columns
             (e.g., `"parse:i-id@result:mrs"`)
+        tsql (bool): if `True`, use *dataspec* as a TSQL select query
         filters (list): see :class:`delphin.itsdb.ItsdbProfile` for a
             description of filters
         applicators (list): see :class:`delphin.itsdb.ItsdbProfile`
@@ -270,21 +271,29 @@ def select(dataspec, testsuite, join=None,
     Returns:
         a generator that yields selected data
     """
-    if not isinstance(testsuite, itsdb.ItsdbProfile):
-        assert os.path.isdir(testsuite)
-        testsuite = _prepare_input_profile(
-            testsuite, filters=filters, applicators=applicators)
-    if join:
-        tbl1, tbl2 = join
-        rows = testsuite.join(tbl1, tbl2, key_filter=True)
-        # Adding : is just for robustness. We need something like
-        # :table:col@table@col, but may have gotten table:col@table@col
-        if not dataspec.startswith(':'):
-            dataspec = ':' + dataspec
-        table, cols = itsdb.get_data_specifier(dataspec)
+    if tsql:
+        from delphin import tsql
+        if isinstance(testsuite, itsdb.ItsdbProfile):
+            testsuite = itsdb.TestSuite(testsuite.root)
+        elif not isinstance(testsuite, itsdb.TestSuite):
+            testsuite = itsdb.TestSuite(testsuite)
+        return tsql.select(dataspec, testsuite, mode=mode)
     else:
-        table, cols = itsdb.get_data_specifier(dataspec)
-        rows = testsuite.read_table(table, key_filter=True)
+        if not isinstance(testsuite, itsdb.ItsdbProfile):
+            assert os.path.isdir(testsuite)
+            testsuite = _prepare_input_profile(
+                testsuite, filters=filters, applicators=applicators)
+        if join:
+            tbl1, tbl2 = join
+            rows = testsuite.join(tbl1, tbl2, key_filter=True)
+            # Adding : is just for robustness. We need something like
+            # :table:col@table@col, but may have gotten table:col@table@col
+            if not dataspec.startswith(':'):
+                dataspec = ':' + dataspec
+            table, cols = itsdb.get_data_specifier(dataspec)
+        else:
+            table, cols = itsdb.get_data_specifier(dataspec)
+            rows = testsuite.read_table(table, key_filter=True)
 
     return itsdb.select_rows(cols, rows, mode=mode)
 
