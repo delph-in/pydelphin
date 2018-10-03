@@ -72,7 +72,8 @@ def call_select(args):
         tsql=args.tsql,
         filters=_make_itsdb_actions(args.filter),
         applicators=_make_itsdb_actions(args.apply),
-        mode='row')
+        mode='row',
+        cast=False)
     for row in rows:
         print(row)
 

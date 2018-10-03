@@ -162,10 +162,11 @@ def test_Relations():
 
 def test_Record():
     rels = itsdb.Relations.from_string(_simple_relations)
-    r = itsdb.Record(rels['item'], [0, 'sentence'])
+    r = itsdb.Record(rels['item'], ['0', 'sentence'])
     assert r.fields == rels['item']
     assert len(r) == 2
-    assert r['i-id'] == r[0] == 0
+    assert r['i-id'] == r[0] == '0'
+    assert r.get('i-id', cast=True) == 0
     assert r['i-input'] == r[1] == 'sentence'
     assert r.get('i-input') == 'sentence'
     assert r.get('unknown') == None
@@ -173,8 +174,10 @@ def test_Record():
     # incorrect number of fields
     with pytest.raises(itsdb.ItsdbError):
         itsdb.Record(rels['item'], [0])
-    # None values get set to default
+    # None values get set to default, and
+    # non-string values are left as-is
     r = itsdb.Record(rels['item'], [0, None])
+    assert r['i-id'] == 0
     assert r['i-input'] == ''
     # mapped fields
     r = itsdb.Record(rels['item'], {'i-id': 0, 'i-input': 'sentence'})
@@ -221,7 +224,7 @@ def test_Table(single_item_skeleton):
     assert t.name == 'item'
     assert len(t) == 1
     assert isinstance(t[0], itsdb.Record)
-    assert t[0]['i-id'] == 0
+    assert t[0]['i-id'] == '0'
     assert t[0]['i-input'] == 'The dog barks.'
     assert list(t.select('i-input')) == [['The dog barks.']]
 

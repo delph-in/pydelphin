@@ -249,7 +249,7 @@ def _read_ace_parse(s):
 ### SELECT ####################################################################
 
 def select(dataspec, testsuite, join=None, tsql=False,
-           filters=None, applicators=None, mode='list'):
+           filters=None, applicators=None, mode='list', cast=True):
     """
     Select data from [incr tsdb()] profiles.
 
@@ -277,7 +277,7 @@ def select(dataspec, testsuite, join=None, tsql=False,
             testsuite = itsdb.TestSuite(testsuite.root)
         elif not isinstance(testsuite, itsdb.TestSuite):
             testsuite = itsdb.TestSuite(testsuite)
-        return tsql.select(dataspec, testsuite, mode=mode)
+        return tsql.select(dataspec, testsuite, mode=mode, cast=cast)
     else:
         if not isinstance(testsuite, itsdb.ItsdbProfile):
             assert os.path.isdir(testsuite)

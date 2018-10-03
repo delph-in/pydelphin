@@ -198,7 +198,7 @@ class Relation(tuple):
         return name in self._index
 
     def index(self, fieldname):
-        """Return the Field given by *fieldname*."""
+        """Return the Field index given by *fieldname*."""
         return self._index[fieldname]
 
     def keys(self):
@@ -431,7 +431,7 @@ class Record(list):
                 iterable[i] = value
 
         self.fields = fields
-        list.__init__(self, iterable)
+        super(Record, self).__init__(iterable)
 
     def __repr__(self):
         return "<{} '{}' {}>".format(
@@ -454,7 +454,7 @@ class Record(list):
         # should the value be validated against the datatype?
         return list.__setitem__(self, index, value)
 
-    def get(self, key, default=None):
+    def get(self, key, default=None, cast=False):
         """
         Return the field data given by field name *key*.
 
@@ -463,9 +463,21 @@ class Record(list):
             default: the value to return if *key* is not in the row
         """
         try:
-            return self[key]
-        except KeyError:
-            return default
+            index = self.fields.index(key)
+            value = list.__getitem__(self, index)
+        except (KeyError, IndexError):
+            value = default
+        else:
+            if cast:
+                dt = self.fields[index].datatype
+                if dt == ':integer':
+                    value = int(value)
+                elif dt == ':float':
+                    value = float(value)
+                elif dt == ':date':
+                    value = parse_datetime(value)
+                # others?
+        return value
 
 
 class Table(list):
@@ -530,9 +542,7 @@ class Table(list):
 
         records = []
         with _open_table(path, encoding) as tab:
-            records.extend(
-                map((lambda s: decode_row(s, fields)), tab)
-            )
+            records.extend(map((lambda s: decode_row(s)), tab))
 
         return cls(name, fields, records)
 
@@ -1008,7 +1018,7 @@ def make_row(row, fields):
     return encode_row(row_fields)
 
 
-def select_rows(cols, rows, mode='list'):
+def select_rows(cols, rows, mode='list', cast=True):
     """
     Yield data selected from rows.
 
@@ -1028,24 +1038,32 @@ def select_rows(cols, rows, mode='list'):
         cols: an iterable of column names to select data for
         rows: the rows to select column data from
         mode: the form yielded data should take
+        cast: if `True`, cast column values to their datatype
+            (requires *rows* to be :class:`Record` objects)
 
     Yields:
         Selected data in the form specified by *mode*.
     """
     mode = mode.lower()
     if mode == 'list':
-        cast = lambda cols, data: data
+        modecast = lambda cols, data: data
     elif mode == 'dict':
-        cast = lambda cols, data: dict(zip(cols, data))
+        modecast = lambda cols, data: dict(zip(cols, data))
     elif mode == 'row':
-        cast = lambda cols, data: encode_row(data)
+        modecast = lambda cols, data: encode_row(data)
     else:
         raise ItsdbError('Invalid mode for select operation: {}\n'
                          '  Valid options include: list, dict, row'
                          .format(mode))
     for row in rows:
-        data = [row.get(c) for c in cols]
-        yield cast(cols, data)
+        if cast:
+            try:
+                data = [row.get(c, cast=True) for c in cols]
+            except TypeError:
+                data = [row.get(c) for c in cols]
+        else:
+            data = [row.get(c) for c in cols]
+        yield modecast(cols, data)
 
 
 def match_rows(rows1, rows2, key, sort_keys=True):
@@ -1410,7 +1428,7 @@ class ItsdbProfile(object):
         table_path = os.path.join(self.root, table)
         with _open_table(table_path, self.encoding) as tbl:
             for line in tbl:
-                cols = decode_row(line, fields)
+                cols = decode_row(line, fields=fields)
                 if len(cols) != field_len:
                     # should this throw an exception instead?
                     logging.error('Number of stored fields ({}) '

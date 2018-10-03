@@ -1,4 +1,5 @@
 
+import operator
 import re
 
 from delphin.exceptions import TSQLSyntaxError
@@ -13,7 +14,7 @@ def query(query, ts):
     return queryobj
 
 
-def select(query, ts, mode='list'):
+def select(query, ts, mode='list', cast=True):
     queryobj = _parse_select(LookaheadIterator(_lex(query)))
     projection = queryobj['projection']
     # start with 'from' tables, apply constraints, join projection
@@ -23,7 +24,7 @@ def select(query, ts, mode='list'):
     # finally select the relevant columns from the joined table
     if projection == '*':
         projection = [f.name for f in table.fields]
-    return itsdb.select_rows(projection, table, mode=mode)
+    return itsdb.select_rows(projection, table, mode=mode, cast=cast)
 
 
 def _select_from(tables, table, ts):
@@ -47,6 +48,17 @@ def _select_where(condition, table, ts):
     return table
 
 
+# ~ and !~ require a lambda to swap the arguments
+_operator_functions = {'~': lambda x, y: re.search(y, x),
+                       '!~': lambda x, y: not re.search(y, x),
+                       '==': operator.eq,
+                       '!=': operator.ne,
+                       '<': operator.lt,
+                       '<=': operator.le,
+                       '>': operator.gt,
+                       '>=': operator.ge}
+
+
 def _process_condition(condition):
     op, body = condition
     if op == 'and':
@@ -65,22 +77,9 @@ def _process_condition(condition):
     else:
         col, val = body
         fields = [col]
-        if op == '~':
-            func = lambda row, val=val, col=col: re.search(val, row[col])
-        elif op == '!~':
-            func = lambda row, val=val, col=col: not re.search(val, row[col])
-        elif op == '==':
-            func = lambda row, val=val, col=col: row[col] == val
-        elif op == '!=':
-            func = lambda row, val=val, col=col: row[col] != val
-        elif op == '<':
-            func = lambda row, val=val, col=col: row[col] < val
-        elif op == '<=':
-            func = lambda row, val=val, col=col: row[col] <= val
-        elif op == '>':
-            func = lambda row, val=val, col=col: row[col] > val
-        elif op == '>=':
-            func = lambda row, val=val, col=col: row[col] >= val
+        compare = _operator_functions[op]
+        def func(row):
+            return compare(row.get(col, cast=True), val)
     return func, fields
 
 
