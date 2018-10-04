@@ -2,7 +2,7 @@
 
 from delphin.util import safe_int, SExpr, detect_encoding
 
-import pytest
+import pytest, codecs
 
 def test_safe_int():
     assert safe_int('1') == 1
@@ -61,86 +61,87 @@ def test_SExpr_format():
 @pytest.fixture
 def empty_file(tmpdir):
     f = tmpdir.join('empty.txt')
+    f.write_text('')
     return str(f)
 
 
 @pytest.fixture
 def nocomment_file(tmpdir):
     f = tmpdir.join('nocomment.txt')
-    f.write('avm := *top*.')
+    f.write_text(u'avm := *top*.', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
 def utf8_file(tmpdir):
     f = tmpdir.join('utf8.txt')
-    f.write('; coding: utf-8\n'
-            u'a := character & [ ORTH \"あ\" ].')
+    f.write_text(u'; coding: utf-8\n'
+                 u'a := character & [ ORTH \"あ\" ].', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
 def utf8var1_file(tmpdir):
     f = tmpdir.join('utf8var1.txt')
-    f.write('; -*- mode: tdl; encoding: UTF-8; foo: bar -*-\n'
-            u'a := character & [ ORTH \"あ\" ].')
+    f.write_text(u'; -*- mode: tdl; encoding: UTF-8; foo: bar -*-\n'
+                 u'a := character & [ ORTH \"あ\" ].', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
 def utf8var2_file(tmpdir):
     f = tmpdir.join('utf8var2.txt')
-    f.write('# coding: utf-8\n'
-            u'a=\"あ\"')
+    f.write_text(u'# coding: utf-8\n'
+                 u'a=\"あ\"', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
 def latin1_file(tmpdir):
     f = tmpdir.join('latin1.txt')
-    f.write('; coding: iso-8859-1\n'
-            u'a := character & [ ORTH \"á\" ].')
+    f.write_text(u'; coding: iso-8859-1\n'
+                 u'a := character & [ ORTH \"á\" ].', encoding='iso-8859-1')
     return str(f)
 
 
 @pytest.fixture
 def shiftjis_file(tmpdir):
     f = tmpdir.join('shift_jis.txt')
-    f.write('# coding: shift_jis\n'
-            u'a=\"あ\"')
+    f.write_text(u'# coding: shift_jis\n'
+                 u'a=\"あ\"', encoding='shift_jis')
     return str(f)
 
 
 @pytest.fixture
 def eucjp_file(tmpdir):
     f = tmpdir.join('eucjp.txt')
-    f.write('# coding: euc_jp\n'
-            u'a=\"あ\"')
+    f.write_text(u'# coding: euc_jp\n'
+                 u'a=\"あ\"', encoding = 'euc_jp')
     return str(f)
 
 
 @pytest.fixture
 def invalid1_file(tmpdir):
     f = tmpdir.join('invalid1.txt')
-    f.write('; encode: iso-8859-1\n'
-            'á')
+    f.write_text(u'; encode: iso-8859-1\n'
+                 u'á', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
 def invalid2_file(tmpdir):
     f = tmpdir.join('invalid2.txt')
-    f.write('; coding: foo')
+    f.write_text(u'; coding: foo', encoding='utf-8')
     return str(f)
 
-import codecs
+
 @pytest.fixture
 def invalid3_file(tmpdir):
     f = tmpdir.join('invalid3.txt')
-    f.write(codecs.BOM_UTF8 + '; coding: latin-1')
+    f.write_text(codecs.BOM_UTF8 + u'; coding: latin-1', encoding='latin-1')
     return str(f)
 
-@pytest.fixture
+
 def test_detect_encoding(empty_file, nocomment_file, utf8_file, utf8var1_file,
     utf8var2_file, shiftjis_file, eucjp_file, latin1_file, invalid1_file):
     assert detect_encoding(empty_file) == 'utf-8'
@@ -151,8 +152,7 @@ def test_detect_encoding(empty_file, nocomment_file, utf8_file, utf8var1_file,
     assert detect_encoding(shiftjis_file) == 'shift_jis'
     assert detect_encoding(eucjp_file) == 'euc_jp'
     assert detect_encoding(latin1_file) == 'iso-8859-1'
-    with pytest.raises(ValueError):
-        detect_encoding(invalid1_file)
+    assert detect_encoding(invalid1_file) == 'utf-8'
     with pytest.raises(LookupError):
         detect_encoding(invalid2_file)
     with pytest.raises(ValueError):
