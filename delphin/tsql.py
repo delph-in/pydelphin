@@ -16,14 +16,22 @@ def query(query, ts):
 
 def select(query, ts, mode='list', cast=True):
     queryobj = _parse_select(LookaheadIterator(_lex(query)))
+    tables = queryobj['tables']
+    condition = queryobj['where']
     projection = queryobj['projection']
     # start with 'from' tables, apply constraints, join projection
-    table = _select_from(queryobj['tables'], None, ts)
-    table = _select_where(queryobj['where'], table, ts)
+    table = _select_from(tables, None, ts)
+    table = _select_where(condition, table, ts)
     table = _select_projection(projection, table, ts)
     # finally select the relevant columns from the joined table
     if projection == '*':
-        projection = [f.name for f in table.fields]
+        if len(tables) == 1:
+            projection = [f.name for f in ts.relations[tables[0]]]
+        else:
+            projection = []
+            for t in tables:
+                projection.extend(t + ':' + f.name
+                                  for f in ts.relations[t])
     return itsdb.select_rows(projection, table, mode=mode, cast=cast)
 
 
@@ -233,9 +241,9 @@ def _parse_select(tokens):
     tables = _parse_select_from(tokens)
     condition = _parse_select_where(tokens)
 
-    if projection == '*' and not tables and condition is None:
+    if projection == '*' and not tables:
         raise TSQLSyntaxError(
-            "'select *' requires a 'from' or 'where' statement",
+            "'select *' requires a 'from' statement",
             lineno=lineno, text=token)
 
     return {'querytype': 'select',
