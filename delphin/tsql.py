@@ -9,16 +9,30 @@ from delphin import itsdb
 
 ### QUERY PROCESSING ##########################################################
 
-def query(query, ts):
+def query(query, ts, **kwargs):
     queryobj = _parse_query(LookaheadIterator(_lex(query)))
-    return queryobj
+
+    if queryobj['querytype'] in ('select', 'retrieve'):
+        return _select(
+            queryobj['projection'],
+            queryobj['tables'],
+            queryobj['where'],
+            ts,
+            **kwargs)
 
 
 def select(query, ts, mode='list', cast=True):
     queryobj = _parse_select(LookaheadIterator(_lex(query)))
-    tables = queryobj['tables']
-    condition = queryobj['where']
-    projection = queryobj['projection']
+    return _select(
+        queryobj['projection'],
+        queryobj['tables'],
+        queryobj['where'],
+        ts,
+        mode,
+        cast)
+
+
+def _select(projection, tables, condition, ts, mode, cast):
     # start with 'from' tables, apply constraints, join projection
     table = _select_from(tables, None, ts)
     table = _select_where(condition, table, ts)
@@ -45,21 +59,27 @@ def _select_from(tables, table, ts):
 
 
 def _select_where(condition, table, ts):
+    keys = table.fields.keys()
+    ids = set()
     if condition is not None:
         func, fields = _process_condition(condition)
+        # join tables in the condition for filtering
+        tmptable = table
         for field in fields:
-            table = _join_if_missing(table, field, ts, 'left')
-        table = itsdb.Table(
-            table.name,
-            table.fields,
-            list(filter(func, table)))
+            tmptable = _join_if_missing(tmptable, field, ts, 'left')
+        # filter the rows and store the keys only
+        for record in filter(func, tmptable):
+            idtuple = tuple(record[key] for key in keys)
+            ids.add(idtuple)
+        # check if a matching idtuple was retained
+        def meta_condition(rec):
+            return tuple(rec[key] for key in keys) in ids
+        table[:] = filter(meta_condition, table)
+
     return table
 
 
-# ~ and !~ require a lambda to swap the arguments
-_operator_functions = {'~': lambda x, y: re.search(y, x),
-                       '!~': lambda x, y: not re.search(y, x),
-                       '==': operator.eq,
+_operator_functions = {'==': operator.eq,
                        '!=': operator.ne,
                        '<': operator.lt,
                        '<=': operator.le,
@@ -69,25 +89,29 @@ _operator_functions = {'~': lambda x, y: re.search(y, x),
 
 def _process_condition(condition):
     op, body = condition
+    lhs, rhs = body if op != 'not' else (None, None)
+    fields = [lhs]  # works for non-boolean operators
     if op == 'and':
-        lfunc, lfields = _process_condition(body[0])
-        rfunc, rfields = _process_condition(body[1])
+        lfunc, lfields = _process_condition(lhs)
+        rfunc, rfields = _process_condition(rhs)
         func = lambda row, lfunc=lfunc, rfunc=rfunc: lfunc(row) and rfunc(row)
         fields = lfields + rfields
     elif op == 'or':
-        lfunc, lfields = _process_condition(body[0])
-        rfunc, rfields = _process_condition(body[1])
+        lfunc, lfields = _process_condition(lhs)
+        rfunc, rfields = _process_condition(rhs)
         func = lambda row, lfunc=lfunc, rfunc=rfunc: lfunc(row) or rfunc(row)
         fields = lfields + rfields
     elif op == 'not':
         nfunc, fields = _process_condition(body)
         func = lambda row, nfunc=nfunc: not nfunc(row)
+    elif op == '~':
+        func = lambda row, col=lhs, pat=rhs: re.search(pat, row[col])
+    elif op == '!~':
+        func = lambda row, col=lhs, pat=rhs: not re.search(pat, row[col])
     else:
-        col, val = body
-        fields = [col]
         compare = _operator_functions[op]
         def func(row):
-            return compare(row.get(col, cast=True), val)
+            return compare(row.get(lhs, cast=True), rhs)
     return func, fields
 
 
