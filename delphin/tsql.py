@@ -1,5 +1,6 @@
 
 import operator
+import copy
 import re
 
 from delphin.exceptions import TSQLSyntaxError
@@ -19,6 +20,11 @@ def query(query, ts, **kwargs):
             queryobj['where'],
             ts,
             **kwargs)
+    else:
+        # not really a syntax error; replace with TSQLError or something
+        # when the proper exception class exists
+        raise TSQLSyntaxError(queryobj['querytype'] +
+                              ' queries are not supported')
 
 
 def select(query, ts, mode='list', cast=True):
@@ -75,7 +81,6 @@ def _select_where(condition, table, ts):
         def meta_condition(rec):
             return tuple(rec[key] for key in keys) in ids
         table[:] = filter(meta_condition, table)
-
     return table
 
 
@@ -136,48 +141,15 @@ def _join_if_missing(table, col, ts, how):
 
 def _transitive_join(tab1, tab2, ts, how):
     if tab1 is None:
-        table = tab2
+        table = copy.copy(tab2)
     else:
         table = tab1
-        # if the tables aren't directly joinable but are joinable
-        # transitively via a 'path' of table joins, do so first
-        path = _id_path(tab1, tab2, ts.relations)
-        for intervening, _ in path[1:]:
-            table = itsdb.join(table, ts[intervening], how=how)
-        # now the tables are either joinable or no path existed
-        table = itsdb.join(table, tab2, how=how)
+        # the tables may not be directly joinable but could be
+        # joinable transitively via a 'path' of table joins
+        path = ts.relations.path(tab1.name, tab2.name)
+        for intervening, pivot in path:
+            table = itsdb.join(table, ts[intervening], on=pivot, how=how)
     return table
-
-
-def _id_path(src, tgt, rels):
-    """
-    Find the path of id fields connecting two tables.
-
-    This is just a basic breadth-first-search. The relations file
-    should be small enough to not be a problem.
-    """
-    paths = [[(src.name, key)] for key in src.fields.keys()]
-    tgtkeys = set(tgt.fields.keys())
-    visited = set(src.name.split('+'))
-    while True:
-        newpaths = []
-        for path in paths:
-            laststep = path[-1]
-            if laststep[1] in tgtkeys:
-                return path
-            else:
-                for table in set(rels.find(laststep[1])) - visited:
-                    visited.add(table)
-                    keys = rels[table].keys()
-                    if len(keys) > 1:
-                        for key in rels[table].keys():
-                            step = (table, key)
-                            if step not in path:
-                                newpaths.append(path + [step])
-        if newpaths:
-            paths = newpaths
-        else:
-            break
 
 
 ### QUERY PARSING #############################################################

@@ -376,7 +376,56 @@ class Relations(object):
         """
         Return the list of tables that define the field *fieldname*.
         """
-        return self._field_map.get(fieldname, [])
+        return self._field_map[fieldname]
+
+    def path(self, source, target):
+        """
+        Find the path of id fields connecting two tables.
+
+        This is just a basic breadth-first-search. The relations file
+        should be small enough to not be a problem.
+
+        Returns:
+            list: (table, fieldname) pairs describing the path from
+                the source to target tables
+        Raises:
+            :class:`ItsdbError` when no path is found
+        Example:
+            >>> relations.path('item', 'result')
+            [('parse', 'i-id'), ('result', 'parse-id')]
+            >>> relations.path('parse', 'item')
+            [('item', 'i-id')]
+            >>> relations.path('item', 'item')
+            []
+        """
+        visited = set(source.split('+'))  # split on + for joins
+        targets = set(target.split('+')) - visited
+        # ensure sources and targets exists
+        for tablename in visited.union(targets):
+            self[tablename]
+        # base case; nothing to do
+        if len(targets) == 0:
+            return []
+        paths = [[(tablename, None)] for tablename in visited]
+        while True:
+            newpaths = []
+            for path in paths:
+                laststep, pivot = path[-1]
+                if laststep in targets:
+                    return path[1:]
+                else:
+                    for key in self[laststep].keys():
+                        for step in set(self.find(key)) - visited:
+                            visited.add(step)
+                            newpaths.append(path + [(step, key)])
+            if newpaths:
+                paths = newpaths
+            else:
+                break
+
+        raise ItsdbError('no relation path found from {} to {}'
+                         .format(source, target))
+
 
 
 def _make_field_map(rels):

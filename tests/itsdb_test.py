@@ -15,6 +15,9 @@ _simple_relations = '''item:
   i-id :integer :key
   i-input :string
 
+fold:
+  fold-id :integer :key
+
 run:
   run-id :integer :key                  # unique test run identifier
 
@@ -173,6 +176,31 @@ def test_Relations():
         '  parse-id :integer :key                # unique parse identifier\n'
         '  i-id :integer :key                    # item parsed'
     )
+
+
+def test_Relations_find():
+    r = itsdb.Relations.from_string(_simple_relations)
+    assert r.find('i-id') == ['item', 'parse']
+    assert r.find('mrs') == ['result']
+    with pytest.raises(KeyError):
+        r.find('foo')
+
+
+def test_Relations_path():
+    r = itsdb.Relations.from_string(_simple_relations)
+    assert r.path('item', 'result') == [('parse', 'i-id'), ('result', 'parse-id')]
+    assert r.path('parse', 'item') == [('item', 'i-id')]
+    assert r.path('item+parse', 'result') == [('result', 'parse-id')]
+    assert r.path('item', 'parse+result') == [('parse', 'i-id')]
+    assert r.path('parse', 'parse') == []
+    assert r.path('item+parse', 'parse+result') == [('result', 'parse-id')]
+    with pytest.raises(KeyError):
+        r.path('foo', 'result')
+    with pytest.raises(KeyError):
+        r.path('item', 'bar')
+    with pytest.raises(itsdb.ItsdbError):
+        r.path('item', 'fold')
+
 
 def test_Record():
     rels = itsdb.Relations.from_string(_simple_relations)

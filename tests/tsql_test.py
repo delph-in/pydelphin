@@ -118,20 +118,6 @@ def test_parse_select_where():
                 ('not', ('==', ('i-wf', 2)))))
 
 
-def test_id_path(ts0):
-    ts = itsdb.TestSuite(str(ts0))
-    assert tsql._id_path(ts['item'], ts['item'], ts.relations) == [
-        ('item', 'i-id')]
-    assert tsql._id_path(ts['item'], ts['parse'], ts.relations) == [
-        ('item', 'i-id')]
-    assert tsql._id_path(ts['item'], ts['result'], ts.relations) == [
-        ('item', 'i-id'),
-        ('parse', 'parse-id')]
-    j = itsdb.join(ts['item'], ts['parse'])
-    assert tsql._id_path(j, ts['result'], ts.relations) == [
-        ('item+parse', 'parse-id')]
-
-
 def test_select(ts0):
     ts = itsdb.TestSuite(str(ts0))
     assert list(tsql.select('i-input', ts)) == [
