@@ -33,10 +33,10 @@ def select(query, ts, mode='list', cast=True):
 
 
 def _select(projection, tables, condition, ts, mode, cast):
-    # start with 'from' tables, apply constraints, join projection
     table = _select_from(tables, None, ts)
-    table = _select_where(condition, table, ts)
     table = _select_projection(projection, table, ts)
+    table = _select_where(condition, table, ts)
+
     # finally select the relevant columns from the joined table
     if projection == '*':
         if len(tables) == 1:
