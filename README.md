@@ -70,6 +70,7 @@ The following packages/modules are available:
 
 - `derivation`: [Derivation trees](http://moin.delph-in.net/ItsdbDerivations)
 - `itsdb`: [incr tsdb()] profiles
+- `tsql`: TSQL testsuite queries
 - `mrs`: [Minimal Recursion Semantics](http://moin.delph-in.net/MrsRfc)
 - `tdl`: [Type-Description Language](http://moin.delph-in.net/TdlRfc)
 - `tfs`: Typed-Feature Structures

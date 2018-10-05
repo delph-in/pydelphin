@@ -34,9 +34,9 @@ databases:
 
 .. autoclass:: TestSuite
   :members:
-.. autoclass:: delphin.itsdb.Table
+.. autoclass:: Table
   :members:
-.. autoclass:: delphin.itsdb.Record
+.. autoclass:: Record
   :members:
 
 Relations Files and Field Descriptions

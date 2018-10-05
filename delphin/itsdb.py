@@ -92,7 +92,9 @@ from contextlib import contextmanager
 
 
 from delphin.exceptions import ItsdbError
-from delphin.util import safe_int, stringtypes, deprecated
+from delphin.util import (
+    safe_int, stringtypes, deprecated, parse_datetime
+)
 from delphin.interfaces.base import FieldMapper
 
 ##############################################################################
@@ -192,13 +194,92 @@ class Relation(tuple):
         tr._keys = tuple(f.name for f in fields if f.key)
         return tr
 
+    def __contains__(self, name):
+        return name in self._index
+
     def index(self, fieldname):
-        """Return the Field given by *fieldname*."""
+        """Return the Field index given by *fieldname*."""
         return self._index[fieldname]
 
     def keys(self):
         """Return the tuple of field names of key fields."""
         return self._keys
+
+
+class _RelationJoin(Relation):
+    def __new__(cls, rel1, rel2, on=None):
+        if set(rel1.name.split('+')).intersection(rel2.name.split('+')):
+            raise ItsdbError('Cannot join tables with the same name; '
+                             'try renaming the table.')
+
+        name = '{}+{}'.format(rel1.name, rel2.name)
+        # the relation of the joined table, merging shared columns in *on*
+        if isinstance(on, stringtypes):
+            on = _split_cols(on)
+        elif on is None:
+            on = []
+
+        fields = _prefixed_relation_fields(rel1, on, False)
+        fields.extend(_prefixed_relation_fields(rel2, on, True))
+        r = super(_RelationJoin, cls).__new__(cls, name, fields)
+
+        # reset _keys to be a unique tuple of column-only forms
+        keys = list(rel1.keys())
+        seen = set(keys)
+        for key in rel2.keys():
+            if key not in seen:
+                keys.append(key)
+                seen.add(key)
+        r._keys = tuple(keys)
+
+        return r
+
+    def __contains__(self, name):
+        try:
+            self.index(name)
+        except KeyError:
+            return False
+        except ItsdbError:
+            pass  # ambiguous field name
+        return True
+
+    def index(self, fieldname):
+        if ':' not in fieldname:
+            qfieldnames = []
+            for table in self.name.split('+'):
+                qfieldname = table + ':' + fieldname
+                if qfieldname in self._index:
+                    qfieldnames.append(qfieldname)
+            if len(qfieldnames) > 1:
+                raise ItsdbError(
+                    "ambiguous field name; include the table name "
+                    "(e.g., 'item:i-id' instead of 'i-id')")
+            elif len(qfieldnames) == 1:
+                fieldname = qfieldnames[0]
+            else:
+                pass  # lookup should return KeyError
+        elif fieldname not in self._index:
+            # join keys don't get prefixed
+            uqfieldname = fieldname.rpartition(':')[2]
+            if uqfieldname in self._keys:
+                fieldname = uqfieldname
+        return self._index[fieldname]
+
+
+def _prefixed_relation_fields(relation, on, drop):
+    fields = []
+    already_joined = isinstance(relation, _RelationJoin)
+    for f in relation:
+        table, _, fieldname = f[0].rpartition(':')
+        if already_joined :
+            prefix = table + ':' if table else ''
+        else:
+            prefix = relation.name + ':'
+        if fieldname in on and not drop:
+            fields.append(Field(fieldname, *f[1:]))
+        elif fieldname not in on:
+            fields.append(Field(prefix + fieldname, *f[1:]))
+    return fields
 
 
 class Relations(object):
@@ -214,8 +295,10 @@ class Relations(object):
     """
 
     def __init__(self, tables):
+        tables = [(t[0], Relation(*t)) for t in tables]
         self.tables = tuple(t[0] for t in tables)
-        self._data = dict((t[0], Relation(*t)) for t in tables)
+        self._data = dict(tables)
+        self._field_map = _make_field_map(t[1] for t in tables)
 
     @classmethod
     def from_file(cls, source):
@@ -289,6 +372,73 @@ class Relations(object):
         """Return a list of (table, :class:`Relation`) for each table."""
         return [(table, self[table]) for table in self]
 
+    def find(self, fieldname):
+        """
+        Return the list of tables that define the field *fieldname*.
+        """
+        tablename, _, column = fieldname.rpartition(':')
+        if tablename and tablename in self._field_map[column]:
+            return tablename
+        else:
+            return self._field_map[fieldname]
+
+    def path(self, source, target):
+        """
+        Find the path of id fields connecting two tables.
+
+        This is just a basic breadth-first-search. The relations file
+        should be small enough to not be a problem.
+
+        Returns:
+            list: (table, fieldname) pairs describing the path from
+                the source to target tables
+        Raises:
+            :class:`ItsdbError` when no path is found
+        Example:
+            >>> relations.path('item', 'result')
+            [('parse', 'i-id'), ('result', 'parse-id')]
+            >>> relations.path('parse', 'item')
+            [('item', 'i-id')]
+            >>> relations.path('item', 'item')
+            []
+        """
+        visited = set(source.split('+'))  # split on + for joins
+        targets = set(target.split('+')) - visited
+        # ensure sources and targets exists
+        for tablename in visited.union(targets):
+            self[tablename]
+        # base case; nothing to do
+        if len(targets) == 0:
+            return []
+        paths = [[(tablename, None)] for tablename in visited]
+        while True:
+            newpaths = []
+            for path in paths:
+                laststep, pivot = path[-1]
+                if laststep in targets:
+                    return path[1:]
+                else:
+                    for key in self[laststep].keys():
+                        for step in set(self.find(key)) - visited:
+                            visited.add(step)
+                            newpaths.append(path + [(step, key)])
+            if newpaths:
+                paths = newpaths
+            else:
+                break
+
+        raise ItsdbError('no relation path found from {} to {}'
+                         .format(source, target))
+
+
+
+def _make_field_map(rels):
+    g = {}
+    for rel in rels:
+        for field in rel:
+            g.setdefault(field.name, []).append(rel.name)
+    return g
+
 
 ##############################################################################
 # Test items and test suites
@@ -334,7 +484,7 @@ class Record(list):
                 iterable[i] = value
 
         self.fields = fields
-        list.__init__(self, iterable)
+        super(Record, self).__init__(iterable)
 
     def __repr__(self):
         return "<{} '{}' {}>".format(
@@ -357,7 +507,7 @@ class Record(list):
         # should the value be validated against the datatype?
         return list.__setitem__(self, index, value)
 
-    def get(self, key, default=None):
+    def get(self, key, default=None, cast=False):
         """
         Return the field data given by field name *key*.
 
@@ -365,10 +515,26 @@ class Record(list):
             key: the field name of the data to return
             default: the value to return if *key* is not in the row
         """
+        tablename, _, key = key.rpartition(':')
+        if tablename and tablename not in self.fields.name.split('+'):
+            raise ItsdbError('column requested from wrong table: {}'
+                             .format(tablename))
         try:
-            return self[key]
-        except KeyError:
-            return default
+            index = self.fields.index(key)
+            value = list.__getitem__(self, index)
+        except (KeyError, IndexError):
+            value = default
+        else:
+            if cast:
+                dt = self.fields[index].datatype
+                if dt == ':integer':
+                    value = int(value)
+                elif dt == ':float':
+                    value = float(value)
+                elif dt == ':date':
+                    value = parse_datetime(value)
+                # others?
+        return value
 
 
 class Table(list):
@@ -433,9 +599,7 @@ class Table(list):
 
         records = []
         with _open_table(path, encoding) as tab:
-            records.extend(
-                map((lambda s: decode_row(s, fields)), tab)
-            )
+            records.extend(map((lambda s: decode_row(s)), tab))
 
         return cls(name, fields, records)
 
@@ -549,7 +713,8 @@ class TestSuite(object):
             cols = [f.name for f in self.relations[table]]
         return select_rows(cols, self[table], mode=mode)
 
-    def write(self, tables=None, path=None, append=False, gzip=None):
+    def write(self, tables=None, path=None, relations=None,
+              append=False, gzip=None):
         """
         Write the testsuite to disk.
 
@@ -559,6 +724,8 @@ class TestSuite(object):
                 all tables will be written
             path: the destination directory; if `None` use the path
                 assigned to the TestSuite
+            relations: a :class:`Relations` object or path to a
+                relations file to be used when writing the tables
             append: if `True`, append to rather than overwrite tables
             gzip: compress non-empty tables with gzip
         Examples:
@@ -577,27 +744,80 @@ class TestSuite(object):
             pass
         elif isinstance(tables, Sequence):
             tables = dict((table, self[table]) for table in tables)
+        if relations is None:
+            relations = self.relations
+        elif isinstance(relations, stringtypes):
+            relations = Relations.from_file(relations)
 
         # prepare destination
         if not os.path.exists(path):
             os.makedirs(path)
         # raise error if path != self._path?
-        if not os.path.isfile(os.path.join(path, _relations_filename)):
-            with open(os.path.join(path, _relations_filename), 'w') as fh:
-                print(str(self.relations), file=fh)
+        with open(os.path.join(path, _relations_filename), 'w') as fh:
+            print(str(relations), file=fh)
 
-        for tablename, data in tables.items():
-            # reload table from disk if it is invalidated
-            if data is None:
-                data = self[tablename]
-            _write_table(
-                path,
-                tablename,
-                data,
-                self.relations[tablename],
-                gzip=gzip,
-                encoding=self.encoding
-            )
+        for tablename, relation in relations.items():
+            if tablename in tables:
+                data = tables[tablename]
+                # reload table from disk if it is invalidated
+                if data is None:
+                    data = self[tablename]
+                elif not isinstance(data, Table):
+                    data = Table(tablename, relation, data)
+                _write_table(
+                    path,
+                    tablename,
+                    data,
+                    relation,
+                    gzip=gzip,
+                    encoding=self.encoding
+                )
+
+    def exists(self, table=None):
+        """
+        Return `True` if the testsuite or a table exists on disk.
+
+        If *table* is `None`, this function returns `True` if the
+        :attr:`TestSuite.path` is specified and points to an existing
+        directory containing a valid relations file. If *table* is
+        given, the function returns `True` if, in addition to the
+        above conditions, the table exists as a file (even if
+        empty). Otherwise it returns False.
+        """
+        if self._path is None or not os.path.isdir(self._path):
+            return False
+        if not os.path.isfile(os.path.join(self._path, _relations_filename)):
+            return False
+        if table is not None:
+            try:
+                _table_filename(os.path.join(self._path, table))
+            except ItsdbError:
+                return False
+        return True
+
+    def size(self, table=None):
+        """
+        Return the size, in bytes, of the testsuite or *table*.
+
+        If *table* is `None`, return the size of the whole testsuite
+        (i.e., the sum of the table sizes). Otherwise, return the
+        size of *table*.
+
+        Notes:
+            * If the file is gzipped, it returns the compressed size.
+            * Only tables on disk are included.
+        """
+        size = 0
+        if table is None:
+            for table in self.relations:
+                size += self.size(table)
+        else:
+            try:
+                fn = _table_filename(os.path.join(self._path, table))
+                size += os.stat(fn).st_size
+            except ItsdbError:
+                pass
+        return size
 
     def process(self, cpu, selector=None, source=None, fieldmapper=None):
         """
@@ -609,43 +829,34 @@ class TestSuite(object):
                 :class:`~delphin.interfaces.ace.AceParser`)
             selector (str): data specifier to select a single table and
                 column as processor input (e.g., `"item:i-input"`)
-            source (:class:`TestSuite`): testsuite from which input
-                items are taken; if `None`, use `self`
+            source (:class:`TestSuite`, :class:`Table`): testsuite or
+                table from which inputs are taken; if `None`, use `self`
             fieldmapper (:class:`~delphin.interfaces.base.FieldMapper`):
                 object for mapping response fields to [incr tsdb()]
                 fields; if `None`, use a default mapper for the
                 standard schema
         Examples:
-            >>> ts.process(ace_parser, 'item:i-input')
+            >>> ts.process(ace_parser)
             >>> ts.process(ace_generator, 'result:mrs', source=ts2)
         """
         if selector is None:
             selector = _default_task_input_selectors.get(cpu.task)
-
-        data_table, data_col = get_data_specifier(selector)
-        if len(data_col) != 1:
-            raise ItsdbError(
-                'Selector must specify exactly one data column: {}'
-                .format(selector)
-            )
-        data_col = data_col[0]
-        key_fields = [f for f in self.relations[data_table] if f.key]
-        cols = [f.name for f in key_fields]
-        cols.append(data_col)
-
         if source is None:
             source = self
-
         if fieldmapper is None:
             fieldmapper = FieldMapper()
 
+        source, cols = _prepare_source(selector, source)
+        key_cols = cols[:-1]
+
         tables = {}
-        for item in source.select(data_table, cols, mode='dict'):
-            datum = item.pop(data_col)
-            response = cpu.process_item(datum, keys=item)
+        for item in select_rows(cols, source, mode='list'):
+            datum = item.pop()
+            keys = dict(zip(key_cols, item))
+            response = cpu.process_item(datum, keys=keys)
             logging.info(
                 'Processed item {:>16}  {:>8} results'
-                .format(make_row(item, key_fields), len(response['results']))
+                .format(encode_row(item), len(response['results']))
             )
             for tablename, data in fieldmapper.map(response):
                 _add_record(tables, tablename, data, self.relations)
@@ -656,6 +867,20 @@ class TestSuite(object):
         for tablename, table in tables.items():
             self._data[tablename] = table
 
+
+def _prepare_source(selector, source):
+    tablename, fields = get_data_specifier(selector)
+    if len(fields) != 1:
+        raise ItsdbError(
+            'Selector must specify exactly one data column: {}'
+            .format(selector)
+        )
+    if isinstance(source, TestSuite):
+        if not tablename:
+            tablename = source.relations.find(fields[0])[0]
+        source = source[tablename]
+    cols = list(source.fields.keys()) + fields
+    return source, cols
 
 def _add_record(tables, tablename, data, relations):
     fields = relations[tablename]
@@ -732,7 +957,10 @@ def decode_row(line, fields=None):
                     col = int(col)
                 elif dt == ':float':
                     col = float(col)
-                # other casts? date?
+                elif dt == ':date':
+                    dt = parse_datetime(col)
+                    col = dt if dt is not None else col
+                # other casts? :position?
             cols[i] = col
     return cols
 
@@ -908,7 +1136,7 @@ def make_row(row, fields):
     return encode_row(row_fields)
 
 
-def select_rows(cols, rows, mode='list'):
+def select_rows(cols, rows, mode='list', cast=True):
     """
     Yield data selected from rows.
 
@@ -928,24 +1156,32 @@ def select_rows(cols, rows, mode='list'):
         cols: an iterable of column names to select data for
         rows: the rows to select column data from
         mode: the form yielded data should take
+        cast: if `True`, cast column values to their datatype
+            (requires *rows* to be :class:`Record` objects)
 
     Yields:
         Selected data in the form specified by *mode*.
     """
     mode = mode.lower()
     if mode == 'list':
-        cast = lambda cols, data: data
+        modecast = lambda cols, data: data
     elif mode == 'dict':
-        cast = lambda cols, data: dict(zip(cols, data))
+        modecast = lambda cols, data: dict(zip(cols, data))
     elif mode == 'row':
-        cast = lambda cols, data: encode_row(data)
+        modecast = lambda cols, data: encode_row(data)
     else:
         raise ItsdbError('Invalid mode for select operation: {}\n'
                          '  Valid options include: list, dict, row'
                          .format(mode))
     for row in rows:
-        data = [row.get(c) for c in cols]
-        yield cast(cols, data)
+        if cast:
+            try:
+                data = [row.get(c, cast=True) for c in cols]
+            except TypeError:
+                data = [row.get(c) for c in cols]
+        else:
+            data = [row.get(c) for c in cols]
+        yield modecast(cols, data)
 
 
 def match_rows(rows1, rows2, key, sort_keys=True):
@@ -979,8 +1215,8 @@ def join(table1, table2, on=None, how='inner', name=None):
     Fields in the resulting table have their names prefixed with their
     corresponding table name. For example, when joining `item` and
     `parse` tables, the `i-input` field of the `item` table will be
-    named `item:i-input` in the resulting Table. Note that this means
-    the shared keys will appear twice---once for each table.
+    named `item:i-input` in the resulting Table. Pivot fields (those
+    in *on*) are only stored once without the prefix.
 
     Both inner and left joins are possible by setting the *how*
     parameter to `inner` and `left`, respectively.
@@ -990,23 +1226,34 @@ def join(table1, table2, on=None, how='inner', name=None):
         table2 (:class:`Table`): the right table to join
         on (str): the shared key to use for joining; if `None`, find
             shared keys using the schemata of the tables
-        how (str): the method used for joining (`"inner"` or
-            `"left"`)
+        how (str): the method used for joining (`"inner"` or `"left"`)
         name (str): the name assigned to the resulting table
     """
     if how not in ('inner', 'left'):
         ItsdbError('Only \'inner\' and \'left\' join methods are allowed.')
-    # the name of the joined table
-    if name is None:
-        name = '{}+{}'.format(table1.name, table2.name)
-    # the relation of the joined table
-    prefixes = (table1.name + ':', table2.name + ':')
-    fields = Relation(
-        name,
-        [Field(prefixes[0] + f.name, *f[1:]) for f in table1.fields] +
-        [Field(prefixes[1] + f.name, *f[1:]) for f in table2.fields]
-    )
     # validate and normalize the pivot
+    on = _join_pivot(on, table1, table2)
+    # the relation of the joined table
+    relation = _RelationJoin(table1.fields, table2.fields, on=on)
+    # get key mappings to the right side (useful for inner and left joins)
+    get_key = lambda rec: tuple(rec.get(k) for k in on)
+    key_indices = set(table2.fields.index(k) for k in on)
+    right = defaultdict(list)
+    for rec in table2:
+        right[get_key(rec)].append([c for i, c in enumerate(rec)
+                                    if i not in key_indices])
+    # build joined table
+    rfill = [f.default_value() for f in table2.fields if f.name not in on]
+    joined = []
+    for lrec in table1:
+        k = get_key(lrec)
+        if how == 'left' or k in right:
+            joined.extend(lrec + rrec for rrec in right.get(k, [rfill]))
+
+    return Table(relation.name, relation, joined)
+
+
+def _join_pivot(on, table1, table2):
     if isinstance(on, stringtypes):
         on = _split_cols(on)
     if not on:
@@ -1016,22 +1263,7 @@ def join(table1, table2, on=None, how='inner', name=None):
                 'No shared key to join on in the \'{}\' and \'{}\' tables.'
                 .format(table1.name, table2.name)
             )
-    on = sorted(on)
-    key = lambda rec: tuple(rec.get(k) for k in on)
-    # get key mappings to the right side (useful for inner and left joins)
-    right = defaultdict(list)
-    for rec in table2:
-        right[key(rec)].append(rec)
-    # build joined table
-    rfill = [f.default_value() for f in table2.fields]
-    joined = []
-    for lrec in table1:
-        k = key(lrec)
-        if how == 'left' or k in right:
-            joined.extend(lrec + rrec for rrec in right.get(k, [rfill]))
-
-    return Table(name, fields, joined)
-
+    return sorted(on)
 
 
 ##############################################################################
@@ -1314,7 +1546,7 @@ class ItsdbProfile(object):
         table_path = os.path.join(self.root, table)
         with _open_table(table_path, self.encoding) as tbl:
             for line in tbl:
-                cols = decode_row(line, fields)
+                cols = decode_row(line, fields=fields)
                 if len(cols) != field_len:
                     # should this throw an exception instead?
                     logging.error('Number of stored fields ({}) '

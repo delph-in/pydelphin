@@ -35,21 +35,32 @@ def mini_testsuite(tmpdir):
     rel.write('item:\n'
               '  i-id :integer :key\n'
               '  i-input :string\n'
+              '  i-wf :integer\n'
+              '  i-date :date\n'
               '\n'
               'parse:\n'
               '  parse-id :integer :key\n'
               '  i-id :integer :key\n'
+              '  readings :integer\n'
               '\n'
               'result:\n'
               '  parse-id :integer :key\n'
               '  result-id :integer\n'
               '  mrs :string\n')
-    item.write('10@It rained.')
-    parse.write('10@10')
+    item.write('10@It rained.@1@1-feb-2018 15:00\n'
+               '20@Rained.@0@01-02-18 15:00:00\n'
+               '30@It snowed.@1@2018-2-1 (15:00:00)\n')
+    parse.write('10@10@1\n'
+                '20@20@0\n'
+                '30@30@1\n')
     result.write('10@0@'
                  '[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
                  '  RELS: < [ _rain_v_1<3:9> LBL: h1 ARG0: e2 ] >'
-                 '  HCONS: < h0 qeq h1 > ]')
+                 '  HCONS: < h0 qeq h1 > ]\n'
+                 '30@0@'
+                 '[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
+                 '  RELS: < [ _snow_v_1<3:9> LBL: h1 ARG0: e2 ] >'
+                 '  HCONS: < h0 qeq h1 > ]\n')
     return ts
 
 
@@ -184,7 +195,7 @@ def test_select(mini_testsuite):
     select('result:mrs', ts0)
     from delphin import itsdb
     select('result:mrs', itsdb.ItsdbProfile(ts0))
-    select('parse:i-id@result:mrs', ts0, join=('parse', 'result'))
+    select('parse:i-id@result:mrs', ts0)
     select('result:result-id@mrs', ts0, mode='row')
 
 

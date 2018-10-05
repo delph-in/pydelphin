@@ -336,6 +336,22 @@ testsuites:
   - :mod:`delphin.itsdb` module
   - :doc:`itsdb` tutorial
 
+
+TSQL Queries
+------------
+
+Partial support of the Test Suite Query Language (TSQL) allows for
+easy selection of [incr tsdb()] TestSuite data.
+
+>>> from delphin import itsdb, tsql
+>>> ts = itsdb.TestSuite('erg/tsdb/gold/mrs')
+>>> next(tsql.select('i-id i-input where i-length > 5 && readings > 0', ts))
+[61, 'Abrams handed the cigarette to Browne.']
+
+.. seealso::
+  - TSQL documentation: http://www.delph-in.net/tsnlp/ftp/manual/volume2.ps.gz
+  - :mod:`delphin.tsql` module
+
 Regular Expression Preprocessors (REPP)
 ---------------------------------------
 
