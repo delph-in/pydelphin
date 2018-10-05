@@ -6,13 +6,12 @@ import pytest
 from delphin import tsql
 from delphin import itsdb
 from delphin.exceptions import TSQLSyntaxError
-from delphin.util import LookaheadIterator
 
 from .commands_test import mini_testsuite as ts0
 
 
 def test_parse_query():
-    parse = lambda s: tsql._parse_query(LookaheadIterator(tsql._lex(s)))
+    parse = lambda s: tsql._parse_query(s)
     with pytest.raises(TSQLSyntaxError):
         parse('info relations')
     with pytest.raises(TSQLSyntaxError):
@@ -22,7 +21,7 @@ def test_parse_query():
 
 
 def test_parse_select():
-    parse = lambda s: tsql._parse_select(LookaheadIterator(tsql._lex(s)))
+    parse = lambda s: tsql._parse_select(s)
     with pytest.raises(TSQLSyntaxError):
         parse('*')
     # with pytest.raises(TSQLSyntaxError):
@@ -54,7 +53,7 @@ def test_parse_select():
 
 
 def test_parse_select_complex_identifiers():
-    parse = lambda s: tsql._parse_select(LookaheadIterator(tsql._lex(s)))
+    parse = lambda s: tsql._parse_select(s)
     assert parse('item:i-input') == {
         'querytype': 'select',
         'projection': ['item:i-input'],
@@ -81,7 +80,7 @@ def test_parse_select_complex_identifiers():
 
 
 def test_parse_select_where():
-    parse = lambda s: tsql._parse_select(LookaheadIterator(tsql._lex(s)))
+    parse = lambda s: tsql._parse_select(s)
     assert parse('i-input where i-wf = 2') == {
         'querytype': 'select',
         'projection': ['i-input'],

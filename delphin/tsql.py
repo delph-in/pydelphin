@@ -1,4 +1,21 @@
 
+"""
+TSQL -- Test Suite Query Language
+
+PyDelphin differences to standard TSQL:
+
+* `select *` requires a `from` statement
+* `select * from item result` does not also include `parse` columns
+* `select i-input from result` returns a matching `i-input` for every
+  row in `result`, rather than only the unique rows
+
+PyDelphin additions to standard TSQL:
+
+* optional table specifications on columns (e.g., `item:i-id`)
+* multiple `where` clauses (e.g., `where X where Y` is the same as
+  `where (X) and (Y)`); this helps when appending to queries
+"""
+
 import operator
 import copy
 import re
@@ -8,10 +25,15 @@ from delphin.util import LookaheadIterator, parse_datetime
 from delphin import itsdb
 
 
+### QUERY INSPECTION ##########################################################
+
+def inspect_query(query):
+    return _parse_query(query)
+
 ### QUERY PROCESSING ##########################################################
 
 def query(query, ts, **kwargs):
-    queryobj = _parse_query(LookaheadIterator(_lex(query)))
+    queryobj = _parse_query(query)
 
     if queryobj['querytype'] in ('select', 'retrieve'):
         return _select(
@@ -28,7 +50,7 @@ def query(query, ts, **kwargs):
 
 
 def select(query, ts, mode='list', cast=True):
-    queryobj = _parse_select(LookaheadIterator(_lex(query)))
+    queryobj = _parse_select(query)
     return _select(
         queryobj['projection'],
         queryobj['tables'],
@@ -64,6 +86,13 @@ def _select_from(tables, table, ts):
     return table
 
 
+def _select_projection(projection, table, ts):
+    if projection != '*':
+        for p in projection:
+            table = _join_if_missing(table, p, ts, 'inner')
+    return table
+
+
 def _select_where(condition, table, ts):
     keys = table.fields.keys()
     ids = set()
@@ -93,38 +122,34 @@ _operator_functions = {'==': operator.eq,
 
 
 def _process_condition(condition):
+    # conditions are something like:
+    #  ('==', ('i-id', 11))
     op, body = condition
-    lhs, rhs = body if op != 'not' else (None, None)
-    fields = [lhs]  # works for non-boolean operators
-    if op == 'and':
-        lfunc, lfields = _process_condition(lhs)
-        rfunc, rfields = _process_condition(rhs)
-        func = lambda row, lfunc=lfunc, rfunc=rfunc: lfunc(row) and rfunc(row)
-        fields = lfields + rfields
-    elif op == 'or':
-        lfunc, lfields = _process_condition(lhs)
-        rfunc, rfields = _process_condition(rhs)
-        func = lambda row, lfunc=lfunc, rfunc=rfunc: lfunc(row) or rfunc(row)
-        fields = lfields + rfields
+    if op in ('and', 'or'):
+        fields = []
+        conditions = []
+        for cond in body:
+            _func, _fields = _process_condition(cond)
+            fields.extend(_fields)
+            conditions.append(_func)
+        _func = all if op == 'and' else any
+        def func(row):
+            return _func(conditions)
     elif op == 'not':
         nfunc, fields = _process_condition(body)
         func = lambda row, nfunc=nfunc: not nfunc(row)
     elif op == '~':
-        func = lambda row, col=lhs, pat=rhs: re.search(pat, row[col])
+        fields = [body[0]]
+        func = lambda row, body=body: re.search(body[1], row[body[0]])
     elif op == '!~':
-        func = lambda row, col=lhs, pat=rhs: not re.search(pat, row[col])
+        fields = [body[0]]
+        func = lambda row, body=body: not re.search(body[1], row[body[0]])
     else:
+        fields = [body[0]]
         compare = _operator_functions[op]
         def func(row):
-            return compare(row.get(lhs, cast=True), rhs)
+            return compare(row.get(body[0], cast=True), body[1])
     return func, fields
-
-
-def _select_projection(projection, table, ts):
-    if projection != '*':
-        for p in projection:
-            table = _join_if_missing(table, p, ts, 'inner')
-    return table
 
 
 def _join_if_missing(table, col, ts, how):
@@ -214,23 +239,20 @@ def _lex(s):
         pass
 
 
-def _parse_query(tokens):
-    gid, token, lineno = tokens.next()
-    _expect(gid == 1 and token in 'info set retrieve select insert'.split(),
-            token, lineno, 'a query type')
-    if token not in ('retrieve', 'select'):
-        raise TSQLSyntaxError("'{}' queries are not supported".format(token),
-                              lineno=lineno)
+def _parse_query(query):
+    querytype, _, querybody = query.lstrip().partition(' ')
+    querytype = querytype.lower()
+    if querytype in ('select', 'retrieve'):
+        result = _parse_select(querybody)
     else:
-        result = _parse_select(tokens)
-
-    gid, token, lineno = tokens.next()
-    _expect(gid == 2 and token == '.', token, lineno, "'.'")
+        raise TSQLSyntaxError("'{}' queries are not supported"
+                              .format(querytype), lineno=1)
 
     return result
 
 
-def _parse_select(tokens):
+def _parse_select(query):
+    tokens = LookaheadIterator(_lex(query))
     _, token, lineno = tokens.peek()  # maybe used in error below
 
     projection = _parse_select_projection(tokens)
@@ -241,6 +263,11 @@ def _parse_select(tokens):
         raise TSQLSyntaxError(
             "'select *' requires a 'from' statement",
             lineno=lineno, text=token)
+
+    # verify we're at the end of the query (the '.' may have been
+    # added in _lex())
+    gid, token, lineno = tokens.next()
+    _expect(gid == 1 and token == '.', token, lineno, "'.'")
 
     return {'querytype': 'select',
             'projection': projection,
@@ -287,9 +314,14 @@ def _parse_select_from(tokens):
 
 
 def _parse_select_where(tokens):
-    if tokens.peek()[1] == 'where':
+    conditions = []
+    while tokens.peek()[1] == 'where':
         tokens.next()
-        condition = _parse_condition_disjunction(tokens)
+        conditions.append(_parse_condition_disjunction(tokens))
+    if len(conditions) == 1:
+        condition = conditions[0]
+    elif len(conditions) > 1:
+        condition = ('and', conditions)
     else:
         condition = None
     return condition
