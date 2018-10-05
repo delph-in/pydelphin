@@ -63,15 +63,9 @@ def call_convert(args):
 
 
 def call_select(args):
-    if args.join is not None:
-        args.join = [tbl.strip() for tbl in args.join.split(',')]
     rows = select(
-        args.DATASPEC,
+        args.QUERY,
         args.TESTSUITE,
-        join=args.join,
-        tsql=args.tsql,
-        filters=_make_itsdb_actions(args.filter),
-        applicators=_make_itsdb_actions(args.apply),
         mode='row',
         cast=False)
     for row in rows:
@@ -83,8 +77,7 @@ def call_mkprof(args):
         args.DEST,
         source=args.source or args.input,
         relations=args.relations,
-        filters=_make_itsdb_actions(args.filter),
-        applicators=_make_itsdb_actions(args.apply),
+        where=args.where,
         in_place=args.in_place,
         skeleton=args.skeleton,
         full=args.full,
@@ -94,11 +87,9 @@ def call_mkprof(args):
 def call_process(args):
     return process(
         args.grammar,
-        args.PROFILE,
+        args.TESTSUITE,
         source=args.source,
-        selector=args.input,
-        filters=_make_itsdb_actions(args.filter),
-        applicators=_make_itsdb_actions(args.apply),
+        select=args.select,
         generate=args.generate,
         transfer=args.transfer,
         all_items=args.all_items,
@@ -107,13 +98,12 @@ def call_process(args):
 
 def call_compare(args):
     template = '{id}\t<{test},{shared},{gold}>'
-    if args.verbosity >= 1:
+    if args.verbosity > 1:
         template += '\t{input}'
     for result in compare(
             args.TESTSUITE,
             args.GOLD,
-            filters=_make_itsdb_actions(args.filter),
-            applicators=_make_itsdb_actions(args.apply)):
+            select=args.select):
         print(template.format(**result))
 
 
@@ -170,22 +160,6 @@ common_parser.add_argument(
     action='store_true',
     help='suppress output on <stdout> and <stderr>')
 
-# Arguments for commands that read profiles
-profile_parser = argparse.ArgumentParser(add_help=False)
-profile_parser.add_argument(
-    '-a',
-    '--apply',
-    action='append',
-    metavar='APL',
-    help=('apply an expression to rows/cols in the test suite; APL '
-          'is a string like \'table:col=expression\''))
-profile_parser.add_argument(
-    '-f',
-    '--filter',
-    action='append',
-    metavar='CND',
-    help=('keep rows satisfying a condition; CND is a string like '
-          '\'table:col=expression\''))
 
 # Arguments for the convert command
 convert_parser = argparse.ArgumentParser(add_help=False)
@@ -193,9 +167,9 @@ convert_parser.set_defaults(func=call_convert)
 convert_parser.add_argument(
     'PATH',
     nargs='?',
-    help=('path to a file containing representations to convert, or '
-          'a test suite directory from which result:mrs will be selected; '
-          'if not given, <stdin> is read as though it were a file'))
+    help=('file with representations to convert or testsuite directory '
+          'from which result:mrs will be selected; if not given, '
+          '<stdin> is read as though it were a file'))
 convert_parser.add_argument(
     '-f',
     '--from',
@@ -231,12 +205,6 @@ convert_parser.add_argument(
     default='auto',
     help='(auto|always|never) use ANSI color (default: auto)')
 convert_parser.add_argument(
-    '--select',
-    metavar='DATASPEC',
-    default='result:mrs',
-    help=('table:col data specifier; ignored if PATH does not point '
-          'to a test suite directory (default: result:mrs)'))
-convert_parser.add_argument(
     '--show-status',
     action='store_true',
     help='(--to=eds only) annotate disconnected graphs and nodes')
@@ -244,32 +212,29 @@ convert_parser.add_argument(
     '--predicate-modifiers',
     action='store_true',
     help='(--to=eds* only) attempt to join disconnected graphs')
+convert_parser.add_argument(
+    '--select',
+    metavar='QUERY',
+    default='result:mrs',
+    help=('TSQL query for selecting MRS data when PATH points to '
+          'a testsuite directory (default: result:mrs)'))
 
 # Arguments for the select command
 select_parser = argparse.ArgumentParser(add_help=False)
 select_parser.set_defaults(func=call_select)
 select_parser.add_argument(
-    'DATASPEC', help='table:col[@col...] data specifier (e.g. item:i-input)')
+    'QUERY', help='TSQL selection (e.g., \'i-input where readings = 0\')')
 select_parser.add_argument(
-    'TESTSUITE', help='path to the test suite directory to select data from')
-select_parser.add_argument(
-    '-j',
-    '--join',
-    help=('join two tables with a shared key (e.g. parse,result); '
-          'the DATASPEC argument then requires explicit tables '
-          '(e.g. parse:i-id@result:mrs)'))
-select_parser.add_argument(
-    '--tsql', action='store_true',
-    help='use DATASPEC as a TSQL select query')
+    'TESTSUITE', help='path to the testsuite directory to select data from')
 
 # mkprof subparser
 mkprof_parser = argparse.ArgumentParser(add_help=False)
 mkprof_parser.set_defaults(func=call_mkprof)
 mkprof_parser.add_argument(
-    'DEST', help='directory for the destination (output) test suite')
+    'DEST', help='directory for the destination (output) testsuite')
 mkprof_grp1 = mkprof_parser.add_mutually_exclusive_group()
 mkprof_grp1.add_argument(
-    '-s', '--source', metavar='DIR', help='path to a test suite directory')
+    '-s', '--source', metavar='DIR', help='path to a testsuite directory')
 mkprof_grp1.add_argument(
     '--in-place',
     action='store_true',
@@ -280,10 +245,14 @@ mkprof_grp1.add_argument(
     metavar='TXT',
     help='file of test sentences (* sents are ungrammatical)')
 mkprof_parser.add_argument(
+    '--where', metavar='CONDITION',
+    help=('filter records in the testsuite with a TSQL condition '
+          '(e.g., \'i-length <= 10 && readings > 0\')'))
+mkprof_parser.add_argument(
     '-r',
     '--relations',
     metavar='FILE',
-    help='relations file to use for destination test suite')
+    help='relations file to use for destination testsuite')
 mkprof_grp2 = mkprof_parser.add_mutually_exclusive_group()
 mkprof_grp2.add_argument(
     '--full',
@@ -300,7 +269,7 @@ mkprof_parser.add_argument(
 process_parser = argparse.ArgumentParser(add_help=False)
 process_parser.set_defaults(func=call_process)
 process_parser.add_argument(
-    'PROFILE', help='target profile'
+    'TESTSUITE', help='target testsuite'
 )
 process_parser.add_argument(
     '-g', '--grammar', metavar='GRM', required=True,
@@ -308,11 +277,12 @@ process_parser.add_argument(
 )
 process_parser.add_argument(
     '-s', '--source', metavar='PATH',
-    help='source profile; if unset, set to PROFILE'
+    help='source testsuite; if unset, set to TESTSUITE'
 )
 process_parser.add_argument(
-    '-i', '--input', metavar='DATASPEC',
-    help='data specifier for input items (see above)'
+    '--select', metavar='QUERY',
+    help=('TSQL query for selecting processor inputs (e.g., '
+          '\'i-input where i-length < 10\'; see above for defaults)')
 )
 process_parser.add_argument(
     '--all-items', action='store_true',
@@ -330,7 +300,7 @@ process_grp1.add_argument(
 process_parser.add_argument(
     '-p', metavar='RID',
     help=('transfer or generate from result with result-id=RID; '
-          'short for \'--filter result:result-id=x==RID\'')
+          'short for adding \'where result-id==RID\' to --select')
 )
 
 # compare subparser
@@ -340,6 +310,12 @@ compare_parser.add_argument(
     'TESTSUITE', help='path to the current test-suite directory')
 compare_parser.add_argument(
     'GOLD', help='path to the gold test-suite directory')
+compare_parser.add_argument(
+    '--select',
+    metavar='QUERY',
+    default='item:i-id item:i-input result:mrs',
+    help=('TSQL query for selecting (id, input, mrs) triples from '
+          'TESTSUITE and GOLD (default: \'i-id i-input mrs\')'))
 
 # repp subparser
 repp_parser = argparse.ArgumentParser(add_help=False)
@@ -388,74 +364,74 @@ subparser.add_parser(
         """))
 subparser.add_parser(
     'select',
-    parents=[common_parser, select_parser, profile_parser],
+    parents=[common_parser, select_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=redent("""
         Select data from [incr tsdb()] testsuites.
         """))
 subparser.add_parser(
     'mkprof',
-    parents=[common_parser, mkprof_parser, profile_parser],
+    parents=[common_parser, mkprof_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=redent("""
-        This command creates test suites. There are four usage patterns:
+        This command creates testsuites. There are four usage patterns:
 
             delphin mkprof --input=sentences.txt --relations=../relations ...
             delphin mkprof --relations=../relations ... < sentences.txt
-            delphin mkprof --source=profile/ ...
+            delphin mkprof --source=testsuite/ ...
             delphin mkprof --in-place ...
 
         The first two read sentences (one per line; '*' in the first column
-        indicates ungrammaticality) from --input or <stdin> and --relations is
-        is required. The second two use an existing profile; --relations
-        defaults to the source profile's; --in-place reads and overwrites DEST.
+        indicates ungrammaticality) from --input or <stdin> and --relations
+        is required. The second two use an existing testsuite; --relations
+        defaults to that of --source; --in-place reads and overwrites DEST.
 
-        By default, test suites are skeletons as from the `mkprof` utility of
+        By default, testsuites are skeletons as from the `mkprof` utility of
         `art`, where the tsdb-core files (e.g., 'item') are non-empty but all
         other tables exist as empty files. The --full option, with --source,
         will copy a full profile, while the --skeleton option will only write
         the tsdb-core files and 'relations' file.
-        """))
+    """))
 subparser.add_parser(
     'process',
-    parents=[common_parser, process_parser, profile_parser],
+    parents=[common_parser, process_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=redent("""
         Use a processor (namely ACE) to process each item in the [incr tsdb()]
-        test suite given by --source (PROFILE if --source is not given). For
+        testsuite given by --source (TESTSUITE if --source is not given). For
         standard [incr tsdb()] schemata, input items given by the following
-        selectors for each task (configurable via the --input option):
+        selectors for each task (configurable via the --select option):
 
-            * parse: item:i-input
-            * transfer: result:mrs
-            * generate: result:mrs
+            * parse:    i-input
+            * transfer: mrs
+            * generate: mrs
 
-        In addition, the following filter is applied if --source is a standard
-        [incr tsdb()] profile and --all-items is not used:
+        In addition, the following TSQL condition is applied if --source is a
+        standard [incr tsdb()] profile and --all-items is not used:
 
-            --filter=item:i-wf="x!=2"
+            where i-wf != 2
     """))
 subparser.add_parser(
-    'compare', parents=[common_parser, compare_parser, profile_parser],
+    'compare', parents=[common_parser, compare_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=redent("""
-    Compare MRS results in test and gold [incr tsdb()] testsuites.
+        Compare MRS results in test and gold [incr tsdb()] testsuites.
 
-    Graph isomorphism is used to determine if two MRSs are equivalent and the
-    results show how many unique MRSs exist in the test and gold testsuites
-    and how many are shared.
+        Graph isomorphism is used to determine if two MRSs are equivalent and
+        the results show how many unique MRSs exist in the test and gold
+        testsuites and how many are shared.
     """))
 subparser.add_parser(
     'repp', parents=[common_parser, repp_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=redent("""
-    Tokenize sentences using a Regular Expression PreProcessor (REPP).
+        Tokenize sentences using a Regular Expression PreProcessor (REPP).
 
-    This front-end to the delphin.repp module makes it easy to tokenize inputs
-    from a testsuite, a file of sentences, or sentences on stdin, and can
-    present the results in a variety of formats. It also visualizes the
-    application of REPP rules with the --trace option, which can be useful for
-    debugging REPP modules.
+        This front-end to the delphin.repp module makes it easy to tokenize
+        inputs from a testsuite, a file of sentences, or sentences on stdin,
+        and can present the results in a variety of formats. It also visualizes
+        the application of REPP rules with the --trace option, which can be
+        useful for debugging REPP modules.
     """))
 
 if __name__ == '__main__':

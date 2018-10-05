@@ -14,7 +14,7 @@ import io
 import json
 from functools import partial
 
-from delphin import itsdb
+from delphin import itsdb, tsql
 from delphin.mrs import xmrs
 from delphin.util import safe_int, SExpr
 
@@ -59,9 +59,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
         pretty_print = True
         indent = 4 if indent is True else safe_int(indent)
 
-    sel_table, sel_col = itsdb.get_data_specifier(select)
-    if len(sel_col) != 1:
-        raise ValueError('Exactly 1 column must be given in data selector '
+    if len(tsql.inspect_query('select ' + select)['projection']) != 1:
+        raise ValueError('Exactly 1 column must be given in selection query: '
                          '(e.g., result:mrs)')
 
     # read
@@ -71,10 +70,10 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     elif hasattr(path, 'read'):
         xs = loads(path.read())
     elif os.path.isdir(path):
-        p = itsdb.ItsdbProfile(path)
+        ts = itsdb.TestSuite(path)
         xs = [
             next(iter(loads(r[0])), None)
-            for r in p.select(sel_table, sel_col)
+            for r in tsql.select(select, ts)
         ]
     else:
         xs = loads(open(path, 'r').read())
@@ -248,61 +247,33 @@ def _read_ace_parse(s):
 ###############################################################################
 ### SELECT ####################################################################
 
-def select(dataspec, testsuite, join=None, tsql=False,
-           filters=None, applicators=None, mode='list', cast=True):
+def select(dataspec, testsuite, mode='list', cast=True):
     """
     Select data from [incr tsdb()] profiles.
 
     Args:
-        dataspec (str): data specifier for [incr tsdb()] profiles
-            (e.g., `"parse:readings"` or `"result:mrs"`)
-        testsuite (str, ItsdbProfile): testsuite or path to testsuite
+        query (str): TSQL select query (e.g., `'i-id i-input mrs'` or
+            `'* from item where readings > 0'`)
+        testsuite (str, TestSuite): testsuite or path to testsuite
             containing data to select
-        join (tuple): 2-tuple of table names to join; the *dataspec*
-            should then include the table name for all columns
-            (e.g., `"parse:i-id@result:mrs"`)
-        tsql (bool): if `True`, use *dataspec* as a TSQL select query
-        filters (list): see :class:`delphin.itsdb.ItsdbProfile` for a
-            description of filters
-        applicators (list): see :class:`delphin.itsdb.ItsdbProfile`
-            for a description of applicators
-        mode (str): see :meth:`delphin.itsdb.ItsdbProfile.select` for
-            a description of the *mode* parameter
+        mode (str): see :func:`delphin.itsdb.select_rows` for a
+            description of the *mode* parameter (default: `list`)
+        cast (bool): if `True`, cast column values to their datatype
+            according to the relations file (default: `True`)
     Returns:
         a generator that yields selected data
     """
-    if tsql:
-        from delphin import tsql
-        if isinstance(testsuite, itsdb.ItsdbProfile):
-            testsuite = itsdb.TestSuite(testsuite.root)
-        elif not isinstance(testsuite, itsdb.TestSuite):
-            testsuite = itsdb.TestSuite(testsuite)
-        return tsql.select(dataspec, testsuite, mode=mode, cast=cast)
-    else:
-        if not isinstance(testsuite, itsdb.ItsdbProfile):
-            assert os.path.isdir(testsuite)
-            testsuite = _prepare_input_profile(
-                testsuite, filters=filters, applicators=applicators)
-        if join:
-            tbl1, tbl2 = join
-            rows = testsuite.join(tbl1, tbl2, key_filter=True)
-            # Adding : is just for robustness. We need something like
-            # :table:col@table@col, but may have gotten table:col@table@col
-            if not dataspec.startswith(':'):
-                dataspec = ':' + dataspec
-            table, cols = itsdb.get_data_specifier(dataspec)
-        else:
-            table, cols = itsdb.get_data_specifier(dataspec)
-            rows = testsuite.read_table(table, key_filter=True)
-
-    return itsdb.select_rows(cols, rows, mode=mode)
+    if isinstance(testsuite, itsdb.ItsdbProfile):
+        testsuite = itsdb.TestSuite(testsuite.root)
+    elif not isinstance(testsuite, itsdb.TestSuite):
+        testsuite = itsdb.TestSuite(testsuite)
+    return tsql.select(dataspec, testsuite, mode=mode, cast=cast)
 
 
 ###############################################################################
 ### MKPROF ####################################################################
 
-def mkprof(destination, source=None, relations=None,
-           filters=None, applicators=None,
+def mkprof(destination, source=None, relations=None, where=None,
            in_place=False, skeleton=False, full=False, gzip=False):
     """
     Create [incr tsdb()] profiles or skeletons.
@@ -325,10 +296,8 @@ def mkprof(destination, source=None, relations=None,
         relations (str): path to a relations file to use for the
             created testsuite; if `None` and *source* is given, the
             relations file of the source testsuite is used
-        filters (list): see :class:`delphin.itsdb.ItsdbProfile` for a
-            description of filters
-        applicators (list): see :class:`delphin.itsdb.ItsdbProfile`
-            for a description of applicators
+        where (str): TSQL condition to filter records by; ignored if
+            *source* is not a testsuite
         in_place (bool): if `True` and *source* is not given, use
             *destination* as the source for data (default: `False`)
         skeleton (bool): if `True`, only write tsdb-core files
@@ -355,36 +324,37 @@ def mkprof(destination, source=None, relations=None,
     elif relations is None or not os.path.isfile(relations):
         raise ValueError('invalid or missing relations file: {}'
                          .format(relations))
-
+    # setup destination testsuite
     _prepare_output_directory(destination)
-    o = itsdb.TestSuite(path=destination, relations=relations)
+    dts = itsdb.TestSuite(path=destination, relations=relations)
     # input is sentences on stdin
     if source is None:
-        o.write({'item': _lines_to_rows(sys.stdin)}, gzip=gzip)
+        dts.write({'item': _lines_to_rows(sys.stdin)}, gzip=gzip)
     # input is sentence file
     elif os.path.isfile(source):
         with open(source) as fh:
-            o.write({'item': _lines_to_rows(fh)}, gzip=gzip)
-    # input is profile
+            dts.write({'item': _lines_to_rows(fh)}, gzip=gzip)
+    # input is source testsuite
     elif os.path.isdir(source):
-        p = _prepare_input_profile(
-            source, filters=filters, applicators=applicators)
-        if full:
-            p.write_profile(
-                destination,
-                relations_filename=relations,
-                key_filter=True,
-                gzip=gzip)
-        else:
-            for table in itsdb.tsdb_core_files:
-                if p.size(table) > 0:
-                    o.write({table: p.read_table(table)}, gzip=gzip)
-    o.reload()
+        sts = itsdb.TestSuite(source)
+        tables = dts.relations.tables if full else itsdb.tsdb_core_files
+        where = '' if where is None else 'where ' + where
+        for table in tables:
+            if sts.size(table) > 0:
+                # filter the data, but use all if the query fails
+                # (e.g., if the filter and table cannot be joined)
+                try:
+                    rows = tsql.select(
+                        '* from {} {}'.format(table, where), sts, cast=False)
+                except itsdb.ItsdbError:
+                    rows = sts[table]
+                dts.write({table: rows}, gzip=gzip)
+    dts.reload()
     # unless a skeleton was requested, make empty files for other tables
     if not skeleton:
-        for table in o.relations:
-            if len(o[table]) == 0:
-                o.write({table: []})
+        for table in dts.relations:
+            if len(dts[table]) == 0:
+                dts.write({table: []})
 
     # summarize what was done
     if sys.stdout.isatty():
@@ -392,15 +362,13 @@ def mkprof(destination, source=None, relations=None,
     else:
         _red = lambda s: s
     fmt = '{:>8} bytes\t{}'
-    prof = itsdb.ItsdbProfile(destination, index=False)
-    relations = prof.relations
-    for filename in ['relations'] + list(relations.tables):
-        f = os.path.join(destination, filename)
-        if os.path.isfile(f):
-            stat = os.stat(f)
+    for filename in ['relations'] + list(dts.relations.tables):
+        path = os.path.join(destination, filename)
+        if os.path.isfile(path):
+            stat = os.stat(path)
             print(fmt.format(stat.st_size, filename))
-        elif os.path.isfile(f + '.gz'):
-            stat = os.stat(f + '.gz')
+        elif os.path.isfile(path + '.gz'):
+            stat = os.stat(path + '.gz')
             print(fmt.format(stat.st_size, _red(filename + '.gz')))
 
 
@@ -415,8 +383,7 @@ def _lines_to_rows(lines):
 ###############################################################################
 ### PROCESS ###################################################################
 
-def process(grammar, testsuite, source=None, selector=None,
-            filters=None, applicators=None,
+def process(grammar, testsuite, source=None, select=None,
             generate=False, transfer=False,
             all_items=False, result_id=None):
     """
@@ -424,59 +391,87 @@ def process(grammar, testsuite, source=None, selector=None,
 
     Results are written to directly to *testsuite*.
 
+    If *select* is `None`, the defaults depend on the task:
+
+        ==========  =========================
+        Task        Default value of *select*
+        ==========  =========================
+        Parsing     `item:i-input`
+        Transfer    `result:mrs`
+        Generation  `result:mrs`
+        ==========  =========================
+
     Args:
         grammar (str): path to a compiled grammar image
         testsuite (str): path to a [incr tsdb()] testsuite where data
             will be read from (see *source*) and written to
-        source (str): see :meth:`delphin.itsdb.TestSuite.process` for
-            a description of *source*
-        selector (str): see :meth:`delphin.itsdb.TestSuite.process`
-            for a description of *selector*
-        filters (list): see :class:`delphin.itsdb.ItsdbProfile` for a
-            description of filters
-        applicators (list): see :class:`delphin.itsdb.ItsdbProfile`
-            for a description of applicators
+        source (str): path to a [incr tsdb()] testsuite; if `None`,
+            *testsuite* is used as the source of data
+        select (str): TSQL query for selecting processor inputs
+            (default depends on the processor type)
         generate (bool): if `True`, generate instead of parse
             (default: `False`)
         transfer (bool): if `True`, transfer instead of parse
             (default: `False`)
         all_items (bool): if `True`, don't exclude ignored items
-            (those with `i-wf==2`)
+            (those with `i-wf==2`) when parsing
         result_id (int): if given, only keep items with the specified
             `result-id`
     """
     from delphin.interfaces import ace
+
     if generate and transfer:
         raise ValueError("'generate' is incompatible with 'transfer'")
     if source is None:
         source = testsuite
-    if filters is None:
-        filters = []
-    if result_id is not None:
-        filters.append(
-            ('result', ['result-id'], lambda row, x: x == result_id))
+    if select is None:
+        select = 'result:mrs' if (generate or transfer) else 'item:i-input'
     if generate:
         processor = ace.AceGenerator
     elif transfer:
         processor = ace.AceTransferer
     else:
         if not all_items:
-            filters.append(
-                ('item', ['i-wf'], lambda row, x: x != 2))
+            select += ' where i-wf != 2'
         processor = ace.AceParser
+    if result_id is not None:
+        select += ' where result-id == {}'.format(result_id)
 
-    source = _prepare_input_profile(
-        source,
-        filters=filters,
-        applicators=applicators,
-        cast=True)
-
+    source = itsdb.TestSuite(source)
     target = itsdb.TestSuite(testsuite)
+    column, tablename, condition = _interpret_selection(select, source)
+    table = itsdb.Table(
+        tablename,
+        source[tablename].fields,
+        tsql.select(
+            '* from {} {}'.format(tablename, condition),
+            source,
+            cast=False))
 
     with processor(grammar) as cpu:
-        target.process(cpu, selector, source=source)
+        target.process(cpu, tablename + ':' + column, source=table)
 
     target.write()
+
+
+def _interpret_selection(select, source):
+    queryobj = tsql.inspect_query('select ' + select)
+    projection = queryobj['projection']
+    if projection == '*' or len(projection) != 1:
+        raise ValueError("'select' must return a single column")
+    tablename, _, column = projection[0].rpartition(':')
+    if not tablename:
+        # query could be 'i-input from item' instead of 'item:i-input'
+        if len(queryobj['tables']) == 1:
+            tablename = queryobj['tables'][0]
+        # otherwise guess
+        else:
+            tablename = source.relations.find(column)[0]
+    try:
+        condition = select[select.index(' where ') + 1:]
+    except ValueError:
+        condition = ''
+    return column, tablename, condition
 
 
 ###############################################################################
@@ -564,20 +559,17 @@ def _repp(r, line, format, trace_level):
 ###############################################################################
 ### COMPARE ###################################################################
 
-def compare(testsuite, gold, filters=None, applicators=None):
+def compare(testsuite, gold, select='i-id i-input mrs'):
     """
     Compare two [incr tsdb()] profiles.
 
-    Any filters or applicators are applied to both the test and gold
-    testsuites.
-
     Args:
-        testsuite: path to the test [incr tsdb()] testsuite
-        gold: path to the gold [incr tsdb()] testsuite
-        filters (list): see :class:`delphin.itsdb.ItsdbProfile` for a
-            description of filters
-        applicators (list): see :class:`delphin.itsdb.ItsdbProfile`
-            for a description of applicators
+        testsuite (str, TestSuite): path to the test [incr tsdb()]
+            testsuite or a :class:`TestSuite` object
+        gold (str, TestSuite): path to the gold [incr tsdb()]
+            testsuite or a :class:`TestSuite` object
+        select: TSQL query to select (id, input, mrs) triples
+            (default: `i-id i-input mrs`)
     Yields:
         dict: Comparison results as:
 
@@ -591,25 +583,32 @@ def compare(testsuite, gold, filters=None, applicators=None):
     """
     from delphin.mrs import simplemrs, compare as mrs_compare
 
-    test_profile = _prepare_input_profile(
-        testsuite,
-        filters=filters,
-        applicators=applicators)
-    gold_profile = _prepare_input_profile(
-        gold,
-        filters=filters,
-        applicators=applicators)
+    if not isinstance(testsuite, itsdb.TestSuite):
+        if isinstance(testsuite, itsdb.ItsdbProfile):
+            testsuite = testsuite.root
+        testsuite = itsdb.TestSuite(testsuite)
+    if not isinstance(gold, itsdb.TestSuite):
+        if isinstance(gold, itsdb.ItsdbProfile):
+            gold = gold.root
+        gold = itsdb.TestSuite(gold)
 
-    i_inputs = dict((row['parse:parse-id'], row['item:i-input'])
-                    for row in test_profile.join('item', 'parse'))
+    queryobj = tsql.inspect_query('select ' + select)
+    if len(queryobj['projection']) != 3:
+        raise ValueError('select does not return 3 fields: ' + select)
+
+    input_select = '{} {}'.format(queryobj['projection'][0],
+                                  queryobj['projection'][1])
+    i_inputs = dict(tsql.select(input_select, testsuite))
 
     matched_rows = itsdb.match_rows(
-        test_profile.read_table('result'), gold_profile.read_table('result'),
-        'parse-id')
+        tsql.select(select, testsuite),
+        tsql.select(select, gold),
+        0)
+
     for (key, testrows, goldrows) in matched_rows:
         (test_unique, shared, gold_unique) = mrs_compare.compare_bags(
-            [simplemrs.loads_one(row['mrs']) for row in testrows],
-            [simplemrs.loads_one(row['mrs']) for row in goldrows])
+            [simplemrs.loads_one(row[2]) for row in testrows],
+            [simplemrs.loads_one(row[2]) for row in goldrows])
         yield {'id': key,
                'input': i_inputs[key],
                'test': test_unique,
@@ -619,12 +618,6 @@ def compare(testsuite, gold, filters=None, applicators=None):
 
 ###############################################################################
 ### HELPER FUNCTIONS ##########################################################
-
-def _prepare_input_profile(path, filters=None, applicators=None, cast=False):
-    index = filters is not None and len(filters) > 0
-    prof = itsdb.ItsdbProfile(
-        path, filters=filters, applicators=applicators, index=index, cast=cast)
-    return prof
 
 
 def _prepare_output_directory(path):
