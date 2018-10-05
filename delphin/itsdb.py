@@ -767,6 +767,52 @@ class TestSuite(object):
                     encoding=self.encoding
                 )
 
+    def exists(self, table=None):
+        """
+        Return `True` if the testsuite or a table exists on disk.
+
+        If *table* is `None`, this function returns `True` if the
+        :attr:`TestSuite.path` is specified and points to an existing
+        directory containing a valid relations file. If *table* is
+        given, the function returns `True` if, in addition to the
+        above conditions, the table exists as a file (even if
+        empty). Otherwise it returns False.
+        """
+        if self._path is None or not os.path.isdir(self._path):
+            return False
+        if not os.path.isfile(os.path.join(self._path, _relations_filename)):
+            return False
+        if table is not None:
+            try:
+                _table_filename(os.path.join(self._path, table))
+            except ItsdbError:
+                return False
+        return True
+
+    def size(self, table=None):
+        """
+        Return the size, in bytes, of the testsuite or *table*.
+
+        If *table* is `None`, return the size of the whole testsuite
+        (i.e., the sum of the table sizes). Otherwise, return the
+        size of *table*.
+
+        Notes:
+            * If the file is gzipped, it returns the compressed size.
+            * Only tables on disk are included.
+        """
+        size = 0
+        if table is None:
+            for table in self.relations:
+                size += self.size(table)
+        else:
+            try:
+                fn = _table_filename(os.path.join(self._path, table))
+                size += os.stat(fn).st_size
+            except ItsdbError:
+                pass
+        return size
+
     def process(self, cpu, selector=None, source=None, fieldmapper=None):
         """
         Process each item in a [incr tsdb()] testsuite
