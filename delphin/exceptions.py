@@ -115,7 +115,7 @@ class TSQLSyntaxError(PyDelphinException):
         display = ''
         if self.text is not None:
             display = '\n  {}\n  {}^'.format(self.text, ' ' * self.offset)
-        return ('At line {}, position {}:{}\n{}'
+        return ('Syntax error at line {}, position {}:{}\n{}'
                 .format(self.lineno or '?',
                         self.offset or '?',
                         display,

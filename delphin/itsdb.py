@@ -511,6 +511,10 @@ class Record(list):
             key: the field name of the data to return
             default: the value to return if *key* is not in the row
         """
+        tablename, _, key = key.rpartition(':')
+        if tablename and tablename not in self.fields.name.split('+'):
+            raise ItsdbError('column requested from wrong table: {}'
+                             .format(tablename))
         try:
             index = self.fields.index(key)
             value = list.__getitem__(self, index)
