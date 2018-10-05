@@ -376,7 +376,11 @@ class Relations(object):
         """
         Return the list of tables that define the field *fieldname*.
         """
-        return self._field_map[fieldname]
+        tablename, _, column = fieldname.rpartition(':')
+        if tablename and tablename in self._field_map[column]:
+            return tablename
+        else:
+            return self._field_map[fieldname]
 
     def path(self, source, target):
         """
@@ -758,6 +762,8 @@ class TestSuite(object):
                 # reload table from disk if it is invalidated
                 if data is None:
                     data = self[tablename]
+                elif not isinstance(data, Table):
+                    data = Table(tablename, relation, data)
                 _write_table(
                     path,
                     tablename,
@@ -823,43 +829,34 @@ class TestSuite(object):
                 :class:`~delphin.interfaces.ace.AceParser`)
             selector (str): data specifier to select a single table and
                 column as processor input (e.g., `"item:i-input"`)
-            source (:class:`TestSuite`): testsuite from which input
-                items are taken; if `None`, use `self`
+            source (:class:`TestSuite`, :class:`Table`): testsuite or
+                table from which inputs are taken; if `None`, use `self`
             fieldmapper (:class:`~delphin.interfaces.base.FieldMapper`):
                 object for mapping response fields to [incr tsdb()]
                 fields; if `None`, use a default mapper for the
                 standard schema
         Examples:
-            >>> ts.process(ace_parser, 'item:i-input')
+            >>> ts.process(ace_parser)
             >>> ts.process(ace_generator, 'result:mrs', source=ts2)
         """
         if selector is None:
             selector = _default_task_input_selectors.get(cpu.task)
-
-        data_table, data_col = get_data_specifier(selector)
-        if len(data_col) != 1:
-            raise ItsdbError(
-                'Selector must specify exactly one data column: {}'
-                .format(selector)
-            )
-        data_col = data_col[0]
-        key_fields = [f for f in self.relations[data_table] if f.key]
-        cols = [f.name for f in key_fields]
-        cols.append(data_col)
-
         if source is None:
             source = self
-
         if fieldmapper is None:
             fieldmapper = FieldMapper()
 
+        source, cols = _prepare_source(selector, source)
+        key_cols = cols[:-1]
+
         tables = {}
-        for item in source.select(data_table, cols, mode='dict'):
-            datum = item.pop(data_col)
-            response = cpu.process_item(datum, keys=item)
+        for item in select_rows(cols, source, mode='list'):
+            datum = item.pop()
+            keys = dict(zip(key_cols, item))
+            response = cpu.process_item(datum, keys=keys)
             logging.info(
                 'Processed item {:>16}  {:>8} results'
-                .format(make_row(item, key_fields), len(response['results']))
+                .format(encode_row(item), len(response['results']))
             )
             for tablename, data in fieldmapper.map(response):
                 _add_record(tables, tablename, data, self.relations)
@@ -870,6 +867,20 @@ class TestSuite(object):
         for tablename, table in tables.items():
             self._data[tablename] = table
 
+
+def _prepare_source(selector, source):
+    tablename, fields = get_data_specifier(selector)
+    if len(fields) != 1:
+        raise ItsdbError(
+            'Selector must specify exactly one data column: {}'
+            .format(selector)
+        )
+    if isinstance(source, TestSuite):
+        if not tablename:
+            tablename = source.relations.find(fields[0])[0]
+        source = source[tablename]
+    cols = list(source.fields.keys()) + fields
+    return source, cols
 
 def _add_record(tables, tablename, data, relations):
     fields = relations[tablename]
