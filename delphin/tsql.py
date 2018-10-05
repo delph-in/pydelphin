@@ -2,6 +2,9 @@
 """
 TSQL -- Test Suite Query Language
 
+This module implements a subset of TSQL, namely the 'select' (or
+'retrieve') queries for extracting data from test suites.
+
 PyDelphin differences to standard TSQL:
 
 * `select *` requires a `from` statement
@@ -134,7 +137,7 @@ def _process_condition(condition):
             conditions.append(_func)
         _func = all if op == 'and' else any
         def func(row):
-            return _func(conditions)
+            return _func(cond(row) for cond in conditions)
     elif op == 'not':
         nfunc, fields = _process_condition(body)
         func = lambda row, nfunc=nfunc: not nfunc(row)
@@ -338,7 +341,6 @@ def _parse_condition_disjunction(tokens):
             nextgid, nexttoken, nextlineno = tokens.peek()
         else:
             break
-
     if len(conds) == 0:
         return None
     elif len(conds) == 1:
