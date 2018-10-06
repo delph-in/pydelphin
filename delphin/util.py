@@ -1,3 +1,6 @@
+
+from __future__ import absolute_import
+
 import warnings, codecs, io
 from collections import deque
 from functools import wraps
@@ -276,26 +279,35 @@ class LookaheadIterator(object):
 
 # modified from https://www.python.org/dev/peps/pep-0263/#defining-the-encoding
 _encoding_symbol_re = re.compile(
-    r'^[ \t\f]*.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)', re.IGNORECASE)
+    b'^.*?coding[:=][ \\t]*([-_.a-zA-Z0-9]+)', re.IGNORECASE)
 
 def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
     encoding = None
     with io.open(filename, 'rb') as fh:
-        line1 = fh.readline().decode('utf-8')
+        line1 = fh.readline()
+    # strip off any UTF-8 BOM and leading spaces
+    if line1.startswith(codecs.BOM_UTF8):
+        line1 = line1[len(codecs.BOM_UTF8):].lstrip()
+        has_bom = True
+    else:
+        line1 = line1.lstrip()
+        has_bom = False
+
+    if line1.startswith(comment_char):
         re_match1 = _encoding_symbol_re.search(line1)
-        line1_comment = line1.startswith(comment_char.decode('utf-8'))
-        if line1_comment and re_match1:
-            match = re_match1.group(1)
+        if re_match1:
+            match = re_match1.group(1).decode('ascii').lower()
             if codecs.lookup(match):
                 encoding = match
 
-        if line1.startswith(codecs.BOM_UTF8.decode('utf-8')):
-            if encoding and encoding.lower() != u'utf-8':
-                raise ValueError("Declared encoding does not match BOM")
-            else:
-                encoding = 'utf-8'
+    if has_bom:
+        if encoding and encoding != 'utf-8':
+            raise ValueError("Declared encoding does not match BOM")
+        else:
+            encoding = 'utf-8'
 
     if not encoding:
         encoding = default_encoding
 
-    return encoding.lower()
+    return encoding
+

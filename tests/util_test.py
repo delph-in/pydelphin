@@ -124,7 +124,7 @@ def eucjp_file(tmpdir):
 def invalid1_file(tmpdir):
     f = tmpdir.join('invalid1.txt')
     f.write_text(u'; encode: iso-8859-1\n'
-                 u'á', encoding='utf-8')
+                 u'á', encoding='iso-8859-1')
     return str(f)
 
 
@@ -138,8 +138,7 @@ def invalid2_file(tmpdir):
 @pytest.fixture
 def invalid3_file(tmpdir):
     f = tmpdir.join('invalid3.txt')
-    f.write(codecs.BOM_UTF8)
-    f.write_text(u'; coding: latin-1', encoding='utf-8')
+    f.write_binary(codecs.BOM_UTF8 + b'; coding: latin-1')
     return str(f)
 
 
