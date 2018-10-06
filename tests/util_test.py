@@ -61,7 +61,7 @@ def test_SExpr_format():
 @pytest.fixture
 def empty_file(tmpdir):
     f = tmpdir.join('empty.txt')
-    f.write_text('')
+    f.write_text(u'', encoding='utf-8')
     return str(f)
 
 
@@ -107,7 +107,7 @@ def latin1_file(tmpdir):
 @pytest.fixture
 def shiftjis_file(tmpdir):
     f = tmpdir.join('shift_jis.txt')
-    f.write_text(u'# coding: shift_jis\n'
+    f.write_text(u'; coding: shift_jis\n'
                  u'a=\"あ\"', encoding='shift_jis')
     return str(f)
 
@@ -115,7 +115,7 @@ def shiftjis_file(tmpdir):
 @pytest.fixture
 def eucjp_file(tmpdir):
     f = tmpdir.join('eucjp.txt')
-    f.write_text(u'# coding: euc_jp\n'
+    f.write_text(u'; coding: euc_jp\n'
                  u'a=\"あ\"', encoding = 'euc_jp')
     return str(f)
 
@@ -138,12 +138,14 @@ def invalid2_file(tmpdir):
 @pytest.fixture
 def invalid3_file(tmpdir):
     f = tmpdir.join('invalid3.txt')
-    f.write_text(codecs.BOM_UTF8 + u'; coding: latin-1', encoding='latin-1')
+    f.write(codecs.BOM_UTF8)
+    f.write_text(u'; coding: latin-1', encoding='utf-8')
     return str(f)
 
 
 def test_detect_encoding(empty_file, nocomment_file, utf8_file, utf8var1_file,
-    utf8var2_file, shiftjis_file, eucjp_file, latin1_file, invalid1_file):
+    utf8var2_file, shiftjis_file, eucjp_file, latin1_file, invalid1_file,
+    invalid2_file, invalid3_file):
     assert detect_encoding(empty_file) == 'utf-8'
     assert detect_encoding(nocomment_file) == 'utf-8'
     assert detect_encoding(utf8_file) == 'utf-8'

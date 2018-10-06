@@ -278,18 +278,19 @@ class LookaheadIterator(object):
 _encoding_symbol_re = re.compile(
     r'^[ \t\f]*.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)', re.IGNORECASE)
 
-
 def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
     encoding = None
     with io.open(filename, 'rb') as fh:
-        line1 = fh.readline()
+        line1 = fh.readline().decode('utf-8')
         re_match1 = _encoding_symbol_re.search(line1)
-        line1_comment = line1.contains(comment_char)
+        line1_comment = line1.startswith(comment_char.decode('utf-8'))
         if line1_comment and re_match1:
-            encoding = codecs.lookup(re_match1.group(1))
+            match = re_match1.group(1)
+            if codecs.lookup(match):
+                encoding = match
 
-        if line1.startswith(codecs.BOM_UTF8):
-            if encoding and encoding.lower() != b'utf-8':
+        if line1.startswith(codecs.BOM_UTF8.decode('utf-8')):
+            if encoding and encoding.lower() != u'utf-8':
                 raise ValueError("Declared encoding does not match BOM")
             else:
                 encoding = 'utf-8'
