@@ -34,6 +34,9 @@ these changes are prefixed with "**BREAKING**"
   - `delphin.tdl.LexicalRuleDefinition`
   - `delphin.tdl.LetterSet`
   - `delphin.tdl.WildCard`
+  - `delphin.tdl.TypeEnvironment`
+  - `delphin.tdl.InstanceEnvironment`
+  - `delphin.tdl.FileInclude`
 * TDL parameters:
   - `delphin.tdl.LIST_TYPE` (default: `"*list*"`)
   - `delphin.tdl.EMPTY_LIST_TYPE` (default: `"*null*"`)
