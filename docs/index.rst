@@ -17,8 +17,9 @@ PyDelphin
 
 .. toctree::
   :maxdepth: 1
-  :caption: Tutorials:
+  :caption: Guides:
 
+  tutorials/setup.rst
   tutorials/walkthrough.rst
   tutorials/ace.rst
   tutorials/commands.rst

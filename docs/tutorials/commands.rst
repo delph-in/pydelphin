@@ -69,61 +69,39 @@ See `delphin convert --help` for more information.
 select
 ------
 
-The `select` subcommand selects data from an [incr tsdb()] profile. For
-example, if you want to get the `i-id` and `i-input` fields from a
-profile, do this:
+The `select` subcommand selects data from an [incr tsdb()] profile
+using TSQL_ queries. For example, if you want to get the `i-id` and
+`i-input` fields from a profile, do this:
+
+.. _TSQL: http://moin.delph-in.net/TsqlRfc
 
 .. code:: bash
 
-  $ delphin select item:i-id@i-input ~/grammars/jacy/tsdb/gold/mrs/
+  $ delphin select 'i-id i-input from item' ~/grammars/jacy/tsdb/gold/mrs/
   11@雨 が 降っ た ．
   21@太郎 が 吠え た ．
   [..]
 
-The `--join` option is useful for getting data from separate tables
-that are linked by a common key. A common use of `--join` is for
-`parse` and `result` tables:
+
+In many cases, the ``from`` clause of the query is not necessary, and
+the appropriate tables will be selected automatically.  Fields from
+multiple tables can be used and the tables containing them will be
+automatically :func:`joined <delphin.itsdb.join>`:
 
 .. code:: bash
 
-  $ delphin select --join parse,result parse:i-id@result:mrs ~/grammars/jacy/tsdb/gold/mrs/
+  $ delphin select 'i-id mrs' ~/grammars/jacy/tsdb/gold/mrs/
   11@[ LTOP: h1 INDEX: e2 ... ]
   [..]
 
-The `select` subcommand, as well as `mkprof`, `process`, and `compare`,
-can take filters or applicators to affect the data that is selected. If
-you want to, for example, remove the spaces in `i-input`, you can use
-`--apply` to apply a Python expression to the field. The expression is
-applied on every column specified, and the variable `x` is the value at
-the current column.
+The results can be filtered by providing ``where`` clauses:
 
 .. code:: bash
 
-  $ delphin select --apply 'item:i-input=x.replace(" ","")' \
-                   item:i-id@i-input \
-                   ~/grammars/jacy/tsdb/gold/mrs/
-  11@雨が降った．
-  21@太郎が吠えた．
-  [..]
-
-The `--filter` option is defined much like `--apply`, but instead of
-changing the value of a cell, it filters the results that are returned.
-The expression should, therefore, return a value that can be evaluated
-as `True` or `False`. The command below finds all items that have the
-word "雨":
-
-.. code:: bash
-
-  $ delphin select --filter 'item:i-input="雨" in x' \
-                   item:i-id@i-input \
-                   ~/grammars/jacy/tsdb/gold/mrs/
+  $ delphin select 'i-id i-input where i-input ~ "雨"' ~/grammars/jacy/tsdb/gold/mrs/
   11@雨 が 降っ た ．
   71@太郎 が タバコ を 次郎 に 雨 が 降る と 賭け た ．
   81@太郎 が 雨 が 降っ た こと を 知っ て い た ．
-
-In addition to `x`, the variable `row` is available for `--apply` and
-`--filter` expressions, and takes the shape of a dictionary containing
-all data in a row of the table.
 
 See `delphin select --help` for more information.
 
@@ -133,16 +111,16 @@ See `delphin select --help` for more information.
 mkprof
 ------
 
-Rather than selecting data to send to stdout, you can also output a new
-[incr tsdb()] profile with the `mkprof` subcommand. If a profile is
-given via the `--source` option, the relations file of the source
-profile is used by default, and you may use filters and applicators to
-alter the data used in creating the new profile. Otherwise, the
-`--relations` option is required, and the input may be a file of
-sentences via the `--input` option, or a stream of sentences via stdin.
-Sentences via file or stdin can be prefixed with an asterisk, in which
-case they are considered ungrammatical (`i-wf` is set to `0`). Here is
-an example:
+Rather than selecting data to send to stdout, you can also output a
+new [incr tsdb()] profile with the `mkprof` subcommand. If a profile
+is given via the `--source` option, the relations file of the source
+profile is used by default, and you may use a ``--where`` option to
+use TSQL_ conditions to filter the data used in creating the new
+profile. Otherwise, the `--relations` option is required, and the
+input may be a file of sentences via the `--input` option, or a stream
+of sentences via stdin.  Sentences via file or stdin can be prefixed
+with an asterisk, in which case they are considered ungrammatical
+(`i-wf` is set to `0`). Here is an example:
 
 .. code:: bash
 
@@ -153,13 +131,13 @@ an example:
   9746   bytes  relations
   67     bytes  item
 
-Using filters, sub-profiles can be created, which may be useful for
-testing different parameters. For example, to create a sub-profile
-with only items whose `i-length` is less than 10, do this:
+Using ``--where``, sub-profiles can be created, which may be useful
+for testing different parameters. For example, to create a sub-profile
+with only items of less than 10 words, do this:
 
 .. code:: bash
 
-  $ delphin mkprof --filter 'item:i-length=int(x) < 10' \
+  $ delphin mkprof --where 'i-length < 10' \
                    --source ~/grammars/jacy/tsdb/gold/mrs/ \
                    mrs-short
   9067   bytes  relations
