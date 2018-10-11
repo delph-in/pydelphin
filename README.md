@@ -37,25 +37,9 @@ $ pip install pydelphin
 
 [PyPI]: https://pypi.python.org/pypi/pyDelphin
 
-PyDelphin is tested to work with [Python 3](http://python.org/download/)
-(3.4+) and Python 2.7. Optional requirements include:
-  - [NetworkX](http://networkx.github.io/) for MRS isomorphism
-    checking
-  - [requests](http://requests.readthedocs.io/en/master/) for the
-    REST client
-  - [Pygments](http://pygments.org/) for TDL and SimpleMRS syntax
-    highlighting
-  - [Penman](https://github.com/goodmami/penman) for PENMAN
-    serialization of DMRS and EDS
-  - [tikz-dependency](https://www.ctan.org/pkg/tikz-dependency), while
-    not a Python requirement, is needed for compiling LaTeX documents
-    using exported DMRSs
-
-The latest development version of PyDelphin can be retrieved via git:
-
-```bash
-$ git clone https://github.com/delph-in/pydelphin.git
-```
+For more information about requirements, installing from source, and
+running unit tests, please see the
+[documentation](https://pydelphin.readthedocs.io/en/latest/tutorials/setup.html).
 
 API changes in new versions are documented in the
 [CHANGELOG](CHANGELOG.md), but for any unexpected changes please
@@ -70,6 +54,7 @@ The following packages/modules are available:
 
 - `derivation`: [Derivation trees](http://moin.delph-in.net/ItsdbDerivations)
 - `itsdb`: [incr tsdb()] profiles
+- `tsql`: TSQL test suite queries
 - `mrs`: [Minimal Recursion Semantics](http://moin.delph-in.net/MrsRfc)
 - `tdl`: [Type-Description Language](http://moin.delph-in.net/TdlRfc)
 - `tfs`: Typed-Feature Structures

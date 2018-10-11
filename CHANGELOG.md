@@ -34,6 +34,9 @@ these changes are prefixed with "**BREAKING**"
   - `delphin.tdl.LexicalRuleDefinition`
   - `delphin.tdl.LetterSet`
   - `delphin.tdl.WildCard`
+  - `delphin.tdl.TypeEnvironment`
+  - `delphin.tdl.InstanceEnvironment`
+  - `delphin.tdl.FileInclude`
 * TDL parameters:
   - `delphin.tdl.LIST_TYPE` (default: `"*list*"`)
   - `delphin.tdl.EMPTY_LIST_TYPE` (default: `"*null*"`)
@@ -50,12 +53,33 @@ these changes are prefixed with "**BREAKING**"
 * `tests/commands_test.py` to test invocation of commands (but not results)
 * `delphin.util.detect_encoding` and tests for checking file header for
   encoding information (#169)
- 
+* `delphin.tsql` module for TSQL queries of testsuites
+* `delphin.exceptions.TSQLSyntaxError`
+* `delphin.itsdb`
+  - `Relations.find()` returns the names of tables defining a field
+  - `Relations.path()` returns a path of `(table, shared_field)` tuples
+    describing how to get from one table to another via shared keys
+  - `TestSuite.write()` takes an optional `relations` parameter to write
+    a profile with an updated relations file (#150)
+  - `TestSuite.exists()` (#150)
+  - `TestSuite.size()` (#150)
+  - `Record.get()` takes a `cast` parameter; when `True`, values are cast
+    to the field's datatype
+  - `select_rows()` takes a `cast` parameter as with `Record.get()`
+
 ### Changed
 
 * `delphin.tdl` now parses triple-quoted docstrings (#167); note that it
   no longer parses the old-style docstrings
 * `delphin.tdl.TdlDefinition` inherits from `delphin.tfs.FeatureStructure`
+* `delphin.itsdb.TestSuite` no longer casts values by default (see note on
+  `Record.get()` above)
+* `delphin.itsdb.TestSuite.process()` can take a `Table` as the `source`
+  instead of just `TestSuite`.
+* **BREAKING** The `delphin` commands have all replaced the previous
+  method of filtering testsuites with the new TSQL queries. Applicators
+  are no longer available to commands. Please see `delphin <cmd> -h` for
+  updated usage notes. (#138, #179)
 
 ### Deprecated
 
@@ -67,6 +91,9 @@ these changes are prefixed with "**BREAKING**"
 
 * **BREAKING** `delphin.tdl.TdlDefinition.comment`; replaced by
   `TdlType.docstring`
+* **BREAKING** `--filter` option on all commands
+* **BREAKING** `--apply` option on all commands
+* **BREAKING** `--join` option on the `select` command
 
 
 ## [v0.8.0][]

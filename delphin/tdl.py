@@ -770,6 +770,51 @@ class WildCard(_MorphSet):
     pass
 
 
+class _Environment(object):
+    """
+    TDL environment.
+    """
+    def __init__(self, entries=None):
+        if entries is None:
+            entries = []
+        self.entries = entries
+
+
+class TypeEnvironment(_Environment):
+    """
+    TDL type environment.
+
+    Args:
+        entries (list): TDL entries
+    """
+
+
+class InstanceEnvironment(_Environment):
+    """
+    TDL instance environment.
+
+    Args:
+        status (str): status (e.g., `"lex-rule"`)
+        entries (list): TDL entries
+    """
+    def __init__(self, status, entries=None):
+        super(InstanceEnvironment, self).__init__(entries)
+        self.status = status
+
+
+class FileInclude(object):
+    """
+    Include other TDL files in the current environment.
+
+    Args:
+        path (str): path to the TDL file to include
+        basedir (str): parent directory of *path*
+    """
+    def __init__(self, path='', basedir=''):
+        self.path = path
+        self.basedir = basedir
+
+
 # Old classes
 
 class TdlDefinition(FeatureStructure):
@@ -947,7 +992,12 @@ _tdl_lex_re = re.compile(
     |\(([^ ]+\s+(?:[^ )\\]|\\.)+)\)  #  22  affix subpattern
     |(\/)                            #  23  defaults (currently unused)
     |([^\s!"#$&'(),./:;<=>[\]^]+)    #  24  identifiers and symbols
-    |([^\s])                         #  25  unexpected
+    |(:begin)                        #  25  start a :type or :instance block
+    |(:end)                          #  26  end a :type or :instance block
+    |(:type|:instance)               #  27  environment type
+    |(:status)                       #  28  instance status
+    |(:include)                      #  29  file inclusion
+    |([^\s])                         #  30  unexpected
     ''',
     flags=re.VERBOSE)
 
@@ -1056,7 +1106,7 @@ def _lex(stream):
                             '#|', '|#', line, m.end(), line_no, lines)
                     yield (gid, s, line_no)
                     break
-                elif gid == 25:
+                elif gid == 30:
                     raise TdlParsingError(
                         ('Syntax error:\n  {}\n {}^'
                          .format(line, ' ' * m.start())),
@@ -1147,9 +1197,12 @@ def _parse2(f):
 
 
 def _parse_tdl(tokens):
+    environment = None
+    envstack = []
     try:
         line_no = 1
         while True:
+            obj = None
             try:
                 gid, token, line_no = tokens.next()
             except StopIteration:  # normal EOF
@@ -1162,59 +1215,77 @@ def _parse_tdl(tokens):
                 obj = _parse_letterset(token, line_no)
                 yield (obj.__class__.__name__, obj, line_no)
             elif gid == 24:
-                identifier = token
-                gid, token, line_no, nextgid = _shift(tokens)
-
-                if gid == 7 and nextgid == 21:  # lex rule with affixes
-                    atype, pats = _parse_tdl_affixes(tokens)
-                    conjunction, nextgid = _parse_tdl_conjunction(tokens)
-                    obj = LexicalRuleDefinition(
-                        identifier, atype, pats, conjunction)
-
-                elif gid == 7:
-                    if token == ':<':
-                        warnings.warn(
-                            'Subtype operator :< encountered at line {} for '
-                            '{}; Continuing as if it were the := operator.'
-                            .format(line_no, identifier),
-                            TdlWarning)
-                    conjunction, nextgid = _parse_tdl_conjunction(tokens)
-                    if isinstance(conjunction, Term):
-                        conjunction = Conjunction([conjunction])
-                    if len(conjunction.types()) == 0:
-                        raise TdlParsingError('No supertypes defined.',
-                                              identifier=identifier,
-                                              line_number=line_no)
-                    obj = TypeDefinition(identifier, conjunction)
-
-                elif gid == 8:
-                    if nextgid == 1 and _peek(tokens, n=1)[0] == 10:
-                        # docstring will be handled after the if-block
-                        conjunction = Conjunction()
-                    else:
-                        conjunction, nextgid = _parse_tdl_conjunction(tokens)
-                    obj = TypeAddendum(identifier, conjunction)
-
-                else:
-                    raise TdlParsingError("Expected: := or :+",
-                                          line_number=line_no)
-
-                if nextgid == 1:  # pre-dot docstring
-                    _, token, _, nextgid = _shift(tokens)
-                    obj.docstring = token
-                if nextgid != 10:  # . dot
-                    raise TdlParsingError('Expected: .', line_number=line_no)
-                tokens.next()
-
+                obj = _parse_tdl_definition(token, tokens)
                 yield (obj.__class__.__name__, obj, line_no)
-
+            elif gid == 25:
+                envstack.append(environment)
+                _environment = _parse_tdl_begin_environment(tokens)
+                if environment is not None:
+                    environment.entries.append(_environment)
+                environment = _environment
+                yield ('BeginEnvironment', environment, line_no)
+            elif gid == 26:
+                _parse_tdl_end_environment(tokens, environment)
+                yield ('EndEnvironment', environment, line_no)
+                environment = envstack.pop()
+            elif gid == 29:
+                obj = _parse_tdl_include(tokens)
+                yield ('FileInclude', obj, line_no)
             else:
                 raise TdlParsingError(
                     'Syntax error; unexpected token: {}'.format(token),
                     line_number=line_no)
-
+            if environment is not None and obj is not None:
+                environment.entries.append(obj)
     except StopIteration:
         raise TdlParsingError('Unexpected end of input.')
+
+
+def _parse_tdl_definition(identifier, tokens):
+    gid, token, line_no, nextgid = _shift(tokens)
+
+    if gid == 7 and nextgid == 21:  # lex rule with affixes
+        atype, pats = _parse_tdl_affixes(tokens)
+        conjunction, nextgid = _parse_tdl_conjunction(tokens)
+        obj = LexicalRuleDefinition(
+            identifier, atype, pats, conjunction)
+
+    elif gid == 7:
+        if token == ':<':
+            warnings.warn(
+                'Subtype operator :< encountered at line {} for '
+                '{}; Continuing as if it were the := operator.'
+                .format(line_no, identifier),
+                TdlWarning)
+        conjunction, nextgid = _parse_tdl_conjunction(tokens)
+        if isinstance(conjunction, Term):
+            conjunction = Conjunction([conjunction])
+        if len(conjunction.types()) == 0:
+            raise TdlParsingError('No supertypes defined.',
+                                  identifier=identifier,
+                                  line_number=line_no)
+        obj = TypeDefinition(identifier, conjunction)
+
+    elif gid == 8:
+        if nextgid == 1 and _peek(tokens, n=1)[0] == 10:
+            # docstring will be handled after the if-block
+            conjunction = Conjunction()
+        else:
+            conjunction, nextgid = _parse_tdl_conjunction(tokens)
+        obj = TypeAddendum(identifier, conjunction)
+
+    else:
+        raise TdlParsingError("Expected: := or :+",
+                              line_number=line_no)
+
+    if nextgid == 1:  # pre-dot docstring
+        _, token, _, nextgid = _shift(tokens)
+        obj.docstring = token
+    if nextgid != 10:  # . dot
+        raise TdlParsingError('Expected: .', line_number=line_no)
+    tokens.next()
+
+    return obj
 
 
 def _parse_letterset(token, line_no):
@@ -1371,6 +1442,51 @@ def _parse_tdl_list(tokens, break_gid):
         end = EMPTY_LIST_TYPE
 
     return values, end, nextgid
+
+
+def _parse_tdl_begin_environment(tokens):
+    gid, envtype, lineno = tokens.next()
+    if gid != 27:
+        raise TdlParsingError('Expected: :type or :instance',
+                              line_number=lineno)
+    gid, token, lineno = tokens.next()
+    if envtype == ':instance':
+        status = envtype[1:]
+        if token == ':status':
+            status = tokens.next()[1]
+            gid, token, lineno = tokens.next()
+        elif gid != 10:
+            raise TdlParsingError('Expected: :status or .',
+                                  line_number=lineno)
+        env = InstanceEnvironment(status)
+    else:
+        env = TypeEnvironment()
+    if gid != 10:
+        raise TdlParsingError('Expected: .', line_number=lineno)
+    return env
+
+
+def _parse_tdl_end_environment(tokens, env):
+    _, envtype, lineno = tokens.next()
+    if envtype == ':type' and not isinstance(env, TypeEnvironment):
+        raise TdlParsingError('Expected: :type', line_number=lineno)
+    elif envtype == ':instance' and not isinstance(env, InstanceEnvironment):
+        raise TdlParsingError('Expected: :instance', line_number=lineno)
+    gid, _, lineno = tokens.next()
+    if gid != 10:
+        raise TdlParsingError('Expected: .', line_number=lineno)
+    return envtype
+
+
+def _parse_tdl_include(tokens):
+    gid, path, lineno = tokens.next()
+    if gid != 4:
+        raise TdlParsingError('Expected: a quoted filename',
+                              line_number=lineno)
+    gid, _, lineno = tokens.next()
+    if gid != 10:
+        raise TdlParsingError('Expected: .', line_number=lineno)
+    return FileInclude(path)
 
 
 break_characters = r'<>!=:.#&,[];$()^/"'
@@ -1722,13 +1838,14 @@ def _make_coreferences(corefs):
 
 # Serialization helpers
 
-def format(obj):
+def format(obj, indent=0):
     """
     Serialize TDL objects to strings.
 
     Args:
         obj: instance of :class:`Term`, :class:`Conjunction`, or
             :class:`TypeDefinition` classes or subclasses
+        indent (int): number of spaces to indent the formatted object
     Returns:
         str: serialized form of *obj*
     Example:
@@ -1743,15 +1860,19 @@ def format(obj):
           [ SYNSEM.LOCAL.CAT.HEAD.MOD < > ].
     """
     if isinstance(obj, TypeDefinition):
-        return _format_typedef(obj)
+        return _format_typedef(obj, indent)
     elif isinstance(obj, Conjunction):
-        return _format_conjunction(obj, 0)
+        return _format_conjunction(obj, indent)
     elif isinstance(obj, Term):
-        return _format_term(obj, 0)
-    elif isinstance(obj, LetterSet):
-        return '%(letter-set ({} {}))'.format(obj.var, obj.characters)
-    elif isinstance(obj, WildCard):
-        return '%(wild-card ({} {}))'.format(obj.var, obj.characters)
+        return _format_term(obj, indent)
+    elif isinstance(obj, _MorphSet):
+        return _format_morphset(obj, indent)
+    elif isinstance(obj, _Environment):
+        return _format_environment(obj, indent)
+    elif isinstance(obj, FileInclude):
+        return _format_include(obj, indent)
+    else:
+        raise ValueError('cannot format object as TDL: {!r}'.format(obj))
 
 
 def _format_term(term, indent):
@@ -1857,18 +1978,20 @@ def _format_conjunction(conj, indent):
             ' & '.join(line) for line in lines if line)
 
 
-def _format_typedef(td):
+def _format_typedef(td, indent):
+    i = ' ' * indent
     if hasattr(td, 'affix_type'):
         patterns = ' '.join('({} {})'.format(a, b) for a, b in td.patterns)
-        body = _format_typedef_body(td, 2)
-        return '{} {}\n%{} {}\n  {}.'.format(
-            td.identifier, td._operator, td.affix_type, patterns, body)
+        body = _format_typedef_body(td, indent, indent + 2)
+        return '{}{} {}\n%{} {}\n  {}.'.format(
+            i, td.identifier, td._operator, td.affix_type, patterns, body)
     else:
-        body = _format_typedef_body(td, len(td.identifier) + 4)
-        return '{} {} {}.'.format(td.identifier, td._operator, body)
+        body = _format_typedef_body(
+            td, indent, indent + len(td.identifier) + 4)
+        return '{}{} {} {}.'.format(i, td.identifier, td._operator, body)
 
 
-def _format_typedef_body(td, offset):
+def _format_typedef_body(td, indent, offset):
     parts = [[]]
     for term in td.conjunction.terms:
         if isinstance(term, AVM) and len(parts) == 1:
@@ -1883,8 +2006,8 @@ def _format_typedef_body(td, offset):
     else:
         formatted_conj = '{} &\n{}{}'.format(
             _format_conjunction(Conjunction(parts[0]), offset),
-            ' ' * _base_indent,
-            _format_conjunction(Conjunction(parts[1]), _base_indent))
+            ' ' * (_base_indent + indent),
+            _format_conjunction(Conjunction(parts[1]), _base_indent + indent))
 
     if td.docstring is not None:
         docstring = '\n  ' + _format_docstring(td.docstring, 2)
@@ -1905,3 +2028,28 @@ def _format_docstring(doc, indent):
             lines = lines[:-1]
     ind = ' ' * indent
     return '"""\n{0}{1}\n{0}"""'.format(ind, ('\n' + ind).join(lines))
+
+
+def _format_morphset(obj, indent):
+    mstype = 'letter-set' if isinstance(obj, LetterSet) else 'wild-card'
+    return '{}%({} ({} {}))'.format(
+        ' ' * indent, mstype, obj.var, obj.characters)
+
+
+def _format_environment(env, indent):
+    status = ''
+    if isinstance(env, TypeEnvironment):
+        envtype = ':type'
+    elif isinstance(env, InstanceEnvironment):
+        envtype = ':instance'
+        if env.status:
+            status = ' :status ' + env.status
+
+    contents = '\n'.join(format(obj, indent + 2) for obj in env.entries)
+    if contents:
+        contents += '\n'
+    return '{0}:begin {1}{2}.\n{3}{0}:end {1}.'.format(
+        ' ' * indent, envtype, status, contents)
+
+def _format_include(fi, indent):
+    return '{}:include "{}".'.format(' ' * indent, fi.path)

@@ -2,6 +2,9 @@
 from __future__ import absolute_import
 
 import warnings, codecs, io
+import re
+from datetime import datetime
+
 from collections import deque
 from functools import wraps
 
@@ -41,6 +44,51 @@ def safe_int(x):
         pass
     return x
 
+
+def parse_datetime(s):
+    if re.match(r':?(today|now)', s):
+        return datetime.now()
+
+    # YYYY-MM-DD HH:MM:SS
+    m = re.match(
+        r'''
+        (?P<y>[0-9]{4})
+        -(?P<m>[0-9]{1,2}|\w{3})
+        (?:-(?P<d>[0-9]{1,2}))?
+        (?:\s*\(?
+        (?P<H>[0-9]{2}):(?P<M>[0-9]{2})(?::(?P<S>[0-9]{2}))?
+        \)?)?''', s, flags=re.VERBOSE)
+    if m is None:
+        # DD-MM-YYYY HH:MM:SS
+        m = re.match(
+            r'''
+            (?:(?P<d>[0-9]{1,2})-)?
+            (?P<m>[0-9]{1,2}|\w{3})
+            -(?P<y>[0-9]{2}(?:[0-9]{2})?)
+            (?:\s*\(?
+                (?P<H>[0-9]{2}):(?P<M>[0-9]{2})(?::(?P<S>[0-9]{2}))?
+            \)?)?''', s, flags=re.VERBOSE)
+    if m is not None:
+        return datetime.strptime(_date_fix(m), '%Y-%m-%d %H:%M:%S')
+
+    return None
+
+
+def _date_fix(mo):
+    y = mo.group('y')
+    if len(y) == 2:
+        y = '20' + y  # buggy in ~80yrs or if using ~20yr-old data :)
+    m = mo.group('m')
+    if len(m) == 3:  # assuming 3-letter abbreviations
+        m = str(datetime.strptime(m, '%b').month)
+    d = mo.group('d') or '01'
+    H = mo.group('H') or '00'
+    M = mo.group('M') or '00'
+    S = mo.group('S') or '00'
+    return '{}-{}-{} {}:{}:{}'.format(y, m, d, H, M, S)
+
+
+
 # unescaping escaped strings (potentially with unicode)
 #   (disabled but left here in case a need arises)
 # thanks: http://stackoverflow.com/a/24519338/1441112
@@ -67,23 +115,7 @@ def safe_int(x):
 # S-expressions
 #  e.g. (:n-inputs . 3) or (S (NP (NNS Dogs)) (VP (VBZ bark)))
 
-import re
-
-from delphin.lib.pegre import (
-    sequence,
-    choice,
-    literal,
-    regex,
-    nonterminal,
-    delimited,
-    bounded,
-    Spacing,
-    Integer,
-    Float,
-    DQString,
-    Peg,
-    PegreResult
-)
+from delphin.lib.pegre import PegreResult
 
 # escapes from https://en.wikipedia.org/wiki/S-expression#Use_in_Lisp
 _SExpr_escape_chars = r'"\s\(\)\[\]\{\}\\;'
@@ -154,35 +186,6 @@ class SExprParser(object):
                 i += len(m.group(0))
 
 SExpr = SExprParser()
-
-# _SExpr = nonterminal('SExpr')
-# _Symbol = regex(r'(?:[^{ec}]+|\\.)+'.format(ec=_SExpr_escape_chars),
-#                 value=_SExpr_unescape_symbol)
-# # dummy choice around DQString just to get character unescaping
-# _String = choice(DQString, value=_SExpr_unescape_string)
-
-# SExpr = Peg(
-#     grammar=dict(
-#         start=sequence(Spacing, _SExpr, value=lambda xs: xs[1]),
-#         SExpr=choice(
-#             # atom
-#             sequence(choice(Float, Integer, _String, _Symbol), Spacing,
-#                      value=lambda xs: xs[0]),
-#             # Expression
-#             bounded(
-#                 regex(r'\(\s*'),
-#                 choice(
-#                     # DotPair
-#                     sequence(_SExpr, regex(r'\.\s*'), _SExpr,
-#                              value=lambda xs: tuple([xs[0], xs[2]])),
-#                     # List
-#                     delimited(_SExpr, Spacing)
-#                 ),
-#                 regex(r'\)\s*')
-#             )
-#         )
-#     )
-# )
 
 # attach an additional method for convenience
 def _format_SExpr(d):

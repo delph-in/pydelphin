@@ -89,6 +89,12 @@ table names.
 >>> next(joined.select('parse:i-id@result:mrs'))
 [11, '[ TOP: h1 INDEX: e3 [ e SF: PROP TENSE: PAST MOOD: INDICATIVE PROG: - PERF: - ] RELS: < [ _rain_v_1<3:10> LBL: h2 ARG0: e3 ] > HCONS: < h1 qeq h2 > ]']
 
+.. seealso::
+
+   The :mod:`delphin.tsql` module provides support for TSQL queries
+   over test suites which are much more flexible and powerful than the
+   :meth:`TestSuite.select <delphin.itsdb.TestSuite.select>` method.
+
 
 Writing Testsuites to Disk
 --------------------------

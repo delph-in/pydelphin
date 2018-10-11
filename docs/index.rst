@@ -17,8 +17,9 @@ PyDelphin
 
 .. toctree::
   :maxdepth: 1
-  :caption: Tutorials:
+  :caption: Guides:
 
+  tutorials/setup.rst
   tutorials/walkthrough.rst
   tutorials/ace.rst
   tutorials/commands.rst
@@ -38,6 +39,7 @@ PyDelphin
   api/delphin.tdl.rst
   api/delphin.tfs.rst
   api/delphin.tokens.rst
+  api/delphin.tsql.rst
 
 
 Indices and tables

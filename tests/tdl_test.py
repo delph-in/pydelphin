@@ -21,7 +21,10 @@ from delphin.tdl import (
     WildCard,
     TypeDefinition,
     TypeAddendum,
-    LexicalRuleDefinition
+    LexicalRuleDefinition,
+    TypeEnvironment,
+    InstanceEnvironment,
+    FileInclude
 )
 from delphin.exceptions import TdlError, TdlParsingError, TdlWarning
 
@@ -531,6 +534,81 @@ def test_parse_blockcomment():
     assert bc == ' this is a comment\n   on multiple lines'
 
 
+def test_parse_environments():
+    tdlparse = lambda s: tdl.iterparse(StringIO(s))
+    g = tdlparse(':begin :type.\n'
+                 ':end :type.')
+    event, e, _ = next(g)
+    assert event == 'BeginEnvironment'
+    assert isinstance(e, TypeEnvironment)
+    assert e.entries == []
+    event, e, _ = next(g)
+    assert event == 'EndEnvironment'
+    assert isinstance(e, TypeEnvironment)
+    assert e.entries == []
+
+    g = tdlparse(':begin :instance.\n'
+                 ':end :instance.')
+    event, e, _ = next(g)
+    assert event == 'BeginEnvironment'
+    assert isinstance(e, InstanceEnvironment)
+    assert e.entries == []
+    assert e.status == 'instance'
+    event, e, _ = next(g)
+    assert event == 'EndEnvironment'
+    assert isinstance(e, InstanceEnvironment)
+    assert e.entries == []
+
+    g = tdlparse(':begin :type.\n'
+                 'a := b & [ ATTR val ].\n'
+                 ':end :type.')
+    event, e, _ = next(g)
+    assert event == 'BeginEnvironment'
+    assert len(e.entries) == 0
+    event, t, _ = next(g)
+    assert event == 'TypeDefinition'
+    event, e, _ = next(g)
+    assert event == 'EndEnvironment'
+    assert e.entries == [t]
+
+    g = tdlparse(':begin :type.\n'
+                 ':include "file1.tdl".\n'
+                 ':include "subdir/file2.tdl".\n'
+                 ':end :type.')
+    event, e, _ = next(g)
+    assert len(e.entries) == 0
+    assert next(g)[0] == 'FileInclude'
+    assert next(g)[0] == 'FileInclude'
+    assert next(g)[0] == 'EndEnvironment'
+    assert len(e.entries) == 2
+    assert isinstance(e.entries[0], FileInclude)
+    assert e.entries[0].path == 'file1.tdl'
+    assert e.entries[0].basedir == ''
+    assert e.entries[1].path == 'subdir/file2.tdl'
+    assert e.entries[1].basedir == ''
+
+    g = tdlparse(':begin :type.\n'
+                 '  :include "file1.tdl".\n'
+                 '  :begin :instance :status lex-rule.\n'
+                 '    :include "lrules.tdl".\n'
+                 '  :end :instance.\n'
+                 ':end :type.')
+    event, e, _ = next(g)
+    assert next(g)[0] == 'FileInclude'
+    event, e2, _ = next(g)
+    assert event == 'BeginEnvironment'
+    assert next(g)[0] == 'FileInclude'
+    assert next(g)[0] == 'EndEnvironment'
+    assert next(g)[0] == 'EndEnvironment'
+    assert len(e.entries) == 2
+    assert isinstance(e, TypeEnvironment)
+    assert isinstance(e.entries[0], FileInclude)
+    assert isinstance(e.entries[1], InstanceEnvironment)
+    assert e2.status == 'lex-rule'
+    assert len(e2.entries) == 1
+    assert isinstance(e2.entries[0], FileInclude)
+
+
 def test_format_TypeTerms():
     assert tdl.format(TypeIdentifier('a-type')) == 'a-type'
     assert tdl.format(String('a string')) == '"a string"'
@@ -655,3 +733,32 @@ def test_format_typedefs():
 def test_format_morphsets():
     assert tdl.format(LetterSet('!b', 'abc')) == '%(letter-set (!b abc))'
     assert tdl.format(WildCard('?b', 'abc')) == '%(wild-card (?b abc))'
+
+
+def test_format_environments():
+    assert tdl.format(TypeEnvironment()) == (
+        ':begin :type.\n'
+        ':end :type.')
+    e = TypeEnvironment(entries=[
+        TypeDefinition(
+            'id',
+            Conjunction([TypeIdentifier('a'),
+                         AVM([('ATTR', TypeIdentifier('b'))])]))])
+    assert tdl.format(e) == (
+        ':begin :type.\n'
+        '  id := a &\n'
+        '    [ ATTR b ].\n'
+        ':end :type.')
+    e = TypeEnvironment(entries=[
+        FileInclude('other.tdl'),
+        InstanceEnvironment(status='lex-rule', entries=[
+            FileInclude('lrules.tdl')]),
+        FileInclude('another.tdl')])
+    assert tdl.format(e) == (
+        ':begin :type.\n'
+        '  :include "other.tdl".\n'
+        '  :begin :instance :status lex-rule.\n'
+        '    :include "lrules.tdl".\n'
+        '  :end :instance.\n'
+        '  :include "another.tdl".\n'
+        ':end :type.')
