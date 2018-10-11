@@ -51,6 +51,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.util.LookaheadIterator` for parsing with arbitrary lookahead
 * `delphin.commands` module to contain logic for `delphin` commands (#140)
 * `tests/commands_test.py` to test invocation of commands (but not results)
+* `delphin.util.detect_encoding` and tests for checking file header for
+  encoding information (#169)
 * `delphin.tsql` module for TSQL queries of testsuites
 * `delphin.exceptions.TSQLSyntaxError`
 * `delphin.itsdb`

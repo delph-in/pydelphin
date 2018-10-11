@@ -1,7 +1,10 @@
 
-import warnings
+from __future__ import absolute_import
+
+import warnings, codecs, io
 import re
 from datetime import datetime
+
 from collections import deque
 from functools import wraps
 
@@ -275,3 +278,39 @@ class LookaheadIterator(object):
             self._buffer_fill(n + 1)
             datum = buffer[n]
         return datum
+
+
+# modified from https://www.python.org/dev/peps/pep-0263/#defining-the-encoding
+_encoding_symbol_re = re.compile(
+    b'^.*?coding[:=][ \\t]*([-_.a-zA-Z0-9]+)', re.IGNORECASE)
+
+def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
+    encoding = None
+    with io.open(filename, 'rb') as fh:
+        line1 = fh.readline()
+    # strip off any UTF-8 BOM and leading spaces
+    if line1.startswith(codecs.BOM_UTF8):
+        line1 = line1[len(codecs.BOM_UTF8):].lstrip()
+        has_bom = True
+    else:
+        line1 = line1.lstrip()
+        has_bom = False
+
+    if line1.startswith(comment_char):
+        re_match1 = _encoding_symbol_re.search(line1)
+        if re_match1:
+            match = re_match1.group(1).decode('ascii').lower()
+            if codecs.lookup(match):
+                encoding = match
+
+    if has_bom:
+        if encoding and encoding != 'utf-8':
+            raise ValueError("Declared encoding does not match BOM")
+        else:
+            encoding = 'utf-8'
+
+    if not encoding:
+        encoding = default_encoding
+
+    return encoding
+
