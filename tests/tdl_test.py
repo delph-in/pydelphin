@@ -662,6 +662,10 @@ def test_format_docstring_terms():
         ConsList(docstring='doc')) == '"""\ndoc\n"""\n< ... >'
     assert tdl.format(
         DiffList(docstring='doc')) == '"""\ndoc\n"""\n<! !>'
+    # escape docstrings if necessary
+    assert tdl.format(
+        TypeIdentifier('a', docstring='"one" ""two"" """three""" """"""""')
+    ) == '"""\n"one" ""two"" ""\\"three""\\" ""\\"""\\"""\n"""\na'
 
 
 def test_format_Conjunction():

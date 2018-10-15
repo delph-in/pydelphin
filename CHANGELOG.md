@@ -18,7 +18,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.tdl.TdlType.docstring` contains a list of a type's docstrings
 * `delphin.tdl.parse()` now takes an `encoding` parameter (#172)
 * `delphin.tdl.iterparse()` for new-style TDL parsing (#153, #167, #168, #170)
-* `delphin.tdl.format()` for TDL serialization (#82)
+* `delphin.tdl.format()` for TDL serialization (#82, #187)
 * Updated TDL entity classes: (#168)
   - `delphin.tdl.Term`
   - `delphin.tdl.TypeIdentifier`

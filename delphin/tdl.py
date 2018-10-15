@@ -2027,7 +2027,27 @@ def _format_docstring(doc, indent):
         if lines[-1].strip() == '':
             lines = lines[:-1]
     ind = ' ' * indent
-    return '"""\n{0}{1}\n{0}"""'.format(ind, ('\n' + ind).join(lines))
+    contents = _escape_docstring(
+        '\n{0}{1}\n{0}'.format(ind, ('\n' + ind).join(lines)))
+    return '"""{}"""'.format(contents)
+
+
+def _escape_docstring(s):
+    cs = []
+    cnt = 0
+    lastindex = len(s) - 1
+    for i, c in enumerate(s):
+        if cnt == -1 or c not in '"\\':
+            cnt = 0
+        elif c == '"':
+            cnt += 1
+            if cnt == 3 or i == lastindex:
+                cs.append('\\')
+                cnt = 0
+        elif c == '\\':
+            cnt = -1
+        cs.append(c)
+    return ''.join(cs)
 
 
 def _format_morphset(obj, indent):
