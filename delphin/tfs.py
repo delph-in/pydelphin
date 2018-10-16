@@ -12,35 +12,6 @@ feature access through TDL-style dot notation regular dictionary keys.
 """
 
 
-class TypedFeatureStructure(object):
-    """
-    A typed :class:`FeatureStructure`.
-
-    Args:
-        type (str): type name
-        featvals (dict, list): a mapping or iterable of feature paths
-            to feature values
-    """
-    __slots__ = ['_type', '_avm']
-
-    def __init__(self, type, featvals=None):
-        self._type = type
-        super(TypedFeatureStructure, self).__init__(self, featvals)
-
-    def __repr__(self):
-        return '<TypedFeatureStructure object ({}) at {}>'.format(
-            self.type, id(self)
-        )
-
-    @property
-    def type(self):
-        return self._type
-
-    @type.setter
-    def type(self, value):
-        self._type = value
-
-
 class FeatureStructure(object):
     """
     A feature structure.
@@ -53,7 +24,7 @@ class FeatureStructure(object):
             to feature values
     """
 
-    __slots__ = ['_avm']
+    __slots__ = ['_avm', '_feats']
 
     def __init__(self, featvals=None):
         self._avm = {}
@@ -124,10 +95,10 @@ class FeatureStructure(object):
 
     def _is_notable(self):
         """
-        Notability determines if the TFS should be listed as the value
-        of a feature or if the feature should just "pass through" its
-        avm to get the next value. A notable TypedFeatureStructure is
-        one with more than one sub-feature.
+        Notability determines if the FeatureStructure should be listed as
+        the value of a feature or if the feature should just "pass
+        through" its avm to get the next value. A notable
+        FeatureStructure is one with more than one sub-feature.
         """
         return self._avm is None or len(self._avm) != 1
 
@@ -152,3 +123,42 @@ class FeatureStructure(object):
                 except AttributeError:
                     fs.append((feat, val))
         return fs
+
+
+class TypedFeatureStructure(FeatureStructure):
+    """
+    A typed :class:`FeatureStructure`.
+
+    Args:
+        type (str): type name
+        featvals (dict, list): a mapping or iterable of feature paths
+            to feature values
+    """
+    __slots__ = ['_type', '_avm', '_feats']
+
+    def __init__(self, type, featvals=None):
+        self._type = type
+        super(TypedFeatureStructure, self).__init__(featvals)
+
+    def __repr__(self):
+        return '<TypedFeatureStructure object ({}) at {}>'.format(
+            self.type, id(self)
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, TypedFeatureStructure):
+            return NotImplemented
+        return self._type == other._type and self._avm == other._avm
+
+    def __ne__(self, other):
+        if not isinstance(other, TypedFeatureStructure):
+            return NotImplemented
+        return self._type != other._type or self._avm != other._avm
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        self._type = value
