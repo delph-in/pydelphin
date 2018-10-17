@@ -45,3 +45,65 @@ def test_TypedFeatureStructure():
     assert fs == tfs.TypedFeatureStructure('typename', [('A', 1), ('B', 2)])
     assert fs != tfs.TypedFeatureStructure('name', [('A', 1), ('B', 2)])
     assert fs != tfs.TypedFeatureStructure('typename', [('A', 1), ('B', 3)])
+
+def test_TypeHierarchy():
+    with pytest.raises(TypeError):
+        tfs.TypeHierarchy()
+    with pytest.raises(ValueError):
+        tfs.TypeHierarchy('*top*', {'a': ['b']})
+
+    th = tfs.TypeHierarchy('*top*')
+    assert th.subsumes('*top*', '*top*') is True
+    assert th.compatible('*top*', '*top*') is True
+
+    th = tfs.TypeHierarchy('*top*', {'a': ['*top*']})
+    assert th.subsumes('*top*', 'a') is True
+    assert th.subsumes('a', '*top*') is False
+    assert th.compatible('*top*', 'a') is True
+    th['b'] = ['*top*']
+    assert th.subsumes('a', 'b') is False
+    assert th.subsumes('b', 'a') is False
+    assert th.compatible('a', 'b') is False
+    th['c'] = ['a', 'b']
+    assert th.subsumes('a', 'b') is False
+    assert th.subsumes('b', 'a') is False
+    assert th.subsumes('a', 'c') is True
+    assert th.subsumes('b', 'c') is True
+    assert th.subsumes('*top*', 'c') is True
+    assert th.subsumes('c', 'a') is False
+    assert th.subsumes('c', 'b') is False
+    assert th.compatible('a', 'b') is True
+
+    # trivial cycle
+    with pytest.raises(ValueError):
+        tfs.TypeHierarchy('*top*', {'a': ['*top*', 'a']})
+    # mutual cycle
+    with pytest.raises(ValueError):
+        tfs.TypeHierarchy('*top*', {'a': ['*top*', 'b'],
+                                    'b': ['*top*', 'a']})
+    # redundant parent
+    with pytest.raises(ValueError):
+        tfs.TypeHierarchy('*top*', {'a': ['*top*'],
+                                    'b': ['*top*', 'a']})
+    # awaiting issue #94
+    # # non-unique glb
+    # with pytest.raises(ValueError):
+    #     tfs.TypeHierarchy('*top*', {'a': ['*top*'],
+    #                                 'b': ['*top*'],
+    #                                 'c': ['a', 'b'],
+    #                                 'd': ['a', 'b']})
+    # # non-symmetric non-unique glb
+    # with pytest.raises(ValueError):
+    #     tfs.TypeHierarchy('*top*', {'a': ['*top*'],
+    #                                 'b': ['*top*'],
+    #                                 'c': ['*top*'],
+    #                                 'd': ['a', 'b', 'c'],
+    #                                 'e': ['a', 'b']})
+    # # non-immediate non-unique glb
+    # with pytest.raises(ValueError):
+    #     tfs.TypeHierarchy('*top*', {'a': ['*top*'],
+    #                                 'b': ['*top*'],
+    #                                 'c': ['a', 'b'],
+    #                                 'a2': ['a'],
+    #                                 'b2': ['b'],
+    #                                 'd': ['a2', 'b2']})

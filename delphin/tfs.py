@@ -1,6 +1,4 @@
 
-from __future__ import unicode_literals
-
 """
 Basic classes for modeling feature structures.
 
@@ -9,7 +7,13 @@ This module defines the :class:`FeatureStructure` and
 matrix (AVM), with the latter including an associated type. They allow
 feature access through TDL-style dot notation regular dictionary keys.
 
+In addition, the :class:`TypeHierarchy` class implements a
+multiple-inheritance hierarchy with checks for type subsumption and
+compatibility.
+
 """
+
+from __future__ import unicode_literals
 
 
 class FeatureStructure(object):
@@ -171,3 +175,88 @@ class TypedFeatureStructure(FeatureStructure):
     @type.setter
     def type(self, value):
         self._type = value
+
+
+class TypeHierarchy(object):
+    """
+    A Type Hierarchy.
+
+    Type hierarchies have certain properties, such as a unique top node,
+    multiple inheritance, and unique greatest-lower-bound (glb) types.
+
+    Note:
+        Checks for unique glbs is not yet implemented.
+    Args:
+        top (str): unique top type
+        hierarchy (dict): mapping of `{child: [parents]}`
+    """
+    def __init__(self, top, hierarchy=None):
+        self._top = top
+        self._hier = {}
+        if hierarchy is None:
+            self[top] = []
+        elif hierarchy.get(top, False):
+            raise ValueError('top type cannot have supertypes')
+        else:
+            hierarchy[top] = []
+            loerarchy = {}  # type -> children
+            for child, parents in hierarchy.items():
+                for parent in parents:
+                    loerarchy.setdefault(parent, []).append(child)
+            agenda = [top]
+            th = self._hier  # to reduce lookups in the loop
+            while agenda:
+                typename = agenda.pop()
+                self[typename] = hierarchy[typename]
+                del hierarchy[typename]
+                for child in loerarchy.get(typename, []):
+                    if all(parent in th for parent in hierarchy[child]):
+                        agenda.append(child)
+            if hierarchy:
+                raise ValueError(
+                    'disconnected or cyclic hierarchy; remaining: {}'
+                    .format(', '.join(hierarchy)))
+
+    def __setitem__(self, typename, parents):
+        if typename in self._hier:
+            raise ValueError('type already in hierarchy: ' + typename)
+        ancestors = set()
+        for parent in parents:
+            if parent not in self._hier:
+                raise ValueError('parent not in hierarchy: ' + parent)
+            ancestors.update(self.ancestors(parent))
+        redundant = ancestors.intersection(parents)
+        if redundant:
+            raise ValueError('redundant parents: {}'
+                             .format(', '.join(sorted(redundant))))
+        self._hier[typename] = (parents, [])
+        for parent in parents:
+            self._hier[parent][1].append(typename)
+
+    # def __getitem__(self, typename):
+    #     return self._hier[typename]
+
+    def ancestors(self, typename):
+        """Return the ancestor types of *typename*."""
+        xs = []
+        for parent in self._hier[typename][0]:
+            xs.append(parent)
+            xs.extend(self.ancestors(parent))
+        return xs
+
+    def descendants(self, typename):
+        """Return the descendant types of *typename*."""
+        xs = []
+        for child in self._hier[typename][1]:
+            xs.append(child)
+            xs.extend(self.descendants(child))
+        return xs
+
+    def subsumes(self, a, b):
+        """Return `True` if type *a* subsumes type *b*."""
+        return a == b or b in self.descendants(a)
+
+    def compatible(self, a, b):
+        """Return `True` if type *a* is compatible with type *b*."""
+        return len(set([a] + self.descendants(a))
+                   .intersection([b] + self.descendants(b))) > 0

@@ -50,6 +50,7 @@ these changes are prefixed with "**BREAKING**"
   methods on `TypedFeatureStructure`, `AVM`, `Conjunction`, and
   `TypeDefinition`) now take a boolean `expand` argument which, if `True`,
   expands all feature paths.
+* `delphin.tfs.TypeHierarchy` with basic tests (#93)
 * `delphin.exceptions.TdlWarning` for notifications about deprecated TDL
   syntaxes
 * `delphin.util.LookaheadIterator` for parsing with arbitrary lookahead
