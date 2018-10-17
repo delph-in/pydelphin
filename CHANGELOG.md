@@ -46,6 +46,10 @@ these changes are prefixed with "**BREAKING**"
   - `delphin.tdl.DIFF_LIST_LAST` (default: `"LAST"`)
 * `delphin.tfs.FeatureStructure`, since the type of `TypedFeatureStructure`
   was unused; `TypedFeatureStructure` now inherits from `FeatureStructure`
+* `delphin.tfs.FeatureStructure.features()` (as well as the `features()`
+  methods on `TypedFeatureStructure`, `AVM`, `Conjunction`, and
+  `TypeDefinition`) now take a boolean `expand` argument which, if `True`,
+  expands all feature paths.
 * `delphin.exceptions.TdlWarning` for notifications about deprecated TDL
   syntaxes
 * `delphin.util.LookaheadIterator` for parsing with arbitrary lookahead

@@ -18,16 +18,18 @@ def test_FeatureStructure():
     assert fs['B'] == fs.get('B') == 2
     assert fs == tfs.FeatureStructure([('A', 'xYz'), ('B', 2)])
 
-    fs = tfs.FeatureStructure([('A.B', 1), ('A.C', 2), ('B', 3)])
+    fs = tfs.FeatureStructure([('A.B.C', 1), ('A.B.D', 2), ('B', 3)])
     assert sorted(fs.features()) == [
-        ('A', tfs.FeatureStructure([('B', 1), ('C', 2)])),
+        ('A.B', tfs.FeatureStructure([('C', 1), ('D', 2)])),
         ('B', 3)]
-    assert fs['A.B'] == fs['a.B'] == 1
-    assert fs['A.C'] == fs['A']['C'] == 2
+    assert sorted(fs.features(expand=True)) == [
+        ('A.B.C', 1), ('A.B.D', 2), ('B', 3)]
+    assert fs['A.B.C'] == fs['a.B.c'] == 1
+    assert fs['A.B.D'] == fs['A']['B']['D'] == 2
     assert fs['B'] == 3
-    assert fs['A'] == tfs.FeatureStructure([('B', 1), ('C', 2)])
+    assert fs['A'] == tfs.FeatureStructure([('B.C', 1), ('B.D', 2)])
     with pytest.raises(KeyError):
-        fs['A.D']
+        fs['A.B.E']
 
 def test_TypedFeatureStructure():
     with pytest.raises(TypeError):

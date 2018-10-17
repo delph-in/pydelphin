@@ -136,15 +136,17 @@ def test_AVM():
     assert a.features()[0][1] == a['ATTR1.ATTR2']
 
     a = AVM([('ATTR1', Conjunction(
-        [AVM([('ATTR2', Conjunction([String('b')]))])]))])
+        [AVM([('ATTR2.ATTR3', Conjunction([String('b')]))])]))])
     assert len(a.features()) == 1
     assert a.features()[0][0] == 'ATTR1'
     assert a.features()[0][1] == a['ATTR1']
-    assert a.features()[0][1].features()[0][0] == 'ATTR2'
-    assert a.features()[0][1].features()[0][1] == a['ATTR1.ATTR2']
-    assert a['ATTR1.ATTR2'] == a['ATTR1']['ATTR2']
+    assert a['ATTR1'].features()[0][0] == 'ATTR2.ATTR3'
+    assert a['ATTR1'].features()[0][1] == a['ATTR1.ATTR2.ATTR3']
+    assert a['ATTR1.ATTR2.ATTR3'] == a['ATTR1']['ATTR2']['ATTR3']
+    assert a.features(expand=True)[0][0] == 'ATTR1.ATTR2.ATTR3'
     a.normalize()
-    assert a.features()[0][0] == 'ATTR1.ATTR2'
+    assert a.features()[0][0] == 'ATTR1.ATTR2.ATTR3'
+    assert a.features(expand=True)[0][0] == 'ATTR1.ATTR2.ATTR3'
 
     a = AVM()
     a['ATTR1.ATTR2'] = Conjunction([TypeIdentifier('a')])
@@ -153,6 +155,13 @@ def test_AVM():
     b = AVM()
     b['ATTR1.ATTR2'] = TypeIdentifier('a')
     assert a == b
+
+    a = AVM([('ATTR1', Conjunction(
+        [TypeIdentifier('b'),
+         AVM([('ATTR2', TypeIdentifier('c'))])]))])
+    assert a.features(expand=True) == [
+        ('ATTR1', TypeIdentifier('b')),
+        ('ATTR1.ATTR2', TypeIdentifier('c'))]
 
 
 def test_ConsList():

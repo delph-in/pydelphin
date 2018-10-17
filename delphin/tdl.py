@@ -245,6 +245,36 @@ class AVM(FeatureStructure, Term):
             elif isinstance(val, AVM):
                 val.normalize()
 
+    def features(self, expand=False):
+        """
+        Return the list of tuples of feature paths and feature values.
+
+        Args:
+            expand (bool): if `True`, expand all feature paths
+        Example:
+            >>> avm = AVM([('A.B', TypeIdentifier('1')),
+            ...            ('A.C', TypeIdentifier('2')])
+            >>> avm.features()
+            [('A', <AVM object at ...>)]
+            >>> avm.features(expand=True)
+            [('A.B', <TypeIdentifier object (1) at ...>),
+             ('A.C', <TypeIdentifier object (2) at ...>)]
+        """
+        fs = []
+        for featpath, val in super(AVM, self).features(expand=expand):
+            # don't juse Conjunction.features() here because we want to
+            # include the non-AVM terms, too
+            if expand and isinstance(val, Conjunction):
+                for term in val.terms:
+                    if isinstance(term, AVM):
+                        for fp, v in term.features(True):
+                            fs.append(('{}.{}'.format(featpath, fp), v))
+                    else:
+                        fs.append((featpath, term))
+            else:
+                fs.append((featpath, val))
+        return fs
+
 
 class ConsList(AVM):
     """
@@ -566,12 +596,12 @@ class Conjunction(object):
         return [term for term in self._terms
                 if isinstance(term, (TypeIdentifier, String, Regex))]
 
-    def features(self):
+    def features(self, expand=False):
         """Return the list of feature-value pairs in the conjunction."""
         featvals = []
         for term in self._terms:
             if isinstance(term, AVM):
-                featvals.extend(term.features())
+                featvals.extend(term.features(expand=expand))
         return featvals
 
     def string(self):
@@ -622,9 +652,9 @@ class TypeDefinition(object):
         """The list of supertypes for the type."""
         return self.conjunction.types()
 
-    def features(self):
+    def features(self, expand=False):
         """Return the list of feature-value pairs in the conjunction."""
-        return self.conjunction.features()
+        return self.conjunction.features(expand=expand)
 
     def __contains__(self, key):
         return key in self.conjunction

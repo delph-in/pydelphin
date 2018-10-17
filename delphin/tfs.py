@@ -102,9 +102,18 @@ class FeatureStructure(object):
         """
         return self._avm is None or len(self._avm) != 1
 
-    def features(self):
+    def features(self, expand=False):
         """
         Return the list of tuples of feature paths and feature values.
+
+        Args:
+            expand (bool): if `True`, expand all feature paths
+        Example:
+            >>> fs = FeatureStructure([('A.B', 1), ('A.C', 2)])
+            >>> fs.features()
+            [('A', <FeatureStructure object at ...>)]
+            >>> fs.features(expand=True)
+            [('A.B', 1), ('A.C', 2)]
         """
         fs = []
         if self._avm is not None:
@@ -114,13 +123,13 @@ class FeatureStructure(object):
                 feats = list(self._avm)
             for feat in feats:
                 val = self._avm[feat]
-                try:
-                    if val._is_notable():
+                if isinstance(val, FeatureStructure):
+                    if not expand and val._is_notable():
                         fs.append((feat, val))
                     else:
-                        for subfeat, subval in val.features():
+                        for subfeat, subval in val.features(expand=expand):
                             fs.append(('{}.{}'.format(feat, subfeat), subval))
-                except AttributeError:
+                else:
                     fs.append((feat, val))
         return fs
 
