@@ -99,6 +99,7 @@ these changes are prefixed with "**BREAKING**"
 * **BREAKING** `--filter` option on all commands
 * **BREAKING** `--apply` option on all commands
 * **BREAKING** `--join` option on the `select` command
+* `recipes/` directory
 
 
 ## [v0.8.0][]
