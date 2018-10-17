@@ -23,7 +23,7 @@ For bug requests, please provide the following, if possible:
   ```python
   >>> from delphin.__about__ import __version__
   >>> __version__
-  '0.6.0'
+  '0.9.0'
   ```
 * Python version (e.g. 2.7, 3.4, etc.)
 
@@ -108,17 +108,17 @@ Do the following tasks prior to releasing on GitHub and PyPI.
   - [ ] Update `CHANGELOG.md`
   - [ ] Update `README.md` (contributors, requirements, etc.) if necessary
   - [ ] Ensure tests pass: `tox`
+  - [ ] Ensure the documentation builds without error (see above)
   - [ ] Bump the version in `delphin/__about__.py`
   - [ ] commit
   - [ ] push
 - [ ] Merge to master
   - [ ] Test again: `tox`
   - [ ] push
-- [ ] [Make a new release](https://github.com/delph-in/pydelphin/releases/new)
 - [ ] Create a source distribution: `setup.py sdist`
 - [ ] Build a wheel distribution: `setup.py bdist_wheel --universal`
 - [ ] Upload to PyPI: `twine upload dist/*`
-- [ ] Update documentation (see above)
+- [ ] [Make a new release](https://github.com/delph-in/pydelphin/releases/new)
 - [ ] Announce
 
 [issues]: https://github.com/delph-in/pydelphin/issues
