@@ -1021,7 +1021,7 @@ _tdl_lex_re = re.compile(
     |%(prefix|suffix)                #  21  start of affixing pattern
     |\(([^ ]+\s+(?:[^ )\\]|\\.)+)\)  #  22  affix subpattern
     |(\/)                            #  23  defaults (currently unused)
-    |([^\s!"#$&'(),./:;<=>[\]^|]+)   #  24  identifiers and symbols
+    |([\w_+*?-]+)                    #  24  identifiers and symbols
     |(:begin)                        #  25  start a :type or :instance block
     |(:end)                          #  26  end a :type or :instance block
     |(:type|:instance)               #  27  environment type
@@ -1029,7 +1029,7 @@ _tdl_lex_re = re.compile(
     |(:include)                      #  29  file inclusion
     |([^\s])                         #  30  unexpected
     ''',
-    flags=re.VERBOSE)
+    flags=re.VERBOSE|re.UNICODE)
 
 
 # Parsing helper functions
