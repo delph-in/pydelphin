@@ -19,6 +19,10 @@ For this tutorial, it is assumed you've installed PyDelphin via
 The `delphin` command has several subcommands, described
 below.
 
+.. seealso::
+
+   The :mod:`delphin.commands` module provides a Python API for these
+   commands.
 
 .. _convert-tutorial:
 

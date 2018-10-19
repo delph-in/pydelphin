@@ -30,6 +30,7 @@ PyDelphin
   :maxdepth: 1
   :caption: API Reference:
 
+  api/delphin.commands.rst
   api/delphin.derivation.rst
   api/delphin.extra.rst
   api/delphin.interfaces.rst

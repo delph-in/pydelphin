@@ -33,8 +33,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
             stream of input representations
         source_fmt (str): convert from this format
         target_fmt (str): convert to this format
-        select (str): data-selector (ignored if *path* is not a
-            testsuite directory; default: `"result:mrs"`)
+        select (str): TSQL query for selecting data (ignored if *path*
+            is not a testsuite directory; default: `"result:mrs"`)
         properties (bool): include morphosemantic properties if `True`
             (default: `True`)
         show_status (bool): show disconnected EDS nodes (ignored if
@@ -571,15 +571,14 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
         select: TSQL query to select (id, input, mrs) triples
             (default: `i-id i-input mrs`)
     Yields:
-        dict: Comparison results as:
+        dict: Comparison results as::
 
-        ```python
-        {"id": "item identifier",
-         "input": "input sentence",
-         "test": number_of_unique_results_in_test,
-         "shared": number_of_shared_results,
-         "gold": number_of_unique_results_in_gold}
-        ```
+            {"id": "item identifier",
+             "input": "input sentence",
+             "test": number_of_unique_results_in_test,
+             "shared": number_of_shared_results,
+             "gold": number_of_unique_results_in_gold}
+
     """
     from delphin.mrs import simplemrs, compare as mrs_compare
 
