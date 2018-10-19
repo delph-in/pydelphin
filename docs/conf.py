@@ -27,7 +27,7 @@ author = u'Michael Wayne Goodman'
 # The short X.Y version
 version = u''
 # The full version, including alpha/beta/rc tags
-release = u'v0.8.0'
+release = u'v0.9.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -180,4 +180,3 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 # -- Options for Napoleon extension ------------------------------------------
 
 napoleon_use_rtype = False
-

@@ -5,6 +5,21 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+## [v0.9.0][]
+
+This release introduces a completely redone TDL parser that follows
+the description of TDL syntax at http://moin.delph-in.net/TdlRfc based
+on recent discussions on the DELPH-IN mailing list (links to these
+discussions are at the bottom of the linked wiki). In addition, there
+are three other major introductions: `delphin.commands`, which gives
+programmatic access to the `delphin` command-line utilities;
+`delphin.tsql`, which implements a subset of the TSQL query language
+(see http://moin.delph-in.net/TsqlRfc) that now replace the --filter
+options for certain commands; and the new `TypeHierarchy` class in
+`delphin.tfs`. Improvements to the `delphin.itsdb.TestSuite` class
+now give it feature-parity with the `ItsdbProfile` class it replaces.
+See the rest of the changelog for additional improvements.
+
 ### Fixed
 
 * `delphin.tdl.parse()` now accepts a filename argument and returns a properly
