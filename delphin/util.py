@@ -105,6 +105,22 @@ def _bfs(g, start=None):
     return seen
 
 
+def _connected_components(nodes, edges):
+    g = {n: set() for n in nodes}
+    for n1, n2 in edges:
+        g[n1].add(n2)
+        g[n2].add(n1)
+    # find connected components
+    components = []
+    seen = set()
+    for n in nodes:
+        if n not in seen:
+            component = _bfs(g, n)
+            seen.update(component)
+            components.append(component)
+    return components
+
+
 # unescaping escaped strings (potentially with unicode)
 #   (disabled but left here in case a need arises)
 # thanks: http://stackoverflow.com/a/24519338/1441112

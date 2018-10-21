@@ -7,8 +7,8 @@ from __future__ import print_function
 
 from itertools import count
 
-from delphin.util import stringtypes
-from delphin.mrs.xmrs import Xmrs, _bfs
+from delphin.util import stringtypes, _bfs, _connected_components
+from delphin.mrs.xmrs import Xmrs
 from delphin.mrs.components import (
     var_sort,
     Lnk,
@@ -299,9 +299,19 @@ def non_argument_modifiers(role='ARG1', only_connecting=True):
         >>> func = non_argument_modifiers(role="MOD", only_connecting=False)
     """
     def func(xmrs, deps):
-        ccmap = _connected_component_map(xmrs, deps)
+        edges = []
+        for src in deps:
+            for _, tgt in deps[src]:
+                edges.append((src, tgt))
+        components = _connected_components(xmrs.nodeids(), edges)
+
+        ccmap = {}
+        for i, component in enumerate(components):
+            for n in component:
+                ccmap[n] = i
+
         addl = {}
-        if not only_connecting or len(set(ccmap.values())) > 1:
+        if not only_connecting or len(components) > 1:
             lsh = xmrs.labelset_heads
             lblheads = {v: lsh(v) for v, vd in xmrs._vars.items()
                         if 'LBL' in vd['refs']}
@@ -320,27 +330,6 @@ def non_argument_modifiers(role='ARG1', only_connecting=True):
         return addl
 
     return func
-
-
-def _connected_component_map(xmrs, deps):
-    # simplify graph structure for _bfs
-    simple_deps = {nid: set() for nid in deps}
-    for src in deps:
-        for _, tgt in deps[src]:
-            simple_deps[src].add(tgt)
-            simple_deps[tgt].add(src)
-    # find connected components
-    ccmap = {}
-    seen = set()
-    idx = 0
-    for nid in xmrs.nodeids():
-        if nid not in seen:
-            component = _bfs(simple_deps, nid)
-            seen.update(component)
-            for n in component:
-                ccmap[n] = idx
-            idx += 1
-    return ccmap
 
 
 def _unique_ids(eps, deps):
