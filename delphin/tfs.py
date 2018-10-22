@@ -28,7 +28,7 @@ class FeatureStructure(object):
             to feature values
     """
 
-    __slots__ = ['_avm', '_feats']
+    __slots__ = ('_avm', '_feats')
 
     def __init__(self, featvals=None):
         self._avm = {}
@@ -147,7 +147,7 @@ class TypedFeatureStructure(FeatureStructure):
         featvals (dict, list): a mapping or iterable of feature paths
             to feature values
     """
-    __slots__ = ['_type', '_avm', '_feats']
+    __slots__ = '_type'
 
     def __init__(self, type, featvals=None):
         self._type = type

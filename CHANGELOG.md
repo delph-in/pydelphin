@@ -5,6 +5,11 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+### Fixed
+
+* `delphin.tfs.TypedFeatureStructure` no longer duplicates attributes
+  on `__slots__` 
+
 ## [v0.9.0][]
 
 This release introduces a completely redone TDL parser that follows
