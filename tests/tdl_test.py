@@ -283,6 +283,34 @@ def test_LexicalRuleDefinition():
     pass
 
 
+def test_parse_identifiers():
+    assert tdlparse('a := b.').identifier == 'a'
+    assert tdlparse('*a* := b.').identifier == '*a*'
+    assert tdlparse(u'Ⅲ := b.').identifier == u'Ⅲ'
+    assert tdlparse(u'＊-marker := b.').identifier == u'＊-marker'
+    assert tdlparse(u'，_c_1 := b.').identifier == u'，_c_1'
+    assert tdlparse(u'_n_1 := b.').identifier == u'_n_1'
+    assert tdlparse(u'和_c_⚠ := b.').identifier == u'和_c_⚠'
+    assert tdlparse(u'格里姆斯比•罗伊洛特_n_1 := b.').identifier == (
+        u'格里姆斯比•罗伊洛特_n_1')
+    with pytest.raises(TdlParsingError):
+        tdlparse('a:b := b.')
+    with pytest.raises(TdlParsingError):
+        tdlparse('a[b := b.')
+    with pytest.raises(TdlParsingError):
+        tdlparse('a!b := b.')
+    with pytest.raises(TdlParsingError):
+        tdlparse('a|b := b.')
+    with pytest.raises(TdlParsingError):
+        tdlparse('a.b := b.')
+    with pytest.raises(TdlParsingError):
+        tdlparse('#a := b.')
+    with pytest.raises(TdlParsingError):
+        tdlparse('a&b := b.')
+    with pytest.raises(TdlParsingError):
+        tdlparse('a,b := b.')
+
+
 def test_parse_supertypes():
     t = tdlparse('a := b.')
     assert t.supertypes == ['b']

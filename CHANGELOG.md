@@ -8,7 +8,9 @@ these changes are prefixed with "**BREAKING**"
 ### Fixed
 
 * `delphin.tfs.TypedFeatureStructure` no longer duplicates attributes
-  on `__slots__` 
+  on `__slots__`
+* TDL identifiers are reverted to the more permissive blacklist pattern (#192)
+* TDL identifiers, coreferences, and 'symbols now use the same pattern (#191)
 
 ## [v0.9.0][]
 

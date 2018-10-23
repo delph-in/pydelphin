@@ -996,13 +996,14 @@ class TdlInflRule(TdlType):
 #       as they require separate handling for proper lexing
 # NOTE: only use one capture group () for each pattern; if grouping
 #       inside the pattern is necessary, use non-capture groups (?:)
+_identifier_pattern = r'''[^\s!"#$%&'(),.\/:;<=>[\]^|]+'''
 _tdl_lex_re = re.compile(
     r'''# regex-pattern                gid  description
     (""")                            #   1  start of multiline docstring
     |(\#\|)                          #   2  start of multiline comment
     |;([^\n]*)                       #   3  single-line comment
     |"([^"\\]*(?:\\.[^"\\]*)*)"      #   4  double-quoted "strings"
-    |'([^\s!"#$&'(),./:;<=>[\]^]+)   #   5  single-quoted 'symbols
+    |'({identifier})                 #   5  single-quoted 'symbols
     |\^([^$\\]*(?:\\.|[^$\\]*)*)\$   #   6  regular expression
     |(:[=<])                         #   7  type def operator
     |(:\+)                           #   8  type addendum operator
@@ -1016,19 +1017,19 @@ _tdl_lex_re = re.compile(
     |(\])                            #  16  AVM close
     |(!>)                            #  17  diff list close
     |(>)                             #  18  cons list close
-    |\#([^\s!"#$&'(),./:;<=>[\]^]+)  #  19  coreference
+    |\#({identifier})                #  19  coreference
     |%\s*\((.*)\)\s*$                #  20  letter-set or wild-card
     |%(prefix|suffix)                #  21  start of affixing pattern
     |\(([^ ]+\s+(?:[^ )\\]|\\.)+)\)  #  22  affix subpattern
     |(\/)                            #  23  defaults (currently unused)
-    |([\w_+*?-]+)                    #  24  identifiers and symbols
+    |({identifier})                  #  24  identifiers and symbols
     |(:begin)                        #  25  start a :type or :instance block
     |(:end)                          #  26  end a :type or :instance block
     |(:type|:instance)               #  27  environment type
     |(:status)                       #  28  instance status
     |(:include)                      #  29  file inclusion
     |([^\s])                         #  30  unexpected
-    ''',
+    '''.format(identifier=_identifier_pattern),
     flags=re.VERBOSE|re.UNICODE)
 
 
