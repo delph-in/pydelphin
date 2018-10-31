@@ -17,17 +17,18 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
-
 # -- Project information -----------------------------------------------------
 
-project = u'PyDelphin'
+import delphin
+
+project = delphin.__title__
 copyright = u'2018, Michael Wayne Goodman'
-author = u'Michael Wayne Goodman'
+author = delphin.__author__
 
 # The short X.Y version
-version = u''
+version = delphin.__version__
 # The full version, including alpha/beta/rc tags
-release = u'v0.9.0'
+release = delphin.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -70,7 +71,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['env', u'_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'

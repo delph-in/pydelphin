@@ -5,12 +5,11 @@ from setuptools import setup
 
 long_description = '''\
 PyDelphin provides a suite of libraries for modeling Minimal Recursion
-Semantics (MRS; including DMRS), derivation trees, and [incr tsdb()]
-profiles; introspection tools for Type Description Language (TDL),
-which is used to define HPSG grammars; a Python wrapper for the ACE
-parser; and some extra tools for syntax highlighting or LaTeX output.
-Python developers who work with DELPH-IN data can rely on PyDelphin to
-correctly deal with such data via convenient interfaces.'''
+Semantics (MRS; including EDS and DMRS), [incr tsdb()] profiles and
+derivations, the Test Suite Query Language (TSQL), Type Description
+Language (TDL), and YY token lattices. In addition, it provides an
+implementation of the Regular Expression Preprocessor (REPP) and
+Python interfaces for the ACE processor and HTTP API.'''
 
 base_dir = os.path.dirname(__file__)
 about = {}
