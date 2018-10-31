@@ -109,7 +109,7 @@ Do the following tasks prior to releasing on GitHub and PyPI.
   - [ ] Update `README.md` (contributors, requirements, etc.) if necessary
   - [ ] Ensure tests pass: `tox`
   - [ ] Ensure the documentation builds without error (see above)
-  - [ ] Bump the version in `delphin/__about__.py` and `docs/conf.py`
+  - [ ] Bump the version in `delphin/__about__.py`
   - [ ] commit
   - [ ] push
 - [ ] Merge to master
