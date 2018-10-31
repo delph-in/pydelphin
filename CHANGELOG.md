@@ -12,6 +12,11 @@ these changes are prefixed with "**BREAKING**"
 * TDL identifiers are reverted to the more permissive blacklist pattern (#192)
 * TDL identifiers, coreferences, and 'symbols now use the same pattern (#191)
 
+### Changed
+
+* Import package information from `delphin/__about__.py` into
+  `delphin/__init__.py` (#190)
+
 ## [v0.9.0][]
 
 This release introduces a completely redone TDL parser that follows
