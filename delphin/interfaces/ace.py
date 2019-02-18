@@ -80,6 +80,11 @@ encoding = locale.getpreferredencoding(False)
 from delphin.interfaces.base import ParseResponse, Processor
 from delphin.util import SExpr, stringtypes
 from delphin.__about__ import __version__ as pydelphin_version
+from delphin.exceptions import PyDelphinException
+
+
+class AceProcessError(PyDelphinException):
+    """Raised when the ACE process has crashed and cannot be recovered."""
 
 
 class AceProcess(Processor):
@@ -166,6 +171,8 @@ class AceProcess(Processor):
             'os': platform(),
             'start': datetime.now()
         })
+        if self._p.poll() is not None and self._p.returncode != 0:
+            raise AceProcessError('Process closed on startup; see <stderr>.')
 
     def __enter__(self):
         return self
@@ -587,7 +594,7 @@ _ace_argparser.add_argument('--disable-generalization', action='store_true')
 _ace_argparser.add_argument('--ubertagging', nargs='?', type=float)
 _ace_argparser.add_argument('--pcfg', type=argparse.FileType())
 _ace_argparser.add_argument('--rooted-derivations', action='store_true')
-_ace_argparser.add_argument('--udx', nargs='?', choices=('all'))
+_ace_argparser.add_argument('--udx', nargs='?', choices=('all',))
 _ace_argparser.add_argument('--yy-rules', action='store_true')
 _ace_argparser.add_argument('--max-words', type=int)
 
