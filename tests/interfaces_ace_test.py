@@ -52,6 +52,7 @@ def test_start(ace_mismatch, tmpdir, monkeypatch):
     grm.write('')
     with monkeypatch.context() as m:
         m.setattr(ace, 'Popen', popen)
+        m.setattr(ace, '_ace_version', lambda x: (0, 9, 29))
         with pytest.raises(ace.AceProcessError):
             ace.AceParser(str(grm))
         with pytest.raises(ace.AceProcessError):
