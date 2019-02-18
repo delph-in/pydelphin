@@ -384,7 +384,7 @@ def _lines_to_rows(lines):
 ### PROCESS ###################################################################
 
 def process(grammar, testsuite, source=None, select=None,
-            generate=False, transfer=False,
+            generate=False, transfer=False, options=None,
             all_items=False, result_id=None):
     """
     Process (e.g., parse) a [incr tsdb()] profile.
@@ -413,6 +413,9 @@ def process(grammar, testsuite, source=None, select=None,
             (default: `False`)
         transfer (bool): if `True`, transfer instead of parse
             (default: `False`)
+        options (list): list of ACE command-line options to use when
+            invoking the ACE subprocess; unsupported options will
+            give an error message
         all_items (bool): if `True`, don't exclude ignored items
             (those with `i-wf==2`) when parsing
         result_id (int): if given, only keep items with the specified
@@ -448,7 +451,7 @@ def process(grammar, testsuite, source=None, select=None,
             source,
             cast=False))
 
-    with processor(grammar) as cpu:
+    with processor(grammar, cmdargs=options) as cpu:
         target.process(cpu, tablename + ':' + column, source=table)
 
     target.write()

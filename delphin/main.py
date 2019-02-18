@@ -7,6 +7,7 @@ import os
 import argparse
 import logging
 import textwrap
+import shlex
 
 from delphin.__about__ import __version__
 from delphin.exceptions import PyDelphinException, PyDelphinWarning
@@ -92,6 +93,7 @@ def call_process(args):
         select=args.select,
         generate=args.generate,
         transfer=args.transfer,
+        options=shlex.split(args.options),
         all_items=args.all_items,
         result_id=args.p)
 
@@ -274,6 +276,10 @@ process_parser.add_argument(
 process_parser.add_argument(
     '-g', '--grammar', metavar='GRM', required=True,
     help='compiled grammar image'
+)
+process_parser.add_argument(
+    '-o', '--options', metavar='OPTIONS', type=str, default='',
+    help='ACE options (see http://moin.delph-in.net/AceOptions)'
 )
 process_parser.add_argument(
     '-s', '--source', metavar='PATH',
