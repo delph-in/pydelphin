@@ -212,7 +212,7 @@ def _select_projection(projection, table, ts):
 
 
 def _select_where(condition, table, ts):
-    keys = table.fields.keys()
+    keys = table.relation.keys()
     ids = set()
     if condition is not None:
         func, fields = _process_condition(condition)
@@ -277,7 +277,7 @@ def _join_if_missing(table, col, ts, how):
         # makes the assumption that relations are ordered and
         # that the first one is 'primary'
         tab = ts.relations.find(column)[0]
-    if table is None or column not in table.fields:
+    if table is None or column not in table.relation:
         table = _transitive_join(table, ts[tab], ts, how)
     return table
 

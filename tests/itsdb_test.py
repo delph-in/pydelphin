@@ -205,7 +205,7 @@ def test_Relations_path():
 def test_Record():
     rels = itsdb.Relations.from_string(_simple_relations)
     r = itsdb.Record(rels['item'], ['0', 'sentence'])
-    assert r.fields == rels['item']
+    assert r.relation == rels['item']
     assert len(r) == 2
     assert r['i-id'] == r[0] == '0'
     assert r.get('i-id', cast=True) == 0
@@ -245,7 +245,7 @@ def test_Table(single_item_skeleton):
         'item',
         rels['item'],
     )
-    assert t.fields == rels['item']
+    assert t.relation == rels['item']
     assert t.name == 'item'
     assert len(t) == 0
 
@@ -254,15 +254,15 @@ def test_Table(single_item_skeleton):
         rels['item'],
         [(0, 'sentence')]
     )
-    assert t.fields == rels['item']
+    assert t.relation == rels['item']
     assert t.name == 'item'
     assert len(t) == 1
     assert isinstance(t[0], itsdb.Record)
-    assert t[0].fields == t.fields
+    assert t[0].relation == t.relation
 
     itemfile = os.path.join(single_item_skeleton, 'item')
     t = itsdb.Table.from_file(itemfile, 'item', rels['item'])
-    assert t.fields == rels['item']
+    assert t.relation == rels['item']
     assert t.name == 'item'
     assert len(t) == 1
     assert isinstance(t[0], itsdb.Record)
@@ -272,7 +272,7 @@ def test_Table(single_item_skeleton):
 
     # infer name and relations if not given
     t = itsdb.Table.from_file(itemfile)
-    assert t.fields == rels['item']
+    assert t.relation == rels['item']
     assert t.name == 'item'
     assert len(t) == 1
 
@@ -332,7 +332,7 @@ class TestSuite(object):
         assert sorted(x.basename for x in d.listdir()) == [
             'item', 'parse', 'relations', 'result']
         ts = itsdb.TestSuite(str(d))
-        assert 'i-date' in ts['item'].fields
+        assert 'i-date' in ts['item'].relation
 
     def test_process(self, parser_cpu, single_item_skeleton):
         ts = itsdb.TestSuite(single_item_skeleton)
@@ -384,7 +384,7 @@ def test_decode_row():
     assert itsdb.decode_row('one@@three') == ['one', '', 'three']
     assert itsdb.decode_row('one\\s@\\\\two\\nabc\\x') == ['one@', '\\two\nabc\\x']
     rels = itsdb.Relations.from_string(_simple_relations)
-    assert itsdb.decode_row('10@one', fields=rels['item']) == [10, 'one']
+    assert itsdb.decode_row('10@one', relation=rels['item']) == [10, 'one']
 
 def test_encode_row():
     assert itsdb.encode_row(['']) == ''
@@ -421,7 +421,7 @@ def test_join(single_item_profile):
     j = itsdb.join(p['parse'], p['result'])
     assert j.name == 'parse+result'
     assert len(j) == 1
-    assert len(j.fields) == len(p['parse'].fields) + len(p['result'].fields) - 1
+    assert len(j.relation) == len(p['parse'].relation) + len(p['result'].relation) - 1
     r = j[0]
     assert r['parse:run-id'] == r['run-id']
     assert r['result:mrs'] == r['mrs']
@@ -430,7 +430,7 @@ def test_join(single_item_profile):
     j2 = itsdb.join(p['item'], j)
     assert j2.name == 'item+parse+result'
     assert len(j2) == 1
-    assert len(j2.fields) == len(j.fields) + len(p['item'].fields) - 1
+    assert len(j2.relation) == len(j.relation) + len(p['item'].relation) - 1
     r = j2[0]
     assert r['item:i-input'] == r['i-input']
     assert r['item:i-id'] == r['parse:i-id']

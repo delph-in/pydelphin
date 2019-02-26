@@ -445,7 +445,7 @@ def process(grammar, testsuite, source=None, select=None,
     column, tablename, condition = _interpret_selection(select, source)
     table = itsdb.Table(
         tablename,
-        source[tablename].fields,
+        source[tablename].relation,
         tsql.select(
             '* from {} {}'.format(tablename, condition),
             source,

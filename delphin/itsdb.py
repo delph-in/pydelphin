@@ -448,34 +448,34 @@ class Record(list):
     A row in a [incr tsdb()] table.
 
     Args:
-        fields: the Relation schema for the table of this record
+        relation: the Relation schema for the table of this record
         iterable: an iterable containing the data for the record
     Attributes:
-        fields (:class:`Relation`): table schema
+        relation (:class:`Relation`): table schema
     """
 
-    def __init__(self, fields, iterable):
+    def __init__(self, relation, iterable):
         # normalize data format
         if isinstance(iterable, Mapping):
             d = iterable
-            iterable = [None] * len(fields)
+            iterable = [None] * len(relation)
             for key, value in d.items():
                 try:
-                    index = fields.index(key)
+                    index = relation.index(key)
                 except KeyError:
                     raise ItsdbError('Invalid field name(s): ' + key)
                 iterable[index] = value
         else:
             iterable = list(iterable)
 
-        if len(fields) != len(iterable):
+        if len(relation) != len(iterable):
             raise ItsdbError(
                 'Incorrect number of column values: {} != {}'
-                .format(len(iterable), len(fields))
+                .format(len(iterable), len(relation))
             )
 
         for i, value in enumerate(iterable):
-            field = fields[i]
+            field = relation[i]
             if value is None:
                 if field.key:
                     raise ItsdbError('Missing key: {}'.format(field.name))
@@ -483,27 +483,27 @@ class Record(list):
             else:
                 iterable[i] = value
 
-        self.fields = fields
+        self.relation = relation
         super(Record, self).__init__(iterable)
 
     def __repr__(self):
         return "<{} '{}' {}>".format(
             self.__class__.__name__,
-            self.fields.name,
-            ' '.join('{}={}'.format(k, self[k]) for k in self.fields.keys())
+            self.relation.name,
+            ' '.join('{}={}'.format(k, self[k]) for k in self.relation.keys())
         )
 
     def __str__(self):
-        return make_row(self, self.fields)
+        return make_row(self, self.relation)
 
     def __getitem__(self, index):
         if not isinstance(index, int):
-            index = self.fields.index(index)
+            index = self.relation.index(index)
         return list.__getitem__(self, index)
 
     def __setitem__(self, index, value):
         if not isinstance(index, int):
-            index = self.fields.index(index)
+            index = self.relation.index(index)
         # should the value be validated against the datatype?
         return list.__setitem__(self, index, value)
 
@@ -516,17 +516,17 @@ class Record(list):
             default: the value to return if *key* is not in the row
         """
         tablename, _, key = key.rpartition(':')
-        if tablename and tablename not in self.fields.name.split('+'):
+        if tablename and tablename not in self.relation.name.split('+'):
             raise ItsdbError('column requested from wrong table: {}'
                              .format(tablename))
         try:
-            index = self.fields.index(key)
+            index = self.relation.index(key)
             value = list.__getitem__(self, index)
         except (KeyError, IndexError):
             value = default
         else:
             if cast:
-                dt = self.fields[index].datatype
+                dt = self.relation[index].datatype
                 if dt == ':integer':
                     value = int(value)
                 elif dt == ':float':
@@ -549,31 +549,30 @@ class Table(list):
 
     Args:
         name: the table name
-        fields: the Relation schema for this table
+        relation: the Relation schema for this table
         records: the collection of Record objects containing the table data
     Attributes:
         name (str): table name
-        fields (:class:`Relation`): table schema
+        relation (:class:`Relation`): table schema
     """
 
-    def __init__(self, name, fields, records=None):
+    def __init__(self, name, relation, records=None):
         self.name = name
-        self.fields = fields
-        # columns = [f.name for f in fields]
+        self.relation = relation
         if records is None:
             records = []
         # ensure records are Record objects
-        list.__init__(self, [Record(fields, rec) for rec in records])
+        list.__init__(self, [Record(relation, rec) for rec in records])
 
     @classmethod
-    def from_file(cls, path, name=None, fields=None, encoding='utf-8'):
+    def from_file(cls, path, name=None, relation=None, encoding='utf-8'):
         """
         Instantiate a Table from a database file.
 
         Args:
             path: the path to the table file
             name: the table name (inferred by the filename if not given)
-            fields: the Relation schema for the table (loaded from the
+            relation: the Relation schema for the table (loaded from the
                 relations file in the same directory if not given)
             encoding: the character encoding of the files in the testsuite
         """
@@ -582,11 +581,11 @@ class Table(list):
         if name is None:
             name = os.path.basename(path).rsplit('.gz', 1)[0]
 
-        if fields is None:
+        if relation is None:
             rpath = os.path.join(os.path.dirname(path), _relations_filename)
             if not os.path.exists(rpath):
                 raise ItsdbError(
-                    'No fields are specified and a relations file could '
+                    'No relation is specified and a relations file could '
                     'not be found.'
                 )
             rels = Relations.from_file(rpath)
@@ -595,13 +594,13 @@ class Table(list):
                     'Table \'{}\' not found in the relations.'.format(name)
                 )
             # successfully inferred the relations for the table
-            fields = rels[name]
+            relation = rels[name]
 
         records = []
         with _open_table(path, encoding) as tab:
             records.extend(map((lambda s: decode_row(s)), tab))
 
-        return cls(name, fields, records)
+        return cls(name, relation, records)
 
     def select(self, cols, mode='list'):
         """
@@ -617,7 +616,7 @@ class Table(list):
         if isinstance(cols, stringtypes):
             cols = _split_cols(cols)
         if not cols:
-            cols = [f.name for f in self.fields]
+            cols = [f.name for f in self.relation]
         return select_rows(cols, self, mode=mode)
 
 
@@ -632,8 +631,8 @@ class TestSuite(object):
             *path* will be used
         encoding: the character encoding of the files in the testsuite
     Attributes:
-        encoding (:py:class:`str`): character encoding used when reading and
-            writing tables
+        encoding (:py:class:`str`): character encoding used when reading
+            and writing tables
         relations (:class:`Relations`): database schema
     """
     def __init__(self, path=None, relations=None, encoding='utf-8'):
@@ -676,13 +675,13 @@ class TestSuite(object):
             self._reload_table(tablename)
 
     def _reload_table(self, tablename):
-        fields = self.relations[tablename]
+        relation = self.relations[tablename]
         tablepath = os.path.join(self._path, tablename)
         if os.path.exists(tablepath) or os.path.exists(tablepath + '.gz'):
             table = Table.from_file(tablepath, name=tablename,
-                                    fields=fields, encoding=self.encoding)
+                                    relation=relation, encoding=self.encoding)
         else:
-            table = Table(name=tablename, fields=fields)
+            table = Table(name=tablename, relation=relation)
         self._data[tablename] = table
 
     def select(self, arg, cols=None, mode='list'):
@@ -879,17 +878,17 @@ def _prepare_source(selector, source):
         if not tablename:
             tablename = source.relations.find(fields[0])[0]
         source = source[tablename]
-    cols = list(source.fields.keys()) + fields
+    cols = list(source.relation.keys()) + fields
     return source, cols
 
 def _add_record(tables, tablename, data, relations):
-    fields = relations[tablename]
+    relation = relations[tablename]
     if tablename not in tables:
-        tables[tablename] = Table(tablename, fields)
+        tables[tablename] = Table(tablename, relation)
     # remove any keys that aren't relation fields
-    for invalid_key in set(data).difference([f.name for f in fields]):
+    for invalid_key in set(data).difference([f.name for f in relation]):
         del data[invalid_key]
-    tables[tablename].append(Record(fields, data))
+    tables[tablename].append(Record(relation, data))
 
 
 
@@ -925,33 +924,33 @@ def _split_cols(colstring):
     colstring = colstring.lstrip(':')
     return [col.strip() for col in colstring.split('@')]
 
-def decode_row(line, fields=None):
+def decode_row(line, relation=None):
     """
     Decode a raw line from a profile into a list of column values.
 
     Decoding involves splitting the line by the field delimiter
-    (`"@"` by default) and unescaping special characters. If *fields*
+    (`"@"` by default) and unescaping special characters. If *relation*
     is given, cast the values into the datatype given by their
     respective Field object.
 
     Args:
         line: a raw line from a [incr tsdb()] profile.
-        fields: a list or Relation object of Fields for the row
+        relation: a list or Relation object of Fields for the row
     Returns:
         A list of column values.
     """
     cols = line.rstrip('\n').split(_field_delimiter)
     cols = list(map(unescape, cols))
-    if fields is not None:
-        if len(cols) != len(fields):
+    if relation is not None:
+        if len(cols) != len(relation):
             raise ItsdbError(
                 'Wrong number of fields: {} != {}'
-                .format(len(cols), len(fields))
+                .format(len(cols), len(relation))
             )
         for i in range(len(cols)):
             col = cols[i]
             if col:
-                field = fields[i]
+                field = relation[i]
                 dt = field.datatype
                 if dt == ':integer':
                     col = int(col)
@@ -965,7 +964,7 @@ def decode_row(line, fields=None):
     return cols
 
 
-def encode_row(fields):
+def encode_row(relation):
     """
     Encode a list of column values into a [incr tsdb()] profile line.
 
@@ -975,12 +974,12 @@ def encode_row(fields):
     make_row()).
 
     Args:
-        fields: a list of column values
+        relation: a list of column values
     Returns:
         A [incr tsdb()]-encoded string
     """
     # NOTE: str(f) only works for Python3
-    unicode_fields = [unicode(f) for f in fields]
+    unicode_fields = [unicode(f) for f in relation]
     escaped_fields = map(escape, unicode_fields)
     return _field_delimiter.join(escaped_fields)
 
@@ -1073,7 +1072,7 @@ def _open_table(tbl_filename, encoding):
             yield f
 
 
-def _write_table(profile_dir, table_name, rows, fields,
+def _write_table(profile_dir, table_name, rows, relation,
                  append=False, gzip=False, encoding='utf-8'):
     # don't gzip if empty
     rows = iter(rows)
@@ -1109,26 +1108,26 @@ def _write_table(profile_dir, table_name, rows, fields,
         f = io.open(tbl_filename, mode=mode, encoding=encoding)
 
     for row in rows:
-        f.write(make_row(row, fields) + '\n')
+        f.write(make_row(row, relation) + '\n')
 
     f.close()
 
 
-def make_row(row, fields):
+def make_row(row, relation):
     """
     Encode a mapping of column name to values into a [incr tsdb()]
-    profile line. The *fields* parameter determines what columns are
+    profile line. The *relation* parameter determines what columns are
     used, and default values are provided if a column is missing from
     the mapping.
 
     Args:
         row: a mapping of column names to values
-        fields: an iterable of :class:`Field` objects
+        relation: an iterable of :class:`Field` objects
     Returns:
         A [incr tsdb()]-encoded string
     """
     row_fields = []
-    for f in fields:
+    for f in relation:
         val = row.get(f.name, None)
         if val is None:
             val = str(f.default_value())
@@ -1234,16 +1233,16 @@ def join(table1, table2, on=None, how='inner', name=None):
     # validate and normalize the pivot
     on = _join_pivot(on, table1, table2)
     # the relation of the joined table
-    relation = _RelationJoin(table1.fields, table2.fields, on=on)
+    relation = _RelationJoin(table1.relation, table2.relation, on=on)
     # get key mappings to the right side (useful for inner and left joins)
     get_key = lambda rec: tuple(rec.get(k) for k in on)
-    key_indices = set(table2.fields.index(k) for k in on)
+    key_indices = set(table2.relation.index(k) for k in on)
     right = defaultdict(list)
     for rec in table2:
         right[get_key(rec)].append([c for i, c in enumerate(rec)
                                     if i not in key_indices])
     # build joined table
-    rfill = [f.default_value() for f in table2.fields if f.name not in on]
+    rfill = [f.default_value() for f in table2.relation if f.name not in on]
     joined = []
     for lrec in table1:
         k = get_key(lrec)
@@ -1257,7 +1256,7 @@ def _join_pivot(on, table1, table2):
     if isinstance(on, stringtypes):
         on = _split_cols(on)
     if not on:
-        on = set(table1.fields.keys()).intersection(table2.fields.keys())
+        on = set(table1.relation.keys()).intersection(table2.relation.keys())
         if not on:
             raise ItsdbError(
                 'No shared key to join on in the \'{}\' and \'{}\' tables.'
@@ -1546,7 +1545,7 @@ class ItsdbProfile(object):
         table_path = os.path.join(self.root, table)
         with _open_table(table_path, self.encoding) as tbl:
             for line in tbl:
-                cols = decode_row(line, fields=fields)
+                cols = decode_row(line, relation=fields)
                 if len(cols) != field_len:
                     # should this throw an exception instead?
                     logging.error('Number of stored fields ({}) '
