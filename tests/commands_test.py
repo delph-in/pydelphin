@@ -162,7 +162,7 @@ def test_mkprof(mini_testsuite, sentence_file, tmpdir, monkeypatch):
         mkprof(ts1, source=sentence_file)
 
     relations = str(mini_testsuite.join('relations'))
-    print(relations)
+
     mkprof(ts1, source=ts0)
     mkprof(ts1, source=None, in_place=True)
     with monkeypatch.context() as m:

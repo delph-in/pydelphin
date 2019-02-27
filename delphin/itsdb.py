@@ -152,6 +152,8 @@ class Field(
         comment (str): a description of the column
     '''
     def __new__(cls, name, datatype, key=False, partial=False, comment=None):
+        if partial and not key:
+            raise ItsdbError('a partial key must also be a key')
         return super(Field, cls).__new__(
             cls, name, datatype, key, partial, comment
         )
@@ -291,7 +293,7 @@ class Relations(object):
       a Relations object.
 
     Args:
-        tables: a list of `(table, :class:`Relation`)` tuples
+        tables: a list of (table, :class:`Relation`) tuples
     """
 
     def __init__(self, tables):
@@ -548,7 +550,6 @@ class Table(list):
     file in the same directory is used to get the schema.
 
     Args:
-        name: the table name
         relation: the Relation schema for this table
         records: the collection of Record objects containing the table data
     Attributes:
@@ -556,51 +557,38 @@ class Table(list):
         relation (:class:`Relation`): table schema
     """
 
-    def __init__(self, name, relation, records=None):
-        self.name = name
+    def __init__(self, relation, records=None):
         self.relation = relation
         if records is None:
             records = []
         # ensure records are Record objects
         list.__init__(self, [Record(relation, rec) for rec in records])
 
+    @property
+    def name(self):
+        return self.relation.name
+
     @classmethod
-    def from_file(cls, path, name=None, relation=None, encoding='utf-8'):
+    def from_file(cls, path, relation=None, encoding='utf-8'):
         """
         Instantiate a Table from a database file.
 
         Args:
             path: the path to the table file
-            name: the table name (inferred by the filename if not given)
             relation: the Relation schema for the table (loaded from the
                 relations file in the same directory if not given)
             encoding: the character encoding of the files in the testsuite
         """
         path = _table_filename(path)  # do early in case file not found
 
-        if name is None:
-            name = os.path.basename(path).rsplit('.gz', 1)[0]
-
         if relation is None:
-            rpath = os.path.join(os.path.dirname(path), _relations_filename)
-            if not os.path.exists(rpath):
-                raise ItsdbError(
-                    'No relation is specified and a relations file could '
-                    'not be found.'
-                )
-            rels = Relations.from_file(rpath)
-            if name not in rels:
-                raise ItsdbError(
-                    'Table \'{}\' not found in the relations.'.format(name)
-                )
-            # successfully inferred the relations for the table
-            relation = rels[name]
+            relation = _get_relation_from_table_path(path)
 
         records = []
         with _open_table(path, encoding) as tab:
             records.extend(map((lambda s: decode_row(s)), tab))
 
-        return cls(name, relation, records)
+        return cls(relation, records)
 
     def select(self, cols, mode='list'):
         """
@@ -620,15 +608,32 @@ class Table(list):
         return select_rows(cols, self, mode=mode)
 
 
+def _get_relation_from_table_path(path):
+    rpath = os.path.join(os.path.dirname(path), _relations_filename)
+    if not os.path.exists(rpath):
+        raise ItsdbError(
+            'No relation is specified and a relations file could '
+            'not be found.'
+        )
+    rels = Relations.from_file(rpath)
+    name = os.path.basename(path).rsplit('.gz', 1)[0]
+    if name not in rels:
+        raise ItsdbError(
+            'Table \'{}\' not found in the relations.'.format(name)
+        )
+    # successfully inferred the relations for the table
+    return rels[name]
+
+
 class TestSuite(object):
     """
     A [incr tsdb()] testsuite database.
 
     Args:
         path: the path to the testsuite's directory
-        relations: the relations file describing the schema of
-            the database; if not given, the relations file under
-            *path* will be used
+        relations (:class:`Relations`, str): the database schema; either
+            a :class:`Relations` object or a path to a relations file;
+            if not given, the relations file under *path* will be used
         encoding: the character encoding of the files in the testsuite
     Attributes:
         encoding (:py:class:`str`): character encoding used when reading
@@ -649,7 +654,7 @@ class TestSuite(object):
         else:
             raise ItsdbError(
                 'Either the relations parameter must be provided or '
-                'path must point to a directory with a relations file.'
+                '*path* must point to a directory with a relations file.'
             )
 
         self._data = dict((t, None) for t in self.relations)
@@ -664,7 +669,6 @@ class TestSuite(object):
                 self._reload_table(tablename)
             else:
                 self._data[tablename] = Table(
-                    tablename,
                     self.relations[tablename]
                 )
         return self._data[tablename]
@@ -678,10 +682,11 @@ class TestSuite(object):
         relation = self.relations[tablename]
         tablepath = os.path.join(self._path, tablename)
         if os.path.exists(tablepath) or os.path.exists(tablepath + '.gz'):
-            table = Table.from_file(tablepath, name=tablename,
-                                    relation=relation, encoding=self.encoding)
+            table = Table.from_file(tablepath,
+                                    relation=relation,
+                                    encoding=self.encoding)
         else:
-            table = Table(name=tablename, relation=relation)
+            table = Table(relation=relation)
         self._data[tablename] = table
 
     def select(self, arg, cols=None, mode='list'):
@@ -762,7 +767,7 @@ class TestSuite(object):
                 if data is None:
                     data = self[tablename]
                 elif not isinstance(data, Table):
-                    data = Table(tablename, relation, data)
+                    data = Table(relation, data)
                 _write_table(
                     path,
                     tablename,
@@ -884,7 +889,7 @@ def _prepare_source(selector, source):
 def _add_record(tables, tablename, data, relations):
     relation = relations[tablename]
     if tablename not in tables:
-        tables[tablename] = Table(tablename, relation)
+        tables[tablename] = Table(relation)
     # remove any keys that aren't relation fields
     for invalid_key in set(data).difference([f.name for f in relation]):
         del data[invalid_key]
@@ -951,20 +956,24 @@ def decode_row(line, relation=None):
             col = cols[i]
             if col:
                 field = relation[i]
-                dt = field.datatype
-                if dt == ':integer':
-                    col = int(col)
-                elif dt == ':float':
-                    col = float(col)
-                elif dt == ':date':
-                    dt = parse_datetime(col)
-                    col = dt if dt is not None else col
-                # other casts? :position?
+                col = _cast_to_datatype(col, field.datatype)
             cols[i] = col
     return cols
 
 
-def encode_row(relation):
+def _cast_to_datatype(col, dt):
+    if dt == ':integer':
+        col = int(col)
+    elif dt == ':float':
+        col = float(col)
+    elif dt == ':date':
+        dt = parse_datetime(col)
+        col = dt if dt is not None else col
+    # other casts? :position?
+    return col
+
+
+def encode_row(fields):
     """
     Encode a list of column values into a [incr tsdb()] profile line.
 
@@ -979,7 +988,7 @@ def encode_row(relation):
         A [incr tsdb()]-encoded string
     """
     # NOTE: str(f) only works for Python3
-    unicode_fields = [unicode(f) for f in relation]
+    unicode_fields = [unicode(f) for f in fields]
     escaped_fields = map(escape, unicode_fields)
     return _field_delimiter.join(escaped_fields)
 
@@ -1249,7 +1258,7 @@ def join(table1, table2, on=None, how='inner', name=None):
         if how == 'left' or k in right:
             joined.extend(lrec + rrec for rrec in right.get(k, [rfill]))
 
-    return Table(relation.name, relation, joined)
+    return Table(relation, joined)
 
 
 def _join_pivot(on, table1, table2):

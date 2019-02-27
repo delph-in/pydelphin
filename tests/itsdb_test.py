@@ -242,7 +242,6 @@ def test_Record():
 def test_Table(single_item_skeleton):
     rels = itsdb.Relations.from_string(_simple_relations)
     t = itsdb.Table(
-        'item',
         rels['item'],
     )
     assert t.relation == rels['item']
@@ -250,7 +249,6 @@ def test_Table(single_item_skeleton):
     assert len(t) == 0
 
     t = itsdb.Table(
-        'item',
         rels['item'],
         [(0, 'sentence')]
     )
@@ -261,7 +259,7 @@ def test_Table(single_item_skeleton):
     assert t[0].relation == t.relation
 
     itemfile = os.path.join(single_item_skeleton, 'item')
-    t = itsdb.Table.from_file(itemfile, 'item', rels['item'])
+    t = itsdb.Table.from_file(itemfile, rels['item'])
     assert t.relation == rels['item']
     assert t.name == 'item'
     assert len(t) == 1

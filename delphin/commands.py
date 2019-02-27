@@ -444,7 +444,6 @@ def process(grammar, testsuite, source=None, select=None,
     target = itsdb.TestSuite(testsuite)
     column, tablename, condition = _interpret_selection(select, source)
     table = itsdb.Table(
-        tablename,
         source[tablename].relation,
         tsql.select(
             '* from {} {}'.format(tablename, condition),
