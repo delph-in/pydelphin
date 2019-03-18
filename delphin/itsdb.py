@@ -301,6 +301,8 @@ class Relations(object):
         tables: a list of (table, :class:`Relation`) tuples
     """
 
+    __slots__ = ('tables', '_data', '_field_map')
+
     def __init__(self, tables):
         tables = [(t[0], Relation(*t)) for t in tables]
         self.tables = tuple(t[0] for t in tables)
@@ -460,6 +462,8 @@ class Record(list):
         relation (:class:`Relation`): table schema
     """
 
+    __slots__ = ('relation',)
+
     def __init__(self, relation, iterable):
         # normalize data format
         if isinstance(iterable, Mapping):
@@ -561,14 +565,14 @@ class Table(object):
         relation (:class:`Relation`): table schema
     """
 
+    __slots__ = ('relation', '_records', '_index')
+
     def __init__(self, relation, records=None):
         self.relation = relation
         if records is None:
             records = []
         key_indices = relation.key_indices
         self._records = [Record(relation, record) for record in records]
-        # self.__getitem__ = self._records.__getitem__
-        # self.__setitem__ = self._records.__setitem__
 
         self._index = {}
 
@@ -673,6 +677,9 @@ class TestSuite(object):
             and writing tables
         relations (:class:`Relations`): database schema
     """
+
+    __slots__ = ('_path', 'relations', '_data', 'encoding')
+
     def __init__(self, path=None, relations=None, encoding='utf-8'):
         self._path = path
         self.encoding = encoding
@@ -1026,16 +1033,6 @@ def encode_row(fields):
     return _field_delimiter.join(escaped_fields)
 
 
-_character_escapes = {
-    _field_delimiter: '\\s',
-    '\n': '\\n',
-    '\\': '\\\\'
-}
-
-def _escape(m):
-    return _character_escapes[m.group(1)]
-
-
 def escape(string):
     r"""
     Replace any special characters with their [incr tsdb()] escape
@@ -1052,13 +1049,11 @@ def escape(string):
     Returns:
         The escaped string
     """
-    return re.sub(r'(@|\n|\\)', _escape, string, flags=re.UNICODE)
-
-
-_character_unescapes = {'\\s': _field_delimiter, '\\n': '\n', '\\\\': '\\'}
-
-def _unescape(m):
-    return _character_unescapes[m.group(1)]
+    # str.replace()... is about 3-4x faster than re.sub() here
+    return (string
+            .replace('\\', '\\\\')  # must be done first
+            .replace('\n', '\\n')
+            .replace(_field_delimiter, '\\s'))
 
 
 def unescape(string):
@@ -1071,7 +1066,11 @@ def unescape(string):
     Returns:
         The string with escape sequences replaced
     """
-    return re.sub(r'(\\s|\\n|\\\\)', _unescape, string, flags=re.UNICODE)
+    # str.replace()... is about 3-4x faster than re.sub() here
+    return (string
+            .replace('\\\\','\\')  # must be done first
+            .replace('\\n','\n')
+            .replace('\\s', _field_delimiter))
 
 
 def _table_filename(tbl_filename):
