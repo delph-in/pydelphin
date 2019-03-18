@@ -222,21 +222,21 @@ def test_Record():
     assert r['i-id'] == 0
     assert r['i-input'] == ''
     # mapped fields
-    r = itsdb.Record(rels['item'], {'i-id': 0, 'i-input': 'sentence'})
+    r = itsdb.Record.from_dict(rels['item'], {'i-id': 0, 'i-input': 'sentence'})
     assert len(r) == 2
     assert r['i-id'] == r[0] == 0
     assert r['i-input'] == r[1] == 'sentence'
     # missing values are ok
-    r = itsdb.Record(rels['item'], {'i-id': 0})
+    r = itsdb.Record.from_dict(rels['item'], {'i-id': 0})
     assert len(r) == 2
     assert r['i-id'] == r[0] == 0
     assert r['i-input'] == r[1] == ''
     # missing keys are not ok
     with pytest.raises(itsdb.ItsdbError):
-        r = itsdb.Record(rels['item'], {'i-input': 'sentence'})
+        r = itsdb.Record.from_dict(rels['item'], {'i-input': 'sentence'})
     # invalid fields are not ok
     with pytest.raises(itsdb.ItsdbError):
-        r = itsdb.Record(rels['item'], {'i-id': 0, 'surface': 'sentence'})
+        r = itsdb.Record.from_dict(rels['item'], {'i-id': 0, 'surface': 'sentence'})
 
 
 def test_Table(single_item_skeleton):

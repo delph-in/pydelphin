@@ -89,8 +89,6 @@ from collections import (
 )
 from itertools import chain
 from contextlib import contextmanager
-from operator import itemgetter
-
 
 from delphin.exceptions import ItsdbError
 from delphin.util import (
@@ -465,18 +463,7 @@ class Record(list):
     __slots__ = ('relation',)
 
     def __init__(self, relation, iterable):
-        # normalize data format
-        if isinstance(iterable, Mapping):
-            d = iterable
-            iterable = [None] * len(relation)
-            for key, value in d.items():
-                try:
-                    index = relation.index(key)
-                except KeyError:
-                    raise ItsdbError('Invalid field name(s): ' + key)
-                iterable[index] = value
-        else:
-            iterable = list(iterable)
+        iterable = list(iterable)
 
         if len(relation) != len(iterable):
             raise ItsdbError(
@@ -495,6 +482,17 @@ class Record(list):
 
         self.relation = relation
         super(Record, self).__init__(iterable)
+
+    @classmethod
+    def from_dict(cls, relation, mapping):
+        iterable = [None] * len(relation)
+        for key, value in mapping.items():
+            try:
+                index = relation.index(key)
+            except KeyError:
+                raise ItsdbError('Invalid field name(s): ' + key)
+            iterable[index] = value
+        return cls(relation, iterable)
 
     def __repr__(self):
         return "<{} '{}' {}>".format(
@@ -537,13 +535,7 @@ class Record(list):
         else:
             if cast:
                 dt = self.relation[index].datatype
-                if dt == ':integer':
-                    value = int(value)
-                elif dt == ':float':
-                    value = float(value)
-                elif dt == ':date':
-                    value = parse_datetime(value)
-                # others?
+                value = _cast_to_datatype(value, dt)
         return value
 
 
@@ -933,7 +925,7 @@ def _add_record(tables, tablename, data, relations):
     # remove any keys that aren't relation fields
     for invalid_key in set(data).difference([f.name for f in relation]):
         del data[invalid_key]
-    tables[tablename].append(Record(relation, data))
+    tables[tablename].append(Record.from_dict(relation, data))
 
 
 

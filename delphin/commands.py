@@ -329,11 +329,13 @@ def mkprof(destination, source=None, relations=None, where=None,
     dts = itsdb.TestSuite(path=destination, relations=relations)
     # input is sentences on stdin
     if source is None:
-        dts.write({'item': _lines_to_rows(sys.stdin)}, gzip=gzip)
+        dts.write({'item': _lines_to_rows(sys.stdin, dts.relations)},
+                  gzip=gzip)
     # input is sentence file
     elif os.path.isfile(source):
         with open(source) as fh:
-            dts.write({'item': _lines_to_rows(fh)}, gzip=gzip)
+            dts.write({'item': _lines_to_rows(fh, dts.relations)},
+                      gzip=gzip)
     # input is source testsuite
     elif os.path.isdir(source):
         sts = itsdb.TestSuite(source)
@@ -372,12 +374,24 @@ def mkprof(destination, source=None, relations=None, where=None,
             print(fmt.format(stat.st_size, _red(filename + '.gz')))
 
 
-def _lines_to_rows(lines):
+def _lines_to_rows(lines, relations):
+    # field indices only need to be computed once, so don't use
+    # itsdb.Record.from_dict()
+    i_id_idx = relations['item'].index('i-id')
+    i_wf_idx = relations['item'].index('i-wf')
+    i_input_idx = relations['item'].index('i-input')
+    num_fields = len(relations['item'])
+
+    def make_row(i_id, i_wf, i_input):
+        row = [None] * num_fields
+        row[i_id_idx] = i_id
+        row[i_wf_idx] = i_wf
+        row[i_input_idx] = i_input
+        return itsdb.Record(relations['item'], row)
+
     for i, line in enumerate(lines):
-        i_id = i * 10
-        i_wf = 0 if line.startswith('*') else 1
-        i_input = line[1:].strip() if line.startswith('*') else line.strip()
-        yield {'i-id': i_id, 'i-wf': i_wf, 'i-input': i_input}
+        i_wf, i_input = (0, line[1:]) if line.startswith('*') else (1, line)
+        yield make_row(i * 10, i_wf, i_input.strip())
 
 
 ###############################################################################
