@@ -284,7 +284,7 @@ def _join_if_missing(table, col, ts, how):
 
 def _transitive_join(tab1, tab2, ts, how):
     if tab1 is None:
-        table = copy.copy(tab2)
+        table = itsdb.Table(tab2.relation, list(tab2))
     else:
         table = tab1
         # the tables may not be directly joinable but could be

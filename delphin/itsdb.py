@@ -89,6 +89,7 @@ from collections import (
 )
 from itertools import chain
 from contextlib import contextmanager
+from operator import itemgetter
 
 
 from delphin.exceptions import ItsdbError
@@ -193,7 +194,8 @@ class Relation(tuple):
         tr._index = dict(
             (f.name, i) for i, f in enumerate(fields)
         )
-        tr._keys = tuple(f.name for f in fields if f.key)
+        tr._keys = None
+        tr.key_indices = tuple(i for i, f in enumerate(fields) if f.key)
         return tr
 
     def __contains__(self, name):
@@ -205,7 +207,10 @@ class Relation(tuple):
 
     def keys(self):
         """Return the tuple of field names of key fields."""
-        return self._keys
+        keys = self._keys
+        if keys is None:
+            keys = tuple(self[i].name for i in self.key_indices)
+        return keys
 
 
 class _RelationJoin(Relation):
@@ -433,7 +438,6 @@ class Relations(object):
                          .format(source, target))
 
 
-
 def _make_field_map(rels):
     g = {}
     for rel in rels:
@@ -539,7 +543,7 @@ class Record(list):
         return value
 
 
-class Table(list):
+class Table(object):
     """
     A [incr tsdb()] table.
 
@@ -561,12 +565,41 @@ class Table(list):
         self.relation = relation
         if records is None:
             records = []
-        # ensure records are Record objects
-        list.__init__(self, [Record(relation, rec) for rec in records])
+        key_indices = relation.key_indices
+        self._records = [Record(relation, record) for record in records]
+        # self.__getitem__ = self._records.__getitem__
+        # self.__setitem__ = self._records.__setitem__
+
+        self._index = {}
 
     @property
     def name(self):
         return self.relation.name
+
+    def __iter__(self):
+        return iter(self._records)
+
+    def __getitem__(self, index):
+        return self._records[index]
+
+    def __setitem__(self, index, value):
+        self._records[index] = value
+
+    def __len__(self):
+        return len(self._records)
+
+    def append(self, item):
+        self._records.append(item)
+
+    def extend(self, items):
+        self._records.extend(items)
+
+    def attach(self, path, encoding='utf-8'):
+        records = []
+        with _open_table(path, encoding) as tab:
+            records.extend(map((lambda s: Record(self.relation, decode_row(s))), tab))
+        self._records = records
+        self.path = path
 
     @classmethod
     def from_file(cls, path, relation=None, encoding='utf-8'):
