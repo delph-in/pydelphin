@@ -186,6 +186,7 @@ class Relation(tuple):
         name: the table name
         fields: a list of Field objects
     """
+
     def __new__(cls, name, fields):
         tr = super(Relation, cls).__new__(cls, fields)
         tr.name = name
@@ -194,6 +195,7 @@ class Relation(tuple):
         )
         tr._keys = None
         tr.key_indices = tuple(i for i, f in enumerate(fields) if f.key)
+        tr._key_datatypes = tuple(tr[i].datatype for i in tr.key_indices)
         return tr
 
     def __contains__(self, name):
@@ -209,6 +211,10 @@ class Relation(tuple):
         if keys is None:
             keys = tuple(self[i].name for i in self.key_indices)
         return keys
+
+    def keygetter(self, record):
+        return tuple(_cast_to_datatype(record[i], dt)
+                     for i, dt in zip(self.key_indices, self._key_datatypes))
 
 
 class _RelationJoin(Relation):
@@ -557,45 +563,18 @@ class Table(object):
         relation (:class:`Relation`): table schema
     """
 
-    __slots__ = ('relation', '_records', '_index')
+    __slots__ = ('relation', 'path', 'encoding', '_records', '_index')
 
     def __init__(self, relation, records=None):
         self.relation = relation
-        if records is None:
-            records = []
-        key_indices = relation.key_indices
-        self._records = [Record(relation, record) for record in records]
-
+        self.path = None
+        self.encoding = None
+        self._records = []
         self._index = {}
 
-    @property
-    def name(self):
-        return self.relation.name
-
-    def __iter__(self):
-        return iter(self._records)
-
-    def __getitem__(self, index):
-        return self._records[index]
-
-    def __setitem__(self, index, value):
-        self._records[index] = value
-
-    def __len__(self):
-        return len(self._records)
-
-    def append(self, item):
-        self._records.append(item)
-
-    def extend(self, items):
-        self._records.extend(items)
-
-    def attach(self, path, encoding='utf-8'):
-        records = []
-        with _open_table(path, encoding) as tab:
-            records.extend(map((lambda s: Record(self.relation, decode_row(s))), tab))
-        self._records = records
-        self.path = path
+        if records is None:
+            records = []
+        self.extend(records)
 
     @classmethod
     def from_file(cls, path, relation=None, encoding='utf-8'):
@@ -609,15 +588,106 @@ class Table(object):
             encoding: the character encoding of the files in the testsuite
         """
         path = _table_filename(path)  # do early in case file not found
-
         if relation is None:
             relation = _get_relation_from_table_path(path)
 
-        records = []
-        with _open_table(path, encoding) as tab:
-            records.extend(map((lambda s: decode_row(s)), tab))
+        table = cls(relation)
+        table.attach(path, encoding=encoding)
 
-        return cls(relation, records)
+        return table
+
+    def attach(self, path, encoding='utf-8'):
+        if self.path is not None:
+            raise ItsdbError('already attached at {}'.format(self.path))
+        load = False
+        if os.path.exists(path) and os.stat(path).st_size > 0:
+            if len(self._records) > 0:
+                raise ItsdbError(
+                    'cannot attach non-empty table to non-empty file')
+            load = True
+        else:
+            # create empty file to attach the table ta
+            # (note: if the file were non-empty this would be destructive)
+            open(path, 'w').close()
+
+        self.path = path
+        self.encoding = encoding
+
+        if load:
+            get_keys = self.relation.keygetter
+            for i, line in self._enum_lines():
+                keys = get_keys(decode_row(line))
+                self._records.append(None)
+                self._index[keys] = i
+
+    def detach(self):
+        if self.path is None:
+            raise ItsdbError('already detached')
+        records = self._records
+        for i, rec in enumerate(self):
+            if records[i] is None:
+                records[i] = rec
+        self.path = None
+        self.encoding = None
+
+    @property
+    def name(self):
+        return self.relation.name
+
+    def _enum_lines(self):
+        with _open_table(self.path, self.encoding) as lines:
+            for i, line in enumerate(lines):
+                yield i, line
+
+    def _make_record(self, line):
+        return Record(self.relation, decode_row(line))
+
+    def __iter__(self):
+        if self.path is None:
+            return iter(self._records)
+        else:
+            records = self._records
+            for i, line in self._enum_lines():
+                if records[i] is not None:
+                    yield records[i]
+                else:
+                    yield self._make_record(line)
+
+    def __getitem__(self, index):
+        if self.path is None or self._records[index] is not None:
+            return self._records[index]
+        else:
+            for i, line in self._enum_lines():
+                if i == index:
+                    return self._make_record(line)
+        raise IndexError(index)
+
+    def __setitem__(self, index, value):
+        keys = self.relation.keygetter(value)
+        if self._index[keys] != index:
+            raise ItsdbError(
+                'new record keys do not match existing record '
+                '(for new data use append() or extend())')
+        self._records[index] = value
+
+    def __len__(self):
+        return len(self._records)
+
+    def append(self, item):
+        self.extend([item])
+
+    def extend(self, items):
+        get_keys = self.relation.keygetter
+        last_pos = len(self._records)
+        for item in items:
+            item = Record(self.relation, item)
+            keys = get_keys(item)
+            if keys in self._index:
+                raise ItsdbError('record keys {} already exist in \'{}\' table'
+                                 .format(keys, self.name))
+            self._records.append(item)
+            self._index[keys] = last_pos
+            last_pos += 1
 
     def select(self, cols, mode='list'):
         """
