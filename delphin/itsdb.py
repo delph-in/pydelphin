@@ -494,6 +494,19 @@ class Record(list):
 
     @classmethod
     def _make(cls, relation, iterable, table, rowid):
+        """
+        Create a Record bound to a :class:`Table`.
+
+        This is a helper method for creating Records from rows of a
+        Table that is attached to a file. It is not meant to be called
+        directly. It specifies the row number and a weak reference to
+        the Table object so that when the Record is modified it is
+        kept in the Table's in-memory list (see Record.__setitem__()),
+        otherwise the changes would not be retained the next time the
+        record is requested from the Table. The use of a weak
+        reference to the Table is to avoid a circular reference and
+        thus allow it to be properly garbage collected.
+        """
         record = cls(relation, iterable)
         record._tableref = weakref.ref(table)
         record._rowid = rowid
@@ -501,6 +514,19 @@ class Record(list):
 
     @classmethod
     def from_dict(cls, relation, mapping):
+        """
+        Create a Record from a dictionary of field mappings.
+
+        The *relations* object is used to determine the column indices
+        of fields in the mapping.
+
+        Args:
+            relation: the Relation schema for the table of this record
+            mapping: a dictionary or other mapping from field names to
+                column values
+        Returns:
+            a :class:`Record` object
+        """
         iterable = [None] * len(relation)
         for key, value in mapping.items():
             try:
@@ -534,7 +560,8 @@ class Record(list):
         if self._tableref is not None:
             assert self._rowid is not None
             table = self._tableref()
-            table[self._rowid] = self
+            if table is not None:
+                table[self._rowid] = self
 
     def get(self, key, default=None, cast=False):
         """
@@ -611,7 +638,28 @@ class Table(object):
         return table
 
     def attach(self, path, encoding='utf-8'):
-        if self.path is not None:
+        """
+        Attach the Table to the file at *path*.
+
+        Attaching a Table to a file means that only changed records
+        are stored in memory, which greatly reduces the memory
+        footprint of large profiles at some cost of
+        performance. Tables created from :meth:`Table.from_file()` or
+        from an attached :class:`TestSuite` are automatically
+        attached. Attaching a file does not immediately flush the
+        contents to disk; after attaching the table must be separately
+        written to commit the in-memory data.
+
+        A non-empty table will fail to attach to a non-empty file to
+        avoid data loss when merging the contents. In this case, you
+        may delete or clear the file, clear the table, or attach to
+        another file.
+
+        Args:
+            path: the path to the table file
+            encoding: the character encoding of the files in the testsuite
+        """
+        if self.is_attached():
             raise ItsdbError('already attached at {}'.format(self.path))
         load = False
         if os.path.exists(path) and os.stat(path).st_size > 0:
@@ -632,7 +680,25 @@ class Table(object):
                 self._records.append(None)
 
     def detach(self):
-        if self.path is None:
+        """
+        Detach the Table from a file.
+
+        Detaching a Table reads all data from the file and places it
+        in memory. This is useful when constructing or significantly
+        manipulating table data, or when more speed is needed. Tables
+        created by the default constructor are detached.
+
+        When detaching, only unmodified records are loaded from the
+        file; any uncommited changes are left as-is.
+
+        .. warning::
+
+           Very large tables may consume all available RAM when
+           detached.  Expect the in-memory table to take up about
+           twice the space of an uncompressed table on disk, although
+           this may vary by system.
+        """
+        if not self.is_attached():
             raise ItsdbError('already detached')
         records = self._records
         for i, line in self._enum_lines():
@@ -646,6 +712,9 @@ class Table(object):
     def name(self):
         return self.relation.name
 
+    def is_attached(self):
+        return self.path is not None
+
     def _enum_lines(self):
         with _open_table(self.path, self.encoding) as lines:
             for i, line in enumerate(lines):
@@ -653,18 +722,18 @@ class Table(object):
 
     def __iter__(self):
         fields = self.relation
-        if self.path is None:
-            generate_records = self._getitem_detached
-        else:
+        if self.is_attached():
             generate_records = self._getitem_attached
+        else:
+            generate_records = self._getitem_detached
         for record in generate_records(range(len(self._records))):
             yield record
 
     def __getitem__(self, index):
-        if self.path is None:
-            generate_records = self._getitem_detached
-        else:
+        if self.is_attached():
             generate_records = self._getitem_attached
+        else:
+            generate_records = self._getitem_detached
 
         if isinstance(index, slice):
             indices = range(*index.indices(len(self._records)))
