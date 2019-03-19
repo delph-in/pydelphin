@@ -89,6 +89,7 @@ from collections import (
 )
 from itertools import chain
 from contextlib import contextmanager
+import weakref
 
 from delphin.exceptions import ItsdbError
 from delphin.util import (
@@ -466,7 +467,7 @@ class Record(list):
         relation (:class:`Relation`): table schema
     """
 
-    __slots__ = ('relation',)
+    __slots__ = ('relation', '_tableref', '_rowid')
 
     def __init__(self, relation, iterable):
         iterable = list(iterable)
@@ -487,7 +488,16 @@ class Record(list):
                 iterable[i] = value
 
         self.relation = relation
+        self._tableref = None
+        self._rowid = None
         super(Record, self).__init__(iterable)
+
+    @classmethod
+    def _make(cls, relation, iterable, table, rowid):
+        record = cls(relation, iterable)
+        record._tableref = weakref.ref(table)
+        record._rowid = rowid
+        return record
 
     @classmethod
     def from_dict(cls, relation, mapping):
@@ -519,7 +529,12 @@ class Record(list):
         if not isinstance(index, int):
             index = self.relation.index(index)
         # should the value be validated against the datatype?
-        return list.__setitem__(self, index, value)
+        list.__setitem__(self, index, value)
+        # when a record is modified it should stay in memory
+        if self._tableref is not None:
+            assert self._rowid is not None
+            table = self._tableref()
+            table[self._rowid] = self
 
     def get(self, key, default=None, cast=False):
         """
@@ -563,14 +578,13 @@ class Table(object):
         relation (:class:`Relation`): table schema
     """
 
-    __slots__ = ('relation', 'path', 'encoding', '_records', '_index')
+    __slots__ = ('relation', 'path', 'encoding', '_records', '__weakref__')
 
     def __init__(self, relation, records=None):
         self.relation = relation
         self.path = None
         self.encoding = None
         self._records = []
-        self._index = {}
 
         if records is None:
             records = []
@@ -606,7 +620,7 @@ class Table(object):
                     'cannot attach non-empty table to non-empty file')
             load = True
         else:
-            # create empty file to attach the table ta
+            # create empty file to attach the table to
             # (note: if the file were non-empty this would be destructive)
             open(path, 'w').close()
 
@@ -614,19 +628,17 @@ class Table(object):
         self.encoding = encoding
 
         if load:
-            get_keys = self.relation.keygetter
             for i, line in self._enum_lines():
-                keys = get_keys(decode_row(line))
                 self._records.append(None)
-                self._index[keys] = i
 
     def detach(self):
         if self.path is None:
             raise ItsdbError('already detached')
         records = self._records
-        for i, rec in enumerate(self):
+        for i, line in self._enum_lines():
             if records[i] is None:
-                records[i] = rec
+                # check number of columns?
+                records[i] = tuple(decode_row(line))
         self.path = None
         self.encoding = None
 
@@ -639,36 +651,56 @@ class Table(object):
             for i, line in enumerate(lines):
                 yield i, line
 
-    def _make_record(self, line):
-        return Record(self.relation, decode_row(line))
-
     def __iter__(self):
+        fields = self.relation
         if self.path is None:
-            return iter(self._records)
+            generate_records = self._getitem_detached
         else:
-            records = self._records
-            for i, line in self._enum_lines():
-                if records[i] is not None:
-                    yield records[i]
-                else:
-                    yield self._make_record(line)
+            generate_records = self._getitem_attached
+        for record in generate_records(range(len(self._records))):
+            yield record
 
     def __getitem__(self, index):
-        if self.path is None or self._records[index] is not None:
-            return self._records[index]
+        if self.path is None:
+            generate_records = self._getitem_detached
         else:
-            for i, line in self._enum_lines():
-                if i == index:
-                    return self._make_record(line)
-        raise IndexError(index)
+            generate_records = self._getitem_attached
+
+        if isinstance(index, slice):
+            indices = range(*index.indices(len(self._records)))
+            return list(generate_records(indices))
+        else:
+            self._records[index]  # check for IndexError
+            indices = range(index, index + 1)
+            return next(generate_records(indices))
+
+    def _getitem_detached(self, indices):
+        fields = self.relation
+        records = self._records
+        for i in indices:
+            yield Record._make(fields, records[i], self, i)
+
+    def _getitem_attached(self, indices):
+        fields = self.relation
+        records = self._records
+        for i, line in self._enum_lines():
+            if i in indices:
+                row = records[i]
+                if row is None:
+                    row = decode_row(line)
+                yield Record._make(fields, row, self, i)
 
     def __setitem__(self, index, value):
-        keys = self.relation.keygetter(value)
-        if self._index[keys] != index:
-            raise ItsdbError(
-                'new record keys do not match existing record '
-                '(for new data use append() or extend())')
-        self._records[index] = value
+        if isinstance(index, slice):
+            values = [tuple(v) for v in value]
+        else:
+            self._records[index]  # check for IndexError
+            values = [tuple(value)]
+            index = slice(index, index + 1)
+        for value in values:
+            if len(value) != len(self.relation):
+                raise ItsdbError('wrong number of fields')
+        self._records[index] = values
 
     def __len__(self):
         return len(self._records)
@@ -677,17 +709,10 @@ class Table(object):
         self.extend([item])
 
     def extend(self, items):
-        get_keys = self.relation.keygetter
-        last_pos = len(self._records)
         for item in items:
-            item = Record(self.relation, item)
-            keys = get_keys(item)
-            if keys in self._index:
-                raise ItsdbError('record keys {} already exist in \'{}\' table'
-                                 .format(keys, self.name))
-            self._records.append(item)
-            self._index[keys] = last_pos
-            last_pos += 1
+            if len(item) != len(self.relation):
+                raise ItsdbError('wrong number of fields')
+            self._records.append(tuple(item))
 
     def select(self, cols, mode='list'):
         """

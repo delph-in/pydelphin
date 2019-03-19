@@ -317,7 +317,7 @@ class TestSuite(object):
         t['item'][0]['i-input'] = 'The cat sleeps.'
         t.write(['item', 'parse'])
         assert t['item'][0]['i-input'] == 'The cat sleeps.'
-        record = itsdb.Record(
+        record = itsdb.Record.from_dict(
             t.relations['item'], {'i-id': 0, 'i-input': 'The cat meows.'}
         )
         t.write({'item': [record]})
