@@ -593,9 +593,26 @@ class Table(object):
 
     Instances of this class contain a collection of rows with the data
     stored in the database. Generally a Table will be created by a
-    TestSuite object for a database, but a Table can also be instantiated
-    individually by the Table.from_file() class method, and the relations
-    file in the same directory is used to get the schema.
+    :class:`TestSuite` object for a database, but a Table can also be
+    instantiated individually by the :meth:`Table.from_file` class
+    method, and the relations file in the same directory is used to
+    get the schema. Tables can also be constructed entirely in-memory
+    and separate from a testsuite via the standard `Table()`
+    constructor.
+
+    Tables have two modes: **attached** and **detached**. Attached
+    tables are backed by a file on disk (whether as part of a
+    testsuite or not) and only store modified records in memory---all
+    unmodified records are retrieved from disk. Therefore, iterating
+    over a table is more efficient than random-access. Attached files
+    use significantly less memory than detached tables but also
+    require more processing time. Detached tables are entirely stored
+    in memory and are not backed by a file. They are useful for the
+    programmatic construction of testsuites (including for unit tests)
+    and other operations where high-speed random-access is required.
+    See the :meth:`attach` and :meth:`detach` methods for more
+    information. The :meth:`is_attached` method is useful for
+    determining which mode a table is in.
 
     Args:
         relation: the Relation schema for this table
@@ -603,6 +620,10 @@ class Table(object):
     Attributes:
         name (str): table name
         relation (:class:`Relation`): table schema
+        path (str): if attached, the path to the file containing the
+            table data; if detached it is `None`
+        encoding (str): the character encoding of the attached table
+            file; if detached it is `None`
     """
 
     __slots__ = ('relation', 'path', 'encoding', '_records', '__weakref__')
@@ -622,11 +643,16 @@ class Table(object):
         """
         Instantiate a Table from a database file.
 
+        This method instantiates a table attached to the file at *path*.
+        The file will be opened and traversed to determine the number of
+        records, but the contents will not be stored in memory unless
+        they are modified.
+
         Args:
             path: the path to the table file
             relation: the Relation schema for the table (loaded from the
                 relations file in the same directory if not given)
-            encoding: the character encoding of the files in the testsuite
+            encoding: the character encoding of the file at *path*
         """
         path = _table_filename(path)  # do early in case file not found
         if relation is None:
@@ -641,7 +667,7 @@ class Table(object):
         """
         Attach the Table to the file at *path*.
 
-        Attaching a Table to a file means that only changed records
+        Attaching a table to a file means that only changed records
         are stored in memory, which greatly reduces the memory
         footprint of large profiles at some cost of
         performance. Tables created from :meth:`Table.from_file()` or
@@ -681,15 +707,15 @@ class Table(object):
 
     def detach(self):
         """
-        Detach the Table from a file.
+        Detach the table from a file.
 
-        Detaching a Table reads all data from the file and places it
+        Detaching a table reads all data from the file and places it
         in memory. This is useful when constructing or significantly
         manipulating table data, or when more speed is needed. Tables
         created by the default constructor are detached.
 
         When detaching, only unmodified records are loaded from the
-        file; any uncommited changes are left as-is.
+        file; any uncommited changes in the Table are left as-is.
 
         .. warning::
 
@@ -713,6 +739,7 @@ class Table(object):
         return self.relation.name
 
     def is_attached(self):
+        """Return `True` if the table is attached to a file."""
         return self.path is not None
 
     def _enum_lines(self):
@@ -774,20 +801,34 @@ class Table(object):
     def __len__(self):
         return len(self._records)
 
-    def append(self, item):
-        self.extend([item])
+    def append(self, record):
+        """
+        Add *record* to the end of the table.
 
-    def extend(self, items):
-        for item in items:
-            if len(item) != len(self.relation):
+        Args:
+            record: a :class:`Record` or other iterable containing
+                column values
+        """
+        self.extend([record])
+
+    def extend(self, records):
+        """
+        Add each record in *records* to the end of the table.
+
+        Args:
+            record: an iterable of :class:`Record` or other iterables
+                containing column values
+        """
+        for record in records:
+            if len(record) != len(self.relation):
                 raise ItsdbError('wrong number of fields')
-            self._records.append(tuple(item))
+            self._records.append(tuple(record))
 
     def select(self, cols, mode='list'):
         """
         Select columns from each row in the table.
 
-        See select_rows() for a description of how to use the
+        See :func:`select_rows` for a description of how to use the
         *mode* parameter.
 
         Args:
@@ -1192,11 +1233,11 @@ def encode_row(fields):
 def escape(string):
     r"""
     Replace any special characters with their [incr tsdb()] escape
-    sequences. Default sequences are::
+    sequences. The characters and their escape sequences are::
 
         @         -> \s
-        (newline) -> \\n
-        \\        -> \\\\
+        (newline) -> \n
+        \         -> \\
 
     Also see :func:`unescape`
 
@@ -1340,13 +1381,13 @@ def select_rows(cols, rows, mode='list', cast=True):
     This function selects the data in *cols* from *rows* and yields it
     in a form specified by *mode*. Possible values of *mode* are:
 
-    ==============  =================  ============================
-    mode            description        example `['i-id', 'i-wf']`
-    ==============  =================  ============================
-    list (default)  a list of values   `[10, 1]`
-    dict            col to value map   `{'i-id': 10,'i-wf': 1}`
-    row             [incr tsdb()] row  `'10@1'`
-    ==============  =================  ============================
+    ==================  =================  ==========================
+    mode                description        example `['i-id', 'i-wf']`
+    ==================  =================  ==========================
+    `'list'` (default)  a list of values   `[10, 1]`
+    `'dict'`            col to value map   `{'i-id': 10,'i-wf': 1}`
+    `'row'`             [incr tsdb()] row  `'10@1'`
+    ==================  =================  ==========================
 
     Args:
         cols: an iterable of column names to select data for
@@ -1383,8 +1424,22 @@ def select_rows(cols, rows, mode='list', cast=True):
 def match_rows(rows1, rows2, key, sort_keys=True):
     """
     Yield triples of `(value, left_rows, right_rows)` where
-    `left_rows` and `right_rows` are lists of rows that share the
-    same column value for *key*.
+    `left_rows` and `right_rows` are lists of rows that share the same
+    column value for *key*. This means that both *rows1* and *rows2*
+    must have a column with the same name *key*.
+
+    .. warning::
+
+       Both *rows1* and *rows2* will exist in memory for this
+       operation, so it is not recommended for very large tables on
+       low-memory systems.
+
+    Args:
+        rows1: a :class:`Table` or list of :class:`Record` objects
+        rows2: a :class:`Table` or list of :class:`Record` objects
+        key (str): the column name on which to match
+        sort_keys (bool): if `True`, yield matching rows sorted by the
+            matched key instead of the original order
     """
     matched = OrderedDict()
     for i, rows in enumerate([rows1, rows2]):
@@ -1416,6 +1471,12 @@ def join(table1, table2, on=None, how='inner', name=None):
 
     Both inner and left joins are possible by setting the *how*
     parameter to `inner` and `left`, respectively.
+
+    .. warning::
+
+       Both *table2* and the resulting joined table will exist in
+       memory for this operation, so it is not recommended for very
+       large tables on low-memory systems.
 
     Args:
         table1 (:class:`Table`): the left table to join
