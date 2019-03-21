@@ -19,27 +19,27 @@ class ItsdbError(PyDelphinException):
 
 
 class XmrsError(PyDelphinException):
-    """Raised when there is an error processing *MRS objects."""
+    """Raised when there is an error processing \*MRS objects."""
     pass
 
 
 class XmrsSerializationError(XmrsError):
-    """Raised when serializing *MRS objects fails."""
+    """Raised when serializing \*MRS objects fails."""
     pass
 
 
 class XmrsDeserializationError(XmrsError):
-    """Raised when deserializing *MRS objects fails."""
+    """Raised when deserializing \*MRS objects fails."""
     pass
 
 
 class XmrsStructureError(XmrsError):
-    """Raised when a *MRS object is structurally ill-formed."""
+    """Raised when a \*MRS object is structurally ill-formed."""
     pass
 
 
 class XmrsWarning(PyDelphinWarning):
-    """Warning class for *MRS processing."""
+    """Warning class for \*MRS processing."""
     pass
 
 
