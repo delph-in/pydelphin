@@ -779,12 +779,20 @@ class Table(object):
     def _getitem_attached(self, indices):
         fields = self.relation
         records = self._records
+        # first get committed records
+        i = 0
         for i, line in self._enum_lines():
             if i in indices:
                 row = records[i]
                 if row is None:
                     row = decode_row(line)
                 yield Record._make(fields, row, self, i)
+        # then appended but uncommitted records
+        for j, row in enumerate(self._records[i:]):
+            if row is None:
+                continue  # should this ever happen?
+            if j in indices:
+                yield Record._make(fields, row, self, j)
 
     def __setitem__(self, index, value):
         if isinstance(index, slice):
@@ -1364,6 +1372,9 @@ def make_row(row, relation):
     Returns:
         A [incr tsdb()]-encoded string
     """
+    if not hasattr(row, 'get'):
+        row = {f.name: col for f, col in zip(relation, row)}
+
     row_fields = []
     for f in relation:
         val = row.get(f.name, None)
