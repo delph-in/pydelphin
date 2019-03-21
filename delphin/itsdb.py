@@ -20,15 +20,23 @@ way of working with the data. Capabilities include:
 
 * Selecting data by table name, record index, and column name or index:
 
-    >>> ts['item'][0]['i-input']  # input sentence of the first item
+    >>> items = ts['item']          # get the items table
+    >>> rec = items[0]              # get the first record
+    >>> rec['i-input']              # input sentence of the first item
     '雨 が 降っ た ．'
-    >>> ts['item'][0]['i-id']     # :integer fields are cast to ints
+    >>> rec['i-id']                 # key-access does not cast types
+    '11'
+    >>> rec.get('i-id')             # nor does get() by default
+    '11'
+    >>> rec.get('i-id', cast=True)  # but it does with cast=True
     11
 
-* Selecting data as a query:
+* Selecting data as a query (note that types are cast by default):
 
-    >>> next(ts.select('item:i-id@i-input'))
-    [11, '雨 が 降っ た ．']
+    >>> next(ts.select('item:i-id@i-input@i-date'))  # query testsuite
+    [11, '雨 が 降っ た ．', datetime.datetime(2006, 5, 28, 0, 0)]
+    >>> next(items.select('i-id@i-input@i-date'))    # query table
+    [11, '雨 が 降っ た ．', datetime.datetime(2006, 5, 28, 0, 0)]
 
 * In-memory modification of testsuite data:
 
@@ -42,8 +50,8 @@ way of working with the data. Capabilities include:
 * Joining tables
 
     >>> joined = itsdb.join(ts['parse'], ts['result'])
-    >>> joined[0]['parse:i-id'], joined[0]['result:mrs']
-    (11, '[ LTOP: h1 INDEX: e2 [ e TENSE: PAST ...')
+    >>> next(joined.select('i-id@mrs'))
+    [11, '[ LTOP: h1 INDEX: e2 [ e TENSE: PAST ...']
 
 * Processing data with ACE (results are stored in memory)
 
@@ -663,6 +671,54 @@ class Table(object):
 
         return table
 
+    def write(self, records=None, path=None, relation=None, append=False,
+              gzip=None):
+        """
+        Write the table to disk.
+
+        The basic usage has no arguments and writes the table's data
+        to the attached file. The parameters accommodate a variety of
+        use cases, such as using *relation* to refresh a table to a
+        new schema or *records* and *append* to incrementally build a
+        table.
+
+        Args:
+            records: an iterable of :class:`Record` objects to write;
+                if `None` the table's existing data is used
+            path: the destination file path; if `None` use the
+                path of the file attached to the table
+            relation (:class:`Relation`): table schema to use for
+                writing, otherwise use the current one
+            append: if `True`, append rather than overwrite
+            gzip: compress with gzip if non-empty
+        Examples:
+            >>> table.write()
+            >>> table.write(results, path='new/path/result')
+        """
+        if path is None:
+            if not self.is_attached():
+                raise ItsdbError('no path given for detached table')
+            else:
+                path = self.path
+        dirpath, name = os.path.split(path)
+        if name[-3:].lower() == '.gz':
+            name = name[:-3]  # compression is determined by *gzip* argument
+        if relation is None:
+            relation = self.relation
+        if records is None:
+            records = iter(self)
+        _write_table(
+            dirpath,
+            name,
+            records,
+            relation,
+            append=append,
+            gzip=gzip,
+            encoding=self.encoding)
+
+        if self.is_attached():
+            self._sync_with_file()
+
     def attach(self, path, encoding='utf-8'):
         """
         Attach the Table to the file at *path*.
@@ -687,23 +743,20 @@ class Table(object):
         """
         if self.is_attached():
             raise ItsdbError('already attached at {}'.format(self.path))
-        load = False
-        if os.path.exists(path) and os.stat(path).st_size > 0:
-            if len(self._records) > 0:
-                raise ItsdbError(
-                    'cannot attach non-empty table to non-empty file')
-            load = True
-        else:
+
+        if not os.path.exists(path):
             # create empty file to attach the table to
             # (note: if the file were non-empty this would be destructive)
             open(path, 'w').close()
+        elif os.stat(path).st_size > 0 and len(self._records) > 0:
+            raise ItsdbError('cannot attach non-empty table to non-empty file')
 
         self.path = path
         self.encoding = encoding
 
-        if load:
-            for i, line in self._enum_lines():
-                self._records.append(None)
+        # if _records is not empty then we're attaching to an empty file
+        if len(self._records) == 0:
+            self._sync_with_file()
 
     def detach(self):
         """
@@ -741,6 +794,28 @@ class Table(object):
     def is_attached(self):
         """Return `True` if the table is attached to a file."""
         return self.path is not None
+
+    def list_changes(self):
+        """
+        Return a list of modified records.
+
+        This is only applicable for attached tables.
+
+        Returns:
+            A list of `(row_index, record)` tuples of modified records
+        Raises:
+            :class:`delphin.exceptions.ItsdbError`: when called on a
+                detached table
+        """
+        if not self.is_attached():
+            raise ItsdbError('changes are not tracked for detached tables.')
+        return [(i, self[i]) for i, row in enumerate(self._records)
+                if row is not None]
+
+    def _sync_with_file(self):
+        self._records = []
+        for i, line in self._enum_lines():
+            self._records.append(None)
 
     def _enum_lines(self):
         with _open_table(self.path, self.encoding) as lines:
@@ -1316,7 +1391,7 @@ def _open_table(tbl_filename, encoding):
         with TextIOWrapper(gzfile, encoding=encoding) as f:
             yield f
     else:
-        with io.open(tbl_filename, encoding=encoding) as f:
+        with io.open(path, encoding=encoding) as f:
             yield f
 
 

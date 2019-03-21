@@ -38,9 +38,11 @@ databases:
 .. autoclass:: Table
 
   .. automethod:: from_file
+  .. automethod:: write
   .. automethod:: attach
   .. automethod:: detach
   .. automethod:: is_attached
+  .. automethod:: list_changes
   .. automethod:: append
   .. automethod:: extend
   .. automethod:: select

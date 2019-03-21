@@ -5,6 +5,8 @@ from __future__ import print_function
 import os
 import tempfile
 import datetime
+import io
+import gzip
 
 import pytest
 
@@ -127,6 +129,17 @@ def single_item_skeleton(tmpdir):
     return str(ts)
 
 @pytest.fixture
+def gzipped_single_item_skeleton(tmpdir):
+    ts = tmpdir.mkdir('gz_skeleton')
+    ts.join('relations').write(_simple_relations)
+    fh = io.TextIOWrapper(
+        gzip.GzipFile(str(ts.join('item.gz')), 'w'),
+        encoding='utf-8')
+    print('0@The dog barks.', file=fh)
+    fh.close()
+    return str(ts)
+
+@pytest.fixture
 def single_item_profile(tmpdir):
     ts = tmpdir.mkdir('single')
     ts.join('relations').write(_simple_relations)
@@ -239,6 +252,206 @@ def test_Record():
         r = itsdb.Record.from_dict(rels['item'], {'i-id': 0, 'surface': 'sentence'})
 
 
+class TestTable(object):
+    def test_init(self):
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        with pytest.raises(TypeError):
+            itsdb.Table()  # no relations
+        # empty table
+        table = itsdb.Table(relation=relation)
+        assert len(table) == 0
+        assert table.name == 'item'
+        assert table.relation == relation
+        assert table.path is None
+        assert table.encoding is None
+        # table with a record
+        table = itsdb.Table(relation=relation, records=[('10', 'Birds chirp.')])
+        assert len(table) == 1
+        assert table[0]['i-id'] == '10'
+        assert table[0]['i-input'] == 'Birds chirp.'
+
+    def test_from_file(self, empty_profile, single_item_skeleton,
+                       gzipped_single_item_skeleton):
+        # I'm not sure this should be an error if 'item' is defined
+        # in the relations file
+        with pytest.raises(itsdb.ItsdbError):
+            itsdb.Table.from_file(os.path.join(empty_profile, 'item'))
+        # table attached to a file
+        table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
+        assert len(table) == 1
+        assert table.path == os.path.join(single_item_skeleton, 'item')
+        assert table.name == 'item'
+        assert table.encoding == 'utf-8'
+        # table attached to gzipped file given normalized filename
+        table = itsdb.Table.from_file(os.path.join(gzipped_single_item_skeleton, 'item'))
+        assert len(table) == 1
+        assert table.path == os.path.join(gzipped_single_item_skeleton, 'item.gz')
+        assert table.name == 'item'
+
+    def test_write(self, tmpdir):
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        table = itsdb.Table(relation, records=[('10', 'Birds chirp.')])
+        path = tmpdir.join('item')
+        with pytest.raises(itsdb.ItsdbError):
+            table.write()  # cannot write to detached table without *path*
+        table.write(path=path)  # can write with *path*
+        assert path.check()
+        assert open(path).read() == '10@Birds chirp.\n'
+        # writing a new record to the path overwrites
+        table.write(records=[(20, 'Cats meow.')], path=path)
+        assert open(path).read() == '20@Cats meow.\n'
+        # unless append=True
+        table.write(records=[(30, 'Cows moo.')], path=path, append=True)
+        assert open(path).read() == '20@Cats meow.\n30@Cows moo.\n'
+        # gzip compresses and deletes any uncompressed version
+        table.write(path=path, gzip=True)
+        assert not path.check()
+        assert tmpdir.join('item.gz').check()
+        # attached tables may be written without *path*
+        table = itsdb.Table.from_file(path, relation=relation)
+        table.write(records=[('10', 'Birds chirp.')], gzip=False)
+        assert path.check()
+        assert not tmpdir.join('item.gz').check()
+        assert open(path).read() == '10@Birds chirp.\n'
+
+    def test_attach(self, empty_profile):
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        item_fn = os.path.join(empty_profile, 'item')
+        enc = 'utf-8'
+        # attach empty table to empty file
+        table = itsdb.Table(relation)
+        assert not os.path.exists(item_fn)
+        table.attach(item_fn)
+        assert os.path.exists(item_fn)  # attaching creates the file
+        table.write()
+        assert open(item_fn).read() == ''
+        # attach already attached table
+        with pytest.raises(itsdb.ItsdbError):
+            table.attach(item_fn)
+        os.unlink(item_fn)
+        # attach non-empty table to empty file
+        table = itsdb.Table(relation, records=[('10', 'Birds chirp.')])
+        table.attach(item_fn)
+        assert open(item_fn).read() == ''  # nothing written yet
+        table.write()
+        assert open(item_fn).read() == '10@Birds chirp.\n'
+        # attach empty table to non-empty file
+        table = itsdb.Table(relation)
+        assert len(table) == 0
+        table.attach(item_fn)
+        assert len(table) == 1
+        # attach non-empty table to non-empty file
+        table = itsdb.Table(relation, records=[('20', 'Wolves howl.')])
+        with pytest.raises(itsdb.ItsdbError):
+            table.attach(item_fn)
+        assert open(item_fn).read() == '10@Birds chirp.\n'
+
+    def test_detach(self, tmpdir, single_item_skeleton):
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        empty_fn = tmpdir.mkdir('tmp').join('item')
+        item_fn = os.path.join(single_item_skeleton, 'item')
+        # detach unchanged table from empty file
+        table = itsdb.Table(relation)
+        table.attach(empty_fn)
+        assert len(table) == 0
+        table.write()
+        assert open(empty_fn).read() == ''
+        table.detach()
+        assert len(table) == 0
+        # detach changed table from empty file
+        table = itsdb.Table(relation)
+        table.attach(empty_fn)
+        assert len(table) == 0
+        table.append((10, 'Birds chirp.'))
+        assert len(table) == 1
+        assert open(empty_fn).read() == ''
+        table.detach()
+        assert len(table) == 1
+        assert open(empty_fn).read() == ''
+        # detach unchanged table from non-empty file
+        table = itsdb.Table(relation)
+        table.attach(item_fn)
+        assert len(table) == 1
+        table.detach()
+        assert len(table) == 1
+        # detach changed table from non-empty file
+        table = itsdb.Table(relation)
+        table.attach(item_fn)
+        assert len(table) == 1
+        assert table[0]['i-input'] == 'The dog barks.'
+        table[0]['i-input'] = 'The bird chirps.'
+        table.append((20, 'Cats meow.'))
+        table.detach()
+        assert len(table) == 2
+        assert table[0]['i-input'] == 'The bird chirps.'
+        assert open(item_fn).read() == '0@The dog barks.'
+
+    def test_is_attached(self, single_item_skeleton, gzipped_single_item_skeleton):
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        table = itsdb.Table(relation)
+        assert table.is_attached() == False
+        # explicit attachment
+        table.attach(os.path.join(single_item_skeleton, 'item'))
+        assert table.is_attached() == True
+        # explicit detachment
+        table.detach()
+        assert table.is_attached() == False
+        # from_file attachment
+        table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
+        assert table.is_attached() == True
+        # from_file attachment with gzipped file
+        table = itsdb.Table.from_file(os.path.join(gzipped_single_item_skeleton, 'item'))
+        assert table.is_attached() == True
+        # writing does not attach
+        table = itsdb.Table(relation, [(10, 'Birds chirp.')])
+        table.write(path=os.path.join(single_item_skeleton, 'item'))
+        assert table.is_attached() == False
+
+    def test_list_changes(self, empty_profile, single_item_skeleton):
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        table = itsdb.Table(relation)
+        # detached tables do not track changes
+        with pytest.raises(itsdb.ItsdbError):
+            table.list_changes()
+        table.append((10, 'Dogs bark.'))
+        with pytest.raises(itsdb.ItsdbError):
+            table.list_changes()
+        # attching to a new file makes uncommitted records into changes
+        table.attach(os.path.join(empty_profile, 'item'))
+        assert len(table.list_changes()) == 1
+        # writing an attached table clears changes
+        table.write()
+        assert table.list_changes() == []
+        # attaching newly to a testsuite has no changes
+        table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
+        assert table.list_changes() == []
+        # appending introduces a change
+        table.append((10, 'Dogs bark.'))
+        assert table.list_changes() == [(1, table[1])]
+        # modifying a record introduces a change
+        table[0]['i-input'] = 'The dog had barked.'
+        assert table.list_changes() == [(0, table[0]), (1, table[1])]
+        # detaching makes changes untrackable again
+        table.detach()
+        with pytest.raises(itsdb.ItsdbError):
+            table.list_changes()
+
+    def test_append(self, empty_profile, single_item_skeleton):
+        pass
+
+    def test_extend(self, empty_profile, single_item_skeleton):
+        pass
+
+    def test_select(self, empty_profile, single_item_skeleton):
+        pass
+
+    def test_getitem(self, empty_profile, single_item_skeleton):
+        pass
+
+    def test_setitem(self, empty_profile, single_item_skeleton):
+        pass
+
+
 def test_Table(single_item_skeleton):
     rels = itsdb.Relations.from_string(_simple_relations)
     t = itsdb.Table(
@@ -326,7 +539,7 @@ class TestSuite(object):
         d = tmpdir.mkdir('alt')
         altrels = itsdb.Relations.from_string(_alt_relations)
         t.write(path=str(d), relations=altrels)
-        assert d.join('relations').read() == _alt_relations
+        assert d.join('relations').read_text('utf-8') == _alt_relations
         assert sorted(x.basename for x in d.listdir()) == [
             'item', 'parse', 'relations', 'result']
         ts = itsdb.TestSuite(str(d))
