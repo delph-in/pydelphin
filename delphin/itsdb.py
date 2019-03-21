@@ -1018,6 +1018,7 @@ class TestSuite(object):
                     tablename,
                     data,
                     relation,
+                    append=append,
                     gzip=gzip,
                     encoding=self.encoding
                 )
@@ -1279,6 +1280,7 @@ def unescape(string):
 
 
 def _table_filename(tbl_filename):
+    tbl_filename = str(tbl_filename)  # convert any Path objects
     if tbl_filename.endswith('.gz'):
         gzfn = tbl_filename
         txfn = tbl_filename[:-3]
@@ -1333,7 +1335,7 @@ def _write_table(profile_dir, table_name, rows, relation,
         logging.warning('Appending to a gzip file may result in '
                         'inefficient compression.')
 
-    if not os.path.exists(profile_dir):
+    if not os.path.isdir(profile_dir):
         raise ItsdbError('Profile directory does not exist: {}'
                          .format(profile_dir))
 
