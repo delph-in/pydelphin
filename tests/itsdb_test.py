@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import os
 import tempfile
@@ -294,25 +294,25 @@ class TestTable(object):
         path = tmpdir.join('item')
         with pytest.raises(itsdb.ItsdbError):
             table.write()  # cannot write to detached table without *path*
-        table.write(path=path)  # can write with *path*
+        table.write(path=str(path))  # can write with *path*
         assert path.check()
-        assert open(path).read() == '10@Birds chirp.\n'
+        assert open(str(path)).read() == '10@Birds chirp.\n'
         # writing a new record to the path overwrites
-        table.write(records=[(20, 'Cats meow.')], path=path)
-        assert open(path).read() == '20@Cats meow.\n'
+        table.write(records=[(20, 'Cats meow.')], path=str(path))
+        assert open(str(path)).read() == '20@Cats meow.\n'
         # unless append=True
-        table.write(records=[(30, 'Cows moo.')], path=path, append=True)
-        assert open(path).read() == '20@Cats meow.\n30@Cows moo.\n'
+        table.write(records=[(30, 'Cows moo.')], path=str(path), append=True)
+        assert open(str(path)).read() == '20@Cats meow.\n30@Cows moo.\n'
         # gzip compresses and deletes any uncompressed version
-        table.write(path=path, gzip=True)
+        table.write(path=str(path), gzip=True)
         assert not path.check()
         assert tmpdir.join('item.gz').check()
         # attached tables may be written without *path*
-        table = itsdb.Table.from_file(path, relation=relation)
+        table = itsdb.Table.from_file(str(path), relation=relation)
         table.write(records=[('10', 'Birds chirp.')], gzip=False)
         assert path.check()
         assert not tmpdir.join('item.gz').check()
-        assert open(path).read() == '10@Birds chirp.\n'
+        assert open(str(path)).read() == '10@Birds chirp.\n'
 
     def test_attach(self, empty_profile):
         relation = itsdb.Relations.from_string(_simple_relations)['item']
@@ -352,22 +352,22 @@ class TestTable(object):
         item_fn = os.path.join(single_item_skeleton, 'item')
         # detach unchanged table from empty file
         table = itsdb.Table(relation)
-        table.attach(empty_fn)
+        table.attach(str(empty_fn))
         assert len(table) == 0
         table.write()
-        assert open(empty_fn).read() == ''
+        assert open(str(empty_fn)).read() == ''
         table.detach()
         assert len(table) == 0
         # detach changed table from empty file
         table = itsdb.Table(relation)
-        table.attach(empty_fn)
+        table.attach(str(empty_fn))
         assert len(table) == 0
         table.append((10, 'Birds chirp.'))
         assert len(table) == 1
-        assert open(empty_fn).read() == ''
+        assert open(str(empty_fn)).read() == ''
         table.detach()
         assert len(table) == 1
-        assert open(empty_fn).read() == ''
+        assert open(str(empty_fn)).read() == ''
         # detach unchanged table from non-empty file
         table = itsdb.Table(relation)
         table.attach(item_fn)
@@ -436,8 +436,23 @@ class TestTable(object):
         with pytest.raises(itsdb.ItsdbError):
             table.list_changes()
 
-    def test_append(self, empty_profile, single_item_skeleton):
-        pass
+    def test_append(self, single_item_skeleton):
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        # on bare table
+        table = itsdb.Table(relation)
+        assert len(table) == 0
+        table.append((10, 'The dog barks.'))
+        assert len(table) == 1
+        assert table[-1]['i-input'] == 'The dog barks.'
+        table.append((20, 'The cat meows.'))
+        assert len(table) == 2
+        assert table[-1]['i-input'] == 'The cat meows.'
+        # on attached table
+        table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
+        assert len(table) == 1
+        table.append((20, 'The bird chirps.'))
+        assert len(table) == 2
+        assert table[-1]['i-input'] == 'The bird chirps.'
 
     def test_extend(self, empty_profile, single_item_skeleton):
         pass

@@ -822,52 +822,63 @@ class Table(object):
             for i, line in enumerate(lines):
                 yield i, line
 
-    def __iter__(self):
-        fields = self.relation
-        if self.is_attached():
-            generate_records = self._getitem_attached
-        else:
-            generate_records = self._getitem_detached
-        for record in generate_records(range(len(self._records))):
-            yield record
-
-    def __getitem__(self, index):
-        if self.is_attached():
-            generate_records = self._getitem_attached
-        else:
-            generate_records = self._getitem_detached
-
-        if isinstance(index, slice):
-            indices = range(*index.indices(len(self._records)))
-            return list(generate_records(indices))
-        else:
-            self._records[index]  # check for IndexError
-            indices = range(index, index + 1)
-            return next(generate_records(indices))
-
-    def _getitem_detached(self, indices):
-        fields = self.relation
+    def _enum_attached_rows(self, indices):
         records = self._records
-        for i in indices:
-            yield Record._make(fields, records[i], self, i)
-
-    def _getitem_attached(self, indices):
-        fields = self.relation
-        records = self._records
-        # first get committed records
         i = 0
+        # first rows covered by the file
         for i, line in self._enum_lines():
             if i in indices:
                 row = records[i]
                 if row is None:
                     row = decode_row(line)
-                yield Record._make(fields, row, self, i)
-        # then appended but uncommitted records
-        for j, row in enumerate(self._records[i:]):
-            if row is None:
-                continue  # should this ever happen?
+                yield (i, row)
+        # then any uncommitted rows
+        for j in range(i, len(records)):
             if j in indices:
-                yield Record._make(fields, row, self, j)
+                if records[j] is not None:
+                    yield (j, records[j])
+
+    def __iter__(self):
+        for record in self._iterslice(slice(None)):
+            yield record
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return list(self._iterslice(index))
+        else:
+            return self._getitem(index)
+
+    def _iterslice(self, slice):
+        indices = range(*slice.indices(len(self._records)))
+        if self.is_attached():
+            rows = self._enum_attached_rows(indices)
+            if slice.step is not None and slice.step < 0:
+                rows = reversed(list(rows))
+        else:
+            rows = zip(indices, self._records[slice])
+
+        fields = self.relation
+        for i, row in rows:
+            yield Record._make(fields, row, self, i)
+
+    def _getitem(self, index):
+        row = self._records[index]
+        if row is not None:
+            pass
+        elif self.is_attached():
+            # need to handle negative indices manually
+            if index < 0:
+                index = len(self._records) + index
+            row = next((decode_row(line)
+                        for i, line in self._enum_lines()
+                        if i == index),
+                       None)
+            if row is None:
+                raise ItsdbError('could not retrieve row in attached table')
+        else:
+            raise ItsdbError('invalid row in detached table: {}'.format(index))
+
+        return Record._make(self.relation, row, self, index)
 
     def __setitem__(self, index, value):
         if isinstance(index, slice):
