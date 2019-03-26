@@ -454,53 +454,68 @@ class TestTable(object):
         assert len(table) == 2
         assert table[-1]['i-input'] == 'The bird chirps.'
 
-    def test_extend(self, empty_profile, single_item_skeleton):
-        pass
+    def test_extend(self, single_item_skeleton):
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        # on bare table
+        table = itsdb.Table(relation)
+        assert len(table) == 0
+        table.extend([(10, 'The dog barks.')])
+        assert len(table) == 1
+        assert table[-1]['i-input'] == 'The dog barks.'
+        def record_generator():
+            yield (20, 'The cat meows.')
+            yield (20, 'The horse whinnies.')
+            yield (20, 'The elephant trumpets.')
+        table.extend(record_generator())
+        assert len(table) == 4
+        assert table[-1]['i-input'] == 'The elephant trumpets.'
+        # on attached table
+        table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
+        assert len(table) == 1
+        table.extend(record_generator())
+        assert len(table) == 4
+        assert table[-1]['i-input'] == 'The elephant trumpets.'
 
-    def test_select(self, empty_profile, single_item_skeleton):
-        pass
+    def test_select(self, single_item_skeleton):
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        # empty table
+        table = itsdb.Table(relation)
+        assert list(table.select('item:i-id')) == []
+        # detached
+        table.append((10, 'The bird chirps.'))
+        assert list(table.select('item:i-id')) == [[10]]
+        # attached and synced
+        table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
+        assert list(table.select('item:i-id')) == [[0]]
+        # attached with unsynced records
+        table.append((1, 'The bear growls.'))
+        assert list(table.select('item:i-id')) == [[0], [1]]
 
     def test_getitem(self, empty_profile, single_item_skeleton):
-        pass
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        # empty table
+        table = itsdb.Table(relation)
+        with pytest.raises(IndexError):
+            table[0]
+        # detached
+        table.append((10, 'The bird chirps.'))
+        assert tuple(table[0]) == ('10', 'The bird chirps.')
+        assert tuple(table[-1]) == ('10', 'The bird chirps.')
+        # attached and synced
+        table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
+        assert tuple(table[0]) == ('0', 'The dog barks.')
+        # attached with unsynced records
+        table.append((1, 'The bear growls.'))
+        assert tuple(table[-1]) == ('1', 'The bear growls.')
+        # slice
+        assert list(map(tuple, table[:])) == [('0', 'The dog barks.'), ('1', 'The bear growls.')]
+        assert list(map(tuple, table[0:1])) == [('0', 'The dog barks.')]
+        assert list(map(tuple, table[::2])) == [('0', 'The dog barks.')]
+        assert list(map(tuple, table[::-1])) == [('1', 'The bear growls.'), ('0', 'The dog barks.')]
 
     def test_setitem(self, empty_profile, single_item_skeleton):
         pass
 
-
-def test_Table(single_item_skeleton):
-    rels = itsdb.Relations.from_string(_simple_relations)
-    t = itsdb.Table(
-        rels['item'],
-    )
-    assert t.relation == rels['item']
-    assert t.name == 'item'
-    assert len(t) == 0
-
-    t = itsdb.Table(
-        rels['item'],
-        [(0, 'sentence')]
-    )
-    assert t.relation == rels['item']
-    assert t.name == 'item'
-    assert len(t) == 1
-    assert isinstance(t[0], itsdb.Record)
-    assert t[0].relation == t.relation
-
-    itemfile = os.path.join(single_item_skeleton, 'item')
-    t = itsdb.Table.from_file(itemfile, rels['item'])
-    assert t.relation == rels['item']
-    assert t.name == 'item'
-    assert len(t) == 1
-    assert isinstance(t[0], itsdb.Record)
-    assert t[0]['i-id'] == '0'
-    assert t[0]['i-input'] == 'The dog barks.'
-    assert list(t.select('i-input')) == [['The dog barks.']]
-
-    # infer name and relations if not given
-    t = itsdb.Table.from_file(itemfile)
-    assert t.relation == rels['item']
-    assert t.name == 'item'
-    assert len(t) == 1
 
 class TestSuite(object):
     def test_init(self, single_item_profile):
@@ -567,12 +582,12 @@ class TestSuite(object):
         ts.process(parser_cpu)
         assert len(ts['parse']) == 1
         assert len(ts['result']) == 2
-        assert ts['parse'][0]['parse-id'] == 0
-        assert ts['parse'][0]['run-id'] == 0
-        assert ts['result'][0]['parse-id'] == 0
-        assert ts['result'][0]['result-id'] == 0
-        assert ts['result'][1]['parse-id'] == 0
-        assert ts['result'][1]['result-id'] == 1
+        assert ts['parse'][0]['parse-id'] == '0'
+        assert ts['parse'][0]['run-id'] == '0'
+        assert ts['result'][0]['parse-id'] == '0'
+        assert ts['result'][0]['result-id'] == '0'
+        assert ts['result'][1]['parse-id'] == '0'
+        assert ts['result'][1]['result-id'] == '1'
 
 def test_get_data_specifier():
     dataspec = itsdb.get_data_specifier

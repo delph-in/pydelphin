@@ -562,6 +562,8 @@ class Record(list):
     def __setitem__(self, index, value):
         if not isinstance(index, int):
             index = self.relation.index(index)
+        # record values are strings
+        value = unicode(value)
         # should the value be validated against the datatype?
         list.__setitem__(self, index, value)
         # when a record is modified it should stay in memory
@@ -882,13 +884,13 @@ class Table(object):
 
     def __setitem__(self, index, value):
         if isinstance(index, slice):
-            values = [tuple(v) for v in value]
+            values = [tuple(unicode(f) for f in v) for v in value]
         else:
             self._records[index]  # check for IndexError
-            values = [tuple(value)]
+            values = [tuple(unicode(f) for f in value)]
             index = slice(index, index + 1)
-        for value in values:
-            if len(value) != len(self.relation):
+        for record in values:
+            if len(record) != len(self.relation):
                 raise ItsdbError('wrong number of fields')
         self._records[index] = values
 
@@ -916,7 +918,8 @@ class Table(object):
         for record in records:
             if len(record) != len(self.relation):
                 raise ItsdbError('wrong number of fields')
-            self._records.append(tuple(record))
+            record = tuple(unicode(f) for f in record)
+            self._records.append(record)
 
     def select(self, cols, mode='list'):
         """
