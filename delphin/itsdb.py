@@ -204,7 +204,6 @@ class Relation(tuple):
         )
         tr._keys = None
         tr.key_indices = tuple(i for i, f in enumerate(fields) if f.key)
-        tr._key_datatypes = tuple(tr[i].datatype for i in tr.key_indices)
         return tr
 
     def __contains__(self, name):
@@ -220,10 +219,6 @@ class Relation(tuple):
         if keys is None:
             keys = tuple(self[i].name for i in self.key_indices)
         return keys
-
-    def keygetter(self, record):
-        return tuple(_cast_to_datatype(record[i], dt)
-                     for i, dt in zip(self.key_indices, self._key_datatypes))
 
 
 class _RelationJoin(Relation):
@@ -486,14 +481,8 @@ class Record(list):
                 .format(len(iterable), len(relation))
             )
 
-        for i, value in enumerate(iterable):
-            field = relation[i]
-            if value is None:
-                if field.key:
-                    raise ItsdbError('Missing key: {}'.format(field.name))
-                iterable[i] = field.default_value()
-            else:
-                iterable[i] = value
+        iterable = [_cast_to_str(val, field)
+                    for val, field in zip(iterable, relation)]
 
         self.relation = relation
         self._tableref = None
@@ -554,16 +543,28 @@ class Record(list):
     def __str__(self):
         return make_row(self, self.relation)
 
+    def __eq__(self, other):
+        return all(a == b for a, b in zip(self, other))
+
+    def __ne__(self, other):
+        return any(a != b for a, b in zip(self, other))
+
+    def __iter__(self):
+        for raw, field in zip(list.__iter__(self), self.relation):
+            yield _cast_to_datatype(raw, field)
+
     def __getitem__(self, index):
         if not isinstance(index, int):
             index = self.relation.index(index)
-        return list.__getitem__(self, index)
+        raw = list.__getitem__(self, index)
+        field = self.relation[index]
+        return _cast_to_datatype(raw, field)
 
     def __setitem__(self, index, value):
         if not isinstance(index, int):
             index = self.relation.index(index)
         # record values are strings
-        value = unicode(value)
+        value = _cast_to_str(value, self.relation[index])
         # should the value be validated against the datatype?
         list.__setitem__(self, index, value)
         # when a record is modified it should stay in memory
@@ -573,7 +574,7 @@ class Record(list):
             if table is not None:
                 table[self._rowid] = self
 
-    def get(self, key, default=None, cast=False):
+    def get(self, key, default=None, cast=True):
         """
         Return the field data given by field name *key*.
 
@@ -592,8 +593,8 @@ class Record(list):
             value = default
         else:
             if cast:
-                dt = self.relation[index].datatype
-                value = _cast_to_datatype(value, dt)
+                field = self.relation[index]
+                value = _cast_to_datatype(value, field)
         return value
 
 
@@ -884,14 +885,17 @@ class Table(object):
 
     def __setitem__(self, index, value):
         if isinstance(index, slice):
-            values = [tuple(unicode(f) for f in v) for v in value]
+            values = list(value)
         else:
             self._records[index]  # check for IndexError
-            values = [tuple(unicode(f) for f in value)]
+            values = [value]
             index = slice(index, index + 1)
-        for record in values:
-            if len(record) != len(self.relation):
+        fields = self.relation
+        for i, record in enumerate(values):
+            if len(record) != len(fields):
                 raise ItsdbError('wrong number of fields')
+            values[i] = tuple(_cast_to_str(value, field)
+                              for value, field in zip(record, fields))
         self._records[index] = values
 
     def __len__(self):
@@ -1291,21 +1295,33 @@ def decode_row(line, relation=None):
             col = cols[i]
             if col:
                 field = relation[i]
-                col = _cast_to_datatype(col, field.datatype)
+                col = _cast_to_datatype(col, field)
             cols[i] = col
     return cols
 
 
-def _cast_to_datatype(col, dt):
-    if dt == ':integer':
-        col = int(col)
-    elif dt == ':float':
-        col = float(col)
-    elif dt == ':date':
-        dt = parse_datetime(col)
-        col = dt if dt is not None else col
-    # other casts? :position?
+def _cast_to_datatype(col, field):
+    if col is None:
+        col = field.default_value()
+    else:
+        dt = field.datatype
+        if dt == ':integer':
+            col = int(col)
+        elif dt == ':float':
+            col = float(col)
+        elif dt == ':date':
+            dt = parse_datetime(col)
+            col = dt if dt is not None else col
+        # other casts? :position?
     return col
+
+
+def _cast_to_str(col, field):
+    if col is None:
+        if field.key:
+            raise ItsdbError('missing key: {}'.format(field.name))
+        col = field.default_value()
+    return unicode(col)
 
 
 def encode_row(fields):

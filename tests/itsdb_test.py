@@ -217,11 +217,11 @@ def test_Relations_path():
 
 def test_Record():
     rels = itsdb.Relations.from_string(_simple_relations)
-    r = itsdb.Record(rels['item'], ['0', 'sentence'])
+    r = itsdb.Record(rels['item'], [0, 'sentence'])
     assert r.relation == rels['item']
     assert len(r) == 2
-    assert r['i-id'] == r[0] == '0'
-    assert r.get('i-id', cast=True) == 0
+    assert r['i-id'] == r[0] == 0
+    assert r.get('i-id', cast=False) == '0'
     assert r['i-input'] == r[1] == 'sentence'
     assert r.get('i-input') == 'sentence'
     assert r.get('unknown') == None
@@ -265,9 +265,9 @@ class TestTable(object):
         assert table.path is None
         assert table.encoding is None
         # table with a record
-        table = itsdb.Table(relation=relation, records=[('10', 'Birds chirp.')])
+        table = itsdb.Table(relation=relation, records=[(10, 'Birds chirp.')])
         assert len(table) == 1
-        assert table[0]['i-id'] == '10'
+        assert table[0]['i-id'] == 10
         assert table[0]['i-input'] == 'Birds chirp.'
 
     def test_from_file(self, empty_profile, single_item_skeleton,
@@ -290,7 +290,7 @@ class TestTable(object):
 
     def test_write(self, tmpdir):
         relation = itsdb.Relations.from_string(_simple_relations)['item']
-        table = itsdb.Table(relation, records=[('10', 'Birds chirp.')])
+        table = itsdb.Table(relation, records=[(10, 'Birds chirp.')])
         path = tmpdir.join('item')
         with pytest.raises(itsdb.ItsdbError):
             table.write()  # cannot write to detached table without *path*
@@ -309,7 +309,7 @@ class TestTable(object):
         assert tmpdir.join('item.gz').check()
         # attached tables may be written without *path*
         table = itsdb.Table.from_file(str(path), relation=relation)
-        table.write(records=[('10', 'Birds chirp.')], gzip=False)
+        table.write(records=[(10, 'Birds chirp.')], gzip=False)
         assert path.check()
         assert not tmpdir.join('item.gz').check()
         assert open(str(path)).read() == '10@Birds chirp.\n'
@@ -330,7 +330,7 @@ class TestTable(object):
             table.attach(item_fn)
         os.unlink(item_fn)
         # attach non-empty table to empty file
-        table = itsdb.Table(relation, records=[('10', 'Birds chirp.')])
+        table = itsdb.Table(relation, records=[(10, 'Birds chirp.')])
         table.attach(item_fn)
         assert open(item_fn).read() == ''  # nothing written yet
         table.write()
@@ -341,7 +341,7 @@ class TestTable(object):
         table.attach(item_fn)
         assert len(table) == 1
         # attach non-empty table to non-empty file
-        table = itsdb.Table(relation, records=[('20', 'Wolves howl.')])
+        table = itsdb.Table(relation, records=[(20, 'Wolves howl.')])
         with pytest.raises(itsdb.ItsdbError):
             table.attach(item_fn)
         assert open(item_fn).read() == '10@Birds chirp.\n'
@@ -499,19 +499,19 @@ class TestTable(object):
             table[0]
         # detached
         table.append((10, 'The bird chirps.'))
-        assert tuple(table[0]) == ('10', 'The bird chirps.')
-        assert tuple(table[-1]) == ('10', 'The bird chirps.')
+        assert tuple(table[0]) == (10, 'The bird chirps.')
+        assert tuple(table[-1]) == (10, 'The bird chirps.')
         # attached and synced
         table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
-        assert tuple(table[0]) == ('0', 'The dog barks.')
+        assert tuple(table[0]) == (0, 'The dog barks.')
         # attached with unsynced records
         table.append((1, 'The bear growls.'))
-        assert tuple(table[-1]) == ('1', 'The bear growls.')
+        assert tuple(table[-1]) == (1, 'The bear growls.')
         # slice
-        assert list(map(tuple, table[:])) == [('0', 'The dog barks.'), ('1', 'The bear growls.')]
-        assert list(map(tuple, table[0:1])) == [('0', 'The dog barks.')]
-        assert list(map(tuple, table[::2])) == [('0', 'The dog barks.')]
-        assert list(map(tuple, table[::-1])) == [('1', 'The bear growls.'), ('0', 'The dog barks.')]
+        assert list(map(tuple, table[:])) == [(0, 'The dog barks.'), (1, 'The bear growls.')]
+        assert list(map(tuple, table[0:1])) == [(0, 'The dog barks.')]
+        assert list(map(tuple, table[::2])) == [(0, 'The dog barks.')]
+        assert list(map(tuple, table[::-1])) == [(1, 'The bear growls.'), (0, 'The dog barks.')]
 
     def test_setitem(self, empty_profile, single_item_skeleton):
         pass
@@ -582,12 +582,12 @@ class TestSuite(object):
         ts.process(parser_cpu)
         assert len(ts['parse']) == 1
         assert len(ts['result']) == 2
-        assert ts['parse'][0]['parse-id'] == '0'
-        assert ts['parse'][0]['run-id'] == '0'
-        assert ts['result'][0]['parse-id'] == '0'
-        assert ts['result'][0]['result-id'] == '0'
-        assert ts['result'][1]['parse-id'] == '0'
-        assert ts['result'][1]['result-id'] == '1'
+        assert ts['parse'][0]['parse-id'] == 0
+        assert ts['parse'][0]['run-id'] == 0
+        assert ts['result'][0]['parse-id'] == 0
+        assert ts['result'][0]['result-id'] == 0
+        assert ts['result'][1]['parse-id'] == 0
+        assert ts['result'][1]['result-id'] == 1
 
 def test_get_data_specifier():
     dataspec = itsdb.get_data_specifier
