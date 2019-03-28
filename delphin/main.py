@@ -32,10 +32,7 @@ def main():
 
     logging.basicConfig(level=50 - (args.verbosity * 10))
 
-    try:
-        args.func(args)
-    except (ValueError, PyDelphinException) as ex:
-        sys.exit(str(ex))
+    args.func(args)
 
 
 def call_convert(args):

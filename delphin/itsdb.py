@@ -88,10 +88,12 @@ except NameError:
 
 import os
 import re
-from gzip import GzipFile
+from gzip import GzipFile, open as gzopen
+import tempfile
+import shutil
 import logging
 import io
-from io import TextIOWrapper, BufferedReader
+from io import TextIOWrapper
 from collections import (
     defaultdict, namedtuple, OrderedDict, Sequence, Mapping
 )
@@ -477,8 +479,8 @@ class Record(list):
 
         if len(relation) != len(iterable):
             raise ItsdbError(
-                'Incorrect number of column values: {} != {}'
-                .format(len(iterable), len(relation))
+                'Incorrect number of column values for {} table: {} != {}\n{}'
+                .format(relation.name, len(iterable), len(relation), iterable)
             )
 
         iterable = [_cast_to_str(val, field)
@@ -637,13 +639,15 @@ class Table(object):
             file; if detached it is `None`
     """
 
-    __slots__ = ('relation', 'path', 'encoding', '_records', '__weakref__')
+    __slots__ = ('relation', 'path', 'encoding', '_records',
+                 '_last_synced_index', '__weakref__')
 
     def __init__(self, relation, records=None):
         self.relation = relation
         self.path = None
         self.encoding = None
         self._records = []
+        self._last_synced_index = -1
 
         if records is None:
             records = []
@@ -721,6 +725,28 @@ class Table(object):
         if self.is_attached() and path == _normalize_table_path(self.path):
             self.path = _table_filename(path)
             self._sync_with_file()
+
+    def commit(self):
+        """
+        Commit changes to disk if attached.
+
+        This method helps normalize the interface for detached and
+        attached tables and makes writing attached tables a bit more
+        efficient. For detached tables nothing is done, as there is no
+        notion of changes, but neither is an error raised (unlike with
+        :meth:`write`). For attached tables, if all changes are new
+        records, the changes are appended to the existing file, and
+        otherwise the whole file is rewritten.
+        """
+        if not self.is_attached():
+            return
+        changes = self.list_changes()
+        if changes:
+            indices, records = zip(*changes)
+            if min(indices) > self._last_synced_index:
+                self.write(records, append=True)
+            else:
+                self.write(append=False)
 
     def attach(self, path, encoding='utf-8'):
         """
@@ -823,8 +849,10 @@ class Table(object):
 
     def _sync_with_file(self):
         self._records = []
+        i = -1
         for i, line in self._enum_lines():
             self._records.append(None)
+        self._last_synced_index = i
 
     def _enum_lines(self):
         with _open_table(self.path, self.encoding) as lines:
@@ -1028,18 +1056,24 @@ class TestSuite(object):
 
     def reload(self):
         """Discard temporary changes and reload the database from disk."""
+        if self._path is None:
+            raise ItsdbError('cannot reload an in-memory testsuite')
         for tablename in self.relations:
             self._reload_table(tablename)
 
     def _reload_table(self, tablename):
+        # assumes self.path is not None
         relation = self.relations[tablename]
-        tablepath = os.path.join(self._path, tablename)
-        if os.path.exists(tablepath) or os.path.exists(tablepath + '.gz'):
-            table = Table.from_file(tablepath,
-                                    relation=relation,
-                                    encoding=self.encoding)
-        else:
-            table = Table(relation=relation)
+        path = os.path.join(self._path, tablename)
+        try:
+            path = _table_filename(path)
+        except ItsdbError:
+            # path doesn't exist
+            path = _normalize_table_path(path)
+            open(path, 'w').close()  # create empty file
+        table = Table.from_file(path,
+                                relation=relation,
+                                encoding=self.encoding)
         self._data[tablename] = table
 
     def select(self, arg, cols=None, mode='list'):
@@ -1099,7 +1133,7 @@ class TestSuite(object):
             tables = {tables: self[tables]}
         elif isinstance(tables, Mapping):
             pass
-        elif isinstance(tables, Sequence):
+        elif isinstance(tables, (Sequence, set)):
             tables = dict((table, self[table]) for table in tables)
         if relations is None:
             relations = self.relations
@@ -1135,7 +1169,7 @@ class TestSuite(object):
         """
         Return `True` if the testsuite or a table exists on disk.
 
-        If *table* is `None`, this function returns `True` if the
+        If *table* is `None`, this method returns `True` if the
         :attr:`TestSuite.path` is specified and points to an existing
         directory containing a valid relations file. If *table* is
         given, the function returns `True` if, in addition to the
@@ -1177,9 +1211,16 @@ class TestSuite(object):
                 pass
         return size
 
-    def process(self, cpu, selector=None, source=None, fieldmapper=None):
+    def process(self, cpu, selector=None, source=None, fieldmapper=None,
+                gzip=None, buffer_size=1000):
         """
         Process each item in a [incr tsdb()] testsuite
+
+        If the testsuite is attached to files on disk, the output
+        records will be flushed to disk when the number of new records
+        in a table is *buffer_size*. If the testsuite is not attached
+        to files or *buffer_size* is set to `None`, records are kept
+        in memory and not flushed to disk.
 
         Args:
             cpu (:class:`~delphin.interfaces.base.Processor`):
@@ -1193,6 +1234,10 @@ class TestSuite(object):
                 object for mapping response fields to [incr tsdb()]
                 fields; if `None`, use a default mapper for the
                 standard schema
+            gzip: compress non-empty tables with gzip
+            buffer_size (int): number of output records to hold in
+                memory before flushing to disk; ignored if the testsuite
+                is all in-memory; if `None`, do not flush to disk
         Examples:
             >>> ts.process(ace_parser)
             >>> ts.process(ace_generator, 'result:mrs', source=ts2)
@@ -1203,11 +1248,14 @@ class TestSuite(object):
             source = self
         if fieldmapper is None:
             fieldmapper = FieldMapper()
+        if self._path is None:
+            buffer_size = None
 
+        tables = set(fieldmapper.affected_tables).intersection(self.relations)
+        _prepare_target(self, tables, buffer_size)
         source, cols = _prepare_source(selector, source)
         key_cols = cols[:-1]
 
-        tables = {}
         for item in select_rows(cols, source, mode='list'):
             datum = item.pop()
             keys = dict(zip(key_cols, item))
@@ -1217,13 +1265,24 @@ class TestSuite(object):
                 .format(encode_row(item), len(response['results']))
             )
             for tablename, data in fieldmapper.map(response):
-                _add_record(tables, tablename, data, self.relations)
+                _add_record(self[tablename], data, buffer_size)
 
         for tablename, data in fieldmapper.cleanup():
-            _add_record(tables, tablename, data, self.relations)
+            _add_record(self[tablename], data, buffer_size)
 
-        for tablename, table in tables.items():
-            self._data[tablename] = table
+        # finalize data if writing to disk
+        for tablename in tables:
+            table = self[tablename]
+            if buffer_size is not None:
+                table.write(gzip=gzip)
+
+
+def _prepare_target(ts, tables, buffer_size):
+    for tablename in tables:
+        table = ts[tablename]
+        table[:] = []
+        if buffer_size is not None and table.is_attached():
+            table.write(append=False)
 
 
 def _prepare_source(selector, source):
@@ -1240,20 +1299,23 @@ def _prepare_source(selector, source):
     cols = list(source.relation.keys()) + fields
     return source, cols
 
-def _add_record(tables, tablename, data, relations):
-    relation = relations[tablename]
-    if tablename not in tables:
-        tables[tablename] = Table(relation)
-    # remove any keys that aren't relation fields
-    for invalid_key in set(data).difference([f.name for f in relation]):
-        del data[invalid_key]
-    tables[tablename].append(Record.from_dict(relation, data))
 
+def _add_record(table, data, buffer_size):
+    fields = table.relation
+    # remove any keys that aren't relation fields
+    for invalid_key in set(data).difference([f.name for f in fields]):
+        del data[invalid_key]
+    table.append(Record.from_dict(fields, data))
+    # write if requested and possible
+    if buffer_size is not None and table.is_attached():
+        # for now there isn't a public method to get the number of new
+        # records, so use private members
+        if (len(table) - 1) - table._last_synced_index > buffer_size:
+            table.commit()
 
 
 ##############################################################################
 # Non-class (i.e. static) functions
-
 
 data_specifier_re = re.compile(r'(?P<table>[^:]+)?(:(?P<cols>.+))?$')
 def get_data_specifier(string):
@@ -1462,6 +1524,8 @@ def _write_table(profile_dir, table_name, rows, relation,
         gzip = False
     else:
         rows = chain([first_row], rows)
+    if encoding is None:
+        encoding = 'utf-8'
 
     if gzip and append:
         logging.warning('Appending to a gzip file may result in '
@@ -1471,26 +1535,30 @@ def _write_table(profile_dir, table_name, rows, relation,
         raise ItsdbError('Profile directory does not exist: {}'
                          .format(profile_dir))
 
-    tbl_filename = os.path.join(profile_dir, table_name)
-    gzfn = tbl_filename + '.gz'
-    mode = 'a' if append else 'w'
-    if gzip:
-        # clean up non-gzip files, if any
-        if os.path.isfile(tbl_filename):
-            os.remove(tbl_filename)
-        # text mode only from py3.3; until then use TextIOWrapper
-        #mode += 't'  # text mode for gzip
-        f = TextIOWrapper(GzipFile(gzfn, mode=mode), encoding=encoding)
-    else:
-        # clean up gzip files, if any
-        if os.path.isfile(gzfn):
-            os.remove(gzfn)
-        f = io.open(tbl_filename, mode=mode, encoding=encoding)
+    with tempfile.NamedTemporaryFile(
+            mode='w+b', suffix='.tmp',
+            prefix=table_name, dir=profile_dir) as f_tmp:
 
-    for row in rows:
-        f.write(make_row(row, relation) + '\n')
+        for row in rows:
+            f_tmp.write((make_row(row, relation) + '\n').encode(encoding))
+        f_tmp.seek(0)
 
-    f.close()
+        txfn = os.path.join(profile_dir, table_name)
+        gzfn = txfn + '.gz'
+        mode = 'ab' if append else 'wb'
+
+        if gzip:
+            # clean up non-gzip files, if any
+            if os.path.isfile(txfn):
+                os.remove(txfn)
+            with gzopen(gzfn, mode) as f_out:
+                shutil.copyfileobj(f_tmp, f_out)
+        else:
+            # clean up gzip files, if any
+            if os.path.isfile(gzfn):
+                os.remove(gzfn)
+            with open(txfn, mode=mode) as f_out:
+                shutil.copyfileobj(f_tmp, f_out)
 
 
 def make_row(row, relation):
@@ -1556,12 +1624,9 @@ def select_rows(cols, rows, mode='list', cast=True):
                          '  Valid options include: list, dict, row'
                          .format(mode))
     for row in rows:
-        if cast:
-            try:
-                data = [row.get(c, cast=True) for c in cols]
-            except TypeError:
-                data = [row.get(c) for c in cols]
-        else:
+        try:
+            data = [row.get(c, cast=cast) for c in cols]
+        except TypeError:
             data = [row.get(c) for c in cols]
         yield modecast(cols, data)
 

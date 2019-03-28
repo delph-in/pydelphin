@@ -186,8 +186,19 @@ class FieldMapper(object):
     * cleanup() - returns any (table, data) tuples resulting from
         aggregated data over all runs, then clears this data
 
+    In addition, the :attr:`affected_tables` attribute should list
+    the names of tables that become invalidated by using this
+    FieldMapper to process a profile. Generally this is the list of
+    tables that :meth:`map` and :meth:`cleanup` create records for,
+    but it may also include those that rely on the previous set
+    (e.g., treebanking preferences, etc.).
+
     Alternative [incr tsdb()] schema can be handled by overriding
     these two methods and the __init__() method.
+
+    Attributes:
+        affected_tables: list of tables that are affected by the
+            processing
     """
     def __init__(self):
         # the parse keys exclude some that are handled specially
@@ -210,6 +221,11 @@ class FieldMapper(object):
         self._parse_id = -1
         self._runs = {}
         self._last_run_id = -1
+
+        self.affected_tables = '''
+            run parse result rule output edge tree decision preference
+            update fold score
+        '''.split()
 
     def map(self, response):
         """

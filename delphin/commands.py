@@ -465,10 +465,7 @@ def process(grammar, testsuite, source=None, select=None,
             cast=False))
 
     with processor(grammar, cmdargs=options) as cpu:
-        target.process(cpu, tablename + ':' + column, source=table)
-
-    target.write()
-
+        target.process(cpu, ':' + column, source=table)
 
 def _interpret_selection(select, source):
     queryobj = tsql.inspect_query('select ' + select)
