@@ -703,9 +703,8 @@ class Table(object):
                 raise ItsdbError('no path given for detached table')
             else:
                 path = self.path
+        path = _normalize_table_path(path)
         dirpath, name = os.path.split(path)
-        if name[-3:].lower() == '.gz':
-            name = name[:-3]  # compression is determined by *gzip* argument
         if relation is None:
             relation = self.relation
         if records is None:
@@ -719,7 +718,8 @@ class Table(object):
             gzip=gzip,
             encoding=self.encoding)
 
-        if self.is_attached():
+        if self.is_attached() and path == _normalize_table_path(self.path):
+            self.path = _table_filename(path)
             self._sync_with_file()
 
     def attach(self, path, encoding='utf-8'):
@@ -747,12 +747,18 @@ class Table(object):
         if self.is_attached():
             raise ItsdbError('already attached at {}'.format(self.path))
 
-        if not os.path.exists(path):
-            # create empty file to attach the table to
+        try:
+            path = _table_filename(path)
+        except ItsdbError:
+            # neither path nor path.gz exist; create new empty file
             # (note: if the file were non-empty this would be destructive)
+            path = _normalize_table_path(path)
             open(path, 'w').close()
-        elif os.stat(path).st_size > 0 and len(self._records) > 0:
-            raise ItsdbError('cannot attach non-empty table to non-empty file')
+        else:
+            # path or path.gz exists; check if merging would be a problem
+            if os.stat(path).st_size > 0 and len(self._records) > 0:
+                raise ItsdbError(
+                    'cannot attach non-empty table to non-empty file')
 
         self.path = path
         self.encoding = encoding
@@ -943,6 +949,12 @@ class Table(object):
         return select_rows(cols, self, mode=mode)
 
 
+def _normalize_table_path(path):
+    if path[-3:].lower() == '.gz':
+        path = path[:-3]
+    return path
+
+
 def _get_relation_from_table_path(path):
     rpath = os.path.join(os.path.dirname(path), _relations_filename)
     if not os.path.exists(rpath):
@@ -951,7 +963,7 @@ def _get_relation_from_table_path(path):
             'not be found.'
         )
     rels = Relations.from_file(rpath)
-    name = os.path.basename(path).rsplit('.gz', 1)[0]
+    name = os.path.basename(_normalize_table_path(path))
     if name not in rels:
         raise ItsdbError(
             'Table \'{}\' not found in the relations.'.format(name)
@@ -1385,13 +1397,20 @@ def unescape(string):
 
 
 def _table_filename(tbl_filename):
+    """
+    Determine if the table path should end in .gz or not and return it.
+
+    A .gz path is preferred only if it exists and is newer than any
+    regular text file path.
+
+    Raises:
+        :class:`delphin.exceptions.ItsdbError`: when neither the .gz
+            nor text file exist.
+    """
     tbl_filename = str(tbl_filename)  # convert any Path objects
-    if tbl_filename.endswith('.gz'):
-        gzfn = tbl_filename
-        txfn = tbl_filename[:-3]
-    else:
-        txfn = tbl_filename
-        gzfn = tbl_filename + '.gz'
+
+    txfn = _normalize_table_path(tbl_filename)
+    gzfn = txfn + '.gz'
 
     if os.path.exists(txfn):
         if (os.path.exists(gzfn) and
@@ -1412,6 +1431,11 @@ def _table_filename(tbl_filename):
 
 @contextmanager
 def _open_table(tbl_filename, encoding):
+    """
+    Transparently open the compressed or text table file.
+
+    Can be used as a context manager in a 'with' statement.
+    """
     path = _table_filename(tbl_filename)
     if path.endswith('.gz'):
         # gzip.open() cannot use mode='rt' until Python2.7 support

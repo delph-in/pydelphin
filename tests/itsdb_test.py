@@ -312,7 +312,13 @@ class TestTable(object):
         table.write(records=[(10, 'Birds chirp.')], gzip=False)
         assert path.check()
         assert not tmpdir.join('item.gz').check()
+        assert table.path == str(path)
         assert open(str(path)).read() == '10@Birds chirp.\n'
+        # ensure path is updated when gzip option is used
+        table.write(gzip=True)
+        assert table.path == str(path) + '.gz'
+        table.write(gzip=False)
+        assert table.path == str(path)
 
     def test_attach(self, empty_profile):
         relation = itsdb.Relations.from_string(_simple_relations)['item']
@@ -340,6 +346,18 @@ class TestTable(object):
         assert len(table) == 0
         table.attach(item_fn)
         assert len(table) == 1
+        # attaching with .gz filename
+        table2 = itsdb.Table(relation)
+        table2.attach(item_fn + '.gz')
+        assert len(table2) == 1
+        assert table2.path == item_fn
+        # attaching to gzipped tables
+        table.write(gzip=True)
+        table2 = itsdb.Table(relation)
+        table2.attach(table.path)
+        assert len(table2) == 1
+        assert table2.path == item_fn + '.gz'
+        table.write(gzip=False)  # just reset for the next test
         # attach non-empty table to non-empty file
         table = itsdb.Table(relation, records=[(20, 'Wolves howl.')])
         with pytest.raises(itsdb.ItsdbError):
