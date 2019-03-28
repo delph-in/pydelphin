@@ -517,22 +517,47 @@ class TestTable(object):
             table[0]
         # detached
         table.append((10, 'The bird chirps.'))
-        assert tuple(table[0]) == (10, 'The bird chirps.')
-        assert tuple(table[-1]) == (10, 'The bird chirps.')
+        assert table[0] == (10, 'The bird chirps.')
+        assert table[-1] == (10, 'The bird chirps.')
         # attached and synced
         table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
-        assert tuple(table[0]) == (0, 'The dog barks.')
+        assert table[0] == (0, 'The dog barks.')
         # attached with unsynced records
         table.append((1, 'The bear growls.'))
-        assert tuple(table[-1]) == (1, 'The bear growls.')
+        assert table[-1] == (1, 'The bear growls.')
         # slice
-        assert list(map(tuple, table[:])) == [(0, 'The dog barks.'), (1, 'The bear growls.')]
-        assert list(map(tuple, table[0:1])) == [(0, 'The dog barks.')]
-        assert list(map(tuple, table[::2])) == [(0, 'The dog barks.')]
-        assert list(map(tuple, table[::-1])) == [(1, 'The bear growls.'), (0, 'The dog barks.')]
+        assert table[:] == [(0, 'The dog barks.'), (1, 'The bear growls.')]
+        assert table[0:1] == [(0, 'The dog barks.')]
+        assert table[::2] == [(0, 'The dog barks.')]
+        assert table[::-1] == [(1, 'The bear growls.'), (0, 'The dog barks.')]
 
     def test_setitem(self, empty_profile, single_item_skeleton):
-        pass
+        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        # empty table
+        table = itsdb.Table(relation)
+        with pytest.raises(IndexError):
+            table[0] = (10, 'The bird chirps.')
+        # detached
+        table.append((10, 'The bird chirps.'))
+        table[0] = (10, 'The bird chirped.')
+        assert len(table) == 1
+        assert table[0] == (10, 'The bird chirped.')
+        # attached
+        table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
+        assert table[0] == (0, 'The dog barks.')
+        table[0] = (0, 'The dog barked.')
+        assert table[0] == (0, 'The dog barked.')
+        # slice
+        table = itsdb.Table(relation)
+        table[:] = [(0, 'The whale sings.')]
+        assert len(table) == 1
+        assert table[0] == (0, 'The whale sings.')
+        table[0:5] = [(0, 'The whale sang.'), (1, 'The bear growls.')]
+        assert len(table) == 2
+        assert table[-1] == (1, 'The bear growls.')
+        table[-1:] = []
+        assert len(table) == 1
+        assert table[-1] == (0, 'The whale sang.')
 
 
 class TestSuite(object):

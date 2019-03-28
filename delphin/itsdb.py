@@ -898,10 +898,7 @@ class Table(object):
             index = slice(index, index + 1)
         fields = self.relation
         for i, record in enumerate(values):
-            if len(record) != len(fields):
-                raise ItsdbError('wrong number of fields')
-            values[i] = tuple(_cast_to_str(value, field)
-                              for value, field in zip(record, fields))
+            values[i] = _cast_record_to_str_tuple(record, fields)
         self._records[index] = values
 
     def __len__(self):
@@ -925,10 +922,9 @@ class Table(object):
             record: an iterable of :class:`Record` or other iterables
                 containing column values
         """
+        fields = self.relation
         for record in records:
-            if len(record) != len(self.relation):
-                raise ItsdbError('wrong number of fields')
-            record = tuple(unicode(f) for f in record)
+            record = _cast_record_to_str_tuple(record, fields)
             self._records.append(record)
 
     def select(self, cols, mode='list'):
@@ -970,6 +966,13 @@ def _get_relation_from_table_path(path):
         )
     # successfully inferred the relations for the table
     return rels[name]
+
+
+def _cast_record_to_str_tuple(record, fields):
+    if len(record) != len(fields):
+        raise ItsdbError('wrong number of fields')
+    return tuple(_cast_to_str(value, field)
+                 for value, field in zip(record, fields))
 
 
 class TestSuite(object):
