@@ -20,16 +20,16 @@ way of working with the data. Capabilities include:
 
 * Selecting data by table name, record index, and column name or index:
 
-    >>> items = ts['item']          # get the items table
-    >>> rec = items[0]              # get the first record
-    >>> rec['i-input']              # input sentence of the first item
+    >>> items = ts['item']           # get the items table
+    >>> rec = items[0]               # get the first record
+    >>> rec['i-input']               # input sentence of the first item
     '雨 が 降っ た ．'
-    >>> rec['i-id']                 # key-access does not cast types
-    '11'
-    >>> rec.get('i-id')             # nor does get() by default
-    '11'
-    >>> rec.get('i-id', cast=True)  # but it does with cast=True
+    >>> rec[0]                       # values are cast on index retrieval
     11
+    >>> rec.get('i-id')              # and on key retrieval
+    11
+    >>> rec.get('i-id', cast=False)  # unless cast=False
+    '11'
 
 * Selecting data as a query (note that types are cast by default):
 
@@ -69,14 +69,15 @@ This module covers all aspects of [incr tsdb()] data, from
 easy to load the tables of a testsuite into memory, inspect its
 contents, modify or create data, and write the data to disk.
 
-By default, the `itsdb` module expects testsuites to use the
-standard [incr tsdb()] schema. Testsuites are always read and written
-according to the associated or specified relations file, but other
-things, such as default field values and the list of "core" tables,
-are defined for the standard schema. It is, however, possible to
-define non-standard schemata for particular applications, and most
-functions will continue to work.
-
+By default, the `itsdb` module expects testsuites to use the standard
+[incr tsdb()] schema. Testsuites are always read and written according
+to the associated or specified relations file, but other things, such
+as default field values and the list of "core" tables, are defined for
+the standard schema. It is, however, possible to define non-standard
+schemata for particular applications, and most functions will continue
+to work. One notable exception is the :meth:`TestSuite.process`
+method, for which a new :class:`~delphin.interfaces.base.FieldMapper`
+class must be defined.
 """
 
 from __future__ import print_function
@@ -625,7 +626,7 @@ class Table(object):
     and other operations where high-speed random-access is required.
     See the :meth:`attach` and :meth:`detach` methods for more
     information. The :meth:`is_attached` method is useful for
-    determining which mode a table is in.
+    determining the mode of a table.
 
     Args:
         relation: the Relation schema for this table
@@ -848,6 +849,7 @@ class Table(object):
                 if row is not None]
 
     def _sync_with_file(self):
+        """Clear in-memory structures so table is synced with the file."""
         self._records = []
         i = -1
         for i, line in self._enum_lines():
@@ -855,11 +857,13 @@ class Table(object):
         self._last_synced_index = i
 
     def _enum_lines(self):
+        """Enumerate lines from the attached file."""
         with _open_table(self.path, self.encoding) as lines:
             for i, line in enumerate(lines):
                 yield i, line
 
     def _enum_attached_rows(self, indices):
+        """Enumerate on-disk and in-memory records."""
         records = self._records
         i = 0
         # first rows covered by the file
@@ -886,6 +890,7 @@ class Table(object):
             return self._getitem(index)
 
     def _iterslice(self, slice):
+        """Yield records from a slice index."""
         indices = range(*slice.indices(len(self._records)))
         if self.is_attached():
             rows = self._enum_attached_rows(indices)
@@ -899,6 +904,7 @@ class Table(object):
             yield Record._make(fields, row, self, i)
 
     def _getitem(self, index):
+        """Get a single non-slice index."""
         row = self._records[index]
         if row is not None:
             pass
@@ -918,12 +924,14 @@ class Table(object):
         return Record._make(self.relation, row, self, index)
 
     def __setitem__(self, index, value):
+        # first normalize the arguments for slices and regular indices
         if isinstance(index, slice):
             values = list(value)
         else:
             self._records[index]  # check for IndexError
             values = [value]
             index = slice(index, index + 1)
+        # now prepare the records for being in a table
         fields = self.relation
         for i, record in enumerate(values):
             values[i] = _cast_record_to_str_tuple(record, fields)

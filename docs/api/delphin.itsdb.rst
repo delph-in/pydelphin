@@ -39,6 +39,7 @@ databases:
 
   .. automethod:: from_file
   .. automethod:: write
+  .. automethod:: commit
   .. automethod:: attach
   .. automethod:: detach
   .. automethod:: is_attached

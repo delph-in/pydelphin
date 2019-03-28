@@ -4,8 +4,12 @@ Working with [incr tsdb()] Testsuites
 
 [incr tsdb()] is the canonical software for managing
 **testsuites**---collections of test items for judging the performance
-of an implemented grammar---within DELPH-IN. There are several words in
-use to describe testsuites:
+of an implemented grammar---within DELPH-IN. While the original
+purpose of testsuites is to aid in grammar development, they are also
+useful more generally for batch processing. PyDelphin has good support
+for a range of [incr tsdb()] functionality.
+
+There are several words in use to describe testsuites:
 
 :skeleton:
 
@@ -131,17 +135,19 @@ By default, writing a table deletes any previous contents, so the
 entire file contents need to be written at once. If you want to write
 results one-by-one, the `append` parameter is useful. You many need to
 clear the in-memory table before appending the first time, and this can
-be done with a standard list operations:
+be done by writing an empty list with `append=False`:
 
->>> ts['result'].clear()  # list.clear() is Python3 only
+>>> ts.write({'result': [], append=False)  # to erase on-disk table
+>>> ts.['result'][:] = []                  # to clear in-memory table
 >>> for record in result_records:
 ...     ts.write({'result': [record]}, append=True)
 
 Processing Testsuites with ACE
 ------------------------------
 
-PyDelphin has the ability to process testsuites using ACE, similar to
-the `art <http://sweaglesw.org/linguistics/libtsdb/art>`_ utility and
+PyDelphin has the ability to process testsuites using `ACE
+<http://sweaglesw.org/linguistics/ace>`_, similar to the
+`art <http://sweaglesw.org/linguistics/libtsdb/art>`_ utility and
 `[incr tsdb()] <http://www.delph-in.net/itsdb/>`_ itself. The simplest
 method is to pass in a running
 :class:`~delphin.interfaces.ace.AceProcess` instance to
@@ -160,10 +166,14 @@ attribute) and select the appropriate inputs from the testsuite.
 NOTE: parsed 2 / 3 sentences, avg 887k, time 0.04736s
 >>> ts.write(path='tsdb/current/matrix')
 
-Note that processing does not write results to disk, but stores them in
-memory. By writing with TestSuite's
-:meth:`~delphin.itsdb.TestSuite.write` method using the `path`
-parameter, the results can be written to a new profile.
+Processing a testsuite that has a path (that is, backed by files on
+disk) will write the results to disk. Processing an in-memory
+testsuite will store the results in-memory. For other options please
+see the API documentation for :meth:`TestSuite.process
+<delphin.itsdb.TestSuite.process>`, specifically the `buffer_size`
+parameter. When the results are all in-memory, you can write them
+to disk with TestSuite's :meth:`~delphin.itsdb.TestSuite.write` method
+with the `path` parameter.
 
 .. warning::
 
@@ -171,16 +181,17 @@ parameter, the results can be written to a new profile.
   gold profiles, so take care when using the `write()` method without
   the `path` parameter.
 
-If you have a testsuite object `ts` and call `ts.process()`, the
-results of the processing will be stored in `ts`. For parsing this
-isn't a problem, but when transfering or generating, you may want to
+If you have a testsuite object `ts` and call `ts.process()`, both the
+source items and the results are stored in `ts`. For parsing this
+isn't a problem because the source items and results are located in
+different tables, but for transfering or generating you may want to
 use the `source` parameter in order to select inputs from a separate
 testsuite than the one where results will be stored:
 
 >>> from delphin.interfaces import ace
 >>> from delphin import itsdb
 >>> src_ts = itsdb.TestSuite('tsdb/current/mrs')
->>> tgt_ts = itsdb.TestSuite('tsdb/skeletons/mrs')
+>>> tgt_ts = itsdb.TestSuite('tsdb/current/mrs-gen')
 >>> with ace.AceGenerator('jacy-0.9.27.dat') as cpu:
 ...     tgt_ts.process(cpu, source=src_ts)
 ... 
