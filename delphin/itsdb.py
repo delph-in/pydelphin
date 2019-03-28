@@ -1278,6 +1278,7 @@ class TestSuite(object):
 
 
 def _prepare_target(ts, tables, buffer_size):
+    """Clear tables affected by the processing."""
     for tablename in tables:
         table = ts[tablename]
         table[:] = []
@@ -1286,6 +1287,7 @@ def _prepare_target(ts, tables, buffer_size):
 
 
 def _prepare_source(selector, source):
+    """Normalize source rows and selectors."""
     tablename, fields = get_data_specifier(selector)
     if len(fields) != 1:
         raise ItsdbError(
@@ -1301,6 +1303,9 @@ def _prepare_source(selector, source):
 
 
 def _add_record(table, data, buffer_size):
+    """
+    Prepare and append a Record into its Table; flush to disk if necessary.
+    """
     fields = table.relation
     # remove any keys that aren't relation fields
     for invalid_key in set(data).difference([f.name for f in fields]):

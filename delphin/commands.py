@@ -399,7 +399,7 @@ def _lines_to_rows(lines, relations):
 
 def process(grammar, testsuite, source=None, select=None,
             generate=False, transfer=False, options=None,
-            all_items=False, result_id=None):
+            all_items=False, result_id=None, gzip=False):
     """
     Process (e.g., parse) a [incr tsdb()] profile.
 
@@ -434,6 +434,8 @@ def process(grammar, testsuite, source=None, select=None,
             (those with `i-wf==2`) when parsing
         result_id (int): if given, only keep items with the specified
             `result-id`
+        gzip (bool): if `True`, non-empty tables will be compressed
+            with gzip
     """
     from delphin.interfaces import ace
 
@@ -465,7 +467,7 @@ def process(grammar, testsuite, source=None, select=None,
             cast=False))
 
     with processor(grammar, cmdargs=options) as cpu:
-        target.process(cpu, ':' + column, source=table)
+        target.process(cpu, ':' + column, source=table, gzip=gzip)
 
 def _interpret_selection(select, source):
     queryobj = tsql.inspect_query('select ' + select)

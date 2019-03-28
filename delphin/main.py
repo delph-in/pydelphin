@@ -92,7 +92,8 @@ def call_process(args):
         transfer=args.transfer,
         options=shlex.split(args.options),
         all_items=args.all_items,
-        result_id=args.p)
+        result_id=args.p,
+        gzip=args.gzip)
 
 
 def call_compare(args):
@@ -305,6 +306,9 @@ process_parser.add_argument(
     help=('transfer or generate from result with result-id=RID; '
           'short for adding \'where result-id==RID\' to --select')
 )
+process_parser.add_argument(
+    '-z', '--gzip', action='store_true', help='compress table files with gzip')
+
 
 # compare subparser
 compare_parser = argparse.ArgumentParser(add_help=False)
