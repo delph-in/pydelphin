@@ -64,7 +64,8 @@ setup(
     ],
     install_requires=[
         'penman >=0.6.1',
-        'networkx',
+        # networkx 2.2 is not compatible with Python 2.7 (apparently) and 3.5
+        'networkx >=2.0,<2.2',
         'requests',
         'Pygments',
     ],
