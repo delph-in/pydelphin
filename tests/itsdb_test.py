@@ -218,7 +218,7 @@ def test_Relations_path():
 def test_Record():
     rels = itsdb.Relations.from_string(_simple_relations)
     r = itsdb.Record(rels['item'], [0, 'sentence'])
-    assert r.relation == rels['item']
+    assert r.fields == rels['item']
     assert len(r) == 2
     assert r['i-id'] == r[0] == 0
     assert r.get('i-id', cast=False) == '0'
@@ -254,18 +254,18 @@ def test_Record():
 
 class TestTable(object):
     def test_init(self):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
         with pytest.raises(TypeError):
             itsdb.Table()  # no relations
         # empty table
-        table = itsdb.Table(relation=relation)
+        table = itsdb.Table(fields=fields)
         assert len(table) == 0
         assert table.name == 'item'
-        assert table.relation == relation
+        assert table.fields == fields
         assert table.path is None
         assert table.encoding is None
         # table with a record
-        table = itsdb.Table(relation=relation, records=[(10, 'Birds chirp.')])
+        table = itsdb.Table(fields=fields, records=[(10, 'Birds chirp.')])
         assert len(table) == 1
         assert table[0]['i-id'] == 10
         assert table[0]['i-input'] == 'Birds chirp.'
@@ -289,8 +289,8 @@ class TestTable(object):
         assert table.name == 'item'
 
     def test_write(self, tmpdir):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
-        table = itsdb.Table(relation, records=[(10, 'Birds chirp.')])
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
+        table = itsdb.Table(fields, records=[(10, 'Birds chirp.')])
         path = tmpdir.join('item')
         with pytest.raises(itsdb.ItsdbError):
             table.write()  # cannot write to detached table without *path*
@@ -308,7 +308,7 @@ class TestTable(object):
         assert not path.check()
         assert tmpdir.join('item.gz').check()
         # attached tables may be written without *path*
-        table = itsdb.Table.from_file(str(path), relation=relation)
+        table = itsdb.Table.from_file(str(path), fields=fields)
         table.write(records=[(10, 'Birds chirp.')], gzip=False)
         assert path.check()
         assert not tmpdir.join('item.gz').check()
@@ -321,11 +321,11 @@ class TestTable(object):
         assert table.path == str(path)
 
     def test_attach(self, empty_profile):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
         item_fn = os.path.join(empty_profile, 'item')
         enc = 'utf-8'
         # attach empty table to empty file
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         assert not os.path.exists(item_fn)
         table.attach(item_fn)
         assert os.path.exists(item_fn)  # attaching creates the file
@@ -336,40 +336,40 @@ class TestTable(object):
             table.attach(item_fn)
         os.unlink(item_fn)
         # attach non-empty table to empty file
-        table = itsdb.Table(relation, records=[(10, 'Birds chirp.')])
+        table = itsdb.Table(fields, records=[(10, 'Birds chirp.')])
         table.attach(item_fn)
         assert open(item_fn).read() == ''  # nothing written yet
         table.write()
         assert open(item_fn).read() == '10@Birds chirp.\n'
         # attach empty table to non-empty file
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         assert len(table) == 0
         table.attach(item_fn)
         assert len(table) == 1
         # attaching with .gz filename
-        table2 = itsdb.Table(relation)
+        table2 = itsdb.Table(fields)
         table2.attach(item_fn + '.gz')
         assert len(table2) == 1
         assert table2.path == item_fn
         # attaching to gzipped tables
         table.write(gzip=True)
-        table2 = itsdb.Table(relation)
+        table2 = itsdb.Table(fields)
         table2.attach(table.path)
         assert len(table2) == 1
         assert table2.path == item_fn + '.gz'
         table.write(gzip=False)  # just reset for the next test
         # attach non-empty table to non-empty file
-        table = itsdb.Table(relation, records=[(20, 'Wolves howl.')])
+        table = itsdb.Table(fields, records=[(20, 'Wolves howl.')])
         with pytest.raises(itsdb.ItsdbError):
             table.attach(item_fn)
         assert open(item_fn).read() == '10@Birds chirp.\n'
 
     def test_detach(self, tmpdir, single_item_skeleton):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
         empty_fn = tmpdir.mkdir('tmp').join('item')
         item_fn = os.path.join(single_item_skeleton, 'item')
         # detach unchanged table from empty file
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         table.attach(str(empty_fn))
         assert len(table) == 0
         table.write()
@@ -377,7 +377,7 @@ class TestTable(object):
         table.detach()
         assert len(table) == 0
         # detach changed table from empty file
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         table.attach(str(empty_fn))
         assert len(table) == 0
         table.append((10, 'Birds chirp.'))
@@ -387,13 +387,13 @@ class TestTable(object):
         assert len(table) == 1
         assert open(str(empty_fn)).read() == ''
         # detach unchanged table from non-empty file
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         table.attach(item_fn)
         assert len(table) == 1
         table.detach()
         assert len(table) == 1
         # detach changed table from non-empty file
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         table.attach(item_fn)
         assert len(table) == 1
         assert table[0]['i-input'] == 'The dog barks.'
@@ -405,8 +405,8 @@ class TestTable(object):
         assert open(item_fn).read() == '0@The dog barks.'
 
     def test_is_attached(self, single_item_skeleton, gzipped_single_item_skeleton):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
-        table = itsdb.Table(relation)
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
+        table = itsdb.Table(fields)
         assert table.is_attached() == False
         # explicit attachment
         table.attach(os.path.join(single_item_skeleton, 'item'))
@@ -421,13 +421,13 @@ class TestTable(object):
         table = itsdb.Table.from_file(os.path.join(gzipped_single_item_skeleton, 'item'))
         assert table.is_attached() == True
         # writing does not attach
-        table = itsdb.Table(relation, [(10, 'Birds chirp.')])
+        table = itsdb.Table(fields, [(10, 'Birds chirp.')])
         table.write(path=os.path.join(single_item_skeleton, 'item'))
         assert table.is_attached() == False
 
     def test_list_changes(self, empty_profile, single_item_skeleton):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
-        table = itsdb.Table(relation)
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
+        table = itsdb.Table(fields)
         # detached tables do not track changes
         with pytest.raises(itsdb.ItsdbError):
             table.list_changes()
@@ -455,9 +455,9 @@ class TestTable(object):
             table.list_changes()
 
     def test_append(self, single_item_skeleton):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
         # on bare table
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         assert len(table) == 0
         table.append((10, 'The dog barks.'))
         assert len(table) == 1
@@ -473,9 +473,9 @@ class TestTable(object):
         assert table[-1]['i-input'] == 'The bird chirps.'
 
     def test_extend(self, single_item_skeleton):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
         # on bare table
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         assert len(table) == 0
         table.extend([(10, 'The dog barks.')])
         assert len(table) == 1
@@ -495,9 +495,9 @@ class TestTable(object):
         assert table[-1]['i-input'] == 'The elephant trumpets.'
 
     def test_select(self, single_item_skeleton):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
         # empty table
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         assert list(table.select('item:i-id')) == []
         # detached
         table.append((10, 'The bird chirps.'))
@@ -510,9 +510,9 @@ class TestTable(object):
         assert list(table.select('item:i-id')) == [[0], [1]]
 
     def test_getitem(self, empty_profile, single_item_skeleton):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
         # empty table
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         with pytest.raises(IndexError):
             table[0]
         # detached
@@ -532,9 +532,9 @@ class TestTable(object):
         assert table[::-1] == [(1, 'The bear growls.'), (0, 'The dog barks.')]
 
     def test_setitem(self, empty_profile, single_item_skeleton):
-        relation = itsdb.Relations.from_string(_simple_relations)['item']
+        fields = itsdb.Relations.from_string(_simple_relations)['item']
         # empty table
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         with pytest.raises(IndexError):
             table[0] = (10, 'The bird chirps.')
         # detached
@@ -548,7 +548,7 @@ class TestTable(object):
         table[0] = (0, 'The dog barked.')
         assert table[0] == (0, 'The dog barked.')
         # slice
-        table = itsdb.Table(relation)
+        table = itsdb.Table(fields)
         table[:] = [(0, 'The whale sings.')]
         assert len(table) == 1
         assert table[0] == (0, 'The whale sings.')
@@ -616,7 +616,7 @@ class TestSuite(object):
         assert sorted(x.basename for x in d.listdir()) == [
             'item', 'parse', 'relations', 'result']
         ts = itsdb.TestSuite(str(d))
-        assert 'i-date' in ts['item'].relation
+        assert 'i-date' in ts['item'].fields
 
     def test_process(self, parser_cpu, single_item_skeleton):
         ts = itsdb.TestSuite(single_item_skeleton)
@@ -668,7 +668,7 @@ def test_decode_row():
     assert itsdb.decode_row('one@@three') == ['one', '', 'three']
     assert itsdb.decode_row('one\\s@\\\\two\\nabc\\x') == ['one@', '\\two\nabc\\x']
     rels = itsdb.Relations.from_string(_simple_relations)
-    assert itsdb.decode_row('10@one', relation=rels['item']) == [10, 'one']
+    assert itsdb.decode_row('10@one', fields=rels['item']) == [10, 'one']
 
 def test_encode_row():
     assert itsdb.encode_row(['']) == ''
@@ -705,7 +705,7 @@ def test_join(single_item_profile):
     j = itsdb.join(p['parse'], p['result'])
     assert j.name == 'parse+result'
     assert len(j) == 1
-    assert len(j.relation) == len(p['parse'].relation) + len(p['result'].relation) - 1
+    assert len(j.fields) == len(p['parse'].fields) + len(p['result'].fields) - 1
     r = j[0]
     assert r['parse:run-id'] == r['run-id']
     assert r['result:mrs'] == r['mrs']
@@ -714,7 +714,7 @@ def test_join(single_item_profile):
     j2 = itsdb.join(p['item'], j)
     assert j2.name == 'item+parse+result'
     assert len(j2) == 1
-    assert len(j2.relation) == len(j.relation) + len(p['item'].relation) - 1
+    assert len(j2.fields) == len(j.fields) + len(p['item'].fields) - 1
     r = j2[0]
     assert r['item:i-input'] == r['i-input']
     assert r['item:i-id'] == r['parse:i-id']

@@ -508,7 +508,7 @@ def process(grammar, testsuite, source=None, select=None,
     target = itsdb.TestSuite(testsuite)
     column, tablename, condition = _interpret_selection(select, source)
     table = itsdb.Table(
-        source[tablename].relation,
+        source[tablename].fields,
         tsql.select(
             '* from {} {}'.format(tablename, condition),
             source,

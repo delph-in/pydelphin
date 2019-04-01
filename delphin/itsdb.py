@@ -231,7 +231,7 @@ class _RelationJoin(Relation):
                              'try renaming the table.')
 
         name = '{}+{}'.format(rel1.name, rel2.name)
-        # the relation of the joined table, merging shared columns in *on*
+        # the fields of the joined table, merging shared columns in *on*
         if isinstance(on, stringtypes):
             on = _split_cols(on)
         elif on is None:
@@ -284,15 +284,15 @@ class _RelationJoin(Relation):
         return self._index[fieldname]
 
 
-def _prefixed_relation_fields(relation, on, drop):
+def _prefixed_relation_fields(fields, on, drop):
     fields = []
-    already_joined = isinstance(relation, _RelationJoin)
-    for f in relation:
+    already_joined = isinstance(fields, _RelationJoin)
+    for f in fields:
         table, _, fieldname = f[0].rpartition(':')
         if already_joined :
             prefix = table + ':' if table else ''
         else:
-            prefix = relation.name + ':'
+            prefix = fields.name + ':'
         if fieldname in on and not drop:
             fields.append(Field(fieldname, *f[1:]))
         elif fieldname not in on:
@@ -467,33 +467,33 @@ class Record(list):
     A row in a [incr tsdb()] table.
 
     Args:
-        relation: the Relation schema for the table of this record
+        fields: the Relation schema for the table of this record
         iterable: an iterable containing the data for the record
     Attributes:
-        relation (:class:`Relation`): table schema
+        fields (:class:`Relation`): table schema
     """
 
-    __slots__ = ('relation', '_tableref', '_rowid')
+    __slots__ = ('fields', '_tableref', '_rowid')
 
-    def __init__(self, relation, iterable):
+    def __init__(self, fields, iterable):
         iterable = list(iterable)
 
-        if len(relation) != len(iterable):
+        if len(fields) != len(iterable):
             raise ItsdbError(
                 'Incorrect number of column values for {} table: {} != {}\n{}'
-                .format(relation.name, len(iterable), len(relation), iterable)
+                .format(fields.name, len(iterable), len(fields), iterable)
             )
 
         iterable = [_cast_to_str(val, field)
-                    for val, field in zip(iterable, relation)]
+                    for val, field in zip(iterable, fields)]
 
-        self.relation = relation
+        self.fields = fields
         self._tableref = None
         self._rowid = None
         super(Record, self).__init__(iterable)
 
     @classmethod
-    def _make(cls, relation, iterable, table, rowid):
+    def _make(cls, fields, iterable, table, rowid):
         """
         Create a Record bound to a :class:`Table`.
 
@@ -507,44 +507,44 @@ class Record(list):
         reference to the Table is to avoid a circular reference and
         thus allow it to be properly garbage collected.
         """
-        record = cls(relation, iterable)
+        record = cls(fields, iterable)
         record._tableref = weakref.ref(table)
         record._rowid = rowid
         return record
 
     @classmethod
-    def from_dict(cls, relation, mapping):
+    def from_dict(cls, fields, mapping):
         """
         Create a Record from a dictionary of field mappings.
 
-        The *relations* object is used to determine the column indices
+        The *fields* object is used to determine the column indices
         of fields in the mapping.
 
         Args:
-            relation: the Relation schema for the table of this record
+            fields: the Relation schema for the table of this record
             mapping: a dictionary or other mapping from field names to
                 column values
         Returns:
             a :class:`Record` object
         """
-        iterable = [None] * len(relation)
+        iterable = [None] * len(fields)
         for key, value in mapping.items():
             try:
-                index = relation.index(key)
+                index = fields.index(key)
             except KeyError:
                 raise ItsdbError('Invalid field name(s): ' + key)
             iterable[index] = value
-        return cls(relation, iterable)
+        return cls(fields, iterable)
 
     def __repr__(self):
         return "<{} '{}' {}>".format(
             self.__class__.__name__,
-            self.relation.name,
-            ' '.join('{}={}'.format(k, self[k]) for k in self.relation.keys())
+            self.fields.name,
+            ' '.join('{}={}'.format(k, self[k]) for k in self.fields.keys())
         )
 
     def __str__(self):
-        return make_row(self, self.relation)
+        return make_row(self, self.fields)
 
     def __eq__(self, other):
         return all(a == b for a, b in zip(self, other))
@@ -553,21 +553,21 @@ class Record(list):
         return any(a != b for a, b in zip(self, other))
 
     def __iter__(self):
-        for raw, field in zip(list.__iter__(self), self.relation):
+        for raw, field in zip(list.__iter__(self), self.fields):
             yield _cast_to_datatype(raw, field)
 
     def __getitem__(self, index):
         if not isinstance(index, int):
-            index = self.relation.index(index)
+            index = self.fields.index(index)
         raw = list.__getitem__(self, index)
-        field = self.relation[index]
+        field = self.fields[index]
         return _cast_to_datatype(raw, field)
 
     def __setitem__(self, index, value):
         if not isinstance(index, int):
-            index = self.relation.index(index)
+            index = self.fields.index(index)
         # record values are strings
-        value = _cast_to_str(value, self.relation[index])
+        value = _cast_to_str(value, self.fields[index])
         # should the value be validated against the datatype?
         list.__setitem__(self, index, value)
         # when a record is modified it should stay in memory
@@ -586,17 +586,17 @@ class Record(list):
             default: the value to return if *key* is not in the row
         """
         tablename, _, key = key.rpartition(':')
-        if tablename and tablename not in self.relation.name.split('+'):
+        if tablename and tablename not in self.fields.name.split('+'):
             raise ItsdbError('column requested from wrong table: {}'
                              .format(tablename))
         try:
-            index = self.relation.index(key)
+            index = self.fields.index(key)
             value = list.__getitem__(self, index)
         except (KeyError, IndexError):
             value = default
         else:
             if cast:
-                field = self.relation[index]
+                field = self.fields[index]
                 value = _cast_to_datatype(value, field)
         return value
 
@@ -629,22 +629,22 @@ class Table(object):
     determining the mode of a table.
 
     Args:
-        relation: the Relation schema for this table
+        fields: the Relation schema for this table
         records: the collection of Record objects containing the table data
     Attributes:
         name (str): table name
-        relation (:class:`Relation`): table schema
+        fields (:class:`Relation`): table schema
         path (str): if attached, the path to the file containing the
             table data; if detached it is `None`
         encoding (str): the character encoding of the attached table
             file; if detached it is `None`
     """
 
-    __slots__ = ('relation', 'path', 'encoding', '_records',
+    __slots__ = ('fields', 'path', 'encoding', '_records',
                  '_last_synced_index', '__weakref__')
 
-    def __init__(self, relation, records=None):
-        self.relation = relation
+    def __init__(self, fields, records=None):
+        self.fields = fields
         self.path = None
         self.encoding = None
         self._records = []
@@ -655,7 +655,7 @@ class Table(object):
         self.extend(records)
 
     @classmethod
-    def from_file(cls, path, relation=None, encoding='utf-8'):
+    def from_file(cls, path, fields=None, encoding='utf-8'):
         """
         Instantiate a Table from a database file.
 
@@ -666,27 +666,27 @@ class Table(object):
 
         Args:
             path: the path to the table file
-            relation: the Relation schema for the table (loaded from the
+            fields: the Relation schema for the table (loaded from the
                 relations file in the same directory if not given)
             encoding: the character encoding of the file at *path*
         """
         path = _table_filename(path)  # do early in case file not found
-        if relation is None:
-            relation = _get_relation_from_table_path(path)
+        if fields is None:
+            fields = _get_relation_from_table_path(path)
 
-        table = cls(relation)
+        table = cls(fields)
         table.attach(path, encoding=encoding)
 
         return table
 
-    def write(self, records=None, path=None, relation=None, append=False,
+    def write(self, records=None, path=None, fields=None, append=False,
               gzip=None):
         """
         Write the table to disk.
 
         The basic usage has no arguments and writes the table's data
         to the attached file. The parameters accommodate a variety of
-        use cases, such as using *relation* to refresh a table to a
+        use cases, such as using *fields* to refresh a table to a
         new schema or *records* and *append* to incrementally build a
         table.
 
@@ -695,7 +695,7 @@ class Table(object):
                 if `None` the table's existing data is used
             path: the destination file path; if `None` use the
                 path of the file attached to the table
-            relation (:class:`Relation`): table schema to use for
+            fields (:class:`Relation`): table schema to use for
                 writing, otherwise use the current one
             append: if `True`, append rather than overwrite
             gzip: compress with gzip if non-empty
@@ -710,15 +710,15 @@ class Table(object):
                 path = self.path
         path = _normalize_table_path(path)
         dirpath, name = os.path.split(path)
-        if relation is None:
-            relation = self.relation
+        if fields is None:
+            fields = self.fields
         if records is None:
             records = iter(self)
         _write_table(
             dirpath,
             name,
             records,
-            relation,
+            fields,
             append=append,
             gzip=gzip,
             encoding=self.encoding)
@@ -825,7 +825,7 @@ class Table(object):
 
     @property
     def name(self):
-        return self.relation.name
+        return self.fields.name
 
     def is_attached(self):
         """Return `True` if the table is attached to a file."""
@@ -899,7 +899,7 @@ class Table(object):
         else:
             rows = zip(indices, self._records[slice])
 
-        fields = self.relation
+        fields = self.fields
         for i, row in rows:
             yield Record._make(fields, row, self, i)
 
@@ -921,7 +921,7 @@ class Table(object):
         else:
             raise ItsdbError('invalid row in detached table: {}'.format(index))
 
-        return Record._make(self.relation, row, self, index)
+        return Record._make(self.fields, row, self, index)
 
     def __setitem__(self, index, value):
         # first normalize the arguments for slices and regular indices
@@ -932,7 +932,7 @@ class Table(object):
             values = [value]
             index = slice(index, index + 1)
         # now prepare the records for being in a table
-        fields = self.relation
+        fields = self.fields
         for i, record in enumerate(values):
             values[i] = _cast_record_to_str_tuple(record, fields)
         self._records[index] = values
@@ -958,7 +958,7 @@ class Table(object):
             record: an iterable of :class:`Record` or other iterables
                 containing column values
         """
-        fields = self.relation
+        fields = self.fields
         for record in records:
             record = _cast_record_to_str_tuple(record, fields)
             self._records.append(record)
@@ -977,7 +977,7 @@ class Table(object):
         if isinstance(cols, stringtypes):
             cols = _split_cols(cols)
         if not cols:
-            cols = [f.name for f in self.relation]
+            cols = [f.name for f in self.fields]
         return select_rows(cols, self, mode=mode)
 
 
@@ -1022,8 +1022,8 @@ class TestSuite(object):
             if not given, the relations file under *path* will be used
         encoding: the character encoding of the files in the testsuite
     Attributes:
-        encoding (:py:class:`str`): character encoding used when reading
-            and writing tables
+        encoding (:py:class:`str`): character encoding used when reading and
+            writing tables
         relations (:class:`Relations`): database schema
     """
 
@@ -1071,7 +1071,7 @@ class TestSuite(object):
 
     def _reload_table(self, tablename):
         # assumes self.path is not None
-        relation = self.relations[tablename]
+        fields = self.relations[tablename]
         path = os.path.join(self._path, tablename)
         try:
             path = _table_filename(path)
@@ -1080,7 +1080,7 @@ class TestSuite(object):
             path = _normalize_table_path(path)
             open(path, 'w').close()  # create empty file
         table = Table.from_file(path,
-                                relation=relation,
+                                fields=fields,
                                 encoding=self.encoding)
         self._data[tablename] = table
 
@@ -1155,19 +1155,19 @@ class TestSuite(object):
         with open(os.path.join(path, _relations_filename), 'w') as fh:
             print(str(relations), file=fh)
 
-        for tablename, relation in relations.items():
+        for tablename, fields in relations.items():
             if tablename in tables:
                 data = tables[tablename]
                 # reload table from disk if it is invalidated
                 if data is None:
                     data = self[tablename]
                 elif not isinstance(data, Table):
-                    data = Table(relation, data)
+                    data = Table(fields, data)
                 _write_table(
                     path,
                     tablename,
                     data,
-                    relation,
+                    fields,
                     append=append,
                     gzip=gzip,
                     encoding=self.encoding
@@ -1306,7 +1306,7 @@ def _prepare_source(selector, source):
         if not tablename:
             tablename = source.relations.find(fields[0])[0]
         source = source[tablename]
-    cols = list(source.relation.keys()) + fields
+    cols = list(source.fields.keys()) + fields
     return source, cols
 
 
@@ -1314,7 +1314,7 @@ def _add_record(table, data, buffer_size):
     """
     Prepare and append a Record into its Table; flush to disk if necessary.
     """
-    fields = table.relation
+    fields = table.fields
     # remove any keys that aren't relation fields
     for invalid_key in set(data).difference([f.name for f in fields]):
         del data[invalid_key]
@@ -1358,33 +1358,33 @@ def _split_cols(colstring):
     colstring = colstring.lstrip(':')
     return [col.strip() for col in colstring.split('@')]
 
-def decode_row(line, relation=None):
+def decode_row(line, fields=None):
     """
     Decode a raw line from a profile into a list of column values.
 
     Decoding involves splitting the line by the field delimiter
-    (`"@"` by default) and unescaping special characters. If *relation*
+    (`"@"` by default) and unescaping special characters. If *fields*
     is given, cast the values into the datatype given by their
     respective Field object.
 
     Args:
         line: a raw line from a [incr tsdb()] profile.
-        relation: a list or Relation object of Fields for the row
+        fields: a list or Relation object of Fields for the row
     Returns:
         A list of column values.
     """
     cols = line.rstrip('\n').split(_field_delimiter)
     cols = list(map(unescape, cols))
-    if relation is not None:
-        if len(cols) != len(relation):
+    if fields is not None:
+        if len(cols) != len(fields):
             raise ItsdbError(
                 'Wrong number of fields: {} != {}'
-                .format(len(cols), len(relation))
+                .format(len(cols), len(fields))
             )
         for i in range(len(cols)):
             col = cols[i]
             if col:
-                field = relation[i]
+                field = fields[i]
                 col = _cast_to_datatype(col, field)
             cols[i] = col
     return cols
@@ -1424,7 +1424,7 @@ def encode_row(fields):
     make_row()).
 
     Args:
-        relation: a list of column values
+        fields: a list of column values
     Returns:
         A [incr tsdb()]-encoded string
     """
@@ -1527,7 +1527,7 @@ def _open_table(tbl_filename, encoding):
             yield f
 
 
-def _write_table(profile_dir, table_name, rows, relation,
+def _write_table(profile_dir, table_name, rows, fields,
                  append=False, gzip=False, encoding='utf-8'):
     # don't gzip if empty
     rows = iter(rows)
@@ -1553,7 +1553,7 @@ def _write_table(profile_dir, table_name, rows, relation,
             prefix=table_name, dir=profile_dir) as f_tmp:
 
         for row in rows:
-            f_tmp.write((make_row(row, relation) + '\n').encode(encoding))
+            f_tmp.write((make_row(row, fields) + '\n').encode(encoding))
         f_tmp.seek(0)
 
         txfn = os.path.join(profile_dir, table_name)
@@ -1574,24 +1574,24 @@ def _write_table(profile_dir, table_name, rows, relation,
                 shutil.copyfileobj(f_tmp, f_out)
 
 
-def make_row(row, relation):
+def make_row(row, fields):
     """
     Encode a mapping of column name to values into a [incr tsdb()]
-    profile line. The *relation* parameter determines what columns are
+    profile line. The *fields* parameter determines what columns are
     used, and default values are provided if a column is missing from
     the mapping.
 
     Args:
         row: a mapping of column names to values
-        relation: an iterable of :class:`Field` objects
+        fields: an iterable of :class:`Field` objects
     Returns:
         A [incr tsdb()]-encoded string
     """
     if not hasattr(row, 'get'):
-        row = {f.name: col for f, col in zip(relation, row)}
+        row = {f.name: col for f, col in zip(fields, row)}
 
     row_fields = []
-    for f in relation:
+    for f in fields:
         val = row.get(f.name, None)
         if val is None:
             val = str(f.default_value())
@@ -1713,31 +1713,31 @@ def join(table1, table2, on=None, how='inner', name=None):
         ItsdbError('Only \'inner\' and \'left\' join methods are allowed.')
     # validate and normalize the pivot
     on = _join_pivot(on, table1, table2)
-    # the relation of the joined table
-    relation = _RelationJoin(table1.relation, table2.relation, on=on)
+    # the fields of the joined table
+    fields = _RelationJoin(table1.fields, table2.fields, on=on)
     # get key mappings to the right side (useful for inner and left joins)
     get_key = lambda rec: tuple(rec.get(k) for k in on)
-    key_indices = set(table2.relation.index(k) for k in on)
+    key_indices = set(table2.fields.index(k) for k in on)
     right = defaultdict(list)
     for rec in table2:
         right[get_key(rec)].append([c for i, c in enumerate(rec)
                                     if i not in key_indices])
     # build joined table
-    rfill = [f.default_value() for f in table2.relation if f.name not in on]
+    rfill = [f.default_value() for f in table2.fields if f.name not in on]
     joined = []
     for lrec in table1:
         k = get_key(lrec)
         if how == 'left' or k in right:
             joined.extend(lrec + rrec for rrec in right.get(k, [rfill]))
 
-    return Table(relation, joined)
+    return Table(fields, joined)
 
 
 def _join_pivot(on, table1, table2):
     if isinstance(on, stringtypes):
         on = _split_cols(on)
     if not on:
-        on = set(table1.relation.keys()).intersection(table2.relation.keys())
+        on = set(table1.fields.keys()).intersection(table2.fields.keys())
         if not on:
             raise ItsdbError(
                 'No shared key to join on in the \'{}\' and \'{}\' tables.'
@@ -2026,7 +2026,7 @@ class ItsdbProfile(object):
         table_path = os.path.join(self.root, table)
         with _open_table(table_path, self.encoding) as tbl:
             for line in tbl:
-                cols = decode_row(line, relation=fields)
+                cols = decode_row(line, fields=fields)
                 if len(cols) != field_len:
                     # should this throw an exception instead?
                     logging.error('Number of stored fields ({}) '
