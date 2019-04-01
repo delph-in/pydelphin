@@ -5,6 +5,58 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+## [v0.9.2][]
+
+### Python Versions
+
+* Added Python 3.7 support
+
+### Added
+
+* `delphin.interfaces.ace.AceProcessError` for unrecoverable ACE crashes (#181)
+* ACE command-line options are allowed with `delphin process --options=...`
+  and in `delphin.commands.process(..., options=...)` (#180)
+* `delphin.itsdb.Record.from_dict()`
+* `delphin.itsdb.Table` (#186)
+  - `write()`
+  - `attach()`
+  - `detach()`
+  - `commit()`
+  - `is_attached()`
+  - `list_changes()`
+  - Various methods to replace `list` functionality: `append()`, `extend()`,
+	`__len__()`, `__getitem__()`, `__setitem__()`, and `__iter__()`
+* `delphin.itsdb.TestSuite.process()` the `gzip` and `buffer_size` parameters
+* `-z` / `--gzip` option to the `delphin process` command
+
+### Fixed
+
+* `delphin.mrs.eds` parsing of predicates and empty property lists (#203)
+* `delphin.commands.convert` wrap the inner step of conversion in a try-except
+  block to more gracefully handle crashes on a single input. (#200)
+* `delphin.itsdb.TestSuite.write()` re-enable the `append` parameter
+
+### Removed
+
+* **BREAKING** `name` parameter on `delphin.itsdb.Table`. The `name` attribute
+  is still available as it is taken from the table's schema.
+
+### Changed
+
+* **BREAKING** `delphin.itsdb.Table` is no longer a subtype of `list`, meaning
+  that some list-like behavior is gone. Most relevant functionality is
+  recreated (e.g., `append()`, `extend()`, `__getitem__()`, `__len__()`, etc.)
+* **BREAKING** `delphin.itsdb.Record` can no longer be instantiated with a dict
+  with column data; use `Record.from_dict()`
+* **BREAKING** `delphin.itsdb.Record` stores data as strings, always retrieves
+  by default as cast types. Use `Record.get(..., cast=False)` to get the raw
+  string value.
+
+### Deprecated
+
+* `delphin.mrs.convert()` use `delphin.commands.convert` instead
+
+
 ## [v0.9.1][]
 
 ### Fixed
