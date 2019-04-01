@@ -7,6 +7,7 @@ import os
 import argparse
 import logging
 import textwrap
+import shlex
 
 from delphin.__about__ import __version__
 from delphin.exceptions import PyDelphinException, PyDelphinWarning
@@ -31,10 +32,7 @@ def main():
 
     logging.basicConfig(level=50 - (args.verbosity * 10))
 
-    try:
-        args.func(args)
-    except (ValueError, PyDelphinException) as ex:
-        sys.exit(str(ex))
+    args.func(args)
 
 
 def call_convert(args):
@@ -92,8 +90,10 @@ def call_process(args):
         select=args.select,
         generate=args.generate,
         transfer=args.transfer,
+        options=shlex.split(args.options),
         all_items=args.all_items,
-        result_id=args.p)
+        result_id=args.p,
+        gzip=args.gzip)
 
 
 def call_compare(args):
@@ -276,6 +276,10 @@ process_parser.add_argument(
     help='compiled grammar image'
 )
 process_parser.add_argument(
+    '-o', '--options', metavar='OPTIONS', type=str, default='',
+    help='ACE options (see http://moin.delph-in.net/AceOptions)'
+)
+process_parser.add_argument(
     '-s', '--source', metavar='PATH',
     help='source testsuite; if unset, set to TESTSUITE'
 )
@@ -302,6 +306,9 @@ process_parser.add_argument(
     help=('transfer or generate from result with result-id=RID; '
           'short for adding \'where result-id==RID\' to --select')
 )
+process_parser.add_argument(
+    '-z', '--gzip', action='store_true', help='compress table files with gzip')
+
 
 # compare subparser
 compare_parser = argparse.ArgumentParser(add_help=False)

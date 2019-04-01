@@ -88,6 +88,38 @@ def _date_fix(mo):
     return '{}-{}-{} {}:{}:{}'.format(y, m, d, H, M, S)
 
 
+# inspired by NetworkX is_connected():
+# https://networkx.github.io/documentation/latest/_modules/networkx/algorithms/components/connected.html#is_connected
+def _bfs(g, start=None):
+    if not g:
+        return {start} if start is not None else set()
+    seen = set()
+    if start is None:
+        start = next(iter(g))
+    agenda = deque([start])
+    while agenda:
+        x = agenda.popleft()
+        if x not in seen:
+            seen.add(x)
+            agenda.extend(y for y in g.get(x, []) if y not in seen)
+    return seen
+
+
+def _connected_components(nodes, edges):
+    g = {n: set() for n in nodes}
+    for n1, n2 in edges:
+        g[n1].add(n2)
+        g[n2].add(n1)
+    # find connected components
+    components = []
+    seen = set()
+    for n in nodes:
+        if n not in seen:
+            component = _bfs(g, n)
+            seen.update(component)
+            components.append(component)
+    return components
+
 
 # unescaping escaped strings (potentially with unicode)
 #   (disabled but left here in case a need arises)

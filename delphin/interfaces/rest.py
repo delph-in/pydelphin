@@ -122,8 +122,7 @@ class DelphinRestClient(Processor):
             A ParseResponse containing the results, if the request was
             successful.
         Raises:
-            A requests.HTTPError is raised if the status code was not
-            200.
+            requests.HTTPError: if the status code was not 200
         """
         if params is None:
             params = {}
@@ -163,7 +162,7 @@ def parse(input, server=default_erg_server, params=None, headers=None):
         A ParseResponse containing the results, if the request was
         successful.
     Raises:
-        A requests.HTTPError is raised if the status code was not 200.
+        requests.HTTPError: if the status code was not 200
     """
     return next(parse_from_iterable([input], server, params, headers), None)
 
@@ -184,8 +183,8 @@ def parse_from_iterable(
     Yields:
         ParseResponse objects for each successful response.
     Raises:
-        A requests.HTTPError is raised for the first response with
-        a status code that is not 200.
+        requests.HTTPError: for the first response with a status code
+            that is not 200
     """
     client = DelphinRestClient(server)
     for input in inputs:

@@ -107,7 +107,7 @@ def eds_kim_probably_sleeps():
             Node('_1', Pred.surface('proper_q_rel')),
             Node('x3', Pred.surface('named_rel'), carg='Kim'),
             Node('e9', Pred.surface('_probable_a_1_rel')),
-            Node('e2', Pred.surface('_sleep_v_1_rel')),        
+            Node('e2', Pred.surface('_sleep_v_1_rel')),
         ],
         edges=[
             ('_1', 'BV', 'x3'),
@@ -230,6 +230,32 @@ def test_deserialize():
     )
     assert e.top == 'e2'
     assert len(e.nodes()) == 4
+
+    # GitHub issue #203
+    # _thing_n_of-about was tripping up the parser due to the hyphen,
+    # and the empty property list of _business_n_1 does not have a space
+    # before } (without the space is better, I think)
+    e = eds.loads_one(
+        '{e3:\n'
+        ' _1:udef_q<0:35>[BV x6]\n'
+        ' e9:_successful_a_1<0:10>{e SF prop, TENSE untensed, MOOD indicative, PROG -, PERF -}[ARG1 x6]\n'
+        ' e10:_american_a_1<11:19>{e SF prop, TENSE untensed, MOOD indicative, PROG -, PERF -}[ARG1 x6]\n'
+        ' e12:compound<20:35>{e SF prop, TENSE untensed, MOOD indicative, PROG -, PERF -}[ARG1 x6, ARG2 x11]\n'
+        ' _2:udef_q<20:28>[BV x11]\n'
+        ' x11:_business_n_1<20:28>{x}[]\n'
+        ' x6:_owner_n_of<29:35>{x PERS 3, NUM pl, IND +}[]\n'
+        ' e3:_do_v_1<36:38>{e SF prop, TENSE pres, MOOD indicative, PROG -, PERF -}[ARG1 x6, ARG2 x18]\n'
+        ' _3:_the_q<39:42>[BV x18]\n'
+        ' e23:_same_a_as<43:47>{e SF prop, TENSE untensed, MOOD indicative, PROG -, PERF -}[ARG1 x18]\n'
+        ' e25:comp_equal<43:47>{e SF prop, TENSE untensed, MOOD indicative, PROG -, PERF -}[ARG1 e23]\n'
+        ' x18:_thing_n_of-about<48:54>{x PERS 3, NUM sg, IND +}[]\n'
+        '}'
+    )
+    assert e.top == 'e3'
+    assert len(e.nodes()) == 12
+    assert e.nodes()[5].properties == {}
+    assert e.nodes()[11].pred == '_thing_n_of-about'
+
 
 def test_serialize():
     assert eds.dumps_one(empty, pretty_print=False) == '{:}'

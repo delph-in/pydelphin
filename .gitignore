@@ -7,6 +7,7 @@ dist/
 PyDelphin.egg-info/
 docs/_build/
 docs/_templates/
+docs/env/
 tmp/
 # Ignore the compiled python files
 *.pyc

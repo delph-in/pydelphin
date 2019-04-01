@@ -906,6 +906,6 @@ def elementarypredication(xmrs, nodeid):
     Returns:
         :class:`ElementaryPredication`
     Raises:
-        :py:exc:`KeyError` if no EP matches
+        :exc:`KeyError`: if no EP matches
     """
     return ElementaryPredication(*xmrs.ep(nodeid))

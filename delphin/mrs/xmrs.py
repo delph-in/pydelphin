@@ -7,7 +7,7 @@ from collections import (defaultdict, deque)
 from itertools import chain
 
 from delphin.exceptions import (XmrsError, XmrsStructureError)
-from delphin.util import safe_int
+from delphin.util import safe_int, _bfs, _connected_components
 from .components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
     Lnk, _LnkMixin, var_re, var_sort, _VarGenerator,
@@ -1158,23 +1158,20 @@ class Dmrs(Xmrs):
         )
 
 def _make_labels(nodes, links, vgen):
-    eq_edges = defaultdict(set)
     nids = [node.nodeid for node in nodes]
+    edges = []
     for l in links:
         if safe_int(l.start) == LTOP_NODEID:
-            vgen.vid = 0  # start at h0 for TOP
             nids = [l.start] + nids
+            vgen.vid = 0  # start at h0 for TOP
         if l.post == EQ_POST:
-            eq_edges[l.start].add(l.end)
-            eq_edges[l.end].add(l.start)
-    seen = set()
+            edges.append((l.start, l.end))
     labels = {}
-    for nid in nids:
-        if nid not in seen:
-            lbl = vgen.new(HANDLESORT)[0]
-            for conj_nid in _bfs(eq_edges, nid):
-                labels[conj_nid] = lbl
-                seen.add(conj_nid)
+    # components return in order of nids
+    for component in _connected_components(nids, edges):
+        lbl = vgen.new(HANDLESORT)[0]
+        for nid in component:
+            labels[nid] = lbl
     return labels
 
 def _make_ivs(nodes, vgen, qs):
@@ -1188,21 +1185,6 @@ def _make_ivs(nodes, vgen, qs):
             ivs[node.nodeid] = vgen.new(node.cvarsort, props)[0]
     return ivs
 
-# inspired by NetworkX is_connected():
-# https://networkx.github.io/documentation/latest/_modules/networkx/algorithms/components/connected.html#is_connected
-def _bfs(g, start=None):
-    if not g:
-        return {start} if start is not None else set()
-    seen = set()
-    if start is None:
-        start = next(iter(g))
-    agenda = deque([start])
-    while agenda:
-        x = agenda.popleft()
-        if x not in seen:
-            seen.add(x)
-            agenda.extend(y for y in g.get(x, []) if y not in seen)
-    return seen
 
 def _ivs_in_scope(nodeid, _eps, _vars, _hcons):
     ivs = set()

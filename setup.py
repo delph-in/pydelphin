@@ -16,6 +16,15 @@ about = {}
 with open(os.path.join(base_dir, "delphin", "__about__.py")) as f:
     exec(f.read(), about)
 
+# thanks: https://snarky.ca/clarifying-pep-518/
+docs_require = [
+    'sphinx',
+    'sphinx-rtd-theme'
+]
+tests_require = [
+    'pytest'
+]
+
 setup(
     name=about['__title__'],
     version=about['__version__'],
@@ -38,6 +47,7 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Text Processing :: Linguistic',
@@ -54,10 +64,16 @@ setup(
     ],
     install_requires=[
         'penman >=0.6.1',
-        'networkx',
+        # networkx 2.2 is not compatible with Python 2.7 (apparently) and 3.5
+        'networkx >=2.0,<2.2',
         'requests',
         'Pygments',
     ],
+    extras_require={
+        'docs': docs_require,
+        'tests': tests_require,
+        'dev': docs_require + tests_require
+    },
     entry_points={
         'console_scripts': [
             'delphin=delphin.main:main'

@@ -23,7 +23,7 @@ For bug requests, please provide the following, if possible:
   ```python
   >>> from delphin.__about__ import __version__
   >>> __version__
-  '0.9.0'
+  '0.9.2'
   ```
 * Python version (e.g. 2.7, 3.4, etc.)
 

@@ -20,15 +20,23 @@ way of working with the data. Capabilities include:
 
 * Selecting data by table name, record index, and column name or index:
 
-    >>> ts['item'][0]['i-input']  # input sentence of the first item
+    >>> items = ts['item']           # get the items table
+    >>> rec = items[0]               # get the first record
+    >>> rec['i-input']               # input sentence of the first item
     '雨 が 降っ た ．'
-    >>> ts['item'][0]['i-id']     # :integer fields are cast to ints
+    >>> rec[0]                       # values are cast on index retrieval
     11
+    >>> rec.get('i-id')              # and on key retrieval
+    11
+    >>> rec.get('i-id', cast=False)  # unless cast=False
+    '11'
 
-* Selecting data as a query:
+* Selecting data as a query (note that types are cast by default):
 
-    >>> next(ts.select('item:i-id@i-input'))
-    [11, '雨 が 降っ た ．']
+    >>> next(ts.select('item:i-id@i-input@i-date'))  # query testsuite
+    [11, '雨 が 降っ た ．', datetime.datetime(2006, 5, 28, 0, 0)]
+    >>> next(items.select('i-id@i-input@i-date'))    # query table
+    [11, '雨 が 降っ た ．', datetime.datetime(2006, 5, 28, 0, 0)]
 
 * In-memory modification of testsuite data:
 
@@ -42,8 +50,8 @@ way of working with the data. Capabilities include:
 * Joining tables
 
     >>> joined = itsdb.join(ts['parse'], ts['result'])
-    >>> joined[0]['parse:i-id'], joined[0]['result:mrs']
-    (11, '[ LTOP: h1 INDEX: e2 [ e TENSE: PAST ...')
+    >>> next(joined.select('i-id@mrs'))
+    [11, '[ LTOP: h1 INDEX: e2 [ e TENSE: PAST ...']
 
 * Processing data with ACE (results are stored in memory)
 
@@ -61,14 +69,15 @@ This module covers all aspects of [incr tsdb()] data, from
 easy to load the tables of a testsuite into memory, inspect its
 contents, modify or create data, and write the data to disk.
 
-By default, the `itsdb` module expects testsuites to use the
-standard [incr tsdb()] schema. Testsuites are always read and written
-according to the associated or specified relations file, but other
-things, such as default field values and the list of "core" tables,
-are defined for the standard schema. It is, however, possible to
-define non-standard schemata for particular applications, and most
-functions will continue to work.
-
+By default, the `itsdb` module expects testsuites to use the standard
+[incr tsdb()] schema. Testsuites are always read and written according
+to the associated or specified relations file, but other things, such
+as default field values and the list of "core" tables, are defined for
+the standard schema. It is, however, possible to define non-standard
+schemata for particular applications, and most functions will continue
+to work. One notable exception is the :meth:`TestSuite.process`
+method, for which a new :class:`~delphin.interfaces.base.FieldMapper`
+class must be defined.
 """
 
 from __future__ import print_function
@@ -80,16 +89,18 @@ except NameError:
 
 import os
 import re
-from gzip import GzipFile
+from gzip import GzipFile, open as gzopen
+import tempfile
+import shutil
 import logging
 import io
-from io import TextIOWrapper, BufferedReader
+from io import TextIOWrapper
 from collections import (
     defaultdict, namedtuple, OrderedDict, Sequence, Mapping
 )
 from itertools import chain
 from contextlib import contextmanager
-
+import weakref
 
 from delphin.exceptions import ItsdbError
 from delphin.util import (
@@ -152,6 +163,8 @@ class Field(
         comment (str): a description of the column
     '''
     def __new__(cls, name, datatype, key=False, partial=False, comment=None):
+        if partial and not key:
+            raise ItsdbError('a partial key must also be a key')
         return super(Field, cls).__new__(
             cls, name, datatype, key, partial, comment
         )
@@ -185,13 +198,15 @@ class Relation(tuple):
         name: the table name
         fields: a list of Field objects
     """
+
     def __new__(cls, name, fields):
         tr = super(Relation, cls).__new__(cls, fields)
         tr.name = name
         tr._index = dict(
             (f.name, i) for i, f in enumerate(fields)
         )
-        tr._keys = tuple(f.name for f in fields if f.key)
+        tr._keys = None
+        tr.key_indices = tuple(i for i, f in enumerate(fields) if f.key)
         return tr
 
     def __contains__(self, name):
@@ -203,7 +218,10 @@ class Relation(tuple):
 
     def keys(self):
         """Return the tuple of field names of key fields."""
-        return self._keys
+        keys = self._keys
+        if keys is None:
+            keys = tuple(self[i].name for i in self.key_indices)
+        return keys
 
 
 class _RelationJoin(Relation):
@@ -213,7 +231,7 @@ class _RelationJoin(Relation):
                              'try renaming the table.')
 
         name = '{}+{}'.format(rel1.name, rel2.name)
-        # the relation of the joined table, merging shared columns in *on*
+        # the fields of the joined table, merging shared columns in *on*
         if isinstance(on, stringtypes):
             on = _split_cols(on)
         elif on is None:
@@ -266,20 +284,20 @@ class _RelationJoin(Relation):
         return self._index[fieldname]
 
 
-def _prefixed_relation_fields(relation, on, drop):
-    fields = []
-    already_joined = isinstance(relation, _RelationJoin)
-    for f in relation:
+def _prefixed_relation_fields(fields, on, drop):
+    prefixed_fields = []
+    already_joined = isinstance(fields, _RelationJoin)
+    for f in fields:
         table, _, fieldname = f[0].rpartition(':')
         if already_joined :
             prefix = table + ':' if table else ''
         else:
-            prefix = relation.name + ':'
+            prefix = fields.name + ':'
         if fieldname in on and not drop:
-            fields.append(Field(fieldname, *f[1:]))
+            prefixed_fields.append(Field(fieldname, *f[1:]))
         elif fieldname not in on:
-            fields.append(Field(prefix + fieldname, *f[1:]))
-    return fields
+            prefixed_fields.append(Field(prefix + fieldname, *f[1:]))
+    return prefixed_fields
 
 
 class Relations(object):
@@ -291,8 +309,10 @@ class Relations(object):
       a Relations object.
 
     Args:
-        tables: a list of `(table, :class:`Relation`)` tuples
+        tables: a list of (table, :class:`Relation`) tuples
     """
+
+    __slots__ = ('tables', '_data', '_field_map')
 
     def __init__(self, tables):
         tables = [(t[0], Relation(*t)) for t in tables]
@@ -393,7 +413,8 @@ class Relations(object):
             list: (table, fieldname) pairs describing the path from
                 the source to target tables
         Raises:
-            :class:`ItsdbError` when no path is found
+            :class:`delphin.exceptions.ItsdbError`: when no path is
+                found
         Example:
             >>> relations.path('item', 'result')
             [('parse', 'i-id'), ('result', 'parse-id')]
@@ -431,7 +452,6 @@ class Relations(object):
                          .format(source, target))
 
 
-
 def _make_field_map(rels):
     g = {}
     for rel in rels:
@@ -454,37 +474,68 @@ class Record(list):
         fields (:class:`Relation`): table schema
     """
 
+    __slots__ = ('fields', '_tableref', '_rowid')
+
     def __init__(self, fields, iterable):
-        # normalize data format
-        if isinstance(iterable, Mapping):
-            d = iterable
-            iterable = [None] * len(fields)
-            for key, value in d.items():
-                try:
-                    index = fields.index(key)
-                except KeyError:
-                    raise ItsdbError('Invalid field name(s): ' + key)
-                iterable[index] = value
-        else:
-            iterable = list(iterable)
+        iterable = list(iterable)
 
         if len(fields) != len(iterable):
             raise ItsdbError(
-                'Incorrect number of column values: {} != {}'
-                .format(len(iterable), len(fields))
+                'Incorrect number of column values for {} table: {} != {}\n{}'
+                .format(fields.name, len(iterable), len(fields), iterable)
             )
 
-        for i, value in enumerate(iterable):
-            field = fields[i]
-            if value is None:
-                if field.key:
-                    raise ItsdbError('Missing key: {}'.format(field.name))
-                iterable[i] = field.default_value()
-            else:
-                iterable[i] = value
+        iterable = [_cast_to_str(val, field)
+                    for val, field in zip(iterable, fields)]
 
         self.fields = fields
+        self._tableref = None
+        self._rowid = None
         super(Record, self).__init__(iterable)
+
+    @classmethod
+    def _make(cls, fields, iterable, table, rowid):
+        """
+        Create a Record bound to a :class:`Table`.
+
+        This is a helper method for creating Records from rows of a
+        Table that is attached to a file. It is not meant to be called
+        directly. It specifies the row number and a weak reference to
+        the Table object so that when the Record is modified it is
+        kept in the Table's in-memory list (see Record.__setitem__()),
+        otherwise the changes would not be retained the next time the
+        record is requested from the Table. The use of a weak
+        reference to the Table is to avoid a circular reference and
+        thus allow it to be properly garbage collected.
+        """
+        record = cls(fields, iterable)
+        record._tableref = weakref.ref(table)
+        record._rowid = rowid
+        return record
+
+    @classmethod
+    def from_dict(cls, fields, mapping):
+        """
+        Create a Record from a dictionary of field mappings.
+
+        The *fields* object is used to determine the column indices
+        of fields in the mapping.
+
+        Args:
+            fields: the Relation schema for the table of this record
+            mapping: a dictionary or other mapping from field names to
+                column values
+        Returns:
+            a :class:`Record` object
+        """
+        iterable = [None] * len(fields)
+        for key, value in mapping.items():
+            try:
+                index = fields.index(key)
+            except KeyError:
+                raise ItsdbError('Invalid field name(s): ' + key)
+            iterable[index] = value
+        return cls(fields, iterable)
 
     def __repr__(self):
         return "<{} '{}' {}>".format(
@@ -496,18 +547,38 @@ class Record(list):
     def __str__(self):
         return make_row(self, self.fields)
 
+    def __eq__(self, other):
+        return all(a == b for a, b in zip(self, other))
+
+    def __ne__(self, other):
+        return any(a != b for a, b in zip(self, other))
+
+    def __iter__(self):
+        for raw, field in zip(list.__iter__(self), self.fields):
+            yield _cast_to_datatype(raw, field)
+
     def __getitem__(self, index):
         if not isinstance(index, int):
             index = self.fields.index(index)
-        return list.__getitem__(self, index)
+        raw = list.__getitem__(self, index)
+        field = self.fields[index]
+        return _cast_to_datatype(raw, field)
 
     def __setitem__(self, index, value):
         if not isinstance(index, int):
             index = self.fields.index(index)
+        # record values are strings
+        value = _cast_to_str(value, self.fields[index])
         # should the value be validated against the datatype?
-        return list.__setitem__(self, index, value)
+        list.__setitem__(self, index, value)
+        # when a record is modified it should stay in memory
+        if self._tableref is not None:
+            assert self._rowid is not None
+            table = self._tableref()
+            if table is not None:
+                table[self._rowid] = self
 
-    def get(self, key, default=None, cast=False):
+    def get(self, key, default=None, cast=True):
         """
         Return the field data given by field name *key*.
 
@@ -526,88 +597,378 @@ class Record(list):
             value = default
         else:
             if cast:
-                dt = self.fields[index].datatype
-                if dt == ':integer':
-                    value = int(value)
-                elif dt == ':float':
-                    value = float(value)
-                elif dt == ':date':
-                    value = parse_datetime(value)
-                # others?
+                field = self.fields[index]
+                value = _cast_to_datatype(value, field)
         return value
 
 
-class Table(list):
+class Table(object):
     """
     A [incr tsdb()] table.
 
     Instances of this class contain a collection of rows with the data
     stored in the database. Generally a Table will be created by a
-    TestSuite object for a database, but a Table can also be instantiated
-    individually by the Table.from_file() class method, and the relations
-    file in the same directory is used to get the schema.
+    :class:`TestSuite` object for a database, but a Table can also be
+    instantiated individually by the :meth:`Table.from_file` class
+    method, and the relations file in the same directory is used to
+    get the schema. Tables can also be constructed entirely in-memory
+    and separate from a testsuite via the standard `Table()`
+    constructor.
+
+    Tables have two modes: **attached** and **detached**. Attached
+    tables are backed by a file on disk (whether as part of a
+    testsuite or not) and only store modified records in memory---all
+    unmodified records are retrieved from disk. Therefore, iterating
+    over a table is more efficient than random-access. Attached files
+    use significantly less memory than detached tables but also
+    require more processing time. Detached tables are entirely stored
+    in memory and are not backed by a file. They are useful for the
+    programmatic construction of testsuites (including for unit tests)
+    and other operations where high-speed random-access is required.
+    See the :meth:`attach` and :meth:`detach` methods for more
+    information. The :meth:`is_attached` method is useful for
+    determining the mode of a table.
 
     Args:
-        name: the table name
         fields: the Relation schema for this table
         records: the collection of Record objects containing the table data
     Attributes:
         name (str): table name
         fields (:class:`Relation`): table schema
+        path (str): if attached, the path to the file containing the
+            table data; if detached it is `None`
+        encoding (str): the character encoding of the attached table
+            file; if detached it is `None`
     """
 
-    def __init__(self, name, fields, records=None):
-        self.name = name
+    __slots__ = ('fields', 'path', 'encoding', '_records',
+                 '_last_synced_index', '__weakref__')
+
+    def __init__(self, fields, records=None):
         self.fields = fields
-        # columns = [f.name for f in fields]
+        self.path = None
+        self.encoding = None
+        self._records = []
+        self._last_synced_index = -1
+
         if records is None:
             records = []
-        # ensure records are Record objects
-        list.__init__(self, [Record(fields, rec) for rec in records])
+        self.extend(records)
 
     @classmethod
-    def from_file(cls, path, name=None, fields=None, encoding='utf-8'):
+    def from_file(cls, path, fields=None, encoding='utf-8'):
         """
         Instantiate a Table from a database file.
 
+        This method instantiates a table attached to the file at *path*.
+        The file will be opened and traversed to determine the number of
+        records, but the contents will not be stored in memory unless
+        they are modified.
+
         Args:
             path: the path to the table file
-            name: the table name (inferred by the filename if not given)
             fields: the Relation schema for the table (loaded from the
                 relations file in the same directory if not given)
-            encoding: the character encoding of the files in the testsuite
+            encoding: the character encoding of the file at *path*
         """
         path = _table_filename(path)  # do early in case file not found
-
-        if name is None:
-            name = os.path.basename(path).rsplit('.gz', 1)[0]
-
         if fields is None:
-            rpath = os.path.join(os.path.dirname(path), _relations_filename)
-            if not os.path.exists(rpath):
-                raise ItsdbError(
-                    'No fields are specified and a relations file could '
-                    'not be found.'
-                )
-            rels = Relations.from_file(rpath)
-            if name not in rels:
-                raise ItsdbError(
-                    'Table \'{}\' not found in the relations.'.format(name)
-                )
-            # successfully inferred the relations for the table
-            fields = rels[name]
+            fields = _get_relation_from_table_path(path)
 
-        records = []
-        with _open_table(path, encoding) as tab:
-            records.extend(map((lambda s: decode_row(s)), tab))
+        table = cls(fields)
+        table.attach(path, encoding=encoding)
 
-        return cls(name, fields, records)
+        return table
+
+    def write(self, records=None, path=None, fields=None, append=False,
+              gzip=None):
+        """
+        Write the table to disk.
+
+        The basic usage has no arguments and writes the table's data
+        to the attached file. The parameters accommodate a variety of
+        use cases, such as using *fields* to refresh a table to a
+        new schema or *records* and *append* to incrementally build a
+        table.
+
+        Args:
+            records: an iterable of :class:`Record` objects to write;
+                if `None` the table's existing data is used
+            path: the destination file path; if `None` use the
+                path of the file attached to the table
+            fields (:class:`Relation`): table schema to use for
+                writing, otherwise use the current one
+            append: if `True`, append rather than overwrite
+            gzip: compress with gzip if non-empty
+        Examples:
+            >>> table.write()
+            >>> table.write(results, path='new/path/result')
+        """
+        if path is None:
+            if not self.is_attached():
+                raise ItsdbError('no path given for detached table')
+            else:
+                path = self.path
+        path = _normalize_table_path(path)
+        dirpath, name = os.path.split(path)
+        if fields is None:
+            fields = self.fields
+        if records is None:
+            records = iter(self)
+        _write_table(
+            dirpath,
+            name,
+            records,
+            fields,
+            append=append,
+            gzip=gzip,
+            encoding=self.encoding)
+
+        if self.is_attached() and path == _normalize_table_path(self.path):
+            self.path = _table_filename(path)
+            self._sync_with_file()
+
+    def commit(self):
+        """
+        Commit changes to disk if attached.
+
+        This method helps normalize the interface for detached and
+        attached tables and makes writing attached tables a bit more
+        efficient. For detached tables nothing is done, as there is no
+        notion of changes, but neither is an error raised (unlike with
+        :meth:`write`). For attached tables, if all changes are new
+        records, the changes are appended to the existing file, and
+        otherwise the whole file is rewritten.
+        """
+        if not self.is_attached():
+            return
+        changes = self.list_changes()
+        if changes:
+            indices, records = zip(*changes)
+            if min(indices) > self._last_synced_index:
+                self.write(records, append=True)
+            else:
+                self.write(append=False)
+
+    def attach(self, path, encoding='utf-8'):
+        """
+        Attach the Table to the file at *path*.
+
+        Attaching a table to a file means that only changed records
+        are stored in memory, which greatly reduces the memory
+        footprint of large profiles at some cost of
+        performance. Tables created from :meth:`Table.from_file()` or
+        from an attached :class:`TestSuite` are automatically
+        attached. Attaching a file does not immediately flush the
+        contents to disk; after attaching the table must be separately
+        written to commit the in-memory data.
+
+        A non-empty table will fail to attach to a non-empty file to
+        avoid data loss when merging the contents. In this case, you
+        may delete or clear the file, clear the table, or attach to
+        another file.
+
+        Args:
+            path: the path to the table file
+            encoding: the character encoding of the files in the testsuite
+        """
+        if self.is_attached():
+            raise ItsdbError('already attached at {}'.format(self.path))
+
+        try:
+            path = _table_filename(path)
+        except ItsdbError:
+            # neither path nor path.gz exist; create new empty file
+            # (note: if the file were non-empty this would be destructive)
+            path = _normalize_table_path(path)
+            open(path, 'w').close()
+        else:
+            # path or path.gz exists; check if merging would be a problem
+            if os.stat(path).st_size > 0 and len(self._records) > 0:
+                raise ItsdbError(
+                    'cannot attach non-empty table to non-empty file')
+
+        self.path = path
+        self.encoding = encoding
+
+        # if _records is not empty then we're attaching to an empty file
+        if len(self._records) == 0:
+            self._sync_with_file()
+
+    def detach(self):
+        """
+        Detach the table from a file.
+
+        Detaching a table reads all data from the file and places it
+        in memory. This is useful when constructing or significantly
+        manipulating table data, or when more speed is needed. Tables
+        created by the default constructor are detached.
+
+        When detaching, only unmodified records are loaded from the
+        file; any uncommited changes in the Table are left as-is.
+
+        .. warning::
+
+           Very large tables may consume all available RAM when
+           detached.  Expect the in-memory table to take up about
+           twice the space of an uncompressed table on disk, although
+           this may vary by system.
+        """
+        if not self.is_attached():
+            raise ItsdbError('already detached')
+        records = self._records
+        for i, line in self._enum_lines():
+            if records[i] is None:
+                # check number of columns?
+                records[i] = tuple(decode_row(line))
+        self.path = None
+        self.encoding = None
+
+    @property
+    def name(self):
+        return self.fields.name
+
+    def is_attached(self):
+        """Return `True` if the table is attached to a file."""
+        return self.path is not None
+
+    def list_changes(self):
+        """
+        Return a list of modified records.
+
+        This is only applicable for attached tables.
+
+        Returns:
+            A list of `(row_index, record)` tuples of modified records
+        Raises:
+            :class:`delphin.exceptions.ItsdbError`: when called on a
+                detached table
+        """
+        if not self.is_attached():
+            raise ItsdbError('changes are not tracked for detached tables.')
+        return [(i, self[i]) for i, row in enumerate(self._records)
+                if row is not None]
+
+    def _sync_with_file(self):
+        """Clear in-memory structures so table is synced with the file."""
+        self._records = []
+        i = -1
+        for i, line in self._enum_lines():
+            self._records.append(None)
+        self._last_synced_index = i
+
+    def _enum_lines(self):
+        """Enumerate lines from the attached file."""
+        with _open_table(self.path, self.encoding) as lines:
+            for i, line in enumerate(lines):
+                yield i, line
+
+    def _enum_attached_rows(self, indices):
+        """Enumerate on-disk and in-memory records."""
+        records = self._records
+        i = 0
+        # first rows covered by the file
+        for i, line in self._enum_lines():
+            if i in indices:
+                row = records[i]
+                if row is None:
+                    row = decode_row(line)
+                yield (i, row)
+        # then any uncommitted rows
+        for j in range(i, len(records)):
+            if j in indices:
+                if records[j] is not None:
+                    yield (j, records[j])
+
+    def __iter__(self):
+        for record in self._iterslice(slice(None)):
+            yield record
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return list(self._iterslice(index))
+        else:
+            return self._getitem(index)
+
+    def _iterslice(self, slice):
+        """Yield records from a slice index."""
+        indices = range(*slice.indices(len(self._records)))
+        if self.is_attached():
+            rows = self._enum_attached_rows(indices)
+            if slice.step is not None and slice.step < 0:
+                rows = reversed(list(rows))
+        else:
+            rows = zip(indices, self._records[slice])
+
+        fields = self.fields
+        for i, row in rows:
+            yield Record._make(fields, row, self, i)
+
+    def _getitem(self, index):
+        """Get a single non-slice index."""
+        row = self._records[index]
+        if row is not None:
+            pass
+        elif self.is_attached():
+            # need to handle negative indices manually
+            if index < 0:
+                index = len(self._records) + index
+            row = next((decode_row(line)
+                        for i, line in self._enum_lines()
+                        if i == index),
+                       None)
+            if row is None:
+                raise ItsdbError('could not retrieve row in attached table')
+        else:
+            raise ItsdbError('invalid row in detached table: {}'.format(index))
+
+        return Record._make(self.fields, row, self, index)
+
+    def __setitem__(self, index, value):
+        # first normalize the arguments for slices and regular indices
+        if isinstance(index, slice):
+            values = list(value)
+        else:
+            self._records[index]  # check for IndexError
+            values = [value]
+            index = slice(index, index + 1)
+        # now prepare the records for being in a table
+        fields = self.fields
+        for i, record in enumerate(values):
+            values[i] = _cast_record_to_str_tuple(record, fields)
+        self._records[index] = values
+
+    def __len__(self):
+        return len(self._records)
+
+    def append(self, record):
+        """
+        Add *record* to the end of the table.
+
+        Args:
+            record: a :class:`Record` or other iterable containing
+                column values
+        """
+        self.extend([record])
+
+    def extend(self, records):
+        """
+        Add each record in *records* to the end of the table.
+
+        Args:
+            record: an iterable of :class:`Record` or other iterables
+                containing column values
+        """
+        fields = self.fields
+        for record in records:
+            record = _cast_record_to_str_tuple(record, fields)
+            self._records.append(record)
 
     def select(self, cols, mode='list'):
         """
         Select columns from each row in the table.
 
-        See select_rows() for a description of how to use the
+        See :func:`select_rows` for a description of how to use the
         *mode* parameter.
 
         Args:
@@ -621,21 +982,54 @@ class Table(list):
         return select_rows(cols, self, mode=mode)
 
 
+def _normalize_table_path(path):
+    if path[-3:].lower() == '.gz':
+        path = path[:-3]
+    return path
+
+
+def _get_relation_from_table_path(path):
+    rpath = os.path.join(os.path.dirname(path), _relations_filename)
+    if not os.path.exists(rpath):
+        raise ItsdbError(
+            'No relation is specified and a relations file could '
+            'not be found.'
+        )
+    rels = Relations.from_file(rpath)
+    name = os.path.basename(_normalize_table_path(path))
+    if name not in rels:
+        raise ItsdbError(
+            'Table \'{}\' not found in the relations.'.format(name)
+        )
+    # successfully inferred the relations for the table
+    return rels[name]
+
+
+def _cast_record_to_str_tuple(record, fields):
+    if len(record) != len(fields):
+        raise ItsdbError('wrong number of fields')
+    return tuple(_cast_to_str(value, field)
+                 for value, field in zip(record, fields))
+
+
 class TestSuite(object):
     """
     A [incr tsdb()] testsuite database.
 
     Args:
         path: the path to the testsuite's directory
-        relations: the relations file describing the schema of
-            the database; if not given, the relations file under
-            *path* will be used
+        relations (:class:`Relations`, str): the database schema; either
+            a :class:`Relations` object or a path to a relations file;
+            if not given, the relations file under *path* will be used
         encoding: the character encoding of the files in the testsuite
     Attributes:
         encoding (:py:class:`str`): character encoding used when reading and
             writing tables
         relations (:class:`Relations`): database schema
     """
+
+    __slots__ = ('_path', 'relations', '_data', 'encoding')
+
     def __init__(self, path=None, relations=None, encoding='utf-8'):
         self._path = path
         self.encoding = encoding
@@ -650,7 +1044,7 @@ class TestSuite(object):
         else:
             raise ItsdbError(
                 'Either the relations parameter must be provided or '
-                'path must point to a directory with a relations file.'
+                '*path* must point to a directory with a relations file.'
             )
 
         self._data = dict((t, None) for t in self.relations)
@@ -665,24 +1059,30 @@ class TestSuite(object):
                 self._reload_table(tablename)
             else:
                 self._data[tablename] = Table(
-                    tablename,
                     self.relations[tablename]
                 )
         return self._data[tablename]
 
     def reload(self):
         """Discard temporary changes and reload the database from disk."""
+        if self._path is None:
+            raise ItsdbError('cannot reload an in-memory testsuite')
         for tablename in self.relations:
             self._reload_table(tablename)
 
     def _reload_table(self, tablename):
+        # assumes self.path is not None
         fields = self.relations[tablename]
-        tablepath = os.path.join(self._path, tablename)
-        if os.path.exists(tablepath) or os.path.exists(tablepath + '.gz'):
-            table = Table.from_file(tablepath, name=tablename,
-                                    fields=fields, encoding=self.encoding)
-        else:
-            table = Table(name=tablename, fields=fields)
+        path = os.path.join(self._path, tablename)
+        try:
+            path = _table_filename(path)
+        except ItsdbError:
+            # path doesn't exist
+            path = _normalize_table_path(path)
+            open(path, 'w').close()  # create empty file
+        table = Table.from_file(path,
+                                fields=fields,
+                                encoding=self.encoding)
         self._data[tablename] = table
 
     def select(self, arg, cols=None, mode='list'):
@@ -742,7 +1142,7 @@ class TestSuite(object):
             tables = {tables: self[tables]}
         elif isinstance(tables, Mapping):
             pass
-        elif isinstance(tables, Sequence):
+        elif isinstance(tables, (Sequence, set)):
             tables = dict((table, self[table]) for table in tables)
         if relations is None:
             relations = self.relations
@@ -756,19 +1156,20 @@ class TestSuite(object):
         with open(os.path.join(path, _relations_filename), 'w') as fh:
             print(str(relations), file=fh)
 
-        for tablename, relation in relations.items():
+        for tablename, fields in relations.items():
             if tablename in tables:
                 data = tables[tablename]
                 # reload table from disk if it is invalidated
                 if data is None:
                     data = self[tablename]
                 elif not isinstance(data, Table):
-                    data = Table(tablename, relation, data)
+                    data = Table(fields, data)
                 _write_table(
                     path,
                     tablename,
                     data,
-                    relation,
+                    fields,
+                    append=append,
                     gzip=gzip,
                     encoding=self.encoding
                 )
@@ -777,7 +1178,7 @@ class TestSuite(object):
         """
         Return `True` if the testsuite or a table exists on disk.
 
-        If *table* is `None`, this function returns `True` if the
+        If *table* is `None`, this method returns `True` if the
         :attr:`TestSuite.path` is specified and points to an existing
         directory containing a valid relations file. If *table* is
         given, the function returns `True` if, in addition to the
@@ -819,9 +1220,16 @@ class TestSuite(object):
                 pass
         return size
 
-    def process(self, cpu, selector=None, source=None, fieldmapper=None):
+    def process(self, cpu, selector=None, source=None, fieldmapper=None,
+                gzip=None, buffer_size=1000):
         """
         Process each item in a [incr tsdb()] testsuite
+
+        If the testsuite is attached to files on disk, the output
+        records will be flushed to disk when the number of new records
+        in a table is *buffer_size*. If the testsuite is not attached
+        to files or *buffer_size* is set to `None`, records are kept
+        in memory and not flushed to disk.
 
         Args:
             cpu (:class:`~delphin.interfaces.base.Processor`):
@@ -835,6 +1243,10 @@ class TestSuite(object):
                 object for mapping response fields to [incr tsdb()]
                 fields; if `None`, use a default mapper for the
                 standard schema
+            gzip: compress non-empty tables with gzip
+            buffer_size (int): number of output records to hold in
+                memory before flushing to disk; ignored if the testsuite
+                is all in-memory; if `None`, do not flush to disk
         Examples:
             >>> ts.process(ace_parser)
             >>> ts.process(ace_generator, 'result:mrs', source=ts2)
@@ -845,11 +1257,14 @@ class TestSuite(object):
             source = self
         if fieldmapper is None:
             fieldmapper = FieldMapper()
+        if self._path is None:
+            buffer_size = None
 
+        tables = set(fieldmapper.affected_tables).intersection(self.relations)
+        _prepare_target(self, tables, buffer_size)
         source, cols = _prepare_source(selector, source)
         key_cols = cols[:-1]
 
-        tables = {}
         for item in select_rows(cols, source, mode='list'):
             datum = item.pop()
             keys = dict(zip(key_cols, item))
@@ -859,16 +1274,29 @@ class TestSuite(object):
                 .format(encode_row(item), len(response['results']))
             )
             for tablename, data in fieldmapper.map(response):
-                _add_record(tables, tablename, data, self.relations)
+                _add_record(self[tablename], data, buffer_size)
 
         for tablename, data in fieldmapper.cleanup():
-            _add_record(tables, tablename, data, self.relations)
+            _add_record(self[tablename], data, buffer_size)
 
-        for tablename, table in tables.items():
-            self._data[tablename] = table
+        # finalize data if writing to disk
+        for tablename in tables:
+            table = self[tablename]
+            if buffer_size is not None:
+                table.write(gzip=gzip)
+
+
+def _prepare_target(ts, tables, buffer_size):
+    """Clear tables affected by the processing."""
+    for tablename in tables:
+        table = ts[tablename]
+        table[:] = []
+        if buffer_size is not None and table.is_attached():
+            table.write(append=False)
 
 
 def _prepare_source(selector, source):
+    """Normalize source rows and selectors."""
     tablename, fields = get_data_specifier(selector)
     if len(fields) != 1:
         raise ItsdbError(
@@ -882,20 +1310,26 @@ def _prepare_source(selector, source):
     cols = list(source.fields.keys()) + fields
     return source, cols
 
-def _add_record(tables, tablename, data, relations):
-    fields = relations[tablename]
-    if tablename not in tables:
-        tables[tablename] = Table(tablename, fields)
+
+def _add_record(table, data, buffer_size):
+    """
+    Prepare and append a Record into its Table; flush to disk if necessary.
+    """
+    fields = table.fields
     # remove any keys that aren't relation fields
     for invalid_key in set(data).difference([f.name for f in fields]):
         del data[invalid_key]
-    tables[tablename].append(Record(fields, data))
-
+    table.append(Record.from_dict(fields, data))
+    # write if requested and possible
+    if buffer_size is not None and table.is_attached():
+        # for now there isn't a public method to get the number of new
+        # records, so use private members
+        if (len(table) - 1) - table._last_synced_index > buffer_size:
+            table.commit()
 
 
 ##############################################################################
 # Non-class (i.e. static) functions
-
 
 data_specifier_re = re.compile(r'(?P<table>[^:]+)?(:(?P<cols>.+))?$')
 def get_data_specifier(string):
@@ -952,17 +1386,33 @@ def decode_row(line, fields=None):
             col = cols[i]
             if col:
                 field = fields[i]
-                dt = field.datatype
-                if dt == ':integer':
-                    col = int(col)
-                elif dt == ':float':
-                    col = float(col)
-                elif dt == ':date':
-                    dt = parse_datetime(col)
-                    col = dt if dt is not None else col
-                # other casts? :position?
+                col = _cast_to_datatype(col, field)
             cols[i] = col
     return cols
+
+
+def _cast_to_datatype(col, field):
+    if col is None:
+        col = field.default_value()
+    else:
+        dt = field.datatype
+        if dt == ':integer':
+            col = int(col)
+        elif dt == ':float':
+            col = float(col)
+        elif dt == ':date':
+            dt = parse_datetime(col)
+            col = dt if dt is not None else col
+        # other casts? :position?
+    return col
+
+
+def _cast_to_str(col, field):
+    if col is None:
+        if field.key:
+            raise ItsdbError('missing key: {}'.format(field.name))
+        col = field.default_value()
+    return unicode(col)
 
 
 def encode_row(fields):
@@ -985,24 +1435,14 @@ def encode_row(fields):
     return _field_delimiter.join(escaped_fields)
 
 
-_character_escapes = {
-    _field_delimiter: '\\s',
-    '\n': '\\n',
-    '\\': '\\\\'
-}
-
-def _escape(m):
-    return _character_escapes[m.group(1)]
-
-
 def escape(string):
     r"""
     Replace any special characters with their [incr tsdb()] escape
-    sequences. Default sequences are::
+    sequences. The characters and their escape sequences are::
 
         @         -> \s
-        (newline) -> \\n
-        \\        -> \\\\
+        (newline) -> \n
+        \         -> \\
 
     Also see :func:`unescape`
 
@@ -1011,13 +1451,11 @@ def escape(string):
     Returns:
         The escaped string
     """
-    return re.sub(r'(@|\n|\\)', _escape, string, flags=re.UNICODE)
-
-
-_character_unescapes = {'\\s': _field_delimiter, '\\n': '\n', '\\\\': '\\'}
-
-def _unescape(m):
-    return _character_unescapes[m.group(1)]
+    # str.replace()... is about 3-4x faster than re.sub() here
+    return (string
+            .replace('\\', '\\\\')  # must be done first
+            .replace('\n', '\\n')
+            .replace(_field_delimiter, '\\s'))
 
 
 def unescape(string):
@@ -1030,16 +1468,28 @@ def unescape(string):
     Returns:
         The string with escape sequences replaced
     """
-    return re.sub(r'(\\s|\\n|\\\\)', _unescape, string, flags=re.UNICODE)
+    # str.replace()... is about 3-4x faster than re.sub() here
+    return (string
+            .replace('\\\\','\\')  # must be done first
+            .replace('\\n','\n')
+            .replace('\\s', _field_delimiter))
 
 
 def _table_filename(tbl_filename):
-    if tbl_filename.endswith('.gz'):
-        gzfn = tbl_filename
-        txfn = tbl_filename[:-3]
-    else:
-        txfn = tbl_filename
-        gzfn = tbl_filename + '.gz'
+    """
+    Determine if the table path should end in .gz or not and return it.
+
+    A .gz path is preferred only if it exists and is newer than any
+    regular text file path.
+
+    Raises:
+        :class:`delphin.exceptions.ItsdbError`: when neither the .gz
+            nor text file exist.
+    """
+    tbl_filename = str(tbl_filename)  # convert any Path objects
+
+    txfn = _normalize_table_path(tbl_filename)
+    gzfn = txfn + '.gz'
 
     if os.path.exists(txfn):
         if (os.path.exists(gzfn) and
@@ -1060,6 +1510,11 @@ def _table_filename(tbl_filename):
 
 @contextmanager
 def _open_table(tbl_filename, encoding):
+    """
+    Transparently open the compressed or text table file.
+
+    Can be used as a context manager in a 'with' statement.
+    """
     path = _table_filename(tbl_filename)
     if path.endswith('.gz'):
         # gzip.open() cannot use mode='rt' until Python2.7 support
@@ -1069,7 +1524,7 @@ def _open_table(tbl_filename, encoding):
         with TextIOWrapper(gzfile, encoding=encoding) as f:
             yield f
     else:
-        with io.open(tbl_filename, encoding=encoding) as f:
+        with io.open(path, encoding=encoding) as f:
             yield f
 
 
@@ -1083,35 +1538,41 @@ def _write_table(profile_dir, table_name, rows, fields,
         gzip = False
     else:
         rows = chain([first_row], rows)
+    if encoding is None:
+        encoding = 'utf-8'
 
     if gzip and append:
         logging.warning('Appending to a gzip file may result in '
                         'inefficient compression.')
 
-    if not os.path.exists(profile_dir):
+    if not os.path.isdir(profile_dir):
         raise ItsdbError('Profile directory does not exist: {}'
                          .format(profile_dir))
 
-    tbl_filename = os.path.join(profile_dir, table_name)
-    gzfn = tbl_filename + '.gz'
-    mode = 'a' if append else 'w'
-    if gzip:
-        # clean up non-gzip files, if any
-        if os.path.isfile(tbl_filename):
-            os.remove(tbl_filename)
-        # text mode only from py3.3; until then use TextIOWrapper
-        #mode += 't'  # text mode for gzip
-        f = TextIOWrapper(GzipFile(gzfn, mode=mode), encoding=encoding)
-    else:
-        # clean up gzip files, if any
-        if os.path.isfile(gzfn):
-            os.remove(gzfn)
-        f = io.open(tbl_filename, mode=mode, encoding=encoding)
+    with tempfile.NamedTemporaryFile(
+            mode='w+b', suffix='.tmp',
+            prefix=table_name, dir=profile_dir) as f_tmp:
 
-    for row in rows:
-        f.write(make_row(row, fields) + '\n')
+        for row in rows:
+            f_tmp.write((make_row(row, fields) + '\n').encode(encoding))
+        f_tmp.seek(0)
 
-    f.close()
+        txfn = os.path.join(profile_dir, table_name)
+        gzfn = txfn + '.gz'
+        mode = 'ab' if append else 'wb'
+
+        if gzip:
+            # clean up non-gzip files, if any
+            if os.path.isfile(txfn):
+                os.remove(txfn)
+            with gzopen(gzfn, mode) as f_out:
+                shutil.copyfileobj(f_tmp, f_out)
+        else:
+            # clean up gzip files, if any
+            if os.path.isfile(gzfn):
+                os.remove(gzfn)
+            with open(txfn, mode=mode) as f_out:
+                shutil.copyfileobj(f_tmp, f_out)
 
 
 def make_row(row, fields):
@@ -1127,6 +1588,9 @@ def make_row(row, fields):
     Returns:
         A [incr tsdb()]-encoded string
     """
+    if not hasattr(row, 'get'):
+        row = {f.name: col for f, col in zip(fields, row)}
+
     row_fields = []
     for f in fields:
         val = row.get(f.name, None)
@@ -1144,13 +1608,13 @@ def select_rows(cols, rows, mode='list', cast=True):
     This function selects the data in *cols* from *rows* and yields it
     in a form specified by *mode*. Possible values of *mode* are:
 
-    ==============  =================  ============================
-    mode            description        example `['i-id', 'i-wf']`
-    ==============  =================  ============================
-    list (default)  a list of values   `[10, 1]`
-    dict            col to value map   `{'i-id': 10,'i-wf': 1}`
-    row             [incr tsdb()] row  `'10@1'`
-    ==============  =================  ============================
+    ==================  =================  ==========================
+    mode                description        example `['i-id', 'i-wf']`
+    ==================  =================  ==========================
+    `'list'` (default)  a list of values   `[10, 1]`
+    `'dict'`            col to value map   `{'i-id': 10,'i-wf': 1}`
+    `'row'`             [incr tsdb()] row  `'10@1'`
+    ==================  =================  ==========================
 
     Args:
         cols: an iterable of column names to select data for
@@ -1174,12 +1638,9 @@ def select_rows(cols, rows, mode='list', cast=True):
                          '  Valid options include: list, dict, row'
                          .format(mode))
     for row in rows:
-        if cast:
-            try:
-                data = [row.get(c, cast=True) for c in cols]
-            except TypeError:
-                data = [row.get(c) for c in cols]
-        else:
+        try:
+            data = [row.get(c, cast=cast) for c in cols]
+        except TypeError:
             data = [row.get(c) for c in cols]
         yield modecast(cols, data)
 
@@ -1187,8 +1648,22 @@ def select_rows(cols, rows, mode='list', cast=True):
 def match_rows(rows1, rows2, key, sort_keys=True):
     """
     Yield triples of `(value, left_rows, right_rows)` where
-    `left_rows` and `right_rows` are lists of rows that share the
-    same column value for *key*.
+    `left_rows` and `right_rows` are lists of rows that share the same
+    column value for *key*. This means that both *rows1* and *rows2*
+    must have a column with the same name *key*.
+
+    .. warning::
+
+       Both *rows1* and *rows2* will exist in memory for this
+       operation, so it is not recommended for very large tables on
+       low-memory systems.
+
+    Args:
+        rows1: a :class:`Table` or list of :class:`Record` objects
+        rows2: a :class:`Table` or list of :class:`Record` objects
+        key (str): the column name on which to match
+        sort_keys (bool): if `True`, yield matching rows sorted by the
+            matched key instead of the original order
     """
     matched = OrderedDict()
     for i, rows in enumerate([rows1, rows2]):
@@ -1221,6 +1696,12 @@ def join(table1, table2, on=None, how='inner', name=None):
     Both inner and left joins are possible by setting the *how*
     parameter to `inner` and `left`, respectively.
 
+    .. warning::
+
+       Both *table2* and the resulting joined table will exist in
+       memory for this operation, so it is not recommended for very
+       large tables on low-memory systems.
+
     Args:
         table1 (:class:`Table`): the left table to join
         table2 (:class:`Table`): the right table to join
@@ -1233,8 +1714,8 @@ def join(table1, table2, on=None, how='inner', name=None):
         ItsdbError('Only \'inner\' and \'left\' join methods are allowed.')
     # validate and normalize the pivot
     on = _join_pivot(on, table1, table2)
-    # the relation of the joined table
-    relation = _RelationJoin(table1.fields, table2.fields, on=on)
+    # the fields of the joined table
+    fields = _RelationJoin(table1.fields, table2.fields, on=on)
     # get key mappings to the right side (useful for inner and left joins)
     get_key = lambda rec: tuple(rec.get(k) for k in on)
     key_indices = set(table2.fields.index(k) for k in on)
@@ -1250,7 +1731,7 @@ def join(table1, table2, on=None, how='inner', name=None):
         if how == 'left' or k in right:
             joined.extend(lrec + rrec for rrec in right.get(k, [rfill]))
 
-    return Table(relation.name, relation, joined)
+    return Table(fields, joined)
 
 
 def _join_pivot(on, table1, table2):
@@ -1329,7 +1810,8 @@ def make_skeleton(path, relations, item_rows, gzip=False):
         An ItsdbProfile containing the skeleton data (but the profile
         data will already have been written to disk).
     Raises:
-        ItsdbError if the destination directory could not be created.
+        :class:`delphin.exceptions.ItsdbError`: if the destination
+            directory could not be created.
 
     .. deprecated:: v0.7.0
     """

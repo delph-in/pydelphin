@@ -11,8 +11,8 @@ delphin.itsdb
 
 
 
-Working with [incr tsdb()] Testsuites
--------------------------------------
+Overview of [incr tsdb()] Testsuites
+------------------------------------
 
 [incr tsdb()] testsuites are directories containing a ``relations``
 file (see `Relations Files and Field Descriptions`_) and a file for
@@ -34,8 +34,20 @@ databases:
 
 .. autoclass:: TestSuite
   :members:
+
 .. autoclass:: Table
-  :members:
+
+  .. automethod:: from_file
+  .. automethod:: write
+  .. automethod:: commit
+  .. automethod:: attach
+  .. automethod:: detach
+  .. automethod:: is_attached
+  .. automethod:: list_changes
+  .. automethod:: append
+  .. automethod:: extend
+  .. automethod:: select
+
 .. autoclass:: Record
   :members:
 

@@ -13,11 +13,15 @@ import os
 import io
 import json
 from functools import partial
+import logging
 
 from delphin import itsdb, tsql
 from delphin.mrs import xmrs
 from delphin.util import safe_int, SExpr
+from delphin.exceptions import PyDelphinException
 
+
+logging.basicConfig()
 
 ###############################################################################
 ### CONVERT ###################################################################
@@ -91,7 +95,36 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
         kwargs['predicate_modifiers'] = predicate_modifiers
     kwargs['properties'] = properties
 
-    return dumps(xs, **kwargs)
+    # this is not a great way to improve robustness when converting
+    # many representations, but it'll do until v1.0.0. Also, it only
+    # improves robustness on the output, not the input.
+    # Note that all the code below is to replace the following:
+    #     return dumps(xs, **kwargs)
+    head, joiner, tail = _get_output_details(target_fmt)
+    parts = []
+    if pretty_print:
+        joiner = joiner.strip() + '\n'
+    def _trim(s):
+        if head and s.startswith(head):
+            s = s[len(head):].lstrip('\n')
+        if tail and s.endswith(tail):
+            s = s[:-len(tail)].rstrip('\n')
+        return s
+    for x in xs:
+        try:
+            s = dumps([x], **kwargs)
+        except (PyDelphinException, KeyError, IndexError):
+            logging.exception('could not convert representation')
+        else:
+            s = _trim(s)
+            parts.append(s)
+    # set these after so head and tail are used correctly in _trim
+    if pretty_print:
+        if head:
+            head += '\n'
+        if tail:
+            tail = '\n' + tail
+    return head + joiner.join(parts) + tail
 
 
 def _get_codec(codec, load=True):
@@ -144,6 +177,21 @@ def _get_codec(codec, load=True):
         raise ValueError('invalid source format: ' + codec)
     else:
         raise ValueError('invalid target format: ' + codec)
+
+
+def _get_output_details(codec):
+    if codec == 'mrx':
+        return ('<mrs-list', '', '</mrs-list>')
+
+    elif codec == 'dmrx':
+        from delphin.mrs import dmrx
+        return ('<dmrs-list>', '', '</dmrs-list>')
+
+    elif codec in ('mrs-json', 'dmrs-json', 'eds-json'):
+        return ('[', ',', ']')
+
+    else:
+        return ('', ' ', '')
 
 
 # simulate json codecs for MRS and DMRS
@@ -329,11 +377,13 @@ def mkprof(destination, source=None, relations=None, where=None,
     dts = itsdb.TestSuite(path=destination, relations=relations)
     # input is sentences on stdin
     if source is None:
-        dts.write({'item': _lines_to_rows(sys.stdin)}, gzip=gzip)
+        dts.write({'item': _lines_to_rows(sys.stdin, dts.relations)},
+                  gzip=gzip)
     # input is sentence file
     elif os.path.isfile(source):
         with open(source) as fh:
-            dts.write({'item': _lines_to_rows(fh)}, gzip=gzip)
+            dts.write({'item': _lines_to_rows(fh, dts.relations)},
+                      gzip=gzip)
     # input is source testsuite
     elif os.path.isdir(source):
         sts = itsdb.TestSuite(source)
@@ -372,20 +422,32 @@ def mkprof(destination, source=None, relations=None, where=None,
             print(fmt.format(stat.st_size, _red(filename + '.gz')))
 
 
-def _lines_to_rows(lines):
+def _lines_to_rows(lines, relations):
+    # field indices only need to be computed once, so don't use
+    # itsdb.Record.from_dict()
+    i_id_idx = relations['item'].index('i-id')
+    i_wf_idx = relations['item'].index('i-wf')
+    i_input_idx = relations['item'].index('i-input')
+    num_fields = len(relations['item'])
+
+    def make_row(i_id, i_wf, i_input):
+        row = [None] * num_fields
+        row[i_id_idx] = i_id
+        row[i_wf_idx] = i_wf
+        row[i_input_idx] = i_input
+        return itsdb.Record(relations['item'], row)
+
     for i, line in enumerate(lines):
-        i_id = i * 10
-        i_wf = 0 if line.startswith('*') else 1
-        i_input = line[1:].strip() if line.startswith('*') else line.strip()
-        yield {'i-id': i_id, 'i-wf': i_wf, 'i-input': i_input}
+        i_wf, i_input = (0, line[1:]) if line.startswith('*') else (1, line)
+        yield make_row(i * 10, i_wf, i_input.strip())
 
 
 ###############################################################################
 ### PROCESS ###################################################################
 
 def process(grammar, testsuite, source=None, select=None,
-            generate=False, transfer=False,
-            all_items=False, result_id=None):
+            generate=False, transfer=False, options=None,
+            all_items=False, result_id=None, gzip=False):
     """
     Process (e.g., parse) a [incr tsdb()] profile.
 
@@ -413,10 +475,15 @@ def process(grammar, testsuite, source=None, select=None,
             (default: `False`)
         transfer (bool): if `True`, transfer instead of parse
             (default: `False`)
+        options (list): list of ACE command-line options to use when
+            invoking the ACE subprocess; unsupported options will
+            give an error message
         all_items (bool): if `True`, don't exclude ignored items
             (those with `i-wf==2`) when parsing
         result_id (int): if given, only keep items with the specified
             `result-id`
+        gzip (bool): if `True`, non-empty tables will be compressed
+            with gzip
     """
     from delphin.interfaces import ace
 
@@ -441,18 +508,14 @@ def process(grammar, testsuite, source=None, select=None,
     target = itsdb.TestSuite(testsuite)
     column, tablename, condition = _interpret_selection(select, source)
     table = itsdb.Table(
-        tablename,
         source[tablename].fields,
         tsql.select(
             '* from {} {}'.format(tablename, condition),
             source,
             cast=False))
 
-    with processor(grammar) as cpu:
-        target.process(cpu, tablename + ':' + column, source=table)
-
-    target.write()
-
+    with processor(grammar, cmdargs=options) as cpu:
+        target.process(cpu, ':' + column, source=table, gzip=gzip)
 
 def _interpret_selection(select, source):
     queryobj = tsql.inspect_query('select ' + select)

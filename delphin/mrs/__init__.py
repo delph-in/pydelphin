@@ -43,12 +43,13 @@ from .components import (
     Lnk, Node, ElementaryPredication,
     HandleConstraint, Pred, Link
 )
-from .xmrs import Xmrs, Mrs, Dmrs, Rmrs
+from .xmrs import Xmrs, Mrs, Rmrs, Dmrs
+from delphin.util import deprecated
 
 __all__ = ['Lnk', 'Node', 'ElementaryPredication',
            'HandleConstraint', 'Pred', 'Link', 'Xmrs', 'Mrs', 'Dmrs']
 
-
+@deprecated(final_version='1.0.0', alternative='delphin.commands.convert()')
 def convert(txt, src_fmt, tgt_fmt, single=True, **kwargs):
     """
     Convert a textual representation of \*MRS from one the src_fmt
