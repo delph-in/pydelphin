@@ -5,6 +5,11 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+
+### Removed
+
+* `delphin.mrs.path` and tests
+
 ## [v0.9.2][]
 
 ### Python Versions
