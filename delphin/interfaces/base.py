@@ -176,7 +176,7 @@ class ParseResponse(dict):
 
 class FieldMapper(object):
     """
-    A class for mapping respsonses to [incr tsdb()] fields.
+    A class for mapping responses to [incr tsdb()] fields.
 
     This class provides two methods for mapping responses to fields:
 

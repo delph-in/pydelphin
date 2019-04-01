@@ -13,11 +13,15 @@ import os
 import io
 import json
 from functools import partial
+import logging
 
 from delphin import itsdb, tsql
 from delphin.mrs import xmrs
 from delphin.util import safe_int, SExpr
+from delphin.exceptions import PyDelphinException
 
+
+logging.basicConfig()
 
 ###############################################################################
 ### CONVERT ###################################################################
@@ -91,7 +95,36 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
         kwargs['predicate_modifiers'] = predicate_modifiers
     kwargs['properties'] = properties
 
-    return dumps(xs, **kwargs)
+    # this is not a great way to improve robustness when converting
+    # many representations, but it'll do until v1.0.0. Also, it only
+    # improves robustness on the output, not the input.
+    # Note that all the code below is to replace the following:
+    #     return dumps(xs, **kwargs)
+    head, joiner, tail = _get_output_details(target_fmt)
+    parts = []
+    if pretty_print:
+        joiner = joiner.strip() + '\n'
+    def _trim(s):
+        if head and s.startswith(head):
+            s = s[len(head):].lstrip('\n')
+        if tail and s.endswith(tail):
+            s = s[:-len(tail)].rstrip('\n')
+        return s
+    for x in xs:
+        try:
+            s = dumps([x], **kwargs)
+        except (PyDelphinException, KeyError, IndexError):
+            logging.exception('could not convert representation')
+        else:
+            s = _trim(s)
+            parts.append(s)
+    # set these after so head and tail are used correctly in _trim
+    if pretty_print:
+        if head:
+            head += '\n'
+        if tail:
+            tail = '\n' + tail
+    return head + joiner.join(parts) + tail
 
 
 def _get_codec(codec, load=True):
@@ -144,6 +177,21 @@ def _get_codec(codec, load=True):
         raise ValueError('invalid source format: ' + codec)
     else:
         raise ValueError('invalid target format: ' + codec)
+
+
+def _get_output_details(codec):
+    if codec == 'mrx':
+        return ('<mrs-list', '', '</mrs-list>')
+
+    elif codec == 'dmrx':
+        from delphin.mrs import dmrx
+        return ('<dmrs-list>', '', '</dmrs-list>')
+
+    elif codec in ('mrs-json', 'dmrs-json', 'eds-json'):
+        return ('[', ',', ']')
+
+    else:
+        return ('', ' ', '')
 
 
 # simulate json codecs for MRS and DMRS
