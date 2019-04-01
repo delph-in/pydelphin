@@ -285,7 +285,7 @@ class _RelationJoin(Relation):
 
 
 def _prefixed_relation_fields(fields, on, drop):
-    fields = []
+    prefixed_fields = []
     already_joined = isinstance(fields, _RelationJoin)
     for f in fields:
         table, _, fieldname = f[0].rpartition(':')
@@ -294,10 +294,10 @@ def _prefixed_relation_fields(fields, on, drop):
         else:
             prefix = fields.name + ':'
         if fieldname in on and not drop:
-            fields.append(Field(fieldname, *f[1:]))
+            prefixed_fields.append(Field(fieldname, *f[1:]))
         elif fieldname not in on:
-            fields.append(Field(prefix + fieldname, *f[1:]))
-    return fields
+            prefixed_fields.append(Field(prefix + fieldname, *f[1:]))
+    return prefixed_fields
 
 
 class Relations(object):
