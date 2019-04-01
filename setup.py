@@ -16,6 +16,15 @@ about = {}
 with open(os.path.join(base_dir, "delphin", "__about__.py")) as f:
     exec(f.read(), about)
 
+# thanks: https://snarky.ca/clarifying-pep-518/
+docs_require = [
+    'sphinx',
+    'sphinx-rtd-theme'
+]
+tests_require = [
+    'pytest'
+]
+
 setup(
     name=about['__title__'],
     version=about['__version__'],
@@ -58,6 +67,11 @@ setup(
         'requests',
         'Pygments',
     ],
+    extras_require={
+        'docs': docs_require,
+        'tests': tests_require,
+        'dev': docs_require + tests_require
+    },
     entry_points={
         'console_scripts': [
             'delphin=delphin.main:main'

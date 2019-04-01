@@ -413,7 +413,8 @@ class Relations(object):
             list: (table, fieldname) pairs describing the path from
                 the source to target tables
         Raises:
-            :class:`ItsdbError` when no path is found
+            :class:`delphin.exceptions.ItsdbError`: when no path is
+                found
         Example:
             >>> relations.path('item', 'result')
             [('parse', 'i-id'), ('result', 'parse-id')]
@@ -1809,7 +1810,8 @@ def make_skeleton(path, relations, item_rows, gzip=False):
         An ItsdbProfile containing the skeleton data (but the profile
         data will already have been written to disk).
     Raises:
-        ItsdbError if the destination directory could not be created.
+        :class:`delphin.exceptions.ItsdbError`: if the destination
+            directory could not be created.
 
     .. deprecated:: v0.7.0
     """
