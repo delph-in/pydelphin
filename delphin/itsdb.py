@@ -104,7 +104,7 @@ import weakref
 
 from delphin.exceptions import ItsdbError
 from delphin.util import (
-    safe_int, stringtypes, deprecated, parse_datetime
+    safe_int, stringtypes, parse_datetime
 )
 from delphin.interfaces.base import FieldMapper
 

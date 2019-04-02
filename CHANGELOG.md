@@ -20,15 +20,15 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.components.ElementaryPredication.__lt__()`
 * `delphin.mrs.components.Node.is_quantifier()`
 * `delphin.mrs.components.Node.__lt__()`
-* `delphin.mrs.components.Pred.stringpred()`
 * `delphin.mrs.components.Pred.grammarpred()`
-* `delphin.mrs.components.Pred.string_or_grammar_pred()`
 * `delphin.mrs.components.Pred.is_quantifier()`
+* `delphin.mrs.components.Pred.stringpred()`
+* `delphin.mrs.components.Pred.string_or_grammar_pred()`
 * `delphin.mrs.convert()`
 * `delphin.mrs.path`
-* `delphin.mrs.query.intrinsic_variable()`
 * `delphin.mrs.query.find_quantifier()`
 * `delphin.mrs.query.get_outbound_args()`
+* `delphin.mrs.query.intrinsic_variable()`
 * `delphin.mrs.query.nodeid()`
 * `delphin.mrs.simplemrs.load()`, the `strict` parameter
 * `delphin.mrs.simplemrs.loads()`, the `strict` parameter
@@ -41,6 +41,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.tdl.TdlDiffList`
 * `delphin.tdl.TdlType`
 * `delphin.tdl.TdlInflRule`
+* `delphin._exceptions`
 
 
 ## [v0.9.2][]

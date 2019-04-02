@@ -86,8 +86,6 @@ serialized derivation into a Python object.
 import re
 from collections import namedtuple, Sequence
 
-from delphin.util import deprecated
-
 _terminal_fields = ('form', 'tokens')
 _token_fields = ('id', 'tfs')
 _nonterminal_fields = ('id', 'entity', 'score', 'start', 'end', 'daughters')
