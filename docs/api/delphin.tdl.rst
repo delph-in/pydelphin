@@ -97,28 +97,3 @@ delphin.tdl
 
   .. autoclass:: WildCard
     :members:
-
-  Deprecated
-  ----------
-
-  Use of the following functions are classes is no longer recommended,
-  and they will be removed in a future version.
-
-  .. autofunction:: parse
-  .. autofunction:: lex
-  .. autofunction:: tokenize
-  .. autoclass:: TdlDefinition
-    :show-inheritance:
-    :members:
-  .. autoclass:: TdlConsList
-    :show-inheritance:
-    :members:
-  .. autoclass:: TdlDiffList
-    :show-inheritance:
-    :members:
-  .. autoclass:: TdlType
-    :show-inheritance:
-    :members:
-  .. autoclass:: TdlInflRule
-    :show-inheritance:
-    :members:

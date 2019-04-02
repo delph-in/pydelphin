@@ -10,7 +10,6 @@ these changes are prefixed with "**BREAKING**"
 
 * `delphin.derivation.UdfNode.basic_entity()`
 * `delphin.derivation.UdfNode.lexical_type()`
-* `delphin.mrs.path`
 * `delphin.itsdb.ItsdbProfile`
 * `delphin.itsdb.ItsdbSkeleton`
 * `delphin.itsdb.apply_rows()`
@@ -18,6 +17,15 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.itsdb.filter_rows()`
 * `delphin.itsdb.get_relations()`
 * `delphin.itsdb.make_skeleton()`
+* `delphin.mrs.path`
+* `delphin.tdl.parse()`
+* `delphin.tdl.lex()`
+* `delphin.tdl.tokenize()`
+* `delphin.tdl.TdlDefinition`
+* `delphin.tdl.TdlConsList`
+* `delphin.tdl.TdlDiffList`
+* `delphin.tdl.TdlType`
+* `delphin.tdl.TdlInflRule`
 
 
 ## [v0.9.2][]
