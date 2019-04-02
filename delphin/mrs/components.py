@@ -9,8 +9,7 @@ import warnings
 from collections import namedtuple, MutableMapping
 from itertools import starmap
 
-from delphin.exceptions import (XmrsError, XmrsStructureError)
-from delphin.util import deprecated
+from delphin.exceptions import (XmrsError)
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
     UNKNOWNSORT, HANDLESORT, CVARSORT, QUANTIFIER_POS,
@@ -515,34 +514,16 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
         return hash(self.short_form())
 
     @classmethod
-    @deprecated(final_version='1.0.0', alternative='Pred.surface()')
-    def stringpred(cls, predstr): 
-        """Instantiate a Pred from its quoted string representation."""
-        return cls.surface(predstr)
-
-    @classmethod
     def surface(cls, predstr):
         """Instantiate a Pred from its quoted string representation."""
         lemma, pos, sense, _ = split_pred_string(predstr)
         return cls(Pred.SURFACE, lemma, pos, sense, predstr)
 
     @classmethod
-    @deprecated(final_version='1.0.0', alternative='Pred.abstract()')
-    def grammarpred(cls, predstr):
-        """Instantiate a Pred from its symbol string."""
-        return cls.abstract(predstr)
-
-    @classmethod
     def abstract(cls, predstr):
         """Instantiate a Pred from its symbol string."""
         lemma, pos, sense, _ = split_pred_string(predstr)
         return cls(Pred.ABSTRACT, lemma, pos, sense, predstr)
-
-    @classmethod
-    @deprecated(final_version='1.0.0', alternative='Pred.surface_or_abstract()')
-    def string_or_grammar_pred(cls, predstr):
-        """Instantiate a Pred from either its surface or abstract symbol."""
-        return cls.surface_or_abstract(predstr)
 
     @classmethod
     def surface_or_abstract(cls, predstr):
@@ -578,18 +559,6 @@ class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
             '_cat_n_1'
         """
         return normalize_pred_string(self.string)
-
-    def is_quantifier(self):
-        """
-        Return `True` if the predicate has a quantifier part-of-speech.
-
-        *Deprecated since v0.6.0*
-        """
-        warnings.warn(
-            'Deprecated; try checking xmrs.nodeids(quantifier=True)',
-            DeprecationWarning
-        )
-        return self.pos == QUANTIFIER_POS
 
 
 def split_pred_string(predstr):
@@ -731,17 +700,6 @@ class Node(
     #             self.base == other.base and
     #             self.carg == other.carg)
 
-    def __lt__(self, other):
-        warnings.warn("Deprecated", DeprecationWarning)
-        x1 = (self.cfrom, self.cto, self.pred.pos != QUANTIFIER_POS,
-              self.pred.lemma)
-        try:
-            x2 = (other.cfrom, other.cto, other.pred.pos != QUANTIFIER_POS,
-                  other.pred.lemma)
-            return x1 < x2
-        except AttributeError:
-            return NotImplemented
-
     @property
     def cvarsort(self):
         """
@@ -769,18 +727,6 @@ class Node(
         if CVARSORT in d:
             del d[CVARSORT]
         return d
-
-    def is_quantifier(self):
-        """
-        Return `True` if the Node's predicate appears to be a quantifier.
-
-        *Deprecated since v0.6.0*
-        """
-        warnings.warn(
-            'Deprecated; try checking xmrs.nodeids(quantifier=True)',
-            DeprecationWarning
-        )
-        return self.pred.is_quantifier()
 
 
 def nodes(xmrs):
@@ -851,16 +797,6 @@ class ElementaryPredication(
         return '<ElementaryPredication object ({} ({})) at {}>'.format(
             self.pred.string, str(self.iv or '?'), id(self)
         )
-
-    def __lt__(self, other):
-        warnings.warn("Deprecated", DeprecationWarning)
-        x1 = (self.cfrom, self.cto, -self.is_quantifier(), self.pred.lemma)
-        try:
-            x2 = (other.cfrom, other.cto, -other.is_quantifier(),
-                  other.pred.lemma)
-            return x1 < x2
-        except AttributeError:
-            return NotImplemented
 
     # these properties are specific to the EP's qualities
 

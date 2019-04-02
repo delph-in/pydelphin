@@ -55,17 +55,13 @@ _default_mrs_delim = '\n'
 # Pickle-API methods
 
 
-def load(fh, single=False, version=_default_version,
-         strict=False, errors='warn'):
+def load(fh, single=False, version=_default_version, errors='warn'):
     """
     Deserialize SimpleMRSs from a file (handle or filename)
 
     Args:
         fh (str, file): input filename or file object
         single: if `True`, only return the first read Xmrs object
-        strict: deprecated; a `True` value is the same as
-            `errors='strict'`, and a `False` value is the same as
-            `errors='warn'`
         errors: if `'strict'`, ill-formed MRSs raise an error; if
             `'warn'`, raise a warning instead; if `'ignore'`, do not
             warn or raise errors for ill-formed MRSs
@@ -77,22 +73,23 @@ def load(fh, single=False, version=_default_version,
         s = open(fh, 'r').read()
     else:
         s = fh.read()
-    return loads(s, single=single, version=version,
-                 strict=strict, errors=errors)
+    return loads(s, single=single, version=version, errors=errors)
 
 
-def loads(s, single=False, version=_default_version,
-          strict=False, errors='warn'):
+def loads(s, single=False, version=_default_version, errors='warn'):
     """
     Deserialize SimpleMRS string representations
 
     Args:
         s (str): a SimpleMRS string
         single (bool): if `True`, only return the first Xmrs object
+        errors: if `'strict'`, ill-formed MRSs raise an error; if
+            `'warn'`, raise a warning instead; if `'ignore'`, do not
+            warn or raise errors for ill-formed MRSs
     Returns:
         a generator of Xmrs objects (unless *single* is `True`)
     """
-    ms = deserialize(s, version=version, strict=strict, errors=errors)
+    ms = deserialize(s, version=version, errors=errors)
     if single:
         return next(ms)
     else:
@@ -185,13 +182,7 @@ def _invalid_token_error(token, expected):
     raise XDE('Invalid token: "{}"\tExpected: "{}"'.format(token, expected))
 
 
-def deserialize(string, version=_default_version, strict=True, errors='warn'):
-    if strict:
-        warnings.warn(
-            'strict=True parameter is deprecated; use errors=\'strict\'',
-            DeprecationWarning
-        )
-        errors = 'strict'
+def deserialize(string, version=_default_version, errors='warn'):
     # FIXME: consider buffering this so we don't read the whole string at once
     tokens = tokenize(string)
     while tokens:

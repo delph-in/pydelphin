@@ -156,13 +156,6 @@ def test_find_subgraphs_by_pred():
     assert f(m, ['udef_q_rel', '"_dog_n_1_rel"', 'udef_q_rel', '"_cat_n_1_rel"'], c=True) == []
     assert f(m, ['udef_q_rel', '"_dog_n_1_rel"', '"_chase_v_1_rel"', 'udef_q_rel', '"_cat_n_1_rel"'], c=True) == [[10000, 10002, 10003, 10004, 10005]]
 
-def test_intrinsic_variable():
-    # works for quantifiers, too
-    assert query.intrinsic_variable(m, 10000) == 'x3'
-    assert query.intrinsic_variable(m, 10001) == 'e8'
-    assert query.intrinsic_variable(m, 10002) == 'x3'
-    assert query.intrinsic_variable(m, 10003) == 'e2'
-
 def test_intrinsic_variables():
     assert query.intrinsic_variables(Xmrs()) == []
     assert query.intrinsic_variables(m) == ['e2', 'x3', 'e8', 'x9']
@@ -178,20 +171,3 @@ def test_in_labelset():
     assert query.in_labelset(m, [10001], 'h7') == True
     assert query.in_labelset(m, [10000], 'h7') == False
     assert query.in_labelset(m, [10001, 10002, 10003]) == False
-
-# deprecated
-
-def test_find_quantifier():
-    assert query.find_quantifier(m, 10002) == 10000
-    assert query.find_quantifier(m, 10000) == None
-    assert query.find_quantifier(m, 10003) == None
-
-def test_get_outbound_args():
-    assert query.get_outbound_args(m, 10000) == [(10000, 'RSTR', 'h5')]
-    assert query.get_outbound_args(m, 10003) == [(10003, 'ARG1', 'x3'), (10003, 'ARG2', 'x9')]
-    assert query.get_outbound_args(m, 10002) == []
-
-def test_nodeid():
-    assert query.nodeid(m, 'x3') == 10002
-    assert query.nodeid(m, 'x3', quantifier=True) == 10000
-    assert query.nodeid(m, 'e2') == 10003

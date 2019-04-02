@@ -17,7 +17,22 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.itsdb.filter_rows()`
 * `delphin.itsdb.get_relations()`
 * `delphin.itsdb.make_skeleton()`
+* `delphin.mrs.components.ElementaryPredication.__lt__()`
+* `delphin.mrs.components.Node.is_quantifier()`
+* `delphin.mrs.components.Node.__lt__()`
+* `delphin.mrs.components.Pred.stringpred()`
+* `delphin.mrs.components.Pred.grammarpred()`
+* `delphin.mrs.components.Pred.string_or_grammar_pred()`
+* `delphin.mrs.components.Pred.is_quantifier()`
+* `delphin.mrs.convert()`
 * `delphin.mrs.path`
+* `delphin.mrs.query.intrinsic_variable()`
+* `delphin.mrs.query.find_quantifier()`
+* `delphin.mrs.query.get_outbound_args()`
+* `delphin.mrs.query.nodeid()`
+* `delphin.mrs.simplemrs.load()`, the `strict` parameter
+* `delphin.mrs.simplemrs.loads()`, the `strict` parameter
+* `delphin.mrs.xmrs.Rmrs`
 * `delphin.tdl.parse()`
 * `delphin.tdl.lex()`
 * `delphin.tdl.tokenize()`

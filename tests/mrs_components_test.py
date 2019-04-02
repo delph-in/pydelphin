@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import pytest
 
@@ -464,17 +464,6 @@ class TestPred():
         assert (spred('_dog_n_rel') == None) == False
         assert spred('_dog_n_1_rel') == spred('_Dog_N_1_rel')
         assert spred('_dog_n_1_rel') == spred('_dog_n_1')
-
-    def test_is_quantifier(self):
-        # NOTE: deprecated
-        assert spred('"_the_q_rel"').is_quantifier() == True
-        assert spred('_udef_q_rel').is_quantifier() == True
-        # how do we do this one?
-        # assert spred('quant_rel').is_quantifier() == True
-        assert spred('abstract_q_rel').is_quantifier() == True
-        assert spred('_the_q').is_quantifier() == True
-        assert spred('"_the_q"').is_quantifier() == True
-        assert spred('_q_n_letter_rel').is_quantifier() == False
 
     def test_hash(self):
         s = set([spred('"_the_q_rel"')])

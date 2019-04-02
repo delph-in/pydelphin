@@ -22,7 +22,7 @@ from .config import (
 
 class Xmrs(_LnkMixin):
     """
-    Xmrs is a common class for Mrs, Rmrs, and Dmrs objects.
+    Xmrs is a common class for Mrs, and Dmrs objects.
 
     Args:
         top: the TOP (or maybe LTOP) variable
@@ -37,8 +37,8 @@ class Xmrs(_LnkMixin):
         identifier: a discourse-utterance id
 
     Xmrs can be instantiated directly, but it may be more
-    convenient to use the :func:`Mrs`, :func:`Rmrs`, or :func:`Dmrs`
-    constructor functions.
+    convenient to use the :class:`Mrs`, or :class:`Dmrs`
+    subclasses.
 
     Variables are simply strings, but must be of the proper form
     in order to be recognized as variables and not constants. The
@@ -151,7 +151,7 @@ class Xmrs(_LnkMixin):
                     vardict = _vars[val]
                     vardict['refs'][role].append(nodeid)
                     # if role == IVARG_ROLE:
-                    #     if pred.is_quantifier():
+                    #     if pred.pos == 'q':
                     #         vardict['bv'] = nodeid
                     #     else:
                     #         vardict['iv'] = nodeid
@@ -539,7 +539,7 @@ class Xmrs(_LnkMixin):
             pred = _eps[n][1]
             if iv in _vars and self.nodeid(iv, quantifier=True) is not None:
                 rank[n] = 0
-            elif pred.is_quantifier():
+            elif pred.pos == 'q':
                 rank[n] = 0
             elif pred.type == Pred.ABSTRACT:
                 rank[n] = 2
@@ -848,66 +848,6 @@ class Mrs(Xmrs):
             identifier=d.get('identifier'),
             vars=variables
         )
-
-
-def Rmrs(top=None, index=None, xarg=None,
-         eps=None, args=None, hcons=None, icons=None,
-         lnk=None, surface=None, identifier=None, vars=None):
-    """
-    Construct an :class:`Xmrs` from RMRS components.
-
-    Robust Minimal Recursion Semantics (RMRS) are like MRS, but all
-    predications have a nodeid ("anchor"), and arguments are not
-    contained by the source predications, but instead reference the
-    nodeid of their predication.
-
-    Args:
-        top: the TOP (or maybe LTOP) variable
-        index: the INDEX variable
-        xarg: the XARG variable
-        eps: an iterable of EPs
-        args: a nested mapping of `{nodeid: {rargname: value}}`
-        hcons: an iterable of HandleConstraint objects
-        icons: an iterable of IndividualConstraint objects
-        lnk: the Lnk object associating the MRS to the surface form
-        surface: the surface string
-        identifier: a discourse-utterance id
-        vars: a mapping of variables to a list of `(property, value)`
-            pairs
-
-    Example:
-
-    >>> m = Rmrs(
-    >>>     top='h0',
-    >>>     index='e2',
-    >>>     eps=[ElementaryPredication(
-    >>>         10000,
-    >>>         Pred.surface('_rain_v_1_rel'),
-    >>>         'h1'
-    >>>     )],
-    >>>     args={10000: {'ARG0': 'e2'}},
-    >>>     hcons=[HandleConstraint('h0', 'qeq', 'h1'),
-    >>>     vars={'e2': {'SF': 'prop-or-ques', 'TENSE': 'present'}}
-    >>> )
-    """
-    eps = list(eps or [])
-    args = list(args or [])
-    if vars is None: vars = {}
-    for arg in args:
-        if arg.nodeid is None:
-            raise XmrsStructureError("RMRS args must have a nodeid.")
-    # make the EPs more MRS-like (with arguments)
-    for ep in eps:
-        if ep.nodeid is None:
-            raise XmrsStructureError("RMRS EPs must have a nodeid.")
-        epargs = ep.args
-        for rargname, value in args.get(ep.nodeid, {}).items():
-            epargs[rargname] = value
-    hcons = list(hcons or [])
-    icons = list(icons or [])
-    return Xmrs(top=top, index=index, xarg=xarg,
-                eps=eps, hcons=hcons, icons=icons, vars=vars,
-                lnk=lnk, surface=surface, identifier=identifier)
 
 
 class Dmrs(Xmrs):

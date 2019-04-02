@@ -6,7 +6,6 @@ from itertools import product
 
 from delphin.mrs.components import nodes, links, var_id
 from delphin.mrs.util import rargname_sortkey
-from delphin.util import deprecated
 
 # query methods
 def select_nodeids(xmrs, iv=None, label=None, pred=None):
@@ -324,39 +323,3 @@ def in_labelset(xmrs, nodeids, label=None):
     if label is None:
         label = xmrs.ep(next(iter(nodeids))).label
     return nodeids.issubset(xmrs._vars[label]['refs']['LBL'])
-
-
-# deprecated
-
-@deprecated(final_version='1.0.0',
-            alternative='xmrs.ep(nid).intrinsic_variable')
-def intrinsic_variable(xmrs, nid):
-    return xmrs.ep(nid).intrinsic_variable
-
-@deprecated(final_version='1.0.0',
-            alternative='xmrs.nodeid(xmrs.ep(nodeid).iv, quantifier=True)')
-def find_quantifier(xmrs, nodeid):
-    ep = xmrs.ep(nodeid)
-    if not ep.is_quantifier():
-        return xmrs.nodeid(xmrs.ep(nodeid).iv, quantifier=True)
-    return None
-
-@deprecated(final_version='1.0.0',
-            alternative='xmrs.outgoing_args(nodeid)')
-def get_outbound_args(xmrs, nodeid, allow_unbound=True):
-    tgts = set(intrinsic_variables(xmrs))
-    tgts.update(xmrs.labels())
-    tgts.update(hc.hi for hc in xmrs.hcons())
-    return [
-        (nodeid, role, val)
-        for role, val in sorted(
-            xmrs.outgoing_args(nodeid).items(),
-            key=lambda r_v: rargname_sortkey(r_v[0])
-        )
-        if allow_unbound or val in tgts
-    ]
-
-@deprecated(final_version='1.0.0',
-            alternative='xmrs.nodeid(iv, quantifier=quantifier)')
-def nodeid(xmrs, iv, quantifier=False):
-    return xmrs.nodeid(iv, quantifier=quantifier)
