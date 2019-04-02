@@ -8,6 +8,8 @@ these changes are prefixed with "**BREAKING**"
 
 ### Removed
 
+* `delphin.derivation.UdfNode.basic_entity()`
+* `delphin.derivation.UdfNode.lexical_type()`
 * `delphin.mrs.path`
 * `delphin.itsdb.ItsdbProfile`
 * `delphin.itsdb.ItsdbSkeleton`

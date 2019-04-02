@@ -282,47 +282,6 @@ class TestDerivation():
         assert node.daughters[0].type == 'a-type'
         assert node.daughters[1].type == 'b-type'
 
-    def test_basic_entity(self):
-        warnings.simplefilter('always')
-        # this works for both UDX and standard UDF
-        a = D.from_string('(root (1 some-thing -1 -1 -1'
-                          '  (2 a-thing -1 -1 -1 ("a"))'
-                          '  (3 b-thing -1 -1 -1 ("b"))))')
-        with pytest.warns(DeprecationWarning):
-            assert a.basic_entity() == 'root'
-            node = a.daughters[0]
-            assert node.daughters[0].basic_entity() == 'a-thing'
-            assert node.daughters[1].basic_entity() == 'b-thing'
-        a = D.from_string('(root (1 some-thing -1 -1 -1'
-                          '  (2 a-thing@a-type_le -1 -1 -1 ("a"))'
-                          '  (3 b-thing@b-type_le -1 -1 -1 ("b"))))')
-        with pytest.warns(DeprecationWarning):
-            assert a.basic_entity() == 'root'
-            node = a.daughters[0]
-            assert node.basic_entity() == 'some-thing'
-            assert node.daughters[0].basic_entity() == 'a-thing'
-            assert node.daughters[1].basic_entity() == 'b-thing'
-
-    def test_lexical_type(self):
-        warnings.simplefilter('always')
-        # NOTE: this returns None for standard UDF or non-preterminals
-        a = D.from_string('(root (1 some-thing -1 -1 -1'
-                          '  (2 a-thing -1 -1 -1 ("a"))'
-                          '  (3 b-thing -1 -1 -1 ("b"))))')
-        with pytest.warns(DeprecationWarning):
-            assert a.lexical_type() == None
-            node = a.daughters[0]
-            assert node.daughters[0].lexical_type() == None
-            assert node.daughters[1].lexical_type() == None
-        a = D.from_string('(root (1 some-thing -1 -1 -1'
-                          '  (2 a-thing@a-type_le -1 -1 -1 ("a"))'
-                          '  (3 b-thing@b-type_le -1 -1 -1 ("b"))))')
-        with pytest.warns(DeprecationWarning):
-            assert a.lexical_type() == None
-            node = a.daughters[0]
-            assert node.daughters[0].lexical_type() == 'a-type_le'
-            assert node.daughters[1].lexical_type() == 'b-type_le'
-
     def test_preterminals(self):
         a = D.from_string('(root (1 some-thing -1 -1 -1'
                           '  (2 a-thing -1 -1 -1 ("a"))'

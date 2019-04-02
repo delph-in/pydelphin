@@ -435,35 +435,6 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
             return False
         return None
 
-    @deprecated(final_version='1.0.0', alternative='UdfNode.entity')
-    def basic_entity(self):
-        """
-        Return the entity without the lexical type information.
-
-        In the export (UDX) format, lexical types follow entities of
-        preterminal nodes, joined by an at-sign (`@`). In regular UDF
-        or non-preterminal nodes, this will just return the entity
-        string.
-
-        .. deprecated:: 0.5.1
-           Use :attr:`entity`
-        """
-        return self.entity
-
-    @deprecated(final_version='1.0.0', alternative='UdfNode.type')
-    def lexical_type(self):
-        """
-        Return the lexical type of a preterminal node.
-
-        In export (UDX) format, lexical types follow entities of
-        preterminal nodes, joined by an at-sign (`@`). In regular UDF
-        or non-preterminal nodes, this will return None.
-
-        .. deprecated:: 0.5.1
-           Use :attr:`type`
-        """
-        return self.type
-
     # Convenience methods
 
     def preterminals(self):
