@@ -679,15 +679,14 @@ def test_encode_row():
     assert itsdb.encode_row(['one@', '\\two\nabc']) == 'one\\s@\\\\two\\nabc'
 
 def test_make_row(empty_profile):
-    r = itsdb.get_relations(os.path.join(empty_profile, 'relations'))
+    r = itsdb.Relations.from_file(os.path.join(empty_profile, 'relations'))
     assert itsdb.make_row({'i-input': 'one', 'i-id': 100}, r['item']) == '100@one'
     assert itsdb.make_row({'i-id': 100, 'mrs': '[RELS: < > HCONS: < >]'}, r['item']) == '100@'
 
 def test_select_rows(single_item_profile):
-    p = itsdb.ItsdbProfile(single_item_profile)
-    # assert list(itsdb.select_rows(None, p.read_table('item'))) == [['0', 'The dog barks.']]
-    assert list(itsdb.select_rows(['i-id', 'i-input'], p.read_table('item'))) == [['0', 'The dog barks.']]
-    assert list(itsdb.select_rows(['item:i-id', 'parse:parse-id'], p.join('item', 'parse'))) == [['0', '0']]
+    p = itsdb.TestSuite(single_item_profile)
+    assert list(itsdb.select_rows(['i-id', 'i-input'], p['item'])) == [[0, 'The dog barks.']]
+    assert list(itsdb.select_rows(['item:i-id', 'parse:parse-id'], itsdb.join(p['item'], p['parse']))) == [[0, 0]]
 
 def test_match_rows():
     assert list(itsdb.match_rows(
@@ -721,54 +720,3 @@ def test_join(single_item_profile):
 
     j3 = itsdb.join(j, p['item'])
     assert j3.name == 'parse+result+item'
-
-
-## Deprecated
-
-def test_get_relations(empty_profile):
-    r = itsdb.get_relations(os.path.join(empty_profile, 'relations'))
-    assert r['item'] == (
-        itsdb.Field('i-id', ':integer', True, False, None),
-        itsdb.Field('i-input', ':string', False, False, None)
-    )
-    assert r['parse'] == (
-        itsdb.Field('parse-id', ':integer', True, False, 'unique parse identifier'),
-        itsdb.Field('run-id', ':integer', True, False, 'test run for this parse'),
-        itsdb.Field('i-id', ':integer', True, False, 'item parsed')
-    )
-    assert r['result'] == (
-        itsdb.Field('parse-id', ':integer', True, False, 'parse for this result'),
-        itsdb.Field('result-id', ':integer', False, False, 'result identifier'),
-        itsdb.Field('mrs', ':string', False, False, 'MRS for this reading')
-    )
-
-def test_default_value():
-    assert itsdb.default_value('foo', ':string') == ''
-    assert itsdb.default_value('foo', '') == ''
-    assert itsdb.default_value('foo', ':integer') == '-1'
-    assert itsdb.default_value('i-wf', ':integer') == '1'
-
-def test_filter_rows():
-    assert list(itsdb.filter_rows([(['i-id'], lambda row, x: x=='10')], [{'i-id': '10'}, {'i-id': '20'}])) == [{'i-id': '10'}]
-    assert list(itsdb.filter_rows([(['i-input'], lambda row, x: len(x) > 2)], [{'i-id': '10'}, {'i-id': '20'}])) == [{'i-id': '10'}, {'i-id': '20'}]
-    assert list(itsdb.filter_rows([(['i-input'], lambda row, x: len(x) > 2)], [{'i-id': '10', 'i-input': 'a'}, {'i-id': '20', 'i-input': 'abc'}])) == [{'i-id': '20', 'i-input': 'abc'}]
-
-def test_apply_rows():
-    assert list(itsdb.apply_rows([(['i-id'], lambda row, x: str(int(x)+10))], [{'i-id': '10'}, {'i-id': '20'}])) == [{'i-id': '20'}, {'i-id': '30'}]
-    # the following inserts any col that didn't already exist. Is this desired?
-    # assert list(itsdb.apply_rows([(['i-input'], lambda row, x: x.replace(' ', ''))], [{'i-id': '10'}, {'i-id': '20'}])) == [{'i-id': '10'}, {'i-id': '20'}]
-    assert list(itsdb.apply_rows([(['i-input'], lambda row, x: x.replace(' ', ''))], [{'i-id': '10', 'i-input': 'a'}, {'i-id': '20', 'i-input': 'a b  c'}])) == [{'i-id': '10', 'i-input': 'a'}, {'i-id': '20', 'i-input': 'abc'}]
-
-def test_make_skeleton():
-    pass
-
-def test_ItsdbProfile(empty_profile, single_item_skeleton, single_item_profile):
-    p = itsdb.ItsdbProfile(empty_profile)
-    # tests
-    p = itsdb.ItsdbProfile(single_item_skeleton)
-    # tests
-    p = itsdb.ItsdbProfile(single_item_profile)
-    # tests
-
-def test_ItsdbSkeleton():
-    pass

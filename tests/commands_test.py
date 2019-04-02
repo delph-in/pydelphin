@@ -194,7 +194,7 @@ def test_select(mini_testsuite):
         select(testsuite=ts0)
     select('result:mrs', ts0)
     from delphin import itsdb
-    select('result:mrs', itsdb.ItsdbProfile(ts0))
+    select('result:mrs', itsdb.TestSuite(ts0))
     select('parse:i-id@result:mrs', ts0)
     select('result:result-id@mrs', ts0, mode='row')
 

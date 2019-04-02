@@ -311,9 +311,7 @@ def select(dataspec, testsuite, mode='list', cast=True):
     Returns:
         a generator that yields selected data
     """
-    if isinstance(testsuite, itsdb.ItsdbProfile):
-        testsuite = itsdb.TestSuite(testsuite.root)
-    elif not isinstance(testsuite, itsdb.TestSuite):
+    if not isinstance(testsuite, itsdb.TestSuite):
         testsuite = itsdb.TestSuite(testsuite)
     return tsql.select(dataspec, testsuite, mode=mode, cast=cast)
 
@@ -646,12 +644,8 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
     from delphin.mrs import simplemrs, compare as mrs_compare
 
     if not isinstance(testsuite, itsdb.TestSuite):
-        if isinstance(testsuite, itsdb.ItsdbProfile):
-            testsuite = testsuite.root
         testsuite = itsdb.TestSuite(testsuite)
     if not isinstance(gold, itsdb.TestSuite):
-        if isinstance(gold, itsdb.ItsdbProfile):
-            gold = gold.root
         gold = itsdb.TestSuite(gold)
 
     queryobj = tsql.inspect_query('select ' + select)

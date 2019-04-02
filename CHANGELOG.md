@@ -8,7 +8,15 @@ these changes are prefixed with "**BREAKING**"
 
 ### Removed
 
-* `delphin.mrs.path` and tests
+* `delphin.mrs.path`
+* `delphin.itsdb.ItsdbProfile`
+* `delphin.itsdb.ItsdbSkeleton`
+* `delphin.itsdb.apply_rows()`
+* `delphin.itsdb.default_value()`
+* `delphin.itsdb.filter_rows()`
+* `delphin.itsdb.get_relations()`
+* `delphin.itsdb.make_skeleton()`
+
 
 ## [v0.9.2][]
 
