@@ -17,7 +17,7 @@ from delphin.mrs.components import (
     nodes as make_nodes
 )
 from delphin.mrs.query import find_argument_target
-from delphin.mrs.util import rargname_sortkey
+from delphin.sembase import role_priority
 from delphin.mrs.config import CVARSORT
 from delphin.lib.pegre import (
     literal as lit,
@@ -215,7 +215,7 @@ class Eds(object):
                 (nid, rargname, tgt)
                 for rargname, tgt in sorted(
                     self.edges(nid).items(),
-                    key=lambda x: rargname_sortkey(x[0])
+                    key=lambda x: role_priority(x[0])
                 )
             )
         return node_triples + edge_triples
@@ -597,7 +597,7 @@ def _serialize_eds(e, properties, pretty_print, show_status,
                     '{} {}'.format(rargname, tgt)
                     for rargname, tgt in sorted(
                         e.edges(n.nodeid).items(),
-                        key=lambda x: rargname_sortkey(x[0])
+                        key=lambda x: role_priority(x[0])
                     )
                 )),
             )

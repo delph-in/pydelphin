@@ -5,7 +5,7 @@ Functions for inspecting and interpreting the structure of an Xmrs.
 from itertools import product
 
 from delphin.mrs.components import nodes, links, var_id
-from delphin.mrs.util import rargname_sortkey
+from delphin.sembase import role_priority
 
 # query methods
 def select_nodeids(xmrs, iv=None, label=None, pred=None):
@@ -121,7 +121,7 @@ def select_args(xmrs, nodeid=None, rargname=None, value=None):
         for nid in xmrs.nodeids()
         for role, val in sorted(
             xmrs.args(nid).items(),
-            key=lambda i: rargname_sortkey(i[0])
+            key=lambda i: role_priority(i[0])
         )
     )
     return list(filter(argmatch, all_args))

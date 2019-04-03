@@ -17,7 +17,6 @@ from delphin.mrs.components import (
 )
 from delphin.exceptions import XmrsDeserializationError as XDE
 from delphin.mrs.config import IVARG_ROLE
-from delphin.mrs.util import etree_tostring
 
 
 ##############################################################################
@@ -292,9 +291,9 @@ def serialize(ms, properties=True, encoding='unicode', pretty_print=False):
         pprint_re = re.compile(r'(<mrs[^-]|</mrs>|</mrs-list>'
                                r'|<ep\s|<fvpair>|<extrapair>|<hcons\s)',
                                re.IGNORECASE)
-        string = etree_tostring(e, encoding=encoding)
+        string = etree.tostring(e, encoding=encoding)
         return pprint_re.sub(r'\n\1', string)
-    return etree_tostring(e, encoding=encoding)
+    return etree.tostring(e, encoding=encoding)
 
 
 def _encode_mrs(m, properties):

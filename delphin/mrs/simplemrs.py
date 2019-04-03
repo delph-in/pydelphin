@@ -19,7 +19,7 @@ from delphin.mrs.components import (
     sort_vid_split, var_sort, var_re, hcons, icons
 )
 from delphin.mrs.config import (HANDLESORT, CONSTARG_ROLE)
-from delphin.mrs.util import rargname_sortkey
+from delphin.sembase import role_priority
 from delphin.exceptions import (
     XmrsDeserializationError as XDE,
     XmrsError,
@@ -445,7 +445,7 @@ def _serialize_ep(ep, varprops, version=_default_version):
     # ('nodeid', 'pred', 'label', 'args', 'lnk', 'surface', 'base')
     args = ep[3]
     arglist = ' '.join([_serialize_argument(rarg, args[rarg], varprops)
-                        for rarg in sorted(args, key=rargname_sortkey)])
+                        for rarg in sorted(args, key=role_priority)])
     if version < 1.1 or len(ep) < 6 or ep[5] is None:
         surface = ''
     else:

@@ -5,6 +5,10 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+### Added
+
+* `delphin.sembase`
+* `delphin.sembase.role_priority`
 
 ### Removed
 
@@ -32,6 +36,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.query.nodeid()`
 * `delphin.mrs.simplemrs.load()`, the `strict` parameter
 * `delphin.mrs.simplemrs.loads()`, the `strict` parameter
+* `delphin.mrs.util`
 * `delphin.mrs.xmrs.Rmrs`
 * `delphin.tdl.parse()`
 * `delphin.tdl.lex()`
