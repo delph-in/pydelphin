@@ -1,5 +1,4 @@
 
-
 def role_priority(role):
     """Return a representation of role priority for ordering."""
     # canonical order: LBL ARG* RSTR BODY *-INDEX *-HNDL CARG ...
@@ -9,3 +8,4 @@ def role_priority(role):
         role in ('BODY', 'CARG'),
         role
     )
+

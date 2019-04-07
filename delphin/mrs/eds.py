@@ -9,10 +9,10 @@ from itertools import count
 
 from delphin.util import stringtypes, _bfs, _connected_components
 from delphin.mrs.xmrs import Xmrs
+from delphin import predicate
 from delphin.mrs.components import (
     var_sort,
     Lnk,
-    Pred,
     Node,
     nodes as make_nodes
 )
@@ -111,12 +111,17 @@ class Eds(object):
 
     def __eq__(self, other):
         if not isinstance(other, Eds):
-            return False
+            return NotImplemented
         return (
             self.top == other.top and
             all(a == b for a, b in zip(self.nodes(), other.nodes())) and
             self._edges == other._edges
         )
+
+    def __ne__(self, other):
+        if not isinstance(other, Eds):
+            return NotImplemented
+        return not (self == other)
 
     def nodeids(self):
         """Return the list of nodeids."""
@@ -142,7 +147,7 @@ class Eds(object):
         nodes = {}
         for node in self.nodes():
             nd = {
-                'label': node.pred.short_form(),
+                'label': predicate.normalize(node.pred),
                 'edges': self.edges(node.nodeid)
             }
             if node.lnk is not None:
@@ -163,7 +168,7 @@ class Eds(object):
         """
         Decode a dictionary, as from :meth:`to_dict`, into an Eds object.
         """
-        makepred, charspan = Pred.surface_or_abstract, Lnk.charspan
+        charspan = Lnk.charspan
         top = d.get('top')
         nodes, edges = [], []
         for nid, node in d.get('nodes', {}).items():
@@ -178,7 +183,7 @@ class Eds(object):
             nodes.append(
                 Node(
                     nodeid=nid,
-                    pred=makepred(node['label']),
+                    pred=node['label'],
                     sortinfo=props,
                     lnk=lnk,
                     carg=node.get('carg')
@@ -200,7 +205,7 @@ class Eds(object):
         nodes = sorted(self.nodes(), key=lambda n: n.nodeid != self.top)
         for node in nodes:
             nid = node.nodeid
-            pred = node.pred.short_form() if short_pred else node.pred.string
+            pred = predicate.normalize(node.pred) if short_pred else node.pred
             node_triples.append((nid, 'predicate', pred))
             if node.lnk:
                 node_triples.append((nid, 'lnk', '"{}"'.format(str(node.lnk))))
@@ -231,7 +236,7 @@ class Eds(object):
                 nids.append(src)
                 nd[src] = {'pred': None, 'lnk': None, 'carg': None, 'si': []}
             if rel == 'predicate':
-                nd[src]['pred'] = Pred.surface_or_abstract(tgt)
+                nd[src]['pred'] = tgt
             elif rel == 'lnk':
                 cfrom, cto = tgt.strip('"<>').split(':')
                 nd[src]['lnk'] = Lnk.charspan(int(cfrom), int(cto))
@@ -494,8 +499,7 @@ _COLON   = regex(r'\s*:\s*', value=Ignore)
 _COMMA   = regex(r',\s*')
 _SPACES  = regex(r'\s+', value=Ignore)
 _SYMBOL  = regex(r'[-+\w]+')
-_PRED    = regex(r'((?!<-?\d|\("|\{|\[|\s).)+',
-                 value=Pred.surface_or_abstract)
+_PRED    = regex(r'((?!<-?\d|\("|\{|\[|\s).)+')
 _EDS     = nt('EDS', value=_make_eds)
 _TOP     = opt(nt('TOP'), default=None)
 _TOPID   = opt(_SYMBOL, default=None)
@@ -583,7 +587,7 @@ def _serialize_eds(e, properties, pretty_print, show_status,
             ed.format(
                 membership=connected if n.nodeid in nidgrp else disconnected,
                 id=n.nodeid,
-                pred=n.pred.short_form(),
+                pred=predicate.normalize(n.pred),
                 lnk=str(n.lnk) if n.lnk else '',
                 carg=carg.format(constant=n.carg) if n.carg else '',
                 props=proplist.format(

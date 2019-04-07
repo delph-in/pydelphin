@@ -4,19 +4,12 @@ delphin.mrs.components
 
 .. automodule:: delphin.mrs.components
 
-  Variables and Predicates
-  ------------------------
+  Variables
+  ---------
 
   .. autofunction:: sort_vid_split
   .. autofunction:: var_sort
   .. autofunction:: var_id
-
-  .. autoclass:: Pred
-    :members:
-
-  .. autofunction:: is_valid_pred_string
-  .. autofunction:: normalize_pred_string
-  .. autofunction:: split_pred_string
 
 
   MRS and RMRS Components

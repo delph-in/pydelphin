@@ -61,7 +61,7 @@ The original motivation for PyDelphin and the area with the most work
 is in modeling MRS representations.
 
 >>> x = response.result(0).mrs()
->>> [ep.pred.string for ep in x.eps()]
+>>> [ep.pred for ep in x.eps()]
 ['proper_q', 'named', '_chase_v_1', 'proper_q', 'named']
 >>> x.variables()
 ['h0', 'e2', 'h4', 'x3', 'h5', 'h6', 'h7', 'h1', 'x9', 'h10', 'h11', 'h12', 'h13']

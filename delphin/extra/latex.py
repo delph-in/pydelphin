@@ -4,6 +4,7 @@ Generate LaTeX snippets for rendering DELPH-IN data.
 
 from collections import defaultdict
 
+from delphin import predicate
 from delphin.mrs.components import nodes, links
 from delphin.mrs.config import (
     RSTR_ROLE, EQ_POST, H_POST
@@ -95,7 +96,7 @@ def dmrs_tikz_dependency(xs, **kwargs):
         lines.append("  \\begin{deptext}[column sep=10pt]")
         for i, n in enumerate(ns):
             sep = "\\&"  if  (i < len(ns) - 1) else  "\\\\"
-            pred = _latex_escape(n.pred.short_form())
+            pred = _latex_escape(predicate.normalize(n.pred))
             pred = "\\named{}" if pred == 'named' else pred
             if n.carg is not None:
                 print(n.carg.strip('"'))

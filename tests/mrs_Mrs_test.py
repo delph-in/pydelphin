@@ -1,9 +1,8 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import pytest
 
 from delphin.mrs.components import (
-    Pred,
     ElementaryPredication as EP,
     elementarypredications as eps,
     HandleConstraint as Hcons,
@@ -15,8 +14,6 @@ from delphin.mrs.config import (FIRST_NODEID, UNKNOWNSORT)
 from delphin.mrs import Mrs
 #from delphin.mrs import simplemrs  # for convenience in later tests
 from delphin.exceptions import XmrsError
-
-sp = Pred.surface
 
 
 # for convenience
@@ -42,21 +39,21 @@ class TestMrs():
 
     def test_single_ep(self):
         # basic, one EP, no TOP
-        x = Mrs(rels=[EP(10, sp('"_rain_v_1_rel"'), 'h1')])
+        x = Mrs(rels=[EP(10, '"_rain_v_1_rel"', 'h1')])
         check_xmrs(x, None, None, None, 1, 0, 0, 1)
         # variables don't need to be created predictably, but it's nice
         # to get the expected values for simple cases
         assert x.label(10) == 'h1'
         assert x.ep(10).iv == None
         # now with ARG0
-        x = Mrs(rels=[EP(10, sp('"_rain_v_1_rel"'), 'h1', {'ARG0': 'e2'})])
+        x = Mrs(rels=[EP(10, '"_rain_v_1_rel"', 'h1', {'ARG0': 'e2'})])
         check_xmrs(x, None, None, None, 1, 0, 0, 2)
         assert x.label(10) == 'h1'
         assert x.ep(10).iv == 'e2'
         # now with TOP
         x = Mrs(
             top='h0',
-            rels=[EP(10, sp('"_rain_v_1_rel"'), 'h1', {'ARG0': 'e2'})],
+            rels=[EP(10, '"_rain_v_1_rel"', 'h1', {'ARG0': 'e2'})],
             hcons=[('h0', 'qeq', 'h1')]
         )
         check_xmrs(x, 'h0', None, None, 1, 1, 0, 3)
@@ -68,7 +65,7 @@ class TestMrs():
             'relations': [], 'constraints': [], 'variables': {}
         }
 
-        x = Mrs(rels=[EP(10, sp('"_rain_v_1_rel"'), 'h1', {'ARG0': 'e2'})])
+        x = Mrs(rels=[EP(10, '"_rain_v_1_rel"', 'h1', {'ARG0': 'e2'})])
         assert x.to_dict() == {
             'relations': [
                 {'label': 'h1', 'predicate': '_rain_v_1',
@@ -80,7 +77,7 @@ class TestMrs():
 
         x = Mrs(
             top='h0',
-            rels=[EP(10, sp('"_rain_v_1_rel"'), 'h1', {'ARG0': 'e2'})],
+            rels=[EP(10, '"_rain_v_1_rel"', 'h1', {'ARG0': 'e2'})],
             hcons=[('h0', 'qeq', 'h1')],
             vars={'e2': {'SF': 'prop', 'TENSE': 'pres'}}
         )
@@ -128,7 +125,7 @@ class TestMrs():
         })
         m2 = Mrs(
             rels=[
-                EP(FIRST_NODEID, sp('"_rain_v_1_rel"'), 'h1', {'ARG0': 'e2'})
+                EP(FIRST_NODEID, '"_rain_v_1_rel"', 'h1', {'ARG0': 'e2'})
             ],
             vars={'e2': {'SF': 'prop', 'TENSE': 'pres'}}
         )

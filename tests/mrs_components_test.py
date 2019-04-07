@@ -3,14 +3,14 @@
 import pytest
 
 from delphin.exceptions import XmrsError
+from delphin import predicate
 from delphin.mrs.components import (
     sort_vid_split, var_sort, var_id, _VarGenerator,
     Lnk, _LnkMixin,
     Link, links, HandleConstraint, hcons,
-    Pred, split_pred_string, is_valid_pred_string, normalize_pred_string,
     Node, ElementaryPredication as EP
 )
-spred = Pred.surface
+
 from delphin.mrs.xmrs import Xmrs
 from delphin.mrs.config import (
     CVARSORT, IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
@@ -23,15 +23,15 @@ from delphin.mrs.config import (
 # just a verb; e.g. "it rains"
 x1 = Xmrs(
     top='h0',
-    eps=[EP(10000, spred('_rain_v_1_rel'), 'h1', {'ARG0': 'e2'})],
+    eps=[EP(10000, '_rain_v_1_rel', 'h1', {'ARG0': 'e2'})],
     hcons=[('h0', 'qeq', 'h1')]
 )
 # modified verb, e.g. "it rains heavily"
 x2 = Xmrs(
     top='h0',
     eps=[
-        EP(10000, spred('_rain_v_1_rel'), 'h1', {'ARG0': 'e2'}),
-        EP(10001, spred('_heavy_a_1_rel'), 'h1',
+        EP(10000, '_rain_v_1_rel', 'h1', {'ARG0': 'e2'}),
+        EP(10001, '_heavy_a_1_rel', 'h1',
            {'ARG0': 'e4', 'ARG1': 'e2'})
     ],
     hcons=[('h0', 'qeq', 'h1')]
@@ -40,10 +40,10 @@ x2 = Xmrs(
 x3 = Xmrs(
     top='h0',
     eps=[
-        EP(10000, spred('_bark_v_1_rel'), 'h1',
+        EP(10000, '_bark_v_1_rel', 'h1',
            {'ARG0': 'e2', 'ARG1': 'x4'}),
-        EP(10001, spred('_dog_n_1_rel'), 'h3', {'ARG0': 'x4'}),
-        EP(10002, spred('the_q_rel'), 'h5',
+        EP(10001, '_dog_n_1_rel', 'h3', {'ARG0': 'x4'}),
+        EP(10002, 'the_q_rel', 'h5',
            {'ARG0': 'x4', 'RSTR': 'h6'})
     ],
     hcons=[('h0', 'qeq', 'h1'), ('h6', 'qeq', 'h3')]
@@ -52,11 +52,11 @@ x3 = Xmrs(
 x4 = Xmrs(
     top='h0',
     eps=[
-        EP(10000, spred('udef_q_rel'), 'h4', {'ARG0': 'x3', 'RSTR': 'h5'}),
-        EP(10001, spred('_rain_v_1_rel'), 'h7', {'ARG0': 'e8'}),
-        EP(10002, spred('nominalizationl_rel'), 'h9',
+        EP(10000, 'udef_q_rel', 'h4', {'ARG0': 'x3', 'RSTR': 'h5'}),
+        EP(10001, '_rain_v_1_rel', 'h7', {'ARG0': 'e8'}),
+        EP(10002, 'nominalizationl_rel', 'h9',
            {'ARG0': 'x3', 'ARG1': 'h7'}),
-        EP(10003, spred('_happen_v_1_rel'), 'h1',
+        EP(10003, '_happen_v_1_rel', 'h1',
            {'ARG0': 'e2', 'ARG1': 'x3'})
     ],
     hcons=[('h0', 'qeq', 'h1'), ('h5', 'qeq', 'h9')]
@@ -65,17 +65,17 @@ x4 = Xmrs(
 x5 = Xmrs(
     top='h0',
     eps=[
-        EP(10000, spred('_the_q_rel'), 'h4',
+        EP(10000, '_the_q_rel', 'h4',
            {'ARG0': 'x3', 'RSTR': 'h5'}),
-        EP(10001, spred('"_dog_n_1_rel"'), 'h7', {'ARG0': 'x3'}),
-        EP(10002, spred('def_explicit_q_rel'), 'h8',
+        EP(10001, '"_dog_n_1_rel"', 'h7', {'ARG0': 'x3'}),
+        EP(10002, 'def_explicit_q_rel', 'h8',
               {'ARG0': 'x9', 'RSTR': 'h10'}),
-        EP(10003, spred('poss_rel'), 'h7',
+        EP(10003, 'poss_rel', 'h7',
               {'ARG0': 'e12', 'ARG1': 'x9', 'ARG2': 'x3'}),
-        EP(10004, spred('"_tail_n_1_rel"'), 'h13', {'ARG0': 'x9'}),
-        EP(10005, spred('"_wag_v_1_rel"'), 'h7',
+        EP(10004, '"_tail_n_1_rel"', 'h13', {'ARG0': 'x9'}),
+        EP(10005, '"_wag_v_1_rel"', 'h7',
               {'ARG0': 'e14', 'ARG1': 'x9'}),
-        EP(10006, spred('"_bark_v_1_rel"'), 'h1',
+        EP(10006, '"_bark_v_1_rel"', 'h1',
               {'ARG0': 'e2', 'ARG1': 'x3'})
     ],
     hcons=[('h0', 'qeq', 'h1'), ('h5', 'qeq', 'h7'),
@@ -85,17 +85,17 @@ x5 = Xmrs(
 x6 = Xmrs(
     top='h0',
     eps=[
-        EP(10000, spred('_the_q_rel'), 'h4',
+        EP(10000, '_the_q_rel', 'h4',
            {'ARG0': 'x3', 'RSTR': 'h5'}),
-        EP(10001, spred('"_big_a_1_rel"'), 'h7',
+        EP(10001, '"_big_a_1_rel"', 'h7',
            {'ARG0': 'e8', 'ARG1': 'x3'}),
-        EP(10002, spred('_and_c_rel'), 'h9',
+        EP(10002, '_and_c_rel', 'h9',
            {'ARG0': 'e10', 'L-INDEX': 'e8', 'R-INDEX': 'e11',
             'L-HNDL': 'h7', 'R-HNDL': 'h12'}),
-        EP(10003, spred('"_scary_a_for_rel"'), 'h12',
+        EP(10003, '"_scary_a_for_rel"', 'h12',
            {'ARG0': 'e11', 'ARG1': 'x3'}),
-        EP(10004, spred('"_dog_n_1_rel"'), 'h9', {'ARG0': 'x3'}),
-        EP(10005, spred('"_bark_v_1_rel"'), 'h1',
+        EP(10004, '"_dog_n_1_rel"', 'h9', {'ARG0': 'x3'}),
+        EP(10005, '"_bark_v_1_rel"', 'h1',
               {'ARG0': 'e2', 'ARG1': 'x3'})
     ],
     hcons=[('h0', 'qeq', 'h1'), ('h5', 'qeq', 'h9')]
@@ -336,249 +336,59 @@ def test_hcons():
                                  ('h5', 'qeq', 'h7')]
 
 
-class TestPred():
-    def testGpred(self):
-        p = Pred.abstract('pron_rel')
-        assert p.type == Pred.ABSTRACT
-        assert p.string == 'pron_rel'
-        assert p.lemma == 'pron'
-        assert p.pos == None
-        assert p.sense == None
-        assert p.short_form() == 'pron'
-        p = Pred.abstract('udef_q_rel')
-        assert p.string == 'udef_q_rel'
-        assert p.lemma == 'udef'
-        assert p.pos == 'q'
-        assert p.sense == None
-        assert p.short_form() == 'udef_q'
-        p = Pred.abstract('udef_q')
-        assert p.string == 'udef_q'
-        assert p.lemma == 'udef'
-        assert p.pos == 'q'
-        assert p.sense == None
-        assert p.short_form() == 'udef_q'
-        p = Pred.abstract('abc_def_ghi_rel')
-        assert p.type == Pred.ABSTRACT
-        assert p.string == 'abc_def_ghi_rel'
-        # pos must be a single character, so we get abc_def, ghi, rel
-        assert p.lemma == 'abc_def'
-        assert p.pos == None
-        assert p.sense == 'ghi'
-        assert p.short_form() == 'abc_def_ghi'
-        repr(p)  # no error
-
-    def testSpred(self):
-        p = spred('_dog_n_rel')
-        assert p.type == Pred.SURFACE
-        assert p.string == '_dog_n_rel'
-        assert p.lemma == 'dog'
-        assert p.pos == 'n'
-        assert p.sense == None
-        assert p.short_form() == '_dog_n'
-        p = spred('_犬_n_rel')
-        assert p.type == Pred.SURFACE
-        assert p.string == '_犬_n_rel'
-        assert p.lemma == '犬'
-        assert p.pos == 'n'
-        assert p.sense == None
-        assert p.short_form() == '_犬_n'
-        p = spred('"_dog_n_1_rel"')
-        assert p.type == Pred.SURFACE
-        assert p.string == '"_dog_n_1_rel"'
-        assert p.lemma == 'dog'
-        assert p.pos == 'n'
-        assert p.sense == '1'
-        assert p.short_form() == '_dog_n_1'
-        p = spred('"_dog_n_1"')
-        assert p.type == Pred.SURFACE
-        assert p.string == '"_dog_n_1"'
-        assert p.lemma == 'dog'
-        assert p.pos == 'n'
-        assert p.sense == '1'
-        assert p.short_form() == '_dog_n_1'
-        # see https://github.com/delph-in/pydelphin/issues/129
-        p = spred('_te_adjunct_rel')
-        assert p.type == Pred.SURFACE
-        assert p.string == '_te_adjunct_rel'
-        assert p.lemma == 'te'
-        assert p.pos == None
-        assert p.sense == 'adjunct'
-        assert p.short_form() == '_te_adjunct'
-        #TODO: the following shouldn't throw warnings.. the code should
-        # be more robust, but there should be some Warning or logging
-        #with pytest.raises(ValueError): spred('_dog_rel')
-        #with pytest.raises(ValueError): spred('_dog_n_1_2_rel')
-        repr(p)  # no error
-
-    def testSurfaceOrAbstractPred(self):
-        p = Pred.surface_or_abstract('_dog_n_rel')
-        assert p.type == Pred.SURFACE
-        p = Pred.surface_or_abstract('pron_rel')
-        assert p.type == Pred.ABSTRACT
-
-    def testRealPred(self):
-        # basic, no sense arg
-        p = Pred.realpred('dog', 'n')
-        assert p.type == Pred.REALPRED
-        assert p.string == '_dog_n_rel'
-        assert p.lemma == 'dog'
-        assert p.pos == 'n'
-        assert p.sense == None
-        assert p.short_form() == '_dog_n'
-        # try with arg names, unicode, and sense
-        p = Pred.realpred(lemma='犬', pos='n', sense='1')
-        assert p.type == Pred.REALPRED
-        assert p.string == '_犬_n_1_rel'
-        assert p.lemma == '犬'
-        assert p.pos == 'n'
-        assert p.sense == '1'
-        assert p.short_form() == '_犬_n_1'
-        # in case sense is int, not str
-        p = Pred.realpred('dog', 'n', 1)
-        assert p.type == Pred.REALPRED
-        assert p.string == '_dog_n_1_rel'
-        assert p.lemma == 'dog'
-        assert p.pos == 'n'
-        assert p.sense == '1'
-        assert p.short_form() == '_dog_n_1'
-        # see https://github.com/delph-in/pydelphin/issues/129
-        p = Pred.realpred('te', None, 'adjunct')
-        assert p.type == Pred.REALPRED
-        assert p.string == '_te_adjunct_rel'
-        assert p.lemma == 'te'
-        assert p.pos == None
-        assert p.sense == 'adjunct'
-        assert p.short_form() == '_te_adjunct'
-
-        with pytest.raises(TypeError): Pred.realpred(lemma='dog')
-        with pytest.raises(TypeError): Pred.realpred(pos='n')
-        repr(p)  # no error
-
-    def testEq(self):
-        assert spred('_dog_n_rel') == Pred.realpred(lemma='dog', pos='n')
-        assert spred('_dog_n_rel') == '_dog_n_rel'
-        assert '_dog_n_rel' == Pred.realpred(lemma='dog', pos='n')
-        assert spred('"_dog_n_rel"') == spred("'_dog_n_rel")
-        assert Pred.abstract('pron_rel') == 'pron_rel'
-        assert Pred.surface_or_abstract('_dog_n_rel') != Pred.surface_or_abstract('dog_n_rel')
-        assert (spred('_dog_n_rel') == None) == False
-        assert spred('_dog_n_1_rel') == spred('_Dog_N_1_rel')
-        assert spred('_dog_n_1_rel') == spred('_dog_n_1')
-
-    def test_hash(self):
-        s = set([spred('"_the_q_rel"')])
-        assert spred('"_the_q_rel"') in s
-        assert spred('_the_q_rel') in s
-        assert spred('_the_q') in s
-        assert spred('_The_q_rel') in s
-        assert spred('the_q_rel') not in s
-        s.add(spred('_the_q_rel'))
-        assert len(s) == 1
-
-
-def test_split_pred_string():
-    sps = split_pred_string
-    # normalized
-    assert sps('dog_n_1') == ('dog', 'n', '1', None)
-    # with rel
-    assert sps('pron_rel') == ('pron', None, None, 'rel')
-    # with pos
-    assert sps('udef_q_rel') == ('udef', 'q', None, 'rel')
-    # with sense (and quotes)
-    assert sps('"_bark_v_1_rel"') == ('bark', 'v', '1', 'rel')
-    # some odd variations (some are not strictly well-formed)
-    assert sps('coord') == ('coord', None, None, None)
-    assert sps('some_relation') == ('some', None, 'relation', None)
-    assert sps('_24/7_a_1_rel') == ('24/7', 'a', '1', 'rel')
-    assert sps('_a+bit_q_rel') == ('a+bit', 'q', None, 'rel')
-    assert sps('_A$_n_1_rel') == ('A$', 'n', '1', 'rel')
-    assert sps('_only_child_n_1_rel') == ('only_child', 'n', '1', 'rel')
-
-
-def test_is_valid_pred_string():
-    ivps = is_valid_pred_string
-    # valid
-    assert ivps('pron_rel')
-    assert ivps('\'pron_rel')  # single open qoute
-    assert ivps('"pron_rel"')  # surrounding double-quotes
-    assert ivps('udef_q_rel')
-    assert ivps('"_dog_n_1_rel"')
-    assert ivps('"_ad+hoc_a_1_rel"')
-    assert ivps('"_look_v_up-at_rel"')
-    assert ivps('_24/7_a_1_rel')
-    assert ivps('_a+bit_q_rel')
-    assert ivps('_A$_n_1_rel')
-    assert ivps('coord')
-    assert ivps('_dog_n_1')
-    assert ivps('_dog_n')
-    # invalid
-    assert not ivps('_dog_rel')
-    assert not ivps('_dog_1_rel')
-    assert not ivps('_only_child_n_1_rel')
-
-
-def test_normalize_pred_string():
-    nps = normalize_pred_string
-    assert nps('pron_rel') == 'pron'
-    assert nps('pron_rel_rel') == 'pron_rel'  # i hope nobody does this
-    assert nps('"udef_q_rel"') == 'udef_q'
-    assert nps('\'udef_q_rel') == 'udef_q'
-    assert nps('_dog_n_1_rel') == '_dog_n_1'
-    assert nps('_DELPH-IN_n_1') == '_delph-in_n_1'
-
 class TestNode():
     def test_construct(self):
         # minimum is a nodeid and a pred
         with pytest.raises(TypeError): Node()
         with pytest.raises(TypeError): Node(10000)
-        n = Node(10000, spred('_dog_n_rel'))
+        n = Node(10000, '_dog_n_rel')
         assert n.nodeid == 10000
         assert n.pred == '_dog_n_rel'
 
     def test_sortinfo(self):
-        n = Node(10000, spred('_dog_n_rel'))
+        n = Node(10000, '_dog_n_rel')
         assert len(n.sortinfo) == 0
-        n = Node(10000, spred('_dog_n_rel'),
+        n = Node(10000, '_dog_n_rel',
                  sortinfo=[(CVARSORT, 'x')])
         assert len(n.sortinfo) == 1
-        n = Node(10000, spred('_dog_n_rel'),
+        n = Node(10000, '_dog_n_rel',
                  sortinfo=[(CVARSORT, 'x'), ('PER', '3')])
         assert len(n.sortinfo) == 2
-        n2 = Node(10001, spred('_cat_n_rel'),
+        n2 = Node(10001, '_cat_n_rel',
                   sortinfo=dict([(CVARSORT,'x'), ('PER','3')]))
         assert n.sortinfo == n2.sortinfo
 
     def test_properties(self):
-        n = Node(10000, spred('_dog_n_rel'))
+        n = Node(10000, '_dog_n_rel')
         assert len(n.properties) == 0
-        n = Node(10000, spred('_dog_n_rel'),
+        n = Node(10000, '_dog_n_rel',
                  sortinfo=[(CVARSORT, 'x')])
         assert len(n.properties) == 0
-        n = Node(10000, spred('_dog_n_rel'),
+        n = Node(10000, '_dog_n_rel',
                  sortinfo=[(CVARSORT, 'x'), ('PER', '3')])
         assert len(n.properties) == 1
-        n2 = Node(10001, spred('_cat_n_rel'),
+        n2 = Node(10001, '_cat_n_rel',
                   sortinfo=dict([(CVARSORT,'x'), ('PER','3')]))
         assert n.properties == n2.properties
 
     def test_lnk(self):
-        n = Node(10000, spred('_dog_n_rel'))
+        n = Node(10000, '_dog_n_rel')
         assert n.lnk == None
         assert n.cfrom == -1
         assert n.cto == -1
-        n = Node(10000, spred('_dog_n_rel'),
+        n = Node(10000, '_dog_n_rel',
                  lnk=Lnk.charspan(0,1))
         assert n.lnk == Lnk.charspan(0,1)
         assert n.cfrom == 0
         assert n.cto == 1
 
     def test_cvarsort(self):
-        n = Node(10000, spred('_dog_n_rel'))
+        n = Node(10000, '_dog_n_rel')
         assert n.cvarsort == None
         n.cvarsort = 'x'
         assert n.cvarsort == 'x'
         assert n.sortinfo == dict([(CVARSORT, 'x')])
-        n = Node(10000, spred('_run_v_rel'),
+        n = Node(10000, '_run_v_rel',
                  sortinfo=dict([(CVARSORT, 'e')]))
         assert n.cvarsort == 'e'
 
@@ -587,14 +397,14 @@ class TestElementaryPredication():
     def test_construct(self):
         with pytest.raises(TypeError): EP()
         with pytest.raises(TypeError): EP(10)
-        with pytest.raises(TypeError): EP(10, spred('_dog_n_rel'))
-        e = EP(10, spred('_dog_n_rel'), 'h1')
+        with pytest.raises(TypeError): EP(10, '_dog_n_rel')
+        e = EP(10, '_dog_n_rel', 'h1')
         assert e.nodeid == 10
         assert e.pred == '_dog_n_rel'
         assert e.label == 'h1'
 
     def test_args(self):
-        p = spred('_chase_v_rel')
+        p = '_chase_v_rel'
         lbl = 'h1'
         e = EP(11, p, lbl)
         assert len(e.args) == 0
@@ -609,11 +419,11 @@ class TestElementaryPredication():
         assert e.args['ARG1'] == v2
 
     def test_is_quantifier(self):
-        e = EP(10, spred('_the_q_rel'), 'h1', args={RSTR_ROLE: 'h2'})
+        e = EP(10, '_the_q_rel', 'h1', args={RSTR_ROLE: 'h2'})
         assert e.is_quantifier() == True
         # not a q pred, but has RSTR
-        e = EP(10, spred('_dog_n_rel'), 'h1', args={RSTR_ROLE: 'h2'})
+        e = EP(10, '_dog_n_rel', 'h1', args={RSTR_ROLE: 'h2'})
         assert e.is_quantifier() == True
         # a q pred, but no RSTR
-        e = EP(10, spred('_the_q_rel'), 'h1', args={})
+        e = EP(10, '_the_q_rel', 'h1', args={})
         assert e.is_quantifier() == False

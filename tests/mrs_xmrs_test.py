@@ -1,8 +1,8 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import pytest
 
-from delphin.mrs.components import Pred, Node, Link
+from delphin.mrs.components import Node, Link
 from delphin.mrs.xmrs import Xmrs, Dmrs
 from delphin.mrs import simplemrs  # for convenience in later tests
 from delphin.exceptions import XmrsError
@@ -33,31 +33,31 @@ class TestXmrs():
         assert len(x.eps()) == 0
         # nodeid and pred
         with pytest.raises(XmrsError):
-            x.add_eps([(10000, Pred.surface('_v_v_rel'))])
+            x.add_eps([(10000, '_v_v_rel')])
         assert len(x.eps()) == 0
         # nodeid, pred, and label (the minimum)
-        x.add_eps([(10000, Pred.surface('_v_v_rel'), 'h1')])
+        x.add_eps([(10000, '_v_v_rel', 'h1')])
         # make sure it was entered correctly and is unchanged
         assert len(x.eps()) == 1
         assert x.eps()[0][0] == 10000
         ep = x.ep(10000)
-        assert isinstance(ep[1], Pred) and ep[1].string == '_v_v_rel'
+        assert ep[1] == '_v_v_rel'
         assert ep[2] == 'h1'
 
         # nodeid, pred, label, and argdict
         x = Xmrs()
-        x.add_eps([(10000, Pred.surface('_v_v_rel'), 'h1', {})])
+        x.add_eps([(10000, '_v_v_rel', 'h1', {})])
         assert len(x.eps()) == 1
         assert x.eps()[0][0] == 10000
         ep = x.ep(10000)
         assert ep[0] == 10000
-        assert isinstance(ep[1], Pred) and ep[1].string == '_v_v_rel'
+        assert ep[1] == '_v_v_rel'
         assert ep[2] == 'h1'
         assert ep[3] == {}
 
         # cannot have more than one ep with the same nodeid
         with pytest.raises(XmrsError):
-            x.add_eps([(10000, Pred.surface('_n_n_rel'), 'h3', {})])
+            x.add_eps([(10000, '_n_n_rel', 'h3', {})])
         assert len(x.eps()) == 1
 
     def test_add_hcons(self):
@@ -112,30 +112,28 @@ class TestXmrs():
         assert x.xarg == 'e0'
 
     def test_nodeid(self):
-        sp = Pred.surface
         x = Xmrs()
         with pytest.raises(KeyError):
             x.nodeid('e2')
-        x.add_eps([(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
+        x.add_eps([(10, '_n_n_rel', 'h3', {'ARG0': 'x4'})])
         assert x.nodeid('x4') == 10
         assert x.nodeid('x4', quantifier=False) == 10
         assert x.nodeid('x4', quantifier=None) == 10
         assert x.nodeid('x4', quantifier=True) == None
-        x.add_eps([(11, sp('_the_q_rel'), 'h5', {'ARG0': 'x4', 'RSTR': 'h6'})])
+        x.add_eps([(11, '_the_q_rel', 'h5', {'ARG0': 'x4', 'RSTR': 'h6'})])
         x.add_hcons([('h6', 'qeq', 'h3')])
         assert x.nodeid('x4') == 10
         assert x.nodeid('x4', quantifier=False) == 10
         assert x.nodeid('x4', quantifier=True) == 11
 
     def test_nodeids(self):
-        sp = Pred.surface
-        x = Xmrs(eps=[(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
+        x = Xmrs(eps=[(10, '_n_n_rel', 'h3', {'ARG0': 'x4'})])
         assert x.nodeids() == [10]
         assert x.nodeids(ivs=['x4']) == [10]
         assert x.nodeids(quantifier=False) == [10]
         assert x.nodeids(quantifier=None) == [10]
         assert x.nodeids(quantifier=True) == []
-        x.add_eps([(11, sp('_the_q_rel'), 'h5', {'ARG0': 'x4', 'RSTR': 'h6'})])
+        x.add_eps([(11, '_the_q_rel', 'h5', {'ARG0': 'x4', 'RSTR': 'h6'})])
         x.add_hcons([('h6', 'qeq', 'h3')])
         assert sorted(x.nodeids()) == [10, 11]
         assert sorted(x.nodeids(ivs=['x4'])) == [10, 11]
@@ -143,50 +141,48 @@ class TestXmrs():
         assert sorted(x.nodeids(ivs=['x4'], quantifier=False)) == [10]
 
     def test_ep(self):
-        sp = Pred.surface
         x = Xmrs()
         with pytest.raises(TypeError):
             x.ep()
         with pytest.raises(KeyError):
             x.ep(10)
-        x.add_eps([(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
-        assert x.ep(10)[1] == sp('_n_n_rel')
+        x.add_eps([(10, '_n_n_rel', 'h3', {'ARG0': 'x4'})])
+        assert x.ep(10)[1] == '_n_n_rel'
 
     def test_eps(self):
-        sp = Pred.surface
         x = Xmrs()
         assert len(x.eps()) == 0
-        x.add_eps([(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
+        x.add_eps([(10, '_n_n_rel', 'h3', {'ARG0': 'x4'})])
         eps = x.eps()
         assert len(eps) == 1
         assert eps[0][0] == 10
-        assert eps[0][1] == sp('_n_n_rel')
+        assert eps[0][1] == '_n_n_rel'
         assert eps[0][2] == 'h3'
         assert eps[0][3] == {'ARG0': 'x4'}
         x.add_eps([
-            (11, sp('_q_q_rel'), 'h5', {'ARG0': 'x4', 'RSTR': 'h6'}),
-            (12, sp('_v_v_rel'), 'h7', {'ARG0': 'e2', 'ARG1': 'x4'})
+            (11, '_q_q_rel', 'h5', {'ARG0': 'x4', 'RSTR': 'h6'}),
+            (12, '_v_v_rel', 'h7', {'ARG0': 'e2', 'ARG1': 'x4'})
         ])
         eps = x.eps()
         assert len(eps) == 3
-        assert eps[0][1] == sp('_n_n_rel')
-        assert eps[1][1] == sp('_q_q_rel')
-        assert eps[2][1] == sp('_v_v_rel')
+        assert eps[0][1] == '_n_n_rel'
+        assert eps[1][1] == '_q_q_rel'
+        assert eps[2][1] == '_v_v_rel'
         # make sure order is preserved
         x = Xmrs()
         x.add_eps([
-            (12, sp('_v_v_rel'), 'h7', {'ARG0':'e2', 'ARG1': 'x4'}),
-            (11, sp('_q_q_rel'), 'h5', {'ARG0':'x4', 'RSTR': 'h6'}),
-            (10, sp('_n_n_rel'), 'h3', {'ARG0':'x4'})
+            (12, '_v_v_rel', 'h7', {'ARG0':'e2', 'ARG1': 'x4'}),
+            (11, '_q_q_rel', 'h5', {'ARG0':'x4', 'RSTR': 'h6'}),
+            (10, '_n_n_rel', 'h3', {'ARG0':'x4'})
         ])
         eps = x.eps()
-        assert eps[0][1] == sp('_v_v_rel')
-        assert eps[1][1] == sp('_q_q_rel')
-        assert eps[2][1] == sp('_n_n_rel')
+        assert eps[0][1] == '_v_v_rel'
+        assert eps[1][1] == '_q_q_rel'
+        assert eps[2][1] == '_n_n_rel'
         # only get with given nodeids and in that order
         eps = x.eps(nodeids=[10, 11])
-        assert eps[0][1] == sp('_n_n_rel')
-        assert eps[1][1] == sp('_q_q_rel')
+        assert eps[0][1] == '_n_n_rel'
+        assert eps[1][1] == '_q_q_rel'
         # but asking for a non-existing one raises a KeyError
         with pytest.raises(KeyError):
             x.eps(nodeids=[10, 13])
@@ -236,7 +232,6 @@ class TestXmrs():
         assert len(x.icons(left='x7')) == 1
 
     def test_variables_and_properties(self):
-        sp = Pred.surface
         # variables can be passed in with properties
         x = Xmrs(vars={'x1':{'PERS':'3','NUM':'sg'}, 'e2':{'SF':'prop'}})
         assert len(x.variables()) == 2
@@ -245,12 +240,12 @@ class TestXmrs():
         # when there's no EP, you cannot retrieve properties via a nodeid
         with pytest.raises(KeyError): x.properties(10)
         # but when an EP with an ARG0 exists, you can
-        x.add_eps([(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x1'})])
+        x.add_eps([(10, '_n_n_rel', 'h3', {'ARG0': 'x1'})])
         assert x.properties(10) == {'PERS': '3', 'NUM': 'sg'}
         # variables can also be inferred from structural things
         x = Xmrs(top='h0', index='e2', xarg='e5')
         assert set(x.variables()) == {'h0', 'e2', 'e5'}
-        x = Xmrs(eps=[(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
+        x = Xmrs(eps=[(10, '_n_n_rel', 'h3', {'ARG0': 'x4'})])
         assert set(x.variables()) == {'x4', 'h3'}
         x = Xmrs(hcons=[('h0', 'qeq', 'h1')])
         assert set(x.variables()) == {'h0', 'h1'}
@@ -263,7 +258,7 @@ class TestXmrs():
         assert x.properties('x6') == {}
         # adding things later doesn't reset properties
         x = Xmrs(vars={'x4': {'PERS': '3'}})
-        x.add_eps([(10, sp('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
+        x.add_eps([(10, '_n_n_rel', 'h3', {'ARG0': 'x4'})])
         assert set(x.variables()) == {'x4', 'h3'}
         assert x.properties('x4') == {'PERS': '3'}
         # and properties can't be added via properties()
@@ -271,14 +266,14 @@ class TestXmrs():
         assert x.properties('x4') == {'PERS': '3'}
         # TODO: how do we add properties?
         # constants are not variables
-        x = Xmrs(eps=[(10, sp('_v_v_rel'), 'h3',
+        x = Xmrs(eps=[(10, '_v_v_rel', 'h3',
                        {'ARG0': 'e2', 'CARG': '"dog"'})])
         assert set(x.variables()) == {'e2', 'h3'}
         # Constants don't need to be the CARG role, and don't need
         # quotes (but if there are quotes, even var-looking things are
         # constants). pyDelphin differs from the LKB in the first
         # respect, but also maybe in the second.
-        x = Xmrs(eps=[(10, sp('_v_v_rel'), 'h3',
+        x = Xmrs(eps=[(10, '_v_v_rel', 'h3',
                        {'ARG0': 'e2', 'ARG1': '1', 'ARG2': '"x5"'})])
         assert set(x.variables()) == {'h3', 'e2'}
 
@@ -287,55 +282,49 @@ class TestXmrs():
         # KeyError on bad nodeid
         with pytest.raises(KeyError): x.pred(10)
         # but otherwise preds can be retrieved by nodeid
-        x.add_eps([(10, Pred.surface('_n_n_rel'), 'h3', {'ARG0': 'x4'})])
-        assert x.pred(10).string == '_n_n_rel'
+        x.add_eps([(10, '_n_n_rel', 'h3', {'ARG0': 'x4'})])
+        assert x.pred(10) == '_n_n_rel'
 
     def test_preds(self):
-        sp = Pred.surface
         x = Xmrs(
             eps=[
-                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2', 'ARG1': 'x4'}),
-                (11, sp('_n_n_rel'), 'h5', {'ARG0': 'x4'}),
-                (12, sp('q_q_rel'), 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
+                (10, '_v_v_rel', 'h3', {'ARG0': 'e2', 'ARG1': 'x4'}),
+                (11, '_n_n_rel', 'h5', {'ARG0': 'x4'}),
+                (12, 'q_q_rel', 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
             ],
             hcons=[('h6', 'qeq', 'h5')]
         )
         # works like xmrs.pred(), but with a list of nodeids
-        ps = x.preds([10, 11])
-        assert [p.string for p in ps] == ['_v_v_rel', '_n_n_rel']
+        assert x.preds([10, 11]) == ['_v_v_rel', '_n_n_rel']
         # order should be preserved
-        ps = x.preds([12, 11])
-        assert [p.string for p in ps] == ['q_q_rel', '_n_n_rel']
+        assert x.preds([12, 11]) == ['q_q_rel', '_n_n_rel']
         # KeyError on bad nodeid
         with pytest.raises(KeyError): x.preds([10, 11, 13])
         # with no arguments, all preds are returned in original order
-        ps = x.preds()
-        assert [p.string for p in ps] == ['_v_v_rel', '_n_n_rel', 'q_q_rel']
+        assert x.preds() == ['_v_v_rel', '_n_n_rel', 'q_q_rel']
         x = Xmrs(
             eps=[
-                (12, sp('q_q_rel'), 'h7', {'ARG0': 'x4', 'RSTR': 'h6'}),
-                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2', 'ARG1': 'x4'}),
-                (11, sp('_n_n_rel'), 'h5', {'ARG0': 'x4'})
+                (12, 'q_q_rel', 'h7', {'ARG0': 'x4', 'RSTR': 'h6'}),
+                (10, '_v_v_rel', 'h3', {'ARG0': 'e2', 'ARG1': 'x4'}),
+                (11, '_n_n_rel', 'h5', {'ARG0': 'x4'})
             ],
             hcons=[('h6', 'qeq', 'h5')]
         )
-        ps = x.preds()
-        assert [p.string for p in ps] == ['q_q_rel', '_v_v_rel', '_n_n_rel']
+        assert x.preds() == ['q_q_rel', '_v_v_rel', '_n_n_rel']
 
     def test_label(self):
         # retrieve the label for a single ep, or KeyError if no such nodeid
-        x = Xmrs(eps=[(10, Pred.surface('_v_v_rel'), 'h3', {'ARG0': 'e2'})])
+        x = Xmrs(eps=[(10, '_v_v_rel', 'h3', {'ARG0': 'e2'})])
         assert x.label(10) == 'h3'
         with pytest.raises(KeyError): x.label(11)
 
     def test_labels(self):
-        sp = Pred.surface
         # same as Xmrs.labels() but with a list of nodeids
         x = Xmrs(
             eps=[
-                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2', 'ARG1': 'x4'}),
-                (11, sp('_n_n_rel'), 'h5', {'ARG0': 'x4'}),
-                (12, sp('q_q_rel'), 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
+                (10, '_v_v_rel', 'h3', {'ARG0': 'e2', 'ARG1': 'x4'}),
+                (11, '_n_n_rel', 'h5', {'ARG0': 'x4'}),
+                (12, 'q_q_rel', 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
             ],
             hcons=[('h6', 'qeq', 'h5')]
         )
@@ -347,7 +336,7 @@ class TestXmrs():
     def test_args(self):
         # return the argument dict of a nodeid, or KeyError for missing nodeid
         x = Xmrs(
-            eps=[(10, Pred.surface('_v_v_rel'), 'h3',
+            eps=[(10, '_v_v_rel', 'h3',
                   {'ARG0': 'e2', 'ARG1': 'x4'})]
         )
         assert x.args(10) == {'ARG0': 'e2', 'ARG1': 'x4'}
@@ -356,18 +345,17 @@ class TestXmrs():
         x.args(10)['ARG1'] = 'x6'
         assert x.args(10)['ARG1'] == 'x4'
         # return empty arg dict for EP without specified args:
-        x = Xmrs(eps=[(10, Pred.surface('_v_v_rel'), 'h3')])
+        x = Xmrs(eps=[(10, '_v_v_rel', 'h3')])
         assert x.args(10) == {}
 
     def test_outgoing_args(self):
-        sp = Pred.surface
         # Outgoing args are those that, from some start node, go to
         # another in some way. These ways include:
         # regular variable args
         x = Xmrs(
             eps=[
-                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2'}),
-                (11, sp('_a_a_rel'), 'h5', {'ARG0': 'e4', 'ARG1': 'e2'})
+                (10, '_v_v_rel', 'h3', {'ARG0': 'e2'}),
+                (11, '_a_a_rel', 'h5', {'ARG0': 'e4', 'ARG1': 'e2'})
             ]
         )
         assert x.outgoing_args(10) == {}  # no outgoing args
@@ -375,8 +363,8 @@ class TestXmrs():
         # label equality args
         x = Xmrs(
             eps=[
-                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2', 'ARG1': 'h5'}),
-                (11, sp('_v_v_rel'), 'h5', {'ARG0': 'e4'})
+                (10, '_v_v_rel', 'h3', {'ARG0': 'e2', 'ARG1': 'h5'}),
+                (11, '_v_v_rel', 'h5', {'ARG0': 'e4'})
             ],
         )
         assert x.outgoing_args(10) == {'ARG1': 'h5'}
@@ -384,8 +372,8 @@ class TestXmrs():
         # handle constraints
         x = Xmrs(
             eps=[
-                (11, sp('_n_n_rel'), 'h5', {'ARG0': 'x4'}),
-                (12, sp('q_q_rel'), 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
+                (11, '_n_n_rel', 'h5', {'ARG0': 'x4'}),
+                (12, 'q_q_rel', 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
             ],
             hcons=[('h6', 'qeq', 'h5')]
         )
@@ -394,8 +382,8 @@ class TestXmrs():
         # basic label equality is not "outgoing"
         x = Xmrs(
             eps=[
-                (11, sp('_nearly_x_deg_rel'), 'h5', {'ARG0': 'e4'}),
-                (12, sp('q_q_rel'), 'h5', {'ARG0': 'x6', 'RSTR': 'h7'})
+                (11, '_nearly_x_deg_rel', 'h5', {'ARG0': 'e4'}),
+                (12, 'q_q_rel', 'h5', {'ARG0': 'x6', 'RSTR': 'h7'})
             ],
         )
         assert x.outgoing_args(11) == {}
@@ -404,11 +392,10 @@ class TestXmrs():
     def test_incoming_args(self):
         # incoming_args() is like the reverse of outgoing_args(), but
         # now it's many-to-one instead of one-to-many
-        sp = Pred.surface
         x = Xmrs(
             eps=[
-                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2'}),
-                (11, sp('_a_a_rel'), 'h5', {'ARG0': 'e4', 'ARG1': 'e2'})
+                (10, '_v_v_rel', 'h3', {'ARG0': 'e2'}),
+                (11, '_a_a_rel', 'h5', {'ARG0': 'e4', 'ARG1': 'e2'})
             ]
         )
         assert x.incoming_args(10) == {11: {'ARG1': 'e2'}}
@@ -416,8 +403,8 @@ class TestXmrs():
         # label equality args
         x = Xmrs(
             eps=[
-                (10, sp('_v_v_rel'), 'h3', {'ARG0': 'e2', 'ARG1': 'h5'}),
-                (11, sp('_v_v_rel'), 'h5', {'ARG0': 'e4'})
+                (10, '_v_v_rel', 'h3', {'ARG0': 'e2', 'ARG1': 'h5'}),
+                (11, '_v_v_rel', 'h5', {'ARG0': 'e4'})
             ],
         )
         assert x.incoming_args(10) == {}  # no incoming args
@@ -425,8 +412,8 @@ class TestXmrs():
         # handle constraints
         x = Xmrs(
             eps=[
-                (11, sp('_n_n_rel'), 'h5', {'ARG0': 'x4'}),
-                (12, sp('q_q_rel'), 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
+                (11, '_n_n_rel', 'h5', {'ARG0': 'x4'}),
+                (12, 'q_q_rel', 'h7', {'ARG0': 'x4', 'RSTR': 'h6'})
             ],
             hcons=[('h6', 'qeq', 'h5')]
         )
@@ -435,8 +422,8 @@ class TestXmrs():
         # basic label equality is not "incoming"
         x = Xmrs(
             eps=[
-                (11, sp('_nearly_x_deg_rel'), 'h5', {'ARG0': 'e4'}),
-                (12, sp('q_q_rel'), 'h5', {'ARG0': 'x6', 'RSTR': 'h7'})
+                (11, '_nearly_x_deg_rel', 'h5', {'ARG0': 'e4'}),
+                (12, 'q_q_rel', 'h5', {'ARG0': 'x6', 'RSTR': 'h7'})
             ],
         )
         assert x.incoming_args(11) == {}
@@ -479,7 +466,6 @@ class TestXmrs():
         assert 10001 not in x
         assert '10000' not in x
         assert '_v_v_rel' not in x
-        assert Pred.surface('_v_v_rel') not in x
 
     def test_labelset(self): pass
     def test_labelset_heads(self): pass
@@ -493,9 +479,9 @@ class TestXmrs():
         with pytest.raises(XmrsError):
             Xmrs(hcons=[('h0', 'qeq', 'h1')]).is_connected()
         # just a pred is fine (even without ARG0)
-        x = Xmrs(eps=[(10, Pred.surface('_v_v_rel'), 'h1', {})])
+        x = Xmrs(eps=[(10, '_v_v_rel', 'h1', {})])
         assert x.is_connected() == True
-        x = Xmrs(eps=[(10, Pred.surface('_v_v_rel'), 'h1',
+        x = Xmrs(eps=[(10, '_v_v_rel', 'h1',
                        {'ARG0':'e2'})])
         assert x.is_connected() == True
         # disconnected top is fine
@@ -553,7 +539,7 @@ class TestXmrs():
         pass
 
     def test_subgraph(self):
-        nodes = [Node(1,Pred.surface('verb'))]
+        nodes = [Node(1,'verb')]
         links = [Link(0,1,'','H')]
         graph = Dmrs(nodes,links)
         new_graph = graph.subgraph([1])

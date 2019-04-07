@@ -7,8 +7,18 @@ these changes are prefixed with "**BREAKING**"
 
 ### Added
 
+* `delphin.predicate`
 * `delphin.sembase`
-* `delphin.sembase.role_priority`
+
+
+### Moved or Renamed
+
+* `delphin.mrs.util.rargname_sortkey()` to `delphin.sembase.role_priority()`
+* `delphin.mrs.components.split_pred_string()` to `delphin.predicate.split()`
+* `delphin.mrs.components.normalize_pred_string()` to
+  `delphin.predicate.normalize()`
+* `delphin.mrs.components.is_valid_pred_string()` to
+  `delphin.predicate.is_valid()`
 
 ### Removed
 
@@ -24,10 +34,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.components.ElementaryPredication.__lt__()`
 * `delphin.mrs.components.Node.is_quantifier()`
 * `delphin.mrs.components.Node.__lt__()`
-* `delphin.mrs.components.Pred.grammarpred()`
-* `delphin.mrs.components.Pred.is_quantifier()`
-* `delphin.mrs.components.Pred.stringpred()`
-* `delphin.mrs.components.Pred.string_or_grammar_pred()`
+* `delphin.mrs.components.Pred`
 * `delphin.mrs.convert()`
 * `delphin.mrs.path`
 * `delphin.mrs.query.find_quantifier()`

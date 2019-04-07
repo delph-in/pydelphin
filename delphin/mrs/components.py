@@ -10,6 +10,7 @@ from collections import namedtuple, MutableMapping
 from itertools import starmap
 
 from delphin.exceptions import (XmrsError)
+from delphin import predicate
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
     UNKNOWNSORT, HANDLESORT, CVARSORT, QUANTIFIER_POS,
@@ -434,201 +435,6 @@ def icons(xmrs):
 
 # PREDICATES AND PREDICATIONS
 
-
-class Pred(namedtuple('Pred', ('type', 'lemma', 'pos', 'sense', 'string'))):
-    """
-    A semantic predicate.
-
-    **Abstract** predicates don't begin with an underscore, and they
-    generally are defined as types in a grammar. **Surface** predicates
-    always begin with an underscore (ignoring possible quotes), and are
-    often defined as strings in a lexicon.
-
-    In PyDelphin, Preds are equivalent if they have the same lemma,
-    pos, and sense, and are both abstract or both surface preds. Other
-    factors are ignored for comparison, such as their being surface-,
-    abstract-, or real-preds, whether they are quoted or not, whether
-    they end with `_rel` or not, or differences in capitalization.
-    Hashed Pred objects (e.g., in a dict or set) also use the
-    normalized form. However, unlike with equality comparisons,
-    Pred-formatted strings are not treated as equivalent in a hash.
-
-    Args:
-        type: the type of predicate; valid values are
-            Pred.ABSTRACT, Pred.REALPRED, and Pred.SURFACE,
-            although in practice Preds are instantiated via
-            classmethods that select the type
-        lemma: the lemma of the predicate
-        pos: the part-of-speech; a single, lowercase character
-        sense: the (often omitted) sense of the predicate
-    Returns:
-        a Pred object
-    Attributes:
-        type: predicate type (Pred.ABSTRACT, Pred.REALPRED, 
-            and Pred.SURFACE)
-        lemma: lemma component of the predicate
-        pos: part-of-speech component of the predicate
-        sense: sense component of the predicate
-    Example:
-        Preds are compared using their string representations.
-        Surrounding quotes (double or single) are ignored, and
-        capitalization doesn't matter. In addition, preds may be
-        compared directly to their string representations:
-
-        >>> p1 = Pred.surface('_dog_n_1_rel')
-        >>> p2 = Pred.realpred(lemma='dog', pos='n', sense='1')
-        >>> p3 = Pred.abstract('dog_n_1_rel')
-        >>> p1 == p2
-        True
-        >>> p1 == '_dog_n_1_rel'
-        True
-        >>> p1 == p3
-        False
-    """
-    pred_re = re.compile(
-        r'_?(?P<lemma>.*?)_'  # match until last 1 or 2 parts
-        r'((?P<pos>[a-z])_)?'  # pos is always only 1 char
-        r'((?P<sense>([^_\\]|(?:\\.))+)_)?'  # no unescaped _s
-        r'(?P<end>rel)$',
-        re.IGNORECASE
-    )
-    # Pred types (used mainly in input/output, not internally in pyDelphin)
-    ABSTRACT = GRAMMARPRED = 0  # only a string allowed (quoted or not)
-    REALPRED = 1  # may explicitly define lemma, pos, sense
-    SURFACE = STRINGPRED = 2  # quoted string form of realpred
-
-    def __eq__(self, other):
-        if other is None:
-            return False
-        if not isinstance(other, Pred):
-            other = Pred.surface(other)
-        return self.short_form().lower() == other.short_form().lower()
-
-    def __str__ (self):
-        return self.string
-
-    def __repr__(self):
-        return '<Pred object {} at {}>'.format(self.string, id(self))
-
-    def __hash__(self):
-        return hash(self.short_form())
-
-    @classmethod
-    def surface(cls, predstr):
-        """Instantiate a Pred from its quoted string representation."""
-        lemma, pos, sense, _ = split_pred_string(predstr)
-        return cls(Pred.SURFACE, lemma, pos, sense, predstr)
-
-    @classmethod
-    def abstract(cls, predstr):
-        """Instantiate a Pred from its symbol string."""
-        lemma, pos, sense, _ = split_pred_string(predstr)
-        return cls(Pred.ABSTRACT, lemma, pos, sense, predstr)
-
-    @classmethod
-    def surface_or_abstract(cls, predstr):
-        """Instantiate a Pred from either its surface or abstract symbol."""
-        if predstr.strip('"').lstrip("'").startswith('_'):
-            return cls.surface(predstr)
-        else:
-            return cls.abstract(predstr)
-
-    @classmethod
-    def realpred(cls, lemma, pos, sense=None):
-        """Instantiate a Pred from its components."""
-        string_tokens = [lemma]
-        if pos is not None:
-            string_tokens.append(pos)
-        if sense is not None:
-            sense = str(sense)
-            string_tokens.append(sense)
-        predstr = '_'.join([''] + string_tokens + ['rel'])
-        return cls(Pred.REALPRED, lemma, pos, sense, predstr)
-
-    def short_form(self):
-        """
-        Return the pred string without quotes or a `_rel` suffix.
-
-        The short form is the same as the normalized form from
-        :func:`normalize_pred_string`.
-
-        Example:
-
-            >>> p = Pred.surface('"_cat_n_1_rel"')
-            >>> p.short_form()
-            '_cat_n_1'
-        """
-        return normalize_pred_string(self.string)
-
-
-def split_pred_string(predstr):
-    """
-    Split *predstr* and return the (lemma, pos, sense, suffix) components.
-
-    Examples:
-        >>> Pred.split_pred_string('_dog_n_1_rel')
-        ('dog', 'n', '1', 'rel')
-        >>> Pred.split_pred_string('quant_rel')
-        ('quant', None, None, 'rel')
-    """
-    predstr = predstr.strip('"\'')  # surrounding quotes don't matter
-    rel_added = False
-    if not predstr.lower().endswith('_rel'):
-        logging.debug('Predicate does not end in "_rel": {}'
-                      .format(predstr))
-        rel_added = True
-        predstr += '_rel'
-    match = Pred.pred_re.search(predstr)
-    if match is None:
-        logging.debug('Unexpected predicate string: {}'.format(predstr))
-        return (predstr, None, None, None)
-    # _lemma_pos(_sense)?_end
-    return (match.group('lemma'), match.group('pos'),
-            match.group('sense'), None if rel_added else match.group('end'))
-
-
-def is_valid_pred_string(predstr):
-    """
-    Return `True` if *predstr* is a valid predicate string.
-
-    Examples:
-        >>> is_valid_pred_string('"_dog_n_1_rel"')
-        True
-        >>> is_valid_pred_string('_dog_n_1')
-        True
-        >>> is_valid_pred_string('_dog_noun_1')
-        False
-        >>> is_valid_pred_string('dog_noun_1')
-        True
-    """
-    predstr = predstr.strip('"').lstrip("'")
-    # this is a stricter regex than in Pred, but doesn't check POS
-    return re.match(
-        r'_([^ _\\]|\\.)+_[a-z](_([^ _\\]|\\.)+)?(_rel)?$'
-        r'|[^_]([^ \\]|\\.)+(_rel)?$',
-        predstr
-    ) is not None
-
-
-def normalize_pred_string(predstr):
-    """
-    Normalize the predicate string *predstr* to a conventional form.
-
-    This makes predicate strings more consistent by removing quotes and
-    the `_rel` suffix, and by lowercasing them.
-
-    Examples:
-        >>> normalize_pred_string('"_dog_n_1_rel"')
-        '_dog_n_1'
-        >>> normalize_pred_string('_dog_n_1')
-        '_dog_n_1'
-    """
-    tokens = [t for t in split_pred_string(predstr)[:3] if t is not None]
-    if predstr.lstrip('\'"')[:1] == '_':
-        tokens = [''] + tokens
-    return '_'.join(tokens).lower()
-
-
 class Node(
     namedtuple('Node', ('nodeid', 'pred', 'sortinfo',
                         'lnk', 'surface', 'base', 'carg')),
@@ -643,7 +449,7 @@ class Node(
 
     Args:
         nodeid: node identifier
-        pred (:class:`Pred`): semantic predicate
+        pred (str): semantic predicate
         sortinfo (dict, optional): mapping of morphosyntactic
             properties and values; the `cvarsort` property is
             specified in this mapping
@@ -653,7 +459,7 @@ class Node(
         carg (str, optional): constant argument string
     Attributes:
         Attributes:
-        pred (:class:`Pred`): semantic predicate
+        pred (str): semantic predicate
         sortinfo (dict): mapping of morphosyntactic
             properties and values; the `cvarsort` property is
             specified in this mapping
@@ -683,22 +489,19 @@ class Node(
             self.nodeid, self.pred.string, lnk, id(self)
         )
 
-    # note: without overriding __eq__, comparisons of sortinfo will be
-    #       be different if they are OrderedDicts and not in the same
-    #       order. Maybe this isn't a big deal?
-    # def __eq__(self, other):
-    #     # not doing self.__dict__ == other.__dict__ right now, because
-    #     # functions like self.get_property show up there
-    #     snid = self.nodeid
-    #     onid = other.nodeid
-    #     return ((None in (snid, onid) or snid == onid) and
-    #             self.pred == other.pred and
-    #             # make one side a regular dict for unordered comparison
-    #             dict(self.sortinfo.items()) == other.sortinfo and
-    #             self.lnk == other.lnk and
-    #             self.surface == other.surface and
-    #             self.base == other.base and
-    #             self.carg == other.carg)
+    def __eq__(self, other):
+        if not isinstance(other, Node):
+            return NotImplemented
+        return (
+            predicate.normalize(self.pred) == predicate.normalize(other.pred)
+            and dict(self.sortinfo.items()) == other.sortinfo
+            and self.carg == other.carg
+        )
+
+    def __ne__(self, other):
+        if not isinstance(other, Node):
+            return NotImplemented
+        return not (self == other)
 
     @property
     def cvarsort(self):
@@ -765,7 +568,7 @@ class ElementaryPredication(
 
     Args:
         nodeid: a nodeid
-        pred (:class:`Pred`): semantic predicate
+        pred (str): semantic predicate
         label (str): scope handle
         args (dict, optional): mapping of roles to values
         lnk (:class:`Lnk`, optional): surface alignment
@@ -773,7 +576,7 @@ class ElementaryPredication(
         base (str, optional): base form
     Attributes:
         nodeid: a nodeid
-        pred (:class:`Pred`): semantic predicate
+        pred (str): semantic predicate
         label (str): scope handle
         args (dict): mapping of roles to values
         lnk (:class:`Lnk`): surface alignment
@@ -787,16 +590,28 @@ class ElementaryPredication(
                  lnk=None, surface=None, base=None):
         if args is None:
             args = {}
-        # else:
-        #     args = dict((a.rargname, a) for a in args)
         return super(ElementaryPredication, cls).__new__(
             cls, nodeid, pred, label, args, lnk, surface, base
         )
 
     def __repr__(self):
         return '<ElementaryPredication object ({} ({})) at {}>'.format(
-            self.pred.string, str(self.iv or '?'), id(self)
+            self.pred, str(self.iv or '?'), id(self)
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, ElementaryPredication):
+            return NotImplemented
+        return (
+            predicate.normalize(self.pred) == predicate.normalize(other.pred)
+            and self.label == other.label
+            and self.args == other.args
+        )
+
+    def __ne__(self, other):
+        if not isinstance(other, ElementaryPredication):
+            return NotImplemented
+        return not (self == other)
 
     # these properties are specific to the EP's qualities
 

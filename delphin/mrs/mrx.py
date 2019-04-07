@@ -11,8 +11,9 @@ from collections import defaultdict
 import xml.etree.ElementTree as etree
 
 from delphin.mrs import Mrs
+from delphin import predicate
 from delphin.mrs.components import (
-    ElementaryPredication, Pred, Lnk, HandleConstraint, IndividualConstraint,
+    ElementaryPredication, Lnk, HandleConstraint, IndividualConstraint,
     elementarypredications, hcons, icons, sort_vid_split, var_re
 )
 from delphin.exceptions import XmrsDeserializationError as XDE
@@ -217,14 +218,12 @@ def _decode_pred(elem):
     #           lemma CDATA #REQUIRED
     #           pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
     #           sense CDATA #IMPLIED >
-    if elem.tag == 'pred':
-        return Pred.abstract(elem.text)
-    elif elem.tag == 'spred':
-        return Pred.surface(elem.text)
+    if elem.tag in ('pred', 'spred'):
+        return elem.text
     elif elem.tag == 'realpred':
-        return Pred.realpred(elem.get('lemma'),
-                             elem.get('pos') or None,
-                             elem.get('sense'))
+        return predicate.create(elem.get('lemma'),
+                                elem.get('pos'),
+                                elem.get('sense'))
 
 
 def _decode_args(elem, variables=None):
@@ -365,17 +364,18 @@ def _encode_ep(ep, varprops=None):
 
 def _encode_pred(pred):
     p = None
-    if pred.type == Pred.ABSTRACT:
-        p = etree.Element('pred')
-        p.text = pred.string
-    elif pred.type == Pred.SURFACE:
-        p = etree.Element('spred')
-        p.text = pred.string
-    elif pred.type == Pred.REALPRED:
-        attributes = {'lemma': pred.lemma, 'pos': pred.pos or ""}
-        if pred.sense is not None:
-            attributes['sense'] = pred.sense
+    if predicate.is_surface(pred):
+        lemma, pos, sense = predicate.split(pred)
+        attributes = {'lemma': lemma, 'pos': pos}
+        if sense is not None:
+            attributes['sense'] = sense
         p = etree.Element('realpred', attrib=attributes)
+    elif predicate.is_abstract(pred):
+        p = etree.Element('pred')
+        p.text = pred
+    else:
+        p = etree.Element('spred')
+        p.text = pred
     return p
 
 

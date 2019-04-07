@@ -39,10 +39,10 @@ will use the same methods.
 # these may be order-sensitive
 from .components import (
     Lnk, Node, ElementaryPredication,
-    HandleConstraint, Pred, Link
+    HandleConstraint, Link
 )
 from .xmrs import Xmrs, Mrs, Dmrs
 from delphin.util import deprecated
 
 __all__ = ['Lnk', 'Node', 'ElementaryPredication',
-           'HandleConstraint', 'Pred', 'Link', 'Xmrs', 'Mrs', 'Dmrs']
+           'HandleConstraint', 'Link', 'Xmrs', 'Mrs', 'Dmrs']

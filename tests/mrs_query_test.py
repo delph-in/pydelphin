@@ -1,21 +1,20 @@
 
 from delphin.mrs.xmrs import Xmrs
-from delphin.mrs.components import ElementaryPredication as EP, Pred
+from delphin.mrs.components import ElementaryPredication as EP
 from delphin.mrs import query
 
-sp = Pred.surface
 qeq = lambda hi, lo: (hi, 'qeq', lo)
 
 # "Cats are chased by big dogs." (reordered, but equivalent)
 m = Xmrs(
     top='h0',
     eps=[
-        EP(10000, sp('udef_q_rel'), 'h4', {'ARG0': 'x3', 'RSTR': 'h5'}),
-        EP(10001, sp('"_big_a_1_rel"'), 'h7', {'ARG0': 'e8', 'ARG1': 'x3'}),
-        EP(10002, sp('"_dog_n_1_rel"'), 'h7', {'ARG0': 'x3'}),
-        EP(10003, sp('"_chase_v_1_rel"'), 'h1', {'ARG0': 'e2', 'ARG1': 'x3', 'ARG2': 'x9'}),
-        EP(10004, sp('udef_q_rel'), 'h10', {'ARG0': 'x9', 'RSTR': 'h11'}),
-        EP(10005, sp('"_cat_n_1_rel"'), 'h13', {'ARG0': 'x9'})
+        EP(10000, 'udef_q_rel', 'h4', {'ARG0': 'x3', 'RSTR': 'h5'}),
+        EP(10001, '"_big_a_1_rel"', 'h7', {'ARG0': 'e8', 'ARG1': 'x3'}),
+        EP(10002, '"_dog_n_1_rel"', 'h7', {'ARG0': 'x3'}),
+        EP(10003, '"_chase_v_1_rel"', 'h1', {'ARG0': 'e2', 'ARG1': 'x3', 'ARG2': 'x9'}),
+        EP(10004, 'udef_q_rel', 'h10', {'ARG0': 'x9', 'RSTR': 'h11'}),
+        EP(10005, '"_cat_n_1_rel"', 'h13', {'ARG0': 'x9'})
     ],
     hcons=[qeq('h0', 'h1'), qeq('h5', 'h7'), qeq('h11', 'h13')],
     icons=[('e2', 'topic', 'x9')]
@@ -135,9 +134,9 @@ def test_find_argument_target():
     m2 = Xmrs(
         top='h0',
         eps=[
-            EP(10000, sp('proper_q_rel'), 'h4', {'ARG0': 'x3', 'RSTR': 'h5'}),
-            EP(10001, sp('named_rel'), 'h7', {'ARG0': 'x3', 'CARG': 'Abrams'}),
-            EP(10002, sp('"_try_v_1_rel"'), 'h1', {'ARG0': 'e2', 'ARG1': 'x3', 'ARG2': 'i9'}),
+            EP(10000, 'proper_q_rel', 'h4', {'ARG0': 'x3', 'RSTR': 'h5'}),
+            EP(10001, 'named_rel', 'h7', {'ARG0': 'x3', 'CARG': 'Abrams'}),
+            EP(10002, '"_try_v_1_rel"', 'h1', {'ARG0': 'e2', 'ARG1': 'x3', 'ARG2': 'i9'}),
         ],
         hcons=[qeq('h0', 'h1'), qeq('h5', 'h7')],
     )

@@ -2,7 +2,7 @@
 import pytest
 
 from delphin.mrs import simplemrs, eds
-from delphin.mrs.components import Node, Pred, Lnk
+from delphin.mrs.components import Node, Lnk
 from delphin.mrs.config import CVARSORT
 
 # empty
@@ -70,7 +70,7 @@ def eds_it_rains():
         nodes=[
             Node(
                 'e2',
-                Pred.surface('"_rain_v_1_rel"'),
+                '"_rain_v_1_rel"',
                 sortinfo={
                     'SF': 'prop', 'TENSE': 'pres', 'MOOD': 'indicative',
                     'PROG': '-', 'PERF': '-', CVARSORT: 'e'},
@@ -85,11 +85,11 @@ def eds_dogs_chase_Kim():
     return eds.Eds(
         top='e2',
         nodes=[
-            Node('_1', Pred.surface('udef_q_rel')),
-            Node('x4', Pred.surface('"_dog_n_1_rel"')),
-            Node('e2', Pred.surface('"_chase_v_1_rel"')),
-            Node('_2', Pred.surface('proper_q_rel')),
-            Node('x6', Pred.surface('named_rel'), carg='Kim')
+            Node('_1', 'udef_q_rel'),
+            Node('x4', '"_dog_n_1_rel"'),
+            Node('e2', '"_chase_v_1_rel"'),
+            Node('_2', 'proper_q_rel'),
+            Node('x6', 'named_rel', carg='Kim')
         ],
         edges=[
             ('_1', 'BV', 'x4'),
@@ -104,10 +104,10 @@ def eds_kim_probably_sleeps():
     return eds.Eds(
         top='e9',
         nodes=[
-            Node('_1', Pred.surface('proper_q_rel')),
-            Node('x3', Pred.surface('named_rel'), carg='Kim'),
-            Node('e9', Pred.surface('_probable_a_1_rel')),
-            Node('e2', Pred.surface('_sleep_v_1_rel')),
+            Node('_1', 'proper_q_rel'),
+            Node('x3', 'named_rel', carg='Kim'),
+            Node('e9', '_probable_a_1_rel'),
+            Node('e2', '_sleep_v_1_rel'),
         ],
         edges=[
             ('_1', 'BV', 'x3'),
@@ -136,7 +136,7 @@ class TestEds(object):
         assert eds_kim_probably_sleeps.top == 'e9'
         assert len(eds_kim_probably_sleeps.nodes()) == 4
         assert eds_kim_probably_sleeps.nodeids() == ['_1', 'x3', 'e9', 'e2']
-        assert eds_kim_probably_sleeps.node('e2').pred == '"_sleep_v_1_rel"'
+        assert eds_kim_probably_sleeps.node('e2').pred == '_sleep_v_1_rel'
         assert eds_kim_probably_sleeps.edges('e2') == {'ARG1': 'x3'}
         assert eds_kim_probably_sleeps.node('x3').carg == 'Kim'
 
@@ -204,12 +204,12 @@ def test_deserialize():
     e = eds.loads_one('{e2: e2:_rain_v_1<3:9>[]}')
     assert e.top == 'e2'
     assert len(e.nodes()) == 1
-    assert e.nodes()[0].pred == '_rain_v_1_rel'
+    assert e.nodes()[0].pred == '_rain_v_1'
 
     e = eds.loads_one('{: e2:_rain_v_1<3:9>[]}')
     assert e.top is None
     assert len(e.nodes()) == 1
-    assert e.nodes()[0].pred == '_rain_v_1_rel'
+    assert e.nodes()[0].pred == '_rain_v_1'
 
     e = eds.loads_one(
         '{e2:\n'

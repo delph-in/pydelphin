@@ -11,7 +11,8 @@ from collections import OrderedDict
 import re
 import xml.etree.ElementTree as etree
 
-from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
+from delphin import predicate
+from delphin.mrs import (Dmrs, Node, Link, Lnk)
 from delphin.mrs.components import (nodes, links)
 from delphin.mrs.config import QUANTIFIER_POS
 
@@ -166,11 +167,11 @@ def _decode_pred(elem):
     #           sense CDATA #IMPLIED >
     # <!ELEMENT gpred (#PCDATA)>
     if elem.tag == 'gpred':
-        return Pred.abstract(elem.text)
+        return elem.text
     elif elem.tag == 'realpred':
-        return Pred.realpred(elem.get('lemma'),
-                             elem.get('pos') or None,
-                             elem.get('sense'))
+        return predicate.create(elem.get('lemma'),
+                                elem.get('pos'),
+                                elem.get('sense'))
 
 
 def _decode_sortinfo(elem):
@@ -267,18 +268,19 @@ def _encode_node(node, properties):
 
 
 def _encode_pred(pred):
-    if pred.type == Pred.ABSTRACT:
+    if predicate.is_abstract(pred):
         e = etree.Element('gpred')
-        e.text = pred.string.strip('"\'')
-    elif pred.type in (Pred.REALPRED, Pred.SURFACE):
+        e.text = predicate.normalize(pred)
+    elif predicate.is_surface(pred):
         attributes = {}
-        attributes['lemma'] = pred.lemma
-        if pred.pos is None:
+        lemma, pos, sense = predicate.split(pred)
+        attributes['lemma'] = lemma
+        if pos is None:
             attributes['pos'] = ""
         else:
-            attributes['pos'] = pred.pos
-        if pred.sense is not None:
-            attributes['sense'] = str(pred.sense)
+            attributes['pos'] = pos
+        if sense is not None:
+            attributes['sense'] = str(sense)
         e = etree.Element('realpred', attrib=attributes)
     return e
 
@@ -286,7 +288,8 @@ def _encode_pred(pred):
 def _encode_sortinfo(node, properties):
     attributes = OrderedDict()
     # return empty <sortinfo/> for quantifiers
-    if node.pred.pos == QUANTIFIER_POS:
+    pos = predicate.split(node.pred)[1]
+    if pos == QUANTIFIER_POS:
         return etree.Element('sortinfo')  # return empty <sortinfo/>
     if properties and node.sortinfo:
         for k, v in node.sortinfo.items():

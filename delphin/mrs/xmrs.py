@@ -8,10 +8,11 @@ from itertools import chain
 
 from delphin.exceptions import (XmrsError, XmrsStructureError)
 from delphin.util import safe_int, _bfs, _connected_components
+from delphin import predicate
 from .components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
     Lnk, _LnkMixin, var_re, var_sort, _VarGenerator,
-    Pred, Node, nodes, Link, links
+    Node, nodes, Link, links
 )
 from .config import (
     HANDLESORT, UNKNOWNSORT, LTOP_NODEID, FIRST_NODEID,
@@ -210,7 +211,8 @@ class Xmrs(_LnkMixin):
         if self.surface is not None:
             stringform = '"{}"'.format(self.surface)
         else:
-            stringform = ' '.join(ep[1].lemma for ep in self.eps())
+            stringform = ' '.join(predicate.split(ep[1])[0]
+                                  for ep in self.eps())
         return '<{} object ({}) at {}>'.format(
             self.__class__.__name__, stringform, id(self)
         )
@@ -364,17 +366,17 @@ class Xmrs(_LnkMixin):
 
     def pred(self, nodeid):
         """
-        Return the Pred object for the predications given by *nodeid*.
+        Return the predicate for the predication given by *nodeid*.
         """
         return self._eps[nodeid][1]
 
     def preds(self, nodeids=None):
         """
-        Return the Pred objects for *nodeids*, or all Preds.
+        Return the predicates for *nodeids*, or all predicates.
 
         Args:
             nodeids: an iterable of nodeids of predications to return
-                Preds from; if `None`, return all Preds
+                predicates from; if `None`, return all predicates
         """
         if nodeids is None: nodeids = self._nodeids
         _eps = self._eps
@@ -539,9 +541,9 @@ class Xmrs(_LnkMixin):
             pred = _eps[n][1]
             if iv in _vars and self.nodeid(iv, quantifier=True) is not None:
                 rank[n] = 0
-            elif pred.pos == 'q':
+            elif predicate.split(pred)[1] == 'q':
                 rank[n] = 0
-            elif pred.type == Pred.ABSTRACT:
+            elif predicate.is_abstract(pred):
                 rank[n] = 2
             else:
                 rank[n] = 1
@@ -746,7 +748,7 @@ class Mrs(Xmrs):
     >>>     top='h0',
     >>>     index='e2',
     >>>     rels=[ElementaryPredication(
-    >>>         Pred.surface('_rain_v_1_rel'),
+    >>>         '_rain_v_1_rel',
     >>>         label='h1',
     >>>         args={'ARG0': 'e2'},
     >>>         vars={'e2': {'SF': 'prop-or-ques', 'TENSE': 'present'}}
@@ -786,7 +788,7 @@ class Mrs(Xmrs):
         """
         def _lnk(obj): return {'from': obj.cfrom, 'to': obj.cto}
         def _ep(ep, short_pred=True):
-            p = ep.pred.short_form() if short_pred else ep.pred.string
+            p = predicate.normalize(ep.pred) if short_pred else ep.pred
             d = dict(label=ep.label, predicate=p, arguments=ep.args)
             if ep.lnk is not None: d['lnk'] = _lnk(ep)
             return d
@@ -822,7 +824,7 @@ class Mrs(Xmrs):
         def _ep(ep):
             return ElementaryPredication(
                 nodeid=None,
-                pred=Pred.surface_or_abstract(ep['predicate']),
+                pred=ep['predicate'] ,
                 label=ep['label'],
                 args=ep.get('arguments', {}),
                 lnk=_lnk(ep.get('lnk')),
@@ -874,7 +876,7 @@ class Dmrs(Xmrs):
 
     Example:
 
-    >>> rain = Node(10000, Pred.surface('_rain_v_1_rel'),
+    >>> rain = Node(10000, '_rain_v_1_rel' ,
     >>>             sortinfo={'cvarsort': 'e'})
     >>> ltop_link = Link(0, 10000, post='H')
     >>> d = Dmrs([rain], [ltop_link])
@@ -955,7 +957,7 @@ class Dmrs(Xmrs):
         qs = set(self.nodeids(quantifier=True))
         def _lnk(obj): return {'from': obj.cfrom, 'to': obj.cto}
         def _node(node, short_pred=True):
-            p = node.pred.short_form() if short_pred else node.pred.string
+            p = predicate.normalize(node.pred) if short_pred else node.pred
             d = dict(nodeid=node.nodeid, predicate=p)
             if node.lnk is not None: d['lnk'] = _lnk(node)
             if properties and node.sortinfo:
@@ -996,7 +998,7 @@ class Dmrs(Xmrs):
         def _node(obj):
             return Node(
                 obj.get('nodeid'),
-                Pred.surface_or_abstract(obj.get('predicate')),
+                obj.get('predicate') ,
                 sortinfo=obj.get('sortinfo'),
                 lnk=_lnk(obj.get('lnk')),
                 surface=obj.get('surface'),
@@ -1023,7 +1025,7 @@ class Dmrs(Xmrs):
         ts = []
         qs = set(self.nodeids(quantifier=True))
         for n in nodes(self):
-            pred = n.pred.short_form() if short_pred else n.pred.string
+            pred = predicate.normalize(n.pred) if short_pred else n.pred
             ts.append((n.nodeid, 'predicate', pred))
             if n.lnk is not None:
                 ts.append((n.nodeid, 'lnk', '"{}"'.format(str(n.lnk))))
@@ -1060,7 +1062,7 @@ class Dmrs(Xmrs):
                 nids.append(src)
                 nd[src] = {'pred': None, 'lnk': None, 'carg': None, 'si': []}
             if rel == 'predicate':
-                nd[src]['pred'] = Pred.surface_or_abstract(tgt)
+                nd[src]['pred'] = tgt
             elif rel == 'lnk':
                 cfrom, cto = tgt.strip('"<>').split(':')
                 nd[src]['lnk'] = Lnk.charspan(int(cfrom), int(cto))

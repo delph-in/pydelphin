@@ -105,7 +105,7 @@ def serialize(ms, pretty_print=False, **kwargs):
             topvars=','.join(topvars),
             rels=__.join(
                 plep.format(
-                    pred=ep.pred.string,
+                    pred=ep.pred,
                     lbl=ep.label,
                     ___=___,
                     attrvals=____.join(

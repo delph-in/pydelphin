@@ -15,7 +15,8 @@ from __future__ import print_function
 from collections import OrderedDict
 from io import BytesIO
 import re
-from delphin.mrs import (Dmrs, Node, Link, Pred, Lnk)
+
+from delphin.mrs import (Dmrs, Node, Link, Lnk)
 from delphin.mrs.components import (nodes, links)
 from delphin.mrs.config import EQ_POST, CVARSORT, CONSTARG_ROLE
 
@@ -103,7 +104,7 @@ def _encode_dmrs(m, properties, indent=2):
         _node.format(
             indent=space,
             nodeid=n.nodeid,
-            pred=n.pred.string,
+            pred=n.pred,
             lnk='' if n.lnk is None else str(n.lnk),
             carg='' if n.carg is None else '("{}")'.format(n.carg),
             sortinfo=(

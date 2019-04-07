@@ -1,14 +1,12 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import pytest
 
-from delphin.mrs.components import Pred, Node, Link, nodes, links
+from delphin.mrs.components import Node, Link, nodes, links
 from delphin.mrs import Dmrs
 from delphin.mrs.config import UNKNOWNSORT
 #from delphin.mrs import simplemrs  # for convenience in later tests
 from delphin.exceptions import XmrsError
-
-sp = Pred.surface
 
 
 # for convenience
@@ -33,20 +31,20 @@ class TestDmrs():
 
     def test_single_node(self):
         # basic, one Node, no TOP
-        x = Dmrs(nodes=[Node(10, sp('"_rain_v_1_rel"'))])
+        x = Dmrs(nodes=[Node(10, '"_rain_v_1_rel"')])
         check_xmrs(x, None, None, None, 1, 0, 0, 2)
         # variables don't need to be created predictably, but it's nice
         # to get the expected values for simple cases
         assert x.label(10) == 'h1'
         assert x.ep(10).iv == 'u2'
         # now with cvarsort
-        x = Dmrs(nodes=[Node(10, sp('"_rain_v_1_rel"'), {'cvarsort': 'e'})])
+        x = Dmrs(nodes=[Node(10, '"_rain_v_1_rel"', {'cvarsort': 'e'})])
         check_xmrs(x, None, None, None, 1, 0, 0, 2)
         assert x.label(10) == 'h1'
         assert x.ep(10).iv == 'e2'
         # now with TOP
         x = Dmrs(
-            nodes=[Node(10, sp('"_rain_v_1_rel"'), {'cvarsort': 'e'})],
+            nodes=[Node(10, '"_rain_v_1_rel"', {'cvarsort': 'e'})],
             links=[Link(0, 10, None, 'H')]
         )
         check_xmrs(x, 'h0', None, None, 1, 1, 0, 3)
@@ -56,7 +54,7 @@ class TestDmrs():
     def test_to_dict(self):
         assert Dmrs().to_dict() == {'nodes': [], 'links': []}
 
-        x = Dmrs(nodes=[Node(10, sp('"_rain_v_1_rel"'))])
+        x = Dmrs(nodes=[Node(10, '"_rain_v_1_rel"')])
         assert x.to_dict() == {
             'nodes': [{'nodeid': 10, 'predicate': '_rain_v_1',
                        'sortinfo': {'cvarsort': UNKNOWNSORT}}],
@@ -64,7 +62,7 @@ class TestDmrs():
         }
 
         x = Dmrs(
-            nodes=[Node(10, sp('"_rain_v_1_rel"'), {'cvarsort': 'e'})],
+            nodes=[Node(10, '"_rain_v_1_rel"', {'cvarsort': 'e'})],
             links=[Link(0, 10, None, 'H')]
         )
         assert x.to_dict() == {
@@ -84,21 +82,21 @@ class TestDmrs():
             'nodes': [{'nodeid': 10, 'predicate': '_rain_v_1'}],
             'links': [{'from': 0, 'to': 10, 'rargname': None, 'post': 'H'}],
         })
-        d2 = Dmrs(nodes=[Node(10, sp('"_rain_v_1_rel"'))],
+        d2 = Dmrs(nodes=[Node(10, '"_rain_v_1_rel"')],
                   links=[Link(0, 10, None, 'H')])
         assert d1 == d2
 
     def test_to_triples(self):
         assert Dmrs().to_triples() == []
 
-        x = Dmrs(nodes=[Node(10, sp('"_rain_v_1_rel"'))])
+        x = Dmrs(nodes=[Node(10, '"_rain_v_1_rel"')])
         assert x.to_triples() == [
             (10, 'predicate', '_rain_v_1'),
             (10, 'cvarsort', 'u')
         ]
 
         x = Dmrs(
-            nodes=[Node(10, sp('"_rain_v_1_rel"'), {'cvarsort': 'e'})],
+            nodes=[Node(10, '"_rain_v_1_rel"', {'cvarsort': 'e'})],
             links=[Link(0, 10, None, 'H')]
         )
         assert x.to_triples() == [
@@ -119,7 +117,7 @@ class TestDmrs():
             (0, 'top', 10)
         ])
         # by default nodeids get remapped from 10000
-        d2 = Dmrs(nodes=[Node(10000, sp('"_rain_v_1_rel"'))],
+        d2 = Dmrs(nodes=[Node(10000, '"_rain_v_1_rel"')],
                   links=[Link(0, 10000, None, 'H')])
         assert d1 == d2
         d1 = Dmrs.from_triples([
@@ -138,9 +136,9 @@ class TestDmrs():
             (20, 'R-INDEX-NEQ', 30),
             (20, 'R-HNDL-HEQ', 30)
         ])
-        d2 = Dmrs(nodes=[Node(10000, sp('"_rain_v_1_rel"')),
-                         Node(10001, sp('_or_c_rel')),
-                         Node(10002, sp('"_snow_v_1_rel"'))],
+        d2 = Dmrs(nodes=[Node(10000, '"_rain_v_1_rel"'),
+                         Node(10001, '_or_c_rel'),
+                         Node(10002, '"_snow_v_1_rel"')],
                   links=[Link(0, 10001, None, 'H'),
                          Link(10001, 10000, 'L-INDEX', 'NEQ'),
                          Link(10001, 10000, 'L-HNDL', 'HEQ'),

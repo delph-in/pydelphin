@@ -15,7 +15,7 @@ from warnings import warn
 from delphin.util import stringtypes
 from delphin.mrs import Mrs
 from delphin.mrs.components import (
-    ElementaryPredication, Pred, Lnk, HandleConstraint, IndividualConstraint,
+    ElementaryPredication, Lnk, HandleConstraint, IndividualConstraint,
     sort_vid_split, var_sort, var_re, hcons, icons
 )
 from delphin.mrs.config import (HANDLESORT, CONSTARG_ROLE)
@@ -276,7 +276,7 @@ def _read_ep(tokens, nid, vars_):
     _var_re = var_re
     # begin parsing
     _read_literals(tokens, '[')
-    pred = Pred.surface_or_abstract(tokens.popleft())
+    pred = tokens.popleft()
     lnk = _read_lnk(tokens)
     surface = label = None
     if tokens[0].startswith('"'):
@@ -452,9 +452,8 @@ def _serialize_ep(ep, varprops, version=_default_version):
         surface = ' "%s"' % ep[5]
     lnk = None if len(ep) < 5 else ep[4]
     pred = ep[1]
-    predstr = pred.string
     return '[ {pred}{lnk}{surface} LBL: {label}{s}{args} ]'.format(
-        pred=predstr,
+        pred=pred,
         lnk=_serialize_lnk(lnk),
         surface=surface,
         label=str(ep[2]),

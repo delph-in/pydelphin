@@ -5,6 +5,7 @@ from functools import partial
 
 import networkx as nx
 
+from delphin import predicate
 from delphin.mrs.components import var_id, var_sort
 from delphin.mrs.config import CONSTARG_ROLE, IVARG_ROLE
 
@@ -43,9 +44,9 @@ def _make_digraph(x, check_varprops):
     for ep in x.eps():
         nid, pred, args = ep[0], ep[1], ep[3]
         if CONSTARG_ROLE in args:
-            s = '{}({})'.format(pred.short_form(), args[CONSTARG_ROLE])
+            s = '{}({})'.format(predicate.normalize(pred), args[CONSTARG_ROLE])
         else:
-            s = pred.short_form()
+            s = predicate.normalize(pred)
         dg.add_node(nid, sig=s)
         dg.add_edges_from((nid, var_id(val)) for role, val in args.items()
                           if role != CONSTARG_ROLE)
@@ -450,7 +451,7 @@ def _isomorphic_var_signature(vd, xmrs, check_varprops):
         else:
             for nid in refval:
                 pred = xmrs.pred(nid)
-                sig.append('%s:%s' % (pred.short_form(), role))
+                sig.append('%s:%s' % (predicate.normalize(pred), role))
 
     return ' '.join(sorted(sig))
 
