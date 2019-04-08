@@ -36,6 +36,7 @@ PyDelphin
   api/delphin.extra.rst
   api/delphin.interfaces.rst
   api/delphin.itsdb.rst
+  api/delphin.lnk.rst
   api/delphin.predicate.rst
   api/delphin.mrs.rst
   api/delphin.repp.rst

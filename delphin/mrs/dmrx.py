@@ -12,7 +12,8 @@ import re
 import xml.etree.ElementTree as etree
 
 from delphin import predicate
-from delphin.mrs import (Dmrs, Node, Link, Lnk)
+from delphin.mrs import (Dmrs, Node, Link)
+from delphin.lnk import Lnk
 from delphin.mrs.components import (nodes, links)
 from delphin.mrs.config import QUANTIFIER_POS
 

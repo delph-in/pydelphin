@@ -15,10 +15,11 @@ from warnings import warn
 from delphin.util import stringtypes
 from delphin.mrs import Mrs
 from delphin.mrs.components import (
-    ElementaryPredication, Lnk, HandleConstraint, IndividualConstraint,
+    ElementaryPredication, HandleConstraint, IndividualConstraint,
     sort_vid_split, var_sort, var_re, hcons, icons
 )
 from delphin.mrs.config import (HANDLESORT, CONSTARG_ROLE)
+from delphin.lnk import Lnk
 from delphin.sembase import role_priority
 from delphin.exceptions import (
     XmrsDeserializationError as XDE,

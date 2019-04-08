@@ -16,7 +16,8 @@ from collections import OrderedDict
 from io import BytesIO
 import re
 
-from delphin.mrs import (Dmrs, Node, Link, Lnk)
+from delphin.lnk import Lnk
+from delphin.mrs import (Dmrs, Node, Link)
 from delphin.mrs.components import (nodes, links)
 from delphin.mrs.config import EQ_POST, CVARSORT, CONSTARG_ROLE
 

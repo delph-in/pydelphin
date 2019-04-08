@@ -27,7 +27,7 @@ from array import array
 from collections import namedtuple
 
 from delphin.tokens import YyToken, YyTokenLattice
-from delphin.mrs.components import Lnk
+from delphin.lnk import Lnk
 from delphin.exceptions import REPPError
 
 

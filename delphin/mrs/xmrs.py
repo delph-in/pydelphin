@@ -9,9 +9,10 @@ from itertools import chain
 from delphin.exceptions import (XmrsError, XmrsStructureError)
 from delphin.util import safe_int, _bfs, _connected_components
 from delphin import predicate
+from delphin.lnk import Lnk, _LnkMixin
 from .components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
-    Lnk, _LnkMixin, var_re, var_sort, _VarGenerator,
+    var_re, var_sort, _VarGenerator,
     Node, nodes, Link, links
 )
 from .config import (

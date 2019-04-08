@@ -10,9 +10,9 @@ from itertools import count
 from delphin.util import stringtypes, _bfs, _connected_components
 from delphin.mrs.xmrs import Xmrs
 from delphin import predicate
+from delphin.lnk import Lnk
 from delphin.mrs.components import (
     var_sort,
-    Lnk,
     Node,
     nodes as make_nodes
 )

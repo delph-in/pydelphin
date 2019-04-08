@@ -12,8 +12,9 @@ import xml.etree.ElementTree as etree
 
 from delphin.mrs import Mrs
 from delphin import predicate
+from delphin.lnk import Lnk
 from delphin.mrs.components import (
-    ElementaryPredication, Lnk, HandleConstraint, IndividualConstraint,
+    ElementaryPredication, HandleConstraint, IndividualConstraint,
     elementarypredications, hcons, icons, sort_vid_split, var_re
 )
 from delphin.exceptions import XmrsDeserializationError as XDE

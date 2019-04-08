@@ -4,9 +4,9 @@ import pytest
 
 from delphin.exceptions import XmrsError
 from delphin import predicate
+from delphin.lnk import Lnk
 from delphin.mrs.components import (
     sort_vid_split, var_sort, var_id, _VarGenerator,
-    Lnk, _LnkMixin,
     Link, links, HandleConstraint, hcons,
     Node, ElementaryPredication as EP
 )
@@ -143,93 +143,6 @@ class TestVarGenerator():
         assert v == 'e2'
         assert vg.vid == 3
         assert len(vg.store['e2']) == len(vps) == 1
-
-
-class TestLnk():
-    def test_raw_init(self):
-        # don't allow just any Lnk type
-        with pytest.raises(XmrsError): Lnk('lnktype', (0, 1))
-
-    def testCharSpanLnk(self):
-        lnk = Lnk.charspan(0, 1)
-        assert lnk.type == Lnk.CHARSPAN
-        assert lnk.data == (0, 1)
-        assert str(lnk) == '<0:1>'
-        repr(lnk)  # no error
-        lnk = Lnk.charspan('0', '1')
-        assert lnk.data == (0, 1)
-        with pytest.raises(TypeError): Lnk.charspan(1)
-        with pytest.raises(TypeError): Lnk.charspan([1, 2])
-        with pytest.raises(TypeError): Lnk.charspan(1, 2, 3)
-        with pytest.raises(ValueError): Lnk.charspan('a', 'b')
-
-    def testChartSpanLnk(self):
-        lnk = Lnk.chartspan(0, 1)
-        assert lnk.type == Lnk.CHARTSPAN
-        assert lnk.data == (0, 1)
-        assert str(lnk) == '<0#1>'
-        repr(lnk)  # no error
-        lnk = Lnk.chartspan('0', '1')
-        assert lnk.data == (0, 1)
-        with pytest.raises(TypeError): Lnk.chartspan(1)
-        with pytest.raises(TypeError): Lnk.chartspan([1, 2])
-        with pytest.raises(TypeError): Lnk.chartspan(1, 2, 3)
-        with pytest.raises(ValueError): Lnk.chartspan('a', 'b')
-
-    def testTokensLnk(self):
-        lnk = Lnk.tokens([1, 2, 3])
-        assert lnk.type == Lnk.TOKENS
-        assert lnk.data == (1, 2, 3)
-        assert str(lnk) == '<1 2 3>'
-        repr(lnk)  # no error
-        lnk = Lnk.tokens(['1'])
-        assert lnk.data == (1,)
-        # empty tokens list might be invalid, but accept for now
-        lnk = Lnk.tokens([])
-        assert lnk.data == tuple()
-        with pytest.raises(TypeError): Lnk.tokens(1)
-        with pytest.raises(ValueError): Lnk.tokens(['a','b'])
-
-    def testEdgeLnk(self):
-        lnk = Lnk.edge(1)
-        assert lnk.type == Lnk.EDGE
-        assert lnk.data == 1
-        assert str(lnk) == '<@1>'
-        repr(lnk)  # no error
-        lnk = Lnk.edge('1')
-        assert lnk.data == 1
-        with pytest.raises(TypeError): Lnk.edge(None)
-        with pytest.raises(TypeError): Lnk.edge((1,))
-        with pytest.raises(ValueError): Lnk.edge('a')
-
-
-class TestLnkMixin():
-    def test_inherit(self):
-        class NoLnk(_LnkMixin):
-            pass
-        n = NoLnk()
-        assert n.cfrom == -1
-        assert n.cto == -1
-
-        class WithNoneLnk(_LnkMixin):
-            def __init__(self):
-                self.lnk = None
-        n = WithNoneLnk()
-        assert n.cfrom == -1
-        assert n.cto == -1
-
-        class WithNonCharspanLnk(_LnkMixin):
-            def __init__(self):
-                self.lnk = Lnk.chartspan(0,1)
-        n = WithNonCharspanLnk()
-        assert n.cfrom == -1
-        assert n.cto == -1
-
-        class WithCharspanLnk(_LnkMixin):
-            def __init__(self):
-                self.lnk = Lnk.charspan(0,1)
-        n = WithCharspanLnk()
-        assert n.cfrom == 0
 
 
 class TestLink():

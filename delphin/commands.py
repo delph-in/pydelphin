@@ -16,6 +16,7 @@ from functools import partial
 import logging
 
 from delphin import itsdb, tsql
+from delphin.lnk import Lnk
 from delphin.mrs import xmrs
 from delphin.util import safe_int, SExpr
 from delphin.exceptions import PyDelphinException
