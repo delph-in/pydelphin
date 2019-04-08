@@ -7,13 +7,20 @@ these changes are prefixed with "**BREAKING**"
 
 ### Added
 
+* `delphin.lnk`
+* `delphin.lnk.LnkError`
 * `delphin.predicate`
+* `delphin.predicate.PredicateError`
+* `delphin.predicate.create()`
+* `delphin.predicate.is_surface()`
+* `delphin.predicate.is_abstract()`
 * `delphin.sembase`
 
 
 ### Moved or Renamed
 
 * `delphin.mrs.util.rargname_sortkey()` to `delphin.sembase.role_priority()`
+* `delphin.mrs.components.Lnk` to `delphin.lnk.Lnk`
 * `delphin.mrs.components.split_pred_string()` to `delphin.predicate.split()`
 * `delphin.mrs.components.normalize_pred_string()` to
   `delphin.predicate.normalize()`
