@@ -49,7 +49,7 @@ def test_TypedFeatureStructure():
 def test_TypeHierarchy():
     with pytest.raises(TypeError):
         tfs.TypeHierarchy()
-    with pytest.raises(ValueError):
+    with pytest.raises(tfs.TypeHierarchyError):
         tfs.TypeHierarchy('*top*', {'a': ['b']})
 
     th = tfs.TypeHierarchy('*top*')
@@ -75,32 +75,32 @@ def test_TypeHierarchy():
     assert th.compatible('a', 'b') is True
 
     # trivial cycle
-    with pytest.raises(ValueError):
+    with pytest.raises(tfs.TypeHierarchyError):
         tfs.TypeHierarchy('*top*', {'a': ['*top*', 'a']})
     # mutual cycle
-    with pytest.raises(ValueError):
+    with pytest.raises(tfs.TypeHierarchyError):
         tfs.TypeHierarchy('*top*', {'a': ['*top*', 'b'],
                                     'b': ['*top*', 'a']})
     # redundant parent
-    with pytest.raises(ValueError):
+    with pytest.raises(tfs.TypeHierarchyError):
         tfs.TypeHierarchy('*top*', {'a': ['*top*'],
                                     'b': ['*top*', 'a']})
     # awaiting issue #94
     # # non-unique glb
-    # with pytest.raises(ValueError):
+    # with pytest.raises(tfs.TypeHierarchyError):
     #     tfs.TypeHierarchy('*top*', {'a': ['*top*'],
     #                                 'b': ['*top*'],
     #                                 'c': ['a', 'b'],
     #                                 'd': ['a', 'b']})
     # # non-symmetric non-unique glb
-    # with pytest.raises(ValueError):
+    # with pytest.raises(tfs.TypeHierarchyError):
     #     tfs.TypeHierarchy('*top*', {'a': ['*top*'],
     #                                 'b': ['*top*'],
     #                                 'c': ['*top*'],
     #                                 'd': ['a', 'b', 'c'],
     #                                 'e': ['a', 'b']})
     # # non-immediate non-unique glb
-    # with pytest.raises(ValueError):
+    # with pytest.raises(tfs.TypeHierarchyError):
     #     tfs.TypeHierarchy('*top*', {'a': ['*top*'],
     #                                 'b': ['*top*'],
     #                                 'c': ['a', 'b'],

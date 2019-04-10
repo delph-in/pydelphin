@@ -11,11 +11,15 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.lnk.LnkError`
 * `delphin.predicate`
 * `delphin.predicate.PredicateError`
-* `delphin.predicate.create()`
+* `delphin.predicate.create()` -- replaces `Pred.realpred()`
 * `delphin.predicate.is_surface()`
 * `delphin.predicate.is_abstract()`
 * `delphin.sembase`
-
+* `delphin.tfs.TypeHierarchyError`
+* `delphin.tfs.TypeHierarchy`:
+  - equality comparison
+  - key access on typename returns list of supertypes for that type
+  - `update()` -- incorporate subhierarchies
 
 ### Moved or Renamed
 
@@ -61,6 +65,10 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.tdl.TdlType`
 * `delphin.tdl.TdlInflRule`
 * `delphin._exceptions`
+
+### Changed
+
+* `delphin.tfs` -- errors raise `TypeHierarchyError` instead of `ValueError`
 
 
 ## [v0.9.2][]

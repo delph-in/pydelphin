@@ -13,7 +13,11 @@ compatibility.
 
 """
 
-from __future__ import unicode_literals
+from delphin.exceptions import PyDelphinException
+
+
+class TypeHierarchyError(PyDelphinException):
+    """Raised for invalid operations on type hierarchies."""
 
 
 class FeatureStructure(object):
@@ -192,49 +196,59 @@ class TypeHierarchy(object):
     """
     def __init__(self, top, hierarchy=None):
         self._top = top
-        self._hier = {}
-        if hierarchy is None:
-            self[top] = []
-        elif hierarchy.get(top, False):
-            raise ValueError('top type cannot have supertypes')
-        else:
-            hierarchy[top] = []
-            loerarchy = {}  # type -> children
-            for child, parents in hierarchy.items():
-                for parent in parents:
-                    loerarchy.setdefault(parent, []).append(child)
-            agenda = [top]
-            th = self._hier  # to reduce lookups in the loop
-            while agenda:
-                typename = agenda.pop()
-                self[typename] = hierarchy[typename]
-                del hierarchy[typename]
-                for child in loerarchy.get(typename, []):
-                    if all(parent in th for parent in hierarchy[child]):
-                        agenda.append(child)
-            if hierarchy:
-                raise ValueError(
-                    'disconnected or cyclic hierarchy; remaining: {}'
-                    .format(', '.join(hierarchy)))
+        self._hier = {top: ([], set())}
+        if hierarchy is not None:
+            self.update(hierarchy)
+
+    def __eq__(self, other):
+        if not isinstance(other, TypeHierarchy):
+            return NotImplemented
+        return self._top == other._top and self._hier == other._hier
+
+    def __ne__(self, other):
+        if not isinstance(other, TypeHierarchy):
+            return NotImplemented
+        return not self.__eq__(other)
 
     def __setitem__(self, typename, parents):
         if typename in self._hier:
-            raise ValueError('type already in hierarchy: ' + typename)
+            raise TypeHierarchyError('type already in hierarchy: ' + typename)
+        elif not parents:
+            raise TypeHierarchyError('no parents specified')
         ancestors = set()
         for parent in parents:
             if parent not in self._hier:
-                raise ValueError('parent not in hierarchy: ' + parent)
+                raise TypeHierarchyError('parent not in hierarchy: ' + parent)
             ancestors.update(self.ancestors(parent))
         redundant = ancestors.intersection(parents)
         if redundant:
-            raise ValueError('redundant parents: {}'
+            raise TypeHierarchyError('redundant parents: {}'
                              .format(', '.join(sorted(redundant))))
-        self._hier[typename] = (parents, [])
+        self._hier[typename] = (parents, set())
         for parent in parents:
-            self._hier[parent][1].append(typename)
+            self._hier[parent][1].add(typename)
 
-    # def __getitem__(self, typename):
-    #     return self._hier[typename]
+    def __getitem__(self, typename):
+        return list(self._hier[typename][0])
+
+    def update(self, subhierarchy):
+        """
+        Incorporate *subhierarchy* into the hierarchy.
+
+        Args:
+            subhierarchy (dict): hierarchy to incorporate
+        """
+        hierarchy = self._hier
+        while subhierarchy:
+            eligible = [typename for typename, parents in subhierarchy.items()
+                        if all(parent in hierarchy for parent in parents)]
+            if not eligible:
+                raise TypeHierarchyError(
+                    'disconnected or cyclic hierarchy; remaining: {}'
+                    .format(', '.join(subhierarchy)))
+            for typename in eligible:
+                self[typename] = subhierarchy[typename]
+                del subhierarchy[typename]
 
     def ancestors(self, typename):
         """Return the ancestor types of *typename*."""
