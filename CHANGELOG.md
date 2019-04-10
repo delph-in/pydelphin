@@ -15,6 +15,14 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.predicate.is_surface()`
 * `delphin.predicate.is_abstract()`
 * `delphin.sembase`
+* `delphin.semi`
+  - `TOP_TYPE`
+  - `STRING_TYPE`
+  - `SemI.compatible()`
+  - `SemI.find_synopsis()`
+  - `SemI.subsumes()`
+  - `SemI.type_hierarchy`
+  - `SemIError`
 * `delphin.tfs.TypeHierarchyError`
 * `delphin.tfs.TypeHierarchy`:
   - equality comparison
@@ -30,6 +38,7 @@ these changes are prefixed with "**BREAKING**"
   `delphin.predicate.normalize()`
 * `delphin.mrs.components.is_valid_pred_string()` to
   `delphin.predicate.is_valid()`
+* `delphin.mrs.semi` to `delphin.semi`
 
 ### Removed
 
@@ -52,6 +61,11 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.query.get_outbound_args()`
 * `delphin.mrs.query.intrinsic_variable()`
 * `delphin.mrs.query.nodeid()`
+* `delphin.mrs.semi.Predicate`
+* `delphin.mrs.semi.Property`
+* `delphin.mrs.semi.Role`
+* `delphin.mrs.semi.TOP`
+* `delphin.mrs.semi.Variable`
 * `delphin.mrs.simplemrs.load()`, the `strict` parameter
 * `delphin.mrs.simplemrs.loads()`, the `strict` parameter
 * `delphin.mrs.util`
@@ -68,6 +82,7 @@ these changes are prefixed with "**BREAKING**"
 
 ### Changed
 
+* `delphin.semi.load()` takes an `encoding` parameter
 * `delphin.tfs` -- errors raise `TypeHierarchyError` instead of `ValueError`
 
 
