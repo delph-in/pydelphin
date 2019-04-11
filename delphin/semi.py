@@ -15,9 +15,13 @@ representations.
 
 import re
 from os.path import dirname, join as pjoin
+import warnings
 
 from delphin.tfs import TypeHierarchy
-from delphin.exceptions import PyDelphinException
+from delphin.exceptions import (
+    PyDelphinException,
+    PyDelphinWarning
+)
 
 
 TOP_TYPE = '*top*'
@@ -32,30 +36,30 @@ _SEMI_SECTIONS = (
 )
 
 _variable_entry_re = re.compile(
-    r'(?P<var>[^ <:.]+)'
+    r'(?P<var>[^ .]+)'
     r'(?: < (?P<parents>[^ &:.]+(?: & [^ &:.]+)*))?'
     r'(?: : (?P<properties>[^ ]+ [^ ,.]+(?:, [^ ]+ [^ ,.]+)*))?'
-    r'\s*\.\s*$',
+    r'\s*\.\s*(?:;.*)?$',
     re.U
 )
 
 _property_entry_re = re.compile(
-    r'(?P<type>[^ <.]+)'
+    r'(?P<type>[^ .]+)'
     r'(?: < (?P<parents>[^ &.]+(?: & [^ &.]+)*))?'
-    r'\s*\.\s*$',
+    r'\s*\.\s*(?:;.*)?$',
     re.U
 )
 
 _role_entry_re = re.compile(
-    r'(?P<role>[^ :]+) : (?P<value>[^ .]+)\s*\.\s*$',
+    r'(?P<role>[^ ]+) : (?P<value>[^ .]+)\s*\.\s*(?:;.*)?$',
     re.U
 )
 
 _predicate_entry_re = re.compile(
-    r'(?P<pred>[^ <:.]+)'
-    r'(?: < (?P<parents>[^ &:.]+(?: & [^ &:.]+)*))?'
-    r'(?: : (?P<synposis>.*[^ .]))?'
-    r'\s*\.\s*$',
+    r'(?P<pred>[^ ]+)'
+    r'(?: < (?P<parents>[^ &:.;]+(?: & [^ &:.;]+)*))?'
+    r'(?: : (?P<synposis>.*[^ .;]))?'
+    r'\s*\.\s*(?:;.*)?$',
     re.U
 )
 
@@ -72,6 +76,12 @@ _synopsis_re = re.compile(
 class SemIError(PyDelphinException):
     """
     Raised when loading an invalid SEM-I.
+    """
+
+
+class SemIWarning(PyDelphinWarning):
+    """
+    Warning class for questionable SEM-Is.
     """
 
 
@@ -227,9 +237,19 @@ class SemI(object):
                  properties=None,
                  roles=None,
                  predicates=None):
-        self.type_hierarchy = hier = TypeHierarchy(TOP_TYPE)
-        # validate and normalize inputs
+        self.type_hierarchy = TypeHierarchy(TOP_TYPE)
         self.properties = set()
+        self.variables = {}
+        self.roles = {}
+        self.predicates = {}
+        # validate and normalize inputs
+        self._init_properties(properties)
+        self._init_variables(variables)
+        self._init_roles(roles)
+        self._init_predicates(predicates)
+
+
+    def _init_properties(self, properties):
         subhier = {}
         for prop, data in dict(properties or []).items():
             prop = prop.lower()
@@ -237,14 +257,12 @@ class SemI(object):
             self.properties.add(prop)
         self.type_hierarchy.update(subhier)
 
-        propcache = {}  # just for consistency checks during construction
+    def _init_variables(self, variables):
         subhier = {}
-        self.variables = {}
         for var, data in dict(variables or []).items():
             var = var.lower()
             _add_to_subhierarchy(subhier, var, data)
             self.variables[var] = proplist = []
-            propcache[var] = dict(data.get('properties', []))
             for k, v in data.get('properties', []):
                 k, v = k.upper(), v.lower()
                 if v not in self.properties:
@@ -252,7 +270,7 @@ class SemI(object):
                 proplist.append((k, v))
         self.type_hierarchy.update(subhier)
 
-        self.roles = {}
+    def _init_roles(self, roles):
         for role, data in dict(roles or []).items():
             role = role.upper()
             var = data['value'].lower()
@@ -260,50 +278,58 @@ class SemI(object):
                 raise SemIError('undefined variable type: {}'.format(var))
             self.roles[role] = var
 
-        self.predicates = {}
+    def _init_predicates(self, predicates):
         subhier = {}
+        propcache = {var: dict(props) for var, props in self.variables.items()}
         for pred, data in dict(predicates or []).items():
             pred = pred.lower()
             _add_to_subhierarchy(subhier, pred, data)
             synopses = []
             for synopsis_data in data['synopses']:
-                synopsis = []
-                for d in synopsis_data:
-                    role = d['role'].upper()
-                    value = d['value'].lower()
-                    proplist = []
-                    if role not in self.roles:
-                        raise SemIError('{}: undefined role: {}'.format(pred, role))
-                    if value == STRING_TYPE:
-                        if d.get('properties', False):
-                            raise SemIError('{}: strings cannot define properties'
-                                            .format(pred))
-                    elif value not in self.variables:
-                        raise SemIError('{}: undefined variable type: {}'
-                                        .format(pred, value))
-                    else:
-                        props = {}
-                        for k, v in dict(d.get('properties', [])).items():
-                            k, v = k.upper(), v.lower()
-                            if k not in propcache[value]:
-                                raise SemIError(
-                                    "{}: property '{}' not allowed on '{}'"
-                                    .format(pred, k, value))
-                            if v not in self.properties:
-                                raise SemIError(
-                                    '{}: undefined property value: {}'
-                                    .format(pred, v))
-                            _v = propcache[value].get(k)
-                            if not self.type_hierarchy.compatible(v, _v):
-                                raise SemIError(
-                                    '{}: incompatible property values: {}, {}'
-                                    .format(pred, v, _v))
-                            props[k] = v
-                    synopsis.append(
-                        (role, value, props, d.get('optional', False)))
-                synopses.append(synopsis)
+                synopses.append(
+                    self._init_synopsis(pred, synopsis_data, propcache))
             self.predicates[pred] = synopses
         self.type_hierarchy.update(subhier)
+
+    def _init_synopsis(self, pred, synopsis_data, propcache):
+        synopsis = []
+        for d in synopsis_data:
+            role = d['role'].upper()
+            value = d['value'].lower()
+            proplist = []
+            if role not in self.roles:
+                raise SemIError('{}: undefined role: {}'.format(pred, role))
+            if value == STRING_TYPE:
+                if d.get('properties', False):
+                    raise SemIError('{}: strings cannot define properties'
+                                    .format(pred))
+            elif value not in self.variables:
+                raise SemIError('{}: undefined variable type: {}'
+                                .format(pred, value))
+            else:
+                props = {}
+                for k, v in dict(d.get('properties', [])).items():
+                    k, v = k.upper(), v.lower()
+                    if v not in self.properties:
+                        raise SemIError(
+                            '{}: undefined property value: {}'
+                            .format(pred, v))
+                    if k not in propcache[value]:
+                        # Just warn because of the current situation where
+                        # 'i' variables are used for unexpressed 'x's
+                        warnings.warn(
+                            "{}: property '{}' not allowed on '{}'"
+                            .format(pred, k, value),
+                            SemIWarning)
+                    else:
+                        _v = propcache[value][k]
+                        if not self.type_hierarchy.compatible(v, _v):
+                            raise SemIError(
+                                '{}: incompatible property values: {}, {}'
+                                .format(pred, v, _v))
+                    props[k] = v
+            synopsis.append((role, value, props, d.get('optional', False)))
+        return synopsis
 
     @classmethod
     def from_dict(cls, d):

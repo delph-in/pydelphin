@@ -23,6 +23,7 @@ these changes are prefixed with "**BREAKING**"
   - `SemI.subsumes()`
   - `SemI.type_hierarchy`
   - `SemIError`
+  - `SemIWarning`
 * `delphin.tfs.TypeHierarchyError`
 * `delphin.tfs.TypeHierarchy`:
   - equality comparison
