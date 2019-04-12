@@ -13,6 +13,8 @@ compatibility.
 
 """
 
+from collections.abc import Iterable
+
 from delphin.exceptions import PyDelphinException
 
 
@@ -181,6 +183,61 @@ class TypedFeatureStructure(FeatureStructure):
         self._type = value
 
 
+class TypeHierarchyNode(object):
+    """
+    A node in a TypeHierarchy.
+
+    When the node is inserted into a :class:`TypeHierarchy` and other
+    nodes are inserted which specify this node as its parent, the
+    :attr:`children` attribute will be updated to reflect those
+    subtypes. The :attr:`children` list is not meant to be set
+    manually.
+
+    Args:
+        parents: an iterable of the type's parents
+        data: arbitrary data associated with the type
+    Attributes:
+        parents: the parents of the type (immediate supertypes)
+        children: the children of the type (immediate subtypes)
+        data: data associated with the type, or `None`
+    """
+
+    __slots__ = ('_parents', '_children', 'data')
+
+    def __init__(self, parents, data=None):
+        if not parents:
+            raise ValueError('no parents specified')
+        self._parents = list(parents)
+        self._children = set()
+        self.data = data
+
+    @classmethod
+    def top(cls):
+        node = cls([None])   # just a sentinel to avoid the ValueError
+        node._parents.pop()  # now remove the None
+        return node
+
+    @property
+    def parents(self):
+        return list(self._parents)
+
+    @property
+    def children(self):
+        return list(self._children)
+
+    def __eq__(self, other):
+        if not isinstance(other, TypeHierarchyNode):
+            return NotImplemented
+        return (self.parents == other.parents
+                and self.children == other.children
+                and self.data == other.data)
+
+    def __ne__(self, other):
+        if not isinstance(other, TypeHierarchyNode):
+            return NotImplemented
+        return not (self == other)
+
+
 class TypeHierarchy(object):
     """
     A Type Hierarchy.
@@ -190,15 +247,61 @@ class TypeHierarchy(object):
 
     Note:
         Checks for unique glbs is not yet implemented.
+
+    TypeHierarchies may be constructed when instantiating the class or
+    via the :meth:`update` method using a dictionary mapping type
+    names to node values, or one-by-one using dictionary-like access.
+    In both cases, the node values may be an individual parent name,
+    an iterable of parent names, or a :class:`TypeHierarchyNode`
+    object. Retrieving a node via dictionary access on the typename
+    returns a :class:`TypeHierarchyNode` regardless of the method used
+    to create the node.
+
+    >>> th = TypeHierarchy('*top*', {'can-fly': '*top*'})
+    >>> th.update({'can-swim': '*top*', 'can-walk': '*top*'})
+    >>> th['butterfly'] = ('can-fly', 'can-walk')
+    >>> th['duck'] = TypeHierarchyNode(
+    ...     ('can-fly', 'can-swim', 'can-walk'),
+    ...     data='some info relating to ducks...')
+    >>> th['butterfly'].data = 'some info relating to butterflies'
+
+    In some ways the TypeHierarchy behaves like a dictionary, but it
+    is not a subclass of :py:class:`dict` and does not implement all
+    its methods. Also note that some methods ignore the top node,
+    which make certain actions easier:
+
+    >>> th = TypeHierarchy('*top*', {'a': '*top*', 'b': 'a', 'c': 'a'})
+    >>> len(th)
+    3
+    >>> list(th)
+    ['a', 'b', 'c']
+    >>> TypeHierarchy('*top*', dict(th.items())) == th
+    True
+
+    But others do not ignore the top node, namely those where you can
+    request it specifically:
+
+    >>> '*top*' in th
+    True
+    >>> th['*top*']
+    <TypeHierarchyNode ... >
+
     Args:
         top (str): unique top type
-        hierarchy (dict): mapping of `{child: [parents]}`
+        hierarchy (dict): mapping of `{child: node}` (see description
+            above concerning the `node` values)
+    Attributes:
+        top: the hierarchy's top type
     """
     def __init__(self, top, hierarchy=None):
         self._top = top
-        self._hier = {top: ([], set())}
+        self._hier = {top: TypeHierarchyNode.top()}
         if hierarchy is not None:
             self.update(hierarchy)
+
+    @property
+    def top(self):
+        return self._top
 
     def __eq__(self, other):
         if not isinstance(other, TypeHierarchy):
@@ -210,50 +313,88 @@ class TypeHierarchy(object):
             return NotImplemented
         return not self.__eq__(other)
 
-    def __setitem__(self, typename, parents):
+    def __setitem__(self, typename, node):
+        node = _ensure_node(node)
+        self._insert(typename, node)
+
+    def _insert(self, typename, node):
         if typename in self._hier:
             raise TypeHierarchyError('type already in hierarchy: ' + typename)
-        elif not parents:
-            raise TypeHierarchyError('no parents specified')
+        self._check_node_integrity(node)
+        self._hier[typename] = node
+        for parent in node.parents:
+            self._hier[parent]._children.add(typename)
+
+    def _check_node_integrity(self, node):
         ancestors = set()
-        for parent in parents:
+        for parent in node.parents:
             if parent not in self._hier:
                 raise TypeHierarchyError('parent not in hierarchy: ' + parent)
             ancestors.update(self.ancestors(parent))
-        redundant = ancestors.intersection(parents)
+        redundant = ancestors.intersection(node.parents)
         if redundant:
             raise TypeHierarchyError('redundant parents: {}'
-                             .format(', '.join(sorted(redundant))))
-        self._hier[typename] = (parents, set())
-        for parent in parents:
-            self._hier[parent][1].add(typename)
+                                     .format(', '.join(sorted(redundant))))
 
     def __getitem__(self, typename):
-        return list(self._hier[typename][0])
+        return self._hier[typename]
+
+    def __iter__(self):
+        return iter(typename for typename in self._hier
+                    if typename != self._top)
+
+    def __contains__(self, typename):
+        return typename in self._hier
+
+    def __len__(self):
+        return len(self._hier) - 1  # ignore top
+
+    def items(self):
+        """
+        Return the (typename, node) pairs excluding the top node.
+        """
+        hier = self._hier
+        return [(typename, hier[typename]) for typename in self]
 
     def update(self, subhierarchy):
         """
         Incorporate *subhierarchy* into the hierarchy.
 
+        This is nearly the same as the following:
+
+        >>> for typename, node in subhierarchy.items():
+        ...     hierarchy[typename] = node
+        ...
+
+        However the `update()` method ensures that the nodes are
+        inserted in an order that does not result in an intermediate
+        state being disconnected or cyclic, and raises an error if
+        it cannot avoid such a state due to *subhierarchy* being
+        invalid when inserted into the main hierarchy.
+
         Args:
             subhierarchy (dict): hierarchy to incorporate
+        Raises:
+            TypeHierarchyError: when inserting *subhierarchy* leads to
+                a disconnected or cyclic hierarchy.
         """
         hierarchy = self._hier
-        while subhierarchy:
-            eligible = [typename for typename, parents in subhierarchy.items()
-                        if all(parent in hierarchy for parent in parents)]
+        subhier = {t: _ensure_node(n) for t, n in subhierarchy.items()}
+        while subhier:
+            eligible = [typename for typename, node in subhier.items()
+                        if all(parent in hierarchy for parent in node.parents)]
             if not eligible:
                 raise TypeHierarchyError(
                     'disconnected or cyclic hierarchy; remaining: {}'
-                    .format(', '.join(subhierarchy)))
+                    .format(', '.join(subhier)))
             for typename in eligible:
-                self[typename] = subhierarchy[typename]
-                del subhierarchy[typename]
+                self._insert(typename, subhier[typename])
+                del subhier[typename]
 
     def ancestors(self, typename):
         """Return the ancestor types of *typename*."""
         xs = []
-        for parent in self._hier[typename][0]:
+        for parent in self._hier[typename].parents:
             xs.append(parent)
             xs.extend(self.ancestors(parent))
         return xs
@@ -261,7 +402,7 @@ class TypeHierarchy(object):
     def descendants(self, typename):
         """Return the descendant types of *typename*."""
         xs = []
-        for child in self._hier[typename][1]:
+        for child in self._hier[typename].children:
             xs.append(child)
             xs.extend(self.descendants(child))
         return xs
@@ -274,3 +415,14 @@ class TypeHierarchy(object):
         """Return `True` if type *a* is compatible with type *b*."""
         return len(set([a] + self.descendants(a))
                    .intersection([b] + self.descendants(b))) > 0
+
+
+def _ensure_node(node):
+    if isinstance(node, str):
+        node = TypeHierarchyNode([node])
+    elif isinstance(node, Iterable):
+        node = TypeHierarchyNode(node)
+    elif not isinstance(node, TypeHierarchyNode):
+        raise TypeError("cannot set '{}' to object of type {}"
+                        .format(typename, node.__class__.__name__))
+    return node

@@ -28,7 +28,10 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.tfs.TypeHierarchy`:
   - equality comparison
   - key access on typename returns list of supertypes for that type
+  - `top`
+  - `items()`
   - `update()` -- incorporate subhierarchies
+* `delphin.tfs.TypeHierarchyNode`
 
 ### Moved or Renamed
 
@@ -85,6 +88,8 @@ these changes are prefixed with "**BREAKING**"
 
 * `delphin.semi.load()` takes an `encoding` parameter
 * `delphin.tfs` -- errors raise `TypeHierarchyError` instead of `ValueError`
+* `delphin.tfs` nodes in the hierarchy are now TypeHierarchyNodes and may
+  contain arbitrary data in addition to the parents and children
 
 
 ## [v0.9.2][]
