@@ -18,12 +18,10 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.semi`
   - `TOP_TYPE`
   - `STRING_TYPE`
-  - `SemI.compatible()`
   - `SemI.find_synopsis()`
-  - `SemI.subsumes()`
-  - `SemI.type_hierarchy`
   - `SemIError`
   - `SemIWarning`
+  - `SynopsisRole`
 * `delphin.tfs.TypeHierarchyError`
 * `delphin.tfs.TypeHierarchy`:
   - equality comparison

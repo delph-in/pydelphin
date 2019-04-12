@@ -13,8 +13,8 @@ def test_properties(tmpdir):
     s = semi.load(str(p))
     assert len(s.properties) == 3
     assert all([x in s.properties for x in ('bool', '+', '-')])
-    assert s.type_hierarchy.subsumes('bool', '+')
-    assert not s.type_hierarchy.compatible('+', '-')
+    assert s.properties.subsumes('bool', '+')
+    assert not s.properties.compatible('+', '-')
 
 
 def test_variables(tmpdir):
@@ -31,13 +31,13 @@ def test_variables(tmpdir):
     s = semi.load(str(p))
     assert len(s.variables) == 5
     assert all([v in s.variables for v in 'uiepx'])
-    assert s.variables['u'] == []
-    assert s.variables['i'] == []
-    assert s.variables['e'] == [('PERF', 'bool'), ('TENSE', 'tense')]
-    assert s.variables['p'] == []
-    assert s.variables['x'] == []
-    assert all(s.type_hierarchy.subsumes('u', v) for v in 'iepx')
-    assert not s.type_hierarchy.compatible('e', 'x')
+    assert s.variables['u'].data == []
+    assert s.variables['i'].data == []
+    assert s.variables['e'].data == [('PERF', 'bool'), ('TENSE', 'tense')]
+    assert s.variables['p'].data == []
+    assert s.variables['x'].data == []
+    assert all(s.variables.subsumes('u', v) for v in 'iepx')
+    assert not s.variables.compatible('e', 'x')
 
 
 def test_roles(tmpdir):
@@ -80,14 +80,14 @@ def test_predicates(tmpdir):
     s = semi.load(str(p))
     assert set(s.predicates) == {'existential_q', '_the_q', '_predicate_n_1',
                                  '_predicate_v_of', '_predominant_a_1'}
-    assert s.type_hierarchy['_the_q'] == ['existential_q']
-    assert s.type_hierarchy['_predicate_n_1'] == ['*top*']
-    assert s.type_hierarchy['_predicate_v_of'] == ['*top*']
-    assert s.type_hierarchy['_predominant_a_1'] == ['*top*']
-    assert len(s.predicates['_the_q']) == 0
-    assert len(s.predicates['_predicate_n_1']) == 1
-    assert len(s.predicates['_predicate_v_of']) == 1
-    assert len(s.predicates['_predominant_a_1']) == 2
+    assert s.predicates['_the_q'].parents == ['existential_q']
+    assert s.predicates['_predicate_n_1'].parents == ['*top*']
+    assert s.predicates['_predicate_v_of'].parents == ['*top*']
+    assert s.predicates['_predominant_a_1'].parents == ['*top*']
+    assert len(s.predicates['_the_q'].data) == 0
+    assert len(s.predicates['_predicate_n_1'].data) == 1
+    assert len(s.predicates['_predicate_v_of'].data) == 1
+    assert len(s.predicates['_predominant_a_1'].data) == 2
 
 
 def test_include(tmpdir):
@@ -133,8 +133,8 @@ def test_include(tmpdir):
     assert 'existential_q' in s.predicates
     assert 'can_able' in s.predicates
     assert '_able_a_1' in s.predicates
-    assert 'can_able' in s.type_hierarchy['_able_a_1']
-    assert len(s.predicates['_able_a_1']) == 2
+    assert 'can_able' in s.predicates['_able_a_1'].parents
+    assert len(s.predicates['_able_a_1'].data) == 2
 
 
 def test_comments(tmpdir):
@@ -390,4 +390,3 @@ def test_from_dict(tmpdir):
     assert s1.properties == s2.properties
     assert s1.roles == s2.roles
     assert s1.predicates == s2.predicates
-    assert s1.type_hierarchy == s2.type_hierarchy

@@ -15,7 +15,6 @@ delphin.mrs
   delphin.mrs.penman.rst
   delphin.mrs.prolog.rst
   delphin.mrs.query.rst
-  delphin.mrs.semi.rst
   delphin.mrs.simpledmrs.rst
   delphin.mrs.simplemrs.rst
   delphin.mrs.vpm.rst

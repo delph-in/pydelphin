@@ -15,9 +15,10 @@ representations.
 
 import re
 from os.path import dirname, join as pjoin
+from collections import namedtuple
 import warnings
 
-from delphin.tfs import TypeHierarchy
+from delphin import tfs
 from delphin.exceptions import (
     PyDelphinException,
     PyDelphinWarning
@@ -82,6 +83,25 @@ class SemIError(PyDelphinException):
 class SemIWarning(PyDelphinWarning):
     """
     Warning class for questionable SEM-Is.
+    """
+
+
+SynopsisRole = namedtuple('SynopsisRole', 'name value properties optional')
+SynopsisRole.__doc__ = """
+    Role data associated with a SEM-I predicate synopsis.
+
+    Args:
+        name (str): the role name
+        value (str): the role value (variable type or "string")
+        properties (list): default properties associated with the
+            role's value as a list of (propname, propval) pairs
+        optional (bool): a flag indicating if the role is optional
+    Attributes:
+        name: the role name
+        value: the role value (variable type or "string")
+        properties: default properties associated with the role's
+            value as a list of (propname, propval) pairs
+        optional: a flag indicating if the role is optional
     """
 
 
@@ -225,50 +245,53 @@ class SemI(object):
         roles: a mapping of (role, {'value': ...})
         predicates: a mapping of (pred, {'parents': [...], 'synopses': [...]})
     Attributes:
-        variables: mapping of variable types to property lists
-        properties: set of valid property values
+        variables: a :class:`~delphin.tfs.TypeHierarchy` of variables;
+            the `data` attribute of the
+            :class:`~delphin.tfs.TypeHierarchyNode` contains its
+            property list
+        properties: a :class:`~delphin.tfs.TypeHierarchy` of properties
         roles: mapping of role names to allowed variable types
-        predicates: mapping of predicate symbols to synopses
-        type_hierarchy: unified :class:`~delphin.tfs.TypeHierarchy` of
-            all types defined in the SEM-I
+        predicates: a :class:`~delphin.tfs.TypeHierarchy` of predicates;
+            the `data` attribute of the
+            :class:`~delphin.tfs.TypeHierarchyNode` contains a list of
+            synopses
     """
     def __init__(self,
                  variables=None,
                  properties=None,
                  roles=None,
                  predicates=None):
-        self.type_hierarchy = TypeHierarchy(TOP_TYPE)
-        self.properties = set()
-        self.variables = {}
+        self.properties = tfs.TypeHierarchy(TOP_TYPE)
+        self.variables = tfs.TypeHierarchy(TOP_TYPE)
         self.roles = {}
-        self.predicates = {}
+        self.predicates = tfs.TypeHierarchy(TOP_TYPE)
         # validate and normalize inputs
         self._init_properties(properties)
         self._init_variables(variables)
         self._init_roles(roles)
         self._init_predicates(predicates)
 
-
     def _init_properties(self, properties):
         subhier = {}
         for prop, data in dict(properties or []).items():
             prop = prop.lower()
-            _add_to_subhierarchy(subhier, prop, data)
-            self.properties.add(prop)
-        self.type_hierarchy.update(subhier)
+            parents = data.get('parents')
+            _add_to_subhierarchy(subhier, prop, parents, None)
+        self.properties.update(subhier)
 
     def _init_variables(self, variables):
         subhier = {}
         for var, data in dict(variables or []).items():
             var = var.lower()
-            _add_to_subhierarchy(subhier, var, data)
-            self.variables[var] = proplist = []
+            parents = data.get('parents')
+            properties = []
             for k, v in data.get('properties', []):
                 k, v = k.upper(), v.lower()
                 if v not in self.properties:
                     raise SemIError('undefined property value: {}'.format(v))
-                proplist.append((k, v))
-        self.type_hierarchy.update(subhier)
+                properties.append((k, v))
+            _add_to_subhierarchy(subhier, var, parents, properties)
+        self.variables.update(subhier)
 
     def _init_roles(self, roles):
         for role, data in dict(roles or []).items():
@@ -280,23 +303,22 @@ class SemI(object):
 
     def _init_predicates(self, predicates):
         subhier = {}
-        propcache = {var: dict(props) for var, props in self.variables.items()}
+        propcache = {v: dict(node.data) for v, node in self.variables.items()}
         for pred, data in dict(predicates or []).items():
             pred = pred.lower()
-            _add_to_subhierarchy(subhier, pred, data)
+            parents = data.get('parents')
             synopses = []
             for synopsis_data in data['synopses']:
                 synopses.append(
                     self._init_synopsis(pred, synopsis_data, propcache))
-            self.predicates[pred] = synopses
-        self.type_hierarchy.update(subhier)
+            _add_to_subhierarchy(subhier, pred, parents, synopses)
+        self.predicates.update(subhier)
 
     def _init_synopsis(self, pred, synopsis_data, propcache):
         synopsis = []
         for d in synopsis_data:
             role = d['role'].upper()
             value = d['value'].lower()
-            proplist = []
             if role not in self.roles:
                 raise SemIError('{}: undefined role: {}'.format(pred, role))
             if value == STRING_TYPE:
@@ -323,12 +345,13 @@ class SemI(object):
                             SemIWarning)
                     else:
                         _v = propcache[value][k]
-                        if not self.type_hierarchy.compatible(v, _v):
+                        if not self.properties.compatible(v, _v):
                             raise SemIError(
                                 '{}: incompatible property values: {}, {}'
                                 .format(pred, v, _v))
                     props[k] = v
-            synopsis.append((role, value, props, d.get('optional', False)))
+            synopsis.append(
+                SynopsisRole(role, value, props, d.get('optional', False)))
         return synopsis
 
     @classmethod
@@ -338,60 +361,30 @@ class SemI(object):
 
     def to_dict(self):
         """Return a dictionary representation of the SemI."""
-        hier = self.type_hierarchy
-        def parents(x):
-            ps = hier[x]
+        def parents(node):
+            ps = node.parents
             if ps == [TOP_TYPE]:
                 return []
             return ps
-        variables = {var: {'parents': parents(var),
-                           'properties': [[k, v] for k, v in props]}
-                     for var, props in self.variables.items()}
-        properties = {prop: {'parents': parents(prop)}
-                      for prop in self.properties}
+
+        variables = {var: {'parents': parents(node),
+                           'properties': [[k, v] for k, v in node.data]}
+                     for var, node in self.variables.items()}
+        properties = {prop: {'parents': parents(node)}
+                      for prop, node in self.properties.items()}
         roles = {role: {'value': value} for role, value in self.roles.items()}
         predicates = {}
         _synopsis_fields = 'role value properties optional'.split()
-        for pred, synopses in self.predicates.items():
+
+        for pred, node in self.predicates.items():
             synopses = [[dict(zip(_synopsis_fields, d)) for d in synopsis]
-                        for synopsis in synopses]
-            predicates[pred] = {'parents': parents(pred), 'synopses': synopses}
+                        for synopsis in node.data]
+            predicates[pred] = {'parents': parents(node), 'synopses': synopses}
+
         return {'variables': variables,
                 'properties': properties,
                 'roles': roles,
                 'predicates': predicates}
-
-    def subsumes(self, a, b):
-        """
-        Return True if *a* subsumes *b* in the type hierarchy.
-
-        Type names *a* and *b* are case-normalized before checking the
-        type hierarchy.
-
-        Example:
-            >>> smi.subsumes('existential_q', '_a_q')
-            True
-            >>> smi.subsumes('+', 'bool')
-            False
-        """
-        return self.type_hierarchy.subsumes(a.lower(), b.lower())
-
-    def compatible(self, a, b):
-        """
-        Return True if *a* is compatible with *b* in the type hierarchy.
-
-        Type names *a* and *b* are case-normalized before checking the
-        type hierarchy.
-
-        Example:
-            >>> smi.compatible('+', 'bool')
-            True
-            >>> smi.compatible('i', 'p')
-            True
-            >>> smi.compatible('past', 'pres')
-            False
-        """
-        return self.type_hierarchy.compatible(a.lower(), b.lower())
 
     def find_synopsis(self, predicate, roles=None, variables=None):
         """
@@ -443,9 +436,9 @@ class SemI(object):
         return found
 
 
-def _add_to_subhierarchy(subhier, typename, data):
-    if data['parents']:
-        parents = [parent.lower() for parent in data['parents']]
+def _add_to_subhierarchy(subhier, typename, parents, data):
+    if parents:
+        parents = [parent.lower() for parent in parents]
     else:
         parents = [TOP_TYPE]
-    subhier[typename] = parents
+    subhier[typename] = tfs.TypeHierarchyNode(parents, data=data)
