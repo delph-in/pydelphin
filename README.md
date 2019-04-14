@@ -56,6 +56,7 @@ The following packages/modules are available:
 - [`delphin.itsdb`][]:           [\[incr tsdb()\]](http://moin.delph-in.net/ItsdbTop) profiles
 - [`delphin.tsql`][]:            [TSQL](http://moin.delph-in.net/TsqlRfc) test suite queries
 - [`delphin.mrs`][]:             [Minimal Recursion Semantics](http://moin.delph-in.net/MrsRfc)
+- [`delphin.semi`][]:            [Semantic Interface](http://moin.delph-in.net/SemiRfc)
 - [`delphin.tdl`][]:             [Type-Description Language](http://moin.delph-in.net/TdlRfc)
 - [`delphin.tfs`][]:             Feature Structures
 - [`delphin.tokens`][]:          [YY Token lattices](http://moin.delph-in.net/PetInput#YY_Input_Mode)
@@ -73,6 +74,7 @@ The following packages/modules are available:
 [`delphin.tfs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tfs.html
 [`delphin.tokens`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tokens.html
 [`delphin.repp`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.repp.html
+[`delphin.semi`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.semi.html
 [`delphin.extra.highlight`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.extra.html#module-delphin.extra.highlight
 [`delphin.extra.latex`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.extra.html#module-delphin.extra.latex
 [`delphin.interfaces.ace`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.interfaces.ace.html

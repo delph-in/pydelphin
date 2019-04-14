@@ -5,6 +5,11 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+### Python Versions
+
+* Removed Python 2.7 support
+* Removed Python 3.4 support
+
 ### Added
 
 * `delphin.lnk`
