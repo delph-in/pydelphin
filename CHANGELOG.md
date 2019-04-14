@@ -21,6 +21,7 @@ these changes are prefixed with "**BREAKING**"
   - `SemI.find_synopsis()`
   - `SemIError`
   - `SemIWarning`
+  - `Synopsis`
   - `SynopsisRole`
 * `delphin.tfs.TypeHierarchyError`
 * `delphin.tfs.TypeHierarchy`:
@@ -85,6 +86,8 @@ these changes are prefixed with "**BREAKING**"
 ### Changed
 
 * `delphin.semi.load()` takes an `encoding` parameter
+* `delphin.semi` dictionary schema removes empty/default values; changes
+  structure of predicate synopses
 * `delphin.tfs` -- errors raise `TypeHierarchyError` instead of `ValueError`
 * `delphin.tfs` nodes in the hierarchy are now TypeHierarchyNodes and may
   contain arbitrary data in addition to the parents and children

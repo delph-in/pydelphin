@@ -168,7 +168,7 @@ def test_consistency():
             predicates={
                 '_predicate_n_1': {
                     'parents': [],
-                    'synopses': [[{'role': 'ARG0', 'value': 'i'}]]}})
+                    'synopses': [{'roles': [{'name': 'ARG0', 'value': 'i'}]}]}})
     # undeclared properties
     with pytest.raises(semi.SemIError):
         semi.SemI(
@@ -179,9 +179,9 @@ def test_consistency():
                 '_predicate_n_1': {
                     'parents': [],
                     'synopses': [
-                        [{'role': 'ARG0',
-                          'value': 'i',
-                          'properties': {'IND': '+'}}]]}})
+                        {'roles': [{'name': 'ARG0',
+                                    'value': 'i',
+                                    'properties': {'IND': '+'}}]}]}})
     # undeclared property value
     with pytest.raises(semi.SemIError):
         semi.SemI(
@@ -194,9 +194,9 @@ def test_consistency():
                 '_predicate_n_1': {
                     'parents': [],
                     'synopses': [
-                        [{'role': 'ARG0',
-                          'value': 'i',
-                          'properties': {'IND': '+'}}]]}})
+                        {'roles': [{'name': 'ARG0',
+                                    'value': 'i',
+                                    'properties': {'IND': '+'}}]}]}})
 
 
 def test_to_dict(tmpdir):
@@ -228,16 +228,16 @@ def test_to_dict(tmpdir):
     d = s.to_dict()
     assert set(d) == {'variables', 'roles', 'properties', 'predicates'}
     assert d['variables'] == {
-        'u': {'parents': [], 'properties': []},
-        'i': {'parents': ['u'], 'properties': []},
-        'p': {'parents': ['u'], 'properties': []},
+        'u': {},
+        'i': {'parents': ['u']},
+        'p': {'parents': ['u']},
         'e': {'parents': ['i'], 'properties': [['TENSE', 'tense']]},
         'x': {'parents': ['i', 'p'], 'properties': [['IND', 'bool']]}
     }
     assert d['properties'] == {
-        'tense': {'parents': []},
+        'tense': {},
         'pres': {'parents': ['tense']},
-        'bool': {'parents': []},
+        'bool': {},
         '+': {'parents': ['bool']}
     }
     assert d['roles'] == {
@@ -250,51 +250,46 @@ def test_to_dict(tmpdir):
         'existential_q', '_the_q', '_predicate_n_1', '_predicate_v_of',
         '_predominant_a_1'
     }
-    assert d['predicates']['existential_q'] == {
-        'parents': [],
-        'synopses': []
-    }
+    assert d['predicates']['existential_q'] == {}
     assert d['predicates']['_the_q'] == {
         'parents': ['existential_q'],
-        'synopses': []
     }
     assert d['predicates']['_predicate_n_1'] == {
-        'parents': [],
         'synopses': [
-            [{'role': 'ARG0', 'value': 'x',
-              'properties': {'IND': '+'}, 'optional': False}]
+            {
+                'roles': [
+                    {'name': 'ARG0', 'value': 'x',
+                     'properties': {'IND': '+'}}
+                ]
+            }
         ]
     }
     assert d['predicates']['_predicate_v_of'] == {
-        'parents': [],
         'synopses': [
-            [
-                {'role': 'ARG0', 'value': 'e',
-                 'properties': {}, 'optional': False},
-                {'role': 'ARG1', 'value': 'i',
-                 'properties': {}, 'optional': False},
-                {'role': 'ARG2', 'value': 'p',
-                 'properties': {}, 'optional': False},
-                {'role': 'ARG3', 'value': 'i',
-                 'properties': {}, 'optional': True}
-            ]
+            {
+                'roles': [
+                    {'name': 'ARG0', 'value': 'e'},
+                    {'name': 'ARG1', 'value': 'i'},
+                    {'name': 'ARG2', 'value': 'p'},
+                    {'name': 'ARG3', 'value': 'i', 'optional': True}
+                ]
+            }
         ]
     }
     assert d['predicates']['_predominant_a_1'] == {
-        'parents': [],
         'synopses': [
-            [
-                {'role': 'ARG0', 'value': 'e',
-                 'properties': {}, 'optional': False},
-                {'role': 'ARG1', 'value': 'e',
-                 'properties': {}, 'optional': False}
-            ],
-            [
-                {'role': 'ARG0', 'value': 'e',
-                 'properties': {}, 'optional': False},
-                {'role': 'ARG1', 'value': 'p',
-                 'properties': {}, 'optional': False}
-            ]
+            {
+                'roles': [
+                    {'name': 'ARG0', 'value': 'e'},
+                    {'name': 'ARG1', 'value': 'e'}
+                ]
+            },
+            {
+                'roles': [
+                    {'name': 'ARG0', 'value': 'e'},
+                    {'name': 'ARG1', 'value': 'p'}
+                ]
+            }
         ]
     }
 
@@ -327,16 +322,16 @@ def test_from_dict(tmpdir):
     s1 = semi.load(str(p))
     s2 = semi.SemI.from_dict({
         'variables': {
-            'u': {'parents': [], 'properties': []},
-            'i': {'parents': ['u'], 'properties': []},
-            'p': {'parents': ['u'], 'properties': []},
+            'u': {},
+            'i': {'parents': ['u']},
+            'p': {'parents': ['u']},
             'e': {'parents': ['i'], 'properties': [('TENSE', 'tense')]},
             'x': {'parents': ['i', 'p'], 'properties': [['IND', 'bool']]}
         },
         'properties': {
-            'tense': {'parents': []},
+            'tense': {},
             'pres': {'parents': ['tense']},
-            'bool': {'parents': []},
+            'bool': {},
             '+': {'parents': ['bool']}
         },
         'roles': {
@@ -346,42 +341,42 @@ def test_from_dict(tmpdir):
             'ARG3': {'value': 'u'}
         },
         'predicates': {
-            'existential_q': {
-                'parents': [],
-                'synopses': []
-            },
+            'existential_q': {},
             '_the_q': {
-                'parents': ['existential_q'],
-                'synopses': []
+                'parents': ['existential_q']
             },
             '_predicate_n_1': {
-                'parents': [],
                 'synopses': [
-                    [{'role': 'ARG0', 'value': 'x', 'properties': {'IND': '+'}}]
+                    {'roles': [{'name': 'ARG0', 'value': 'x', 'properties': {'IND': '+'}}]}
                 ]
             },
             '_predicate_v_of': {
-                'parents': [],
                 'synopses': [
-                    [
-                        {'role': 'ARG0', 'value': 'e'},
-                        {'role': 'ARG1', 'value': 'i'},
-                        {'role': 'ARG2', 'value': 'p'},
-                        {'role': 'ARG3', 'value': 'i', 'optional': True}
-                    ]
+                    {
+                        'roles': [
+                            {'name': 'ARG0', 'value': 'e'},
+                            {'name': 'ARG1', 'value': 'i'},
+                            {'name': 'ARG2', 'value': 'p'},
+                            {'name': 'ARG3', 'value': 'i', 'optional': True}
+                        ]
+                    }
                 ]
             },
             '_predominant_a_1': {
                 'parents': [],
                 'synopses': [
-                    [
-                        {'role': 'ARG0', 'value': 'e'},
-                        {'role': 'ARG1', 'value': 'e'}
-                    ],
-                    [
-                        {'role': 'ARG0', 'value': 'e'},
-                        {'role': 'ARG1', 'value': 'p'}
-                    ]
+                    {
+                        'roles': [
+                            {'name': 'ARG0', 'value': 'e'},
+                            {'name': 'ARG1', 'value': 'e'}
+                        ]
+                    },
+                    {
+                        'roles': [
+                            {'name': 'ARG0', 'value': 'e'},
+                            {'name': 'ARG1', 'value': 'p'}
+                        ]
+                    }
                 ]
             }
         }
