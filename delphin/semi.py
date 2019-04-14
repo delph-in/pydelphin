@@ -9,7 +9,10 @@ structures or for filling out missing information in incomplete
 representations.
 
 .. seealso::
-  - Wiki on SEM-I: http://moin.delph-in.net/SemiRfc
+  The following DELPH-IN wikis contain more information:
+
+  - Technical specifications: http://moin.delph-in.net/SemiRfc
+  - Overview and usage: http://moin.delph-in.net/RmrsSemi
 
 """
 
@@ -228,6 +231,12 @@ class SynopsisRole(tuple):
     >>> role = SynopsisRole('ARG0', 'x', {'PERS': '3'}, False)
     """
 
+    name = property(itemgetter(0), doc='The role name.')
+    value = property(
+        itemgetter(1), doc='The role value (variable type or "string"')
+    properties = property(itemgetter(2), doc='Property-value map.')
+    optional = property(itemgetter(3), doc="`True` if the role is optional.")
+
     def __new__(cls, name, value, properties=None, optional=False):
         if not properties:
             properties = {}
@@ -239,11 +248,9 @@ class SynopsisRole(tuple):
                                       properties,
                                       bool(optional)]))
 
-    name = property(itemgetter(0), doc='The role name.')
-    value = property(
-        itemgetter(1), doc='The role value (variable type or "string"')
-    properties = property(itemgetter(2), doc='Property-value map.')
-    optional = property(itemgetter(3), doc="`True` if the role is optional.")
+    def __repr__(self):
+        return 'SynopsisRole({}, {}, {}, {})'.format(
+            self.name, self.value, self.properties, self.optional)
 
     def _to_dict(self):
         d = {"name": self.name, "value": self.value}
@@ -272,6 +279,9 @@ class Synopsis(tuple):
     the role names, argument types, associated properties, and
     optionality.
     """
+
+    def __repr__(self):
+        return 'Synopsis([{}])'.format(', '.join(map(repr, self)))
 
     @classmethod
     def from_dict(cls, d):

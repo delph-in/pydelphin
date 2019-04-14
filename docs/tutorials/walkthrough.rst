@@ -458,18 +458,27 @@ grammar. PyDelphin supports the reading and inspection of SEM-Is.
 >>> list(s.variables)
 ['u', 'i', 'p', 'h', 'e', 'x']
 >>> list(s.roles)
-['ARG0', 'ARG1', 'ARG2', 'ARG3', 'ARG4', 'ARG', 'BODY', 'CARG', 'L-HNDL', 'L-INDEX', 'R-HNDL', 'R-INDEX', 'RSTR']
->>> s.roles['ARG3']
-Role(rargname='ARG3', value='u', proplist=[], optional=False)
+['ARG0', 'ARG1', 'ARG2', 'ARG3', 'ARG4', 'ARG', 'RSTR', 'BODY', 'CARG']
+>>> s.roles['ARG2']
+'u'
 >>> list(s.properties)
-['bool', '+', '-', 'tense', 'tensed', 'past', 'pres', 'fut', 'untensed', 'mood', 'subjunctive', 'indicative', 'gender', 'm-or-f', 'm', 'f', 'n', 'number', 'sg', 'pl', 'person', '1', '2', '3', 'pt', 'refl', 'std', 'zero', 'sf', 'prop-or-ques', 'prop', 'ques', 'comm']
+['bool', 'tense', 'mood', 'gender', 'number', 'person', 'pt', 'sf', '+', '-', 'tensed', 'untensed', 'subjunctive', 'indicative', 'm-or-f', 'n', 'sg', 'pl', '1', '2', '3', 'refl', 'std', 'zero', 'prop-or-ques', 'comm', 'past', 'pres', 'fut', 'm', 'f', 'prop', 'ques']
 >>> s.properties['fut']
-Property(type='fut', supertypes=('tensed',))
+<delphin.tfs.TypeHierarchyNode object at 0x7fd67b015948>
+>>> s.properties['fut'].parents
+['tensed']
 >>> len(s.predicates)
-22539
->>> s.predicates['_cactus_n_1']
-Predicate(predicate='_cactus_n_1', supertypes=(), synopses=[(Role(rargname='ARG0', value='x', proplist=[('IND', '+')], optional=False),)])
+23403
+>>> s.predicates['_cactus_n_1'].data
+[Synopsis([SynopsisRole(ARG0, x, {'IND': '+'}, False)])]
+>>> s.predicates.descendants('some_q')
+['_such+a_q', '_a_q', '_an+additional_q', '_another_q', '_many+a_q', '_some_q_indiv', '_what+a_q', '_some_q']
+
 
 .. seealso::
-  - The SEM-I wiki: http://moin.delph-in.net/SemiRfc
-  - :mod:`delphin.mrs.semi` module
+  - The SEM-I wikis:
+
+    - http://moin.delph-in.net/SemiRfc
+    - http://moin.delph-in.net/RmrsSemi
+
+  - :mod:`delphin.semi` module
