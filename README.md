@@ -1,8 +1,9 @@
 # PyDelphin &mdash; Python libraries for DELPH-IN data
 
-| [master](https://github.com/delph-in/pydelphin/tree/master) branch | [develop](https://github.com/delph-in/pydelphin/tree/develop) branch | [documentation](https://pydelphin.readthedocs.io/) |
-| ------ | ------ | ------ |
-| [![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=master)](https://travis-ci.org/delph-in/pydelphin) | [![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=develop)](https://travis-ci.org/delph-in/pydelphin) | [![Documentation Status](https://readthedocs.org/projects/pydelphin/badge/?version=latest)](https://pydelphin.readthedocs.io/en/latest/?badge=latest) |
+[![PyPI Version](https://img.shields.io/pypi/v/pydelphin.svg)](https://pypi.org/project/PyDelphin/)
+![Python Support](https://img.shields.io/pypi/pyversions/pydelphin.svg)
+[![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=develop)](https://travis-ci.org/delph-in/pydelphin)
+[![Documentation Status](https://readthedocs.org/projects/pydelphin/badge/?version=latest)](https://pydelphin.readthedocs.io/en/latest/?badge=latest)
 
 [DELPH-IN](http://delph-in.net) is an international consortium of
 researchers committed to producing precise, high-quality language
@@ -43,14 +44,11 @@ running unit tests, please see the
 
 API changes in new versions are documented in the
 [CHANGELOG](CHANGELOG.md), but for any unexpected changes please
-[file an issue](https://github.com/delph-in/pydelphin/issues). Also note
-that the upcoming
-[v1.0.0](https://github.com/delph-in/pydelphin/milestone/12) version will
-remove Python 2.7 support and numerous deprecated features.
+[file an issue](https://github.com/delph-in/pydelphin/issues).
 
-## Sub-packages
+## Features
 
-The following packages/modules are available:
+PyDelphin implements the following DELPH-IN specifications:
 
 - [`delphin.derivation`][]:      [Derivation trees](http://moin.delph-in.net/ItsdbDerivations)
 - [`delphin.itsdb`][]:           [\[incr tsdb()\]](http://moin.delph-in.net/ItsdbTop) profiles
@@ -58,14 +56,20 @@ The following packages/modules are available:
 - [`delphin.mrs`][]:             [Minimal Recursion Semantics](http://moin.delph-in.net/MrsRfc)
 - [`delphin.semi`][]:            [Semantic Interface](http://moin.delph-in.net/SemiRfc)
 - [`delphin.tdl`][]:             [Type-Description Language](http://moin.delph-in.net/TdlRfc)
-- [`delphin.tfs`][]:             Feature Structures
+- [`delphin.tfs`][]:             Feature structures and type hierarchies
 - [`delphin.tokens`][]:          [YY Token lattices](http://moin.delph-in.net/PetInput#YY_Input_Mode)
 - [`delphin.repp`][]:            [Regular-Expression PreProcessor](http://moin.delph-in.net/ReppTop)
-- [`delphin.extra.highlight`][]: [Pygments](http://pygments.org/)-based syntax highlighting (currently just for TDL and SimpleMRS)
-- [`delphin.extra.latex`][]:     Formatting for LaTeX (just DMRS)
+
+In addition, it provides the following packages and tools for convenience:
+
+- [`delphin.commands`][]:        Functional or CLI interface to common tasks
 - [`delphin.interfaces.ace`][]:  Python wrapper for common tasks using [ACE](http://sweaglesw.org/linguistics/ace/)
 - [`delphin.interfaces.rest`][]: Client for the [web API](http://moin.delph-in.net/ErgApi)
+- [`delphin.extra.highlight`][]: [Pygments](http://pygments.org/)-based syntax highlighting (currently just for TDL and SimpleMRS)
+- [`delphin.extra.latex`][]:     Formatting for LaTeX (just DMRS)
 
+
+[`delphin.commands`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.commands.html
 [`delphin.derivation`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.derivation.html
 [`delphin.itsdb`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.itsdb.html
 [`delphin.tsql`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tsql.html
@@ -79,6 +83,7 @@ The following packages/modules are available:
 [`delphin.extra.latex`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.extra.html#module-delphin.extra.latex
 [`delphin.interfaces.ace`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.interfaces.ace.html
 [`delphin.interfaces.rest`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.interfaces.rest.html
+
 
 ## Other Information
 
@@ -96,7 +101,7 @@ PyDelphin is developed and maintained by several contributors:
 ### Related Software
 
 * Parser/Generators (chronological order)
-  - LKB: http://moin.delph-in.net/LkbTop
+  - LKB: http://moin.delph-in.net/LkbTop (also: http://moin.delph-in.net/LkbFos)
   - PET: http://moin.delph-in.net/PetTop
   - ACE: http://sweaglesw.org/linguistics/ace/
   - agree: http://moin.delph-in.net/AgreeTop
@@ -107,7 +112,6 @@ PyDelphin is developed and maintained by several contributors:
   - gTest: https://github.com/goodmami/gtest
 * Software libraries and repositories
   - LOGON: http://moin.delph-in.net/LogonTop
-  - Ruby-DELPH-IN: https://github.com/wpm/Ruby-DELPH-IN
   - pydmrs: https://github.com/delph-in/pydmrs
 * Also see (may have overlap with the above):
   - http://moin.delph-in.net/ToolsTop

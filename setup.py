@@ -3,18 +3,13 @@
 import os
 from setuptools import setup
 
-long_description = '''\
-PyDelphin provides a suite of libraries for modeling Minimal Recursion
-Semantics (MRS; including EDS and DMRS), [incr tsdb()] profiles and
-derivations, the Test Suite Query Language (TSQL), Type Description
-Language (TDL), and YY token lattices. In addition, it provides an
-implementation of the Regular Expression Preprocessor (REPP) and
-Python interfaces for the ACE processor and HTTP API.'''
-
 base_dir = os.path.dirname(__file__)
 about = {}
 with open(os.path.join(base_dir, "delphin", "__about__.py")) as f:
     exec(f.read(), about)
+
+with open(os.path.join(base_dir, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 # thanks: https://snarky.ca/clarifying-pep-518/
 docs_require = [
@@ -30,6 +25,7 @@ setup(
     version=about['__version__'],
     description=about['__summary__'],
     long_description=long_description,
+    long_description_content_type='text/markdown',
     url=about['__uri__'],
     author=about['__author__'],
     author_email=about['__email__'],
