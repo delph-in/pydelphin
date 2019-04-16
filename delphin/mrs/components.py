@@ -11,7 +11,7 @@ from itertools import starmap
 
 from delphin.exceptions import (XmrsError)
 from delphin import predicate
-from delphin.lnk import Lnk, _LnkMixin
+from delphin.lnk import LnkMixin
 from delphin import variable
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
@@ -204,7 +204,7 @@ def icons(xmrs):
 class Node(
     namedtuple('Node', ('nodeid', 'pred', 'sortinfo',
                         'lnk', 'surface', 'base', 'carg')),
-    _LnkMixin):
+    LnkMixin):
     """
     A DMRS node.
 
@@ -219,7 +219,7 @@ class Node(
         sortinfo (dict, optional): mapping of morphosyntactic
             properties and values; the `cvarsort` property is
             specified in this mapping
-        lnk (:class:`Lnk`, optional): surface alignment
+        lnk (:class:`delphin.lnk.Lnk`, optional): surface alignment
         surface (str, optional): surface string
         base (str, optional): base form
         carg (str, optional): constant argument string
@@ -229,7 +229,7 @@ class Node(
         sortinfo (dict): mapping of morphosyntactic
             properties and values; the `cvarsort` property is
             specified in this mapping
-        lnk (:class:`Lnk`): surface alignment
+        lnk (:class:`delphin.lnk.Lnk`): surface alignment
         surface (str): surface string
         base (str): base form
         carg (str): constant argument string
@@ -319,7 +319,7 @@ def nodes(xmrs):
 class ElementaryPredication(
     namedtuple('ElementaryPredication',
                ('nodeid', 'pred', 'label', 'args', 'lnk', 'surface', 'base')),
-    _LnkMixin):
+    LnkMixin):
     """
     An MRS elementary predication (EP).
 
@@ -337,7 +337,7 @@ class ElementaryPredication(
         pred (str): semantic predicate
         label (str): scope handle
         args (dict, optional): mapping of roles to values
-        lnk (:class:`Lnk`, optional): surface alignment
+        lnk (:class:`delphin.lnk.Lnk`, optional): surface alignment
         surface (str, optional): surface string
         base (str, optional): base form
     Attributes:
@@ -345,7 +345,7 @@ class ElementaryPredication(
         pred (str): semantic predicate
         label (str): scope handle
         args (dict): mapping of roles to values
-        lnk (:class:`Lnk`): surface alignment
+        lnk (:class:`delphin.lnk.Lnk`): surface alignment
         surface (str): surface string
         base (str): base form
         cfrom (int): surface alignment starting position

@@ -9,7 +9,7 @@ from itertools import chain
 from delphin.exceptions import (XmrsError, XmrsStructureError)
 from delphin.util import safe_int, _bfs, _connected_components
 from delphin import predicate
-from delphin.lnk import Lnk, _LnkMixin
+from delphin.lnk import Lnk, LnkMixin
 from delphin import variable
 from .components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
@@ -22,7 +22,7 @@ from .config import (
 )
 
 
-class Xmrs(_LnkMixin):
+class Xmrs(LnkMixin):
     """
     Xmrs is a common class for Mrs, and Dmrs objects.
 
@@ -59,7 +59,7 @@ class Xmrs(_LnkMixin):
         top: the top (i.e. LTOP) handle
         index: the semantic index
         xarg: the external argument
-        lnk (:class:`~delphin.mrs.components.Lnk`): surface alignment
+        lnk (:class:`~delphin.lnk.Lnk`): surface alignment
         surface: the surface string
         identifier: a discourse-utterance ID (often unset)
     """

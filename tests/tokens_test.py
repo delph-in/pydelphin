@@ -2,7 +2,7 @@
 import pytest
 
 from delphin.tokens import YyTokenLattice as YY, YyToken
-from delphin.mrs.components import Lnk
+from delphin.lnk import Lnk
 
 token_v1_basic = '(1, 0, 1, 1, "dog", 0, "null")'
 token_v1_surface = '(1, 0, 1, 1, "dog" "Dog", 0, "null")'

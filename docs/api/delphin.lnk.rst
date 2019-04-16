@@ -4,6 +4,15 @@ delphin.lnk
 
 .. automodule:: delphin.lnk
 
-  .. autoexception:: LnkError
-  .. autoclass:: Lnk
-     :members:
+   Classes
+   -------
+
+   .. autoclass:: Lnk
+      :members:
+   .. autoclass:: LnkMixin
+      :members:
+
+   Exceptions
+   ----------
+
+   .. autoexception:: LnkError

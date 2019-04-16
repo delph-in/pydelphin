@@ -1,8 +1,9 @@
 
 import pytest
 
+from delphin.lnk import Lnk
 from delphin.mrs import simplemrs, eds
-from delphin.mrs.components import Node, Lnk
+from delphin.mrs.components import Node
 from delphin.mrs.config import CVARSORT
 
 # empty

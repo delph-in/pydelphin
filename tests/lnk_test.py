@@ -1,7 +1,7 @@
 
 import pytest
 
-from delphin.lnk import Lnk, _LnkMixin, LnkError
+from delphin.lnk import Lnk, LnkMixin, LnkError
 
 class TestLnk():
     def test_raw_init(self):
@@ -63,27 +63,27 @@ class TestLnk():
 
 class TestLnkMixin():
     def test_inherit(self):
-        class NoLnk(_LnkMixin):
+        class NoLnk(LnkMixin):
             pass
         n = NoLnk()
         assert n.cfrom == -1
         assert n.cto == -1
 
-        class WithNoneLnk(_LnkMixin):
+        class WithNoneLnk(LnkMixin):
             def __init__(self):
                 self.lnk = None
         n = WithNoneLnk()
         assert n.cfrom == -1
         assert n.cto == -1
 
-        class WithNonCharspanLnk(_LnkMixin):
+        class WithNonCharspanLnk(LnkMixin):
             def __init__(self):
                 self.lnk = Lnk.chartspan(0,1)
         n = WithNonCharspanLnk()
         assert n.cfrom == -1
         assert n.cto == -1
 
-        class WithCharspanLnk(_LnkMixin):
+        class WithCharspanLnk(LnkMixin):
             def __init__(self):
                 self.lnk = Lnk.charspan(0,1)
         n = WithCharspanLnk()

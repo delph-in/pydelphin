@@ -195,19 +195,9 @@ class Lnk(object):
         return self.type == other.type and self.data == other.data
 
 
-class _LnkMixin(object):
+class LnkMixin(object):
     """
     A mixin class for adding `cfrom` and `cto` properties on structures.
-
-    By far the most common :class:`Lnk` type is for character spans,
-    and these spans are conveniently described by `cfrom` and `cto`
-    properties. This mixin is used by larger structures, such as
-    :class:`~delphin.mrs.ElementaryPredication`,
-    :class:`~delphin.dmrs.Node`, and
-    :class:`~delphin.eds.Node`, to add `cfrom` and `cto`
-    properties. These properties exist regardless of the whether the
-    Lnk is a character span or not; if not, or if Lnk information is
-    missing, they return the default value of `-1`.
     """
 
     __slots__ = ()

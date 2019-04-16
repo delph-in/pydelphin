@@ -1,6 +1,6 @@
 
 from delphin import repp
-from delphin.mrs.components import Lnk
+from delphin.lnk import Lnk
 
 def test_REPP():
     r = repp.REPP
