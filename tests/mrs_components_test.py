@@ -6,7 +6,6 @@ from delphin.exceptions import XmrsError
 from delphin import predicate
 from delphin.lnk import Lnk
 from delphin.mrs.components import (
-    sort_vid_split, var_sort, var_id, _VarGenerator,
     Link, links, HandleConstraint, hcons,
     Node, ElementaryPredication as EP
 )
@@ -100,49 +99,6 @@ x6 = Xmrs(
     ],
     hcons=[('h0', 'qeq', 'h1'), ('h5', 'qeq', 'h9')]
 )
-
-def test_sort_vid_split():
-    assert sort_vid_split('x1') == ('x', '1')
-    assert sort_vid_split('event10') == ('event', '10')
-    assert sort_vid_split('ref-ind2') == ('ref-ind', '2')
-    with pytest.raises(ValueError): sort_vid_split('x')
-    with pytest.raises(ValueError): sort_vid_split('1')
-    with pytest.raises(ValueError): sort_vid_split('1x')
-
-
-def test_var_sort():
-    assert var_sort('x1') == 'x'
-    assert var_sort('event10') == 'event'
-    assert var_sort('ref-ind2') == 'ref-ind'
-    with pytest.raises(ValueError): var_sort('x')
-
-
-def test_var_id():
-    assert var_id('x1') == 1
-    assert var_id('event10') == 10
-    assert var_id('ref-ind2') == 2
-    with pytest.raises(ValueError): var_id('1')
-
-
-class TestVarGenerator():
-    def test_init(self):
-        vg = _VarGenerator()
-        assert vg.vid == 1
-        assert len(vg.store) == 0
-        vg = _VarGenerator(starting_vid=5)
-        assert vg.vid == 5
-        assert len(vg.store) == 0
-
-    def test_new(self):
-        vg = _VarGenerator()
-        v, vps = vg.new('x')
-        assert v == 'x1'
-        assert vg.vid == 2
-        assert len(vg.store['x1']) == len(vps) == 0
-        v, vps = vg.new('e', [('PROP', 'VAL')])
-        assert v == 'e2'
-        assert vg.vid == 3
-        assert len(vg.store['e2']) == len(vps) == 1
 
 
 class TestLink():

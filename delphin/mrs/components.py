@@ -12,9 +12,10 @@ from itertools import starmap
 from delphin.exceptions import (XmrsError)
 from delphin import predicate
 from delphin.lnk import Lnk, _LnkMixin
+from delphin import variable
 from .config import (
     IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE,
-    UNKNOWNSORT, HANDLESORT, CVARSORT, QUANTIFIER_POS,
+    CVARSORT, QUANTIFIER_POS,
     EQ_POST, HEQ_POST, NEQ_POST, H_POST,
     BARE_EQ_ROLE
 )
@@ -22,85 +23,6 @@ from .config import (
 # The classes below are generally just namedtuples with extra methods.
 # The namedtuples sometimes have default values. thanks:
 #   http://stackoverflow.com/a/16721002/1441112
-
-
-# VARIABLES and LNKS
-
-var_re = re.compile(r'^([-\w]*\D)(\d+)$')
-
-
-def sort_vid_split(vs):
-    """
-    Split a valid variable string into its variable sort and id.
-
-    Examples:
-        >>> sort_vid_split('h3')
-        ('h', '3')
-        >>> sort_vid_split('ref-ind12')
-        ('ref-ind', '12')
-    """
-    match = var_re.match(vs)
-    if match is None:
-        raise ValueError('Invalid variable string: {}'.format(str(vs)))
-    else:
-        return match.groups()
-
-
-def var_sort(v):
-    """
-    Return the sort of a valid variable string.
-
-    Examples:
-        >>> var_sort('h3')
-        'h'
-        >>> var_sort('ref-ind12')
-        'ref-ind'
-    """
-    return sort_vid_split(v)[0]
-
-
-def var_id(v):
-    """
-    Return the integer id of a valid variable string.
-
-    Examples:
-        >>> var_id('h3')
-        3
-        >>> var_id('ref-ind12')
-        12
-    """
-    return int(sort_vid_split(v)[1])
-
-
-class _VarGenerator(object):
-    """
-    Simple class to produce variables, incrementing the vid for each
-    one.
-    """
-
-    def __init__(self, starting_vid=1):
-        self.vid = starting_vid
-        self.index = {}  # to map vid to created variable
-        self.store = {}  # to recall properties from varstrings
-
-    def new(self, sort, properties=None):
-        """
-        Create a new variable for the given *sort*.
-        """
-        if sort is None:
-            sort = UNKNOWNSORT
-        # find next available vid
-        vid, index = self.vid, self.index
-        while vid in index:
-            vid += 1
-        varstring = '{}{}'.format(sort, vid)
-        index[vid] = varstring
-        if properties is None:
-            properties = []
-        self.store[varstring] = properties
-        self.vid = vid + 1
-        return (varstring, properties)
-
 
 # LINKS and CONSTRAINTS
 
@@ -248,7 +170,8 @@ def hcons(xmrs):
     """Return the list of all HandleConstraints in *xmrs*."""
     return [
         HandleConstraint(hi, reln, lo)
-        for hi, reln, lo in sorted(xmrs.hcons(), key=lambda hc: var_id(hc[0]))
+        for hi, reln, lo
+        in sorted(xmrs.hcons(), key=lambda hc: variable.id(hc[0]))
     ]
 
 
@@ -272,7 +195,7 @@ def icons(xmrs):
     return [
         IndividualConstraint(left, reln, right)
         for left, reln, right in sorted(xmrs.icons(),
-                                        key=lambda ic: var_id(ic[0]))
+                                        key=lambda ic: variable.id(ic[0]))
     ]
 
 
@@ -379,7 +302,7 @@ def nodes(xmrs):
     """Return the list of Nodes for *xmrs*."""
     nodes = []
     _props = xmrs.properties
-    varsplit = sort_vid_split
+    varsplit = variable.split
     for p in xmrs.eps():
         sortinfo = None
         iv = p.intrinsic_variable

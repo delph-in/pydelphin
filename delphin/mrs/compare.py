@@ -6,7 +6,7 @@ from functools import partial
 import networkx as nx
 
 from delphin import predicate
-from delphin.mrs.components import var_id, var_sort
+from delphin import variable
 from delphin.mrs.config import CONSTARG_ROLE, IVARG_ROLE
 
 # NOTES:
@@ -48,7 +48,7 @@ def _make_digraph(x, check_varprops):
         else:
             s = predicate.normalize(pred)
         dg.add_node(nid, sig=s)
-        dg.add_edges_from((nid, var_id(val)) for role, val in args.items()
+        dg.add_edges_from((nid, variable.id(val)) for role, val in args.items()
                           if role != CONSTARG_ROLE)
     for var, vd in x._vars.items():
         aspects = []
@@ -57,9 +57,9 @@ def _make_digraph(x, check_varprops):
         aspects.extend('%s:%s' % (dg.node[tgt]['sig'], ref)
                        for ref, tgts in vd['refs'].items()
                        for tgt in tgts if tgt in x._eps)
-        s = '{}|{}'.format(var_sort(var), '|'.join(sorted(aspects)))
-        dg.add_node(var_id(var), sig=s)
-    dg.add_edges_from((var_id(hi), var_id(lo), {'sig':reln})
+        s = '{}|{}'.format(variable.sort(var), '|'.join(sorted(aspects)))
+        dg.add_node(variable.id(var), sig=s)
+    dg.add_edges_from((variable.id(hi), variable.id(lo), {'sig':reln})
                       for hi, reln, lo in x.hcons())
     return dg
 
@@ -130,7 +130,7 @@ class _IsoGraph(object):
             aspects.extend(['%s:%s' % (sigidx[tgt], ref)
                             for ref, tgts in vd['refs'].items()
                             for tgt in tgts if tgt in x._eps])
-            s = '{}|{}'.format(var_sort(var), '|'.join(sorted(aspects)))
+            s = '{}|{}'.format(variable.sort(var), '|'.join(sorted(aspects)))
             sig[s].append(var)
             sigidx[var] = s
 
@@ -308,7 +308,7 @@ def _node_isomorphic_build_nodedict(x, varprops):
             for ref, tgts in vd['refs'].items()
             for tgt in tgts if tgt in x._eps
         )
-        var_sig = '{}|{}|{}'.format(var_sort(var), vps, refs)
+        var_sig = '{}|{}|{}'.format(variable.sort(var), vps, refs)
         var_tgts = {}
         if var in x._hcons:
             hc = x._hcons[var]

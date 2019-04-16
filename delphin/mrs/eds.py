@@ -10,9 +10,9 @@ from itertools import count
 from delphin.util import stringtypes, _bfs, _connected_components
 from delphin.mrs.xmrs import Xmrs
 from delphin import predicate
+from delphin import variable
 from delphin.lnk import Lnk
 from delphin.mrs.components import (
-    var_sort,
     Node,
     nodes as make_nodes
 )
@@ -326,7 +326,7 @@ def non_argument_modifiers(role='ARG1', only_connecting=True):
                     joined = set([ccmap[first]])
                     for other in heads[1:]:
                         occ = ccmap[other]
-                        srt = var_sort(xmrs.args(other).get(role, 'u0'))
+                        srt = variable.sort(xmrs.args(other).get(role, 'u0'))
                         needs_edge = not only_connecting or occ not in joined
                         edge_available = srt == 'u'
                         if needs_edge and edge_available:

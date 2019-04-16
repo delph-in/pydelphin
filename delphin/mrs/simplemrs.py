@@ -16,10 +16,11 @@ from delphin.util import stringtypes
 from delphin.mrs import Mrs
 from delphin.mrs.components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
-    sort_vid_split, var_sort, var_re, hcons, icons
+    hcons, icons
 )
-from delphin.mrs.config import (HANDLESORT, CONSTARG_ROLE)
+from delphin.mrs.config import CONSTARG_ROLE
 from delphin.lnk import Lnk
+from delphin import variable
 from delphin.sembase import role_priority
 from delphin.exceptions import (
     XmrsDeserializationError as XDE,
@@ -274,7 +275,7 @@ def _read_rels(tokens, vars_):
 def _read_ep(tokens, nid, vars_):
     # reassign these locally to avoid global lookup
     CARG = CONSTARG_ROLE
-    _var_re = var_re
+    is_var = variable.is_valid
     # begin parsing
     _read_literals(tokens, '[')
     pred = tokens.popleft()
@@ -295,7 +296,7 @@ def _read_ep(tokens, nid, vars_):
         if role.upper() == CARG:
             if val and (val[0], val[-1]) == ('"', '"'):
                 val = val[1:-1]
-        elif _var_re.match(val) is not None:
+        elif is_var(val):
             props = _read_props(tokens)
             if val not in vars_:
                 vars_[val] = []
@@ -428,7 +429,7 @@ def _serialize_argument(rargname, value, varprops):
     if value in varprops:
         props = ' [ {} ]'.format(
             ' '.join(
-                [var_sort(value)] +
+                [variable.sort(value)] +
                 list(map('{0[0]}: {0[1]}'.format,
                          [(k.upper(), v) for k, v in varprops[value]]))
             )

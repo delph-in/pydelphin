@@ -14,7 +14,7 @@ variable properties (e.g. `PNG: 1pl` might map to `PERS: 1` and
 
 import re
 
-from delphin.mrs.components import sort_vid_split
+from delphin import variable
 
 _LR_OPS = set(['<>', '>>', '==', '=>'])
 _RL_OPS = set(['<>', '<<', '==', '<='])
@@ -111,7 +111,7 @@ class VPM(object):
         Returns:
             a tuple (v, p) of the mapped variable and properties
         """
-        vs, vid = sort_vid_split(var)
+        vs, vid = variable.split(var)
         if reverse:
             # variable type mapping is disabled in reverse
             # tms = [(b, op, a) for a, op, b in self._typemap if op in _RL_OPS]

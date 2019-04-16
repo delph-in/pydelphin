@@ -36,6 +36,13 @@ these changes are prefixed with "**BREAKING**"
   - `items()`
   - `update()` -- incorporate subhierarchies
 * `delphin.tfs.TypeHierarchyNode`
+* `delphin.variable`
+  - `hierarchy`
+  - `INDIVIDUAL`
+  - `INSTANCE_OR_HANDLE`
+  - `EVENTUALITY`
+  - `INSTANCE`
+  - `is_valid()`
 
 ### Moved or Renamed
 
@@ -47,6 +54,13 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.components.is_valid_pred_string()` to
   `delphin.predicate.is_valid()`
 * `delphin.mrs.semi` to `delphin.semi`
+* `delphin.mrs.components.var_re` to `delphin.variable.variable_re`
+* `delphin.mrs.components.var_sort` to `delphin.variable.sort`
+* `delphin.mrs.components.var_id` to `delphin.variable.id`
+* `delphin.mrs.components.sort_vid_split` to `delphin.variable.split`
+* `delphin.mrs.components._VarGenerator` to `delphin.variable.VariableFactory`
+* `delphin.mrs.config.UNKNOWNSORT` to `delphin.variable.UNKNOWN`
+* `delphin.mrs.config.HANDLESORT` to `delphin.variable.HANDLE`
 
 ### Removed
 

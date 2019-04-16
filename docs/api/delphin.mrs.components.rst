@@ -4,14 +4,6 @@ delphin.mrs.components
 
 .. automodule:: delphin.mrs.components
 
-  Variables
-  ---------
-
-  .. autofunction:: sort_vid_split
-  .. autofunction:: var_sort
-  .. autofunction:: var_id
-
-
   MRS and RMRS Components
   -----------------------
 

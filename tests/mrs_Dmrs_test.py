@@ -4,7 +4,7 @@ import pytest
 
 from delphin.mrs.components import Node, Link, nodes, links
 from delphin.mrs import Dmrs
-from delphin.mrs.config import UNKNOWNSORT
+from delphin import variable
 #from delphin.mrs import simplemrs  # for convenience in later tests
 from delphin.exceptions import XmrsError
 
@@ -57,7 +57,7 @@ class TestDmrs():
         x = Dmrs(nodes=[Node(10, '"_rain_v_1_rel"')])
         assert x.to_dict() == {
             'nodes': [{'nodeid': 10, 'predicate': '_rain_v_1',
-                       'sortinfo': {'cvarsort': UNKNOWNSORT}}],
+                       'sortinfo': {'cvarsort': variable.UNKNOWN}}],
             'links': []
         }
 

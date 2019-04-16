@@ -10,13 +10,13 @@ from delphin.exceptions import (XmrsError, XmrsStructureError)
 from delphin.util import safe_int, _bfs, _connected_components
 from delphin import predicate
 from delphin.lnk import Lnk, _LnkMixin
+from delphin import variable
 from .components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
-    var_re, var_sort, _VarGenerator,
     Node, nodes, Link, links
 )
 from .config import (
-    HANDLESORT, UNKNOWNSORT, LTOP_NODEID, FIRST_NODEID,
+    LTOP_NODEID, FIRST_NODEID,
     IVARG_ROLE, CONSTARG_ROLE, RSTR_ROLE, BARE_EQ_ROLE,
     EQ_POST, HEQ_POST, H_POST, NIL_POST, CVARSORT
 )
@@ -45,7 +45,7 @@ class Xmrs(_LnkMixin):
     Variables are simply strings, but must be of the proper form
     in order to be recognized as variables and not constants. The
     form is basically a sequence of non-integers followed by a
-    sequence of integers, but see :data:`delphin.mrs.components.var_re`
+    sequence of integers, but see :data:`delphin.variable.variable_re`
     for the regular expression used to determine a match.
 
     The *eps* argument is an iterable of tuples representing
@@ -148,8 +148,8 @@ class Xmrs(_LnkMixin):
                 _vars[lbl]['refs']['LBL'].append(nodeid)
             for role, val in ep.args.items():
                 # if the val is not in _vars, it might still be a
-                # variable; check with var_re
-                if val in _vars or var_re.match(val):
+                # variable; check with variable.is_valid
+                if val in _vars or variable.is_valid(val):
                     vardict = _vars[val]
                     vardict['refs'][role].append(nodeid)
                     # if role == IVARG_ROLE:
@@ -796,7 +796,7 @@ class Mrs(Xmrs):
         def _hcons(hc): return {'relation':hc[1], 'high':hc[0], 'low':hc[2]}
         def _icons(ic): return {'relation':ic[1], 'left':ic[0], 'right':ic[2]}
         def _var(v):
-            d = {'type': var_sort(v)}
+            d = {'type': variable.sort(v)}
             if properties and self.properties(v):
                 d['properties'] = self.properties(v)
             return d
@@ -890,7 +890,7 @@ class Dmrs(Xmrs):
         if nodes is None: nodes = []
         if links is None: links = []
         qeq = HandleConstraint.qeq
-        vgen = _VarGenerator()
+        vgen = variable.VariableFactory()
 
         # check this here to streamline things later
         if top is not None:
@@ -912,7 +912,7 @@ class Dmrs(Xmrs):
                 if not l.rargname or l.rargname.upper() == BARE_EQ_ROLE:
                     continue  # don't make an argument for bare EQ links
                 if l.post == H_POST:
-                    hole = vgen.new(HANDLESORT)[0]
+                    hole = vgen.new(variable.HANDLE)[0]
                     hcons += [qeq(hole, labels[l.end])]
                     args[l.start][l.rargname] = hole
                     # if the arg is RSTR, it's a quantifier, so we can
@@ -1112,7 +1112,7 @@ def _make_labels(nodes, links, vgen):
     labels = {}
     # components return in order of nids
     for component in _connected_components(nids, edges):
-        lbl = vgen.new(HANDLESORT)[0]
+        lbl = vgen.new(variable.HANDLE)[0]
         for nid in component:
             labels[nid] = lbl
     return labels
@@ -1137,7 +1137,7 @@ def _ivs_in_scope(nodeid, _eps, _vars, _hcons):
             ivs.add(val)
         elif role == CONSTARG_ROLE:
             pass
-        elif var_sort(val) == HANDLESORT:
+        elif variable.sort(val) == variable.HANDLE:
             if val in _hcons:
                 val = _hcons[val].lo
             for conj_nid in _vars[val]['refs']['LBL']:

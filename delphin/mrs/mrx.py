@@ -13,9 +13,10 @@ import xml.etree.ElementTree as etree
 from delphin.mrs import Mrs
 from delphin import predicate
 from delphin.lnk import Lnk
+from delphin import variable
 from delphin.mrs.components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
-    elementarypredications, hcons, icons, sort_vid_split, var_re
+    elementarypredications, hcons, icons
 )
 from delphin.exceptions import XmrsDeserializationError as XDE
 from delphin.mrs.config import IVARG_ROLE
@@ -321,13 +322,13 @@ def _encode_mrs(m, properties):
 
 
 def _encode_label(label):
-    _, vid = sort_vid_split(label)
+    _, vid = variable.split(label)
     return etree.Element('label', vid=vid)
 
 
 def _encode_variable(v, varprops=None):
     if varprops is None: varprops = {}
-    srt, vid = sort_vid_split(v)
+    srt, vid = variable.split(v)
     var = etree.Element('var', vid=vid, sort=srt)
     if v in varprops:
         var.extend(_encode_extrapair(key, val)
@@ -356,7 +357,7 @@ def _encode_ep(ep, varprops=None):
     e.append(_encode_pred(ep.pred))
     e.append(_encode_label(ep.label))
     for rargname, val in ep.args.items():
-        if var_re.match(val):
+        if variable.is_valid(val):
             e.append(_encode_arg(rargname, _encode_variable(val, varprops)))
         else:
             e.append(_encode_arg(rargname, _encode_constant(val)))

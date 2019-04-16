@@ -45,6 +45,7 @@ PyDelphin
   api/delphin.tfs.rst
   api/delphin.tokens.rst
   api/delphin.tsql.rst
+  api/delphin.variable.rst
 
 
 Indices and tables

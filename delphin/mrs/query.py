@@ -4,7 +4,8 @@ Functions for inspecting and interpreting the structure of an Xmrs.
 
 from itertools import product
 
-from delphin.mrs.components import nodes, links, var_id
+from delphin import variable
+from delphin.mrs.components import nodes, links
 from delphin.sembase import role_priority
 
 # query methods
@@ -299,7 +300,7 @@ def intrinsic_variables(xmrs):
         ep.intrinsic_variable for ep in xmrs.eps()
         if not ep.is_quantifier() and ep.intrinsic_variable is not None
     )
-    return sorted(ivs, key=var_id)
+    return sorted(ivs, key=variable.id)
 
 def bound_variables(xmrs):
     """Return the list of all bound variables in *xmrs*"""
@@ -307,7 +308,7 @@ def bound_variables(xmrs):
         ep.intrinsic_variable for ep in xmrs.eps()
         if ep.is_quantifier() and ep.intrinsic_variable is not None
     )
-    return sorted(bvs, key=var_id)
+    return sorted(bvs, key=variable.id)
 
 def in_labelset(xmrs, nodeids, label=None):
     """

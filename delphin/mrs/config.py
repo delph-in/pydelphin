@@ -5,9 +5,6 @@
 
 LTOP_NODEID    = 0
 FIRST_NODEID   = 10000 # the nodeid assigned to the first node
-# sortal values
-UNKNOWNSORT    = 'u' # when nothing is known about the sort
-HANDLESORT     = 'h' # for scopal relations
 # useful pos values
 QUANTIFIER_POS = 'q' # for quantifier preds
 # MRS strings

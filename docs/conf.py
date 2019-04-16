@@ -76,6 +76,10 @@ exclude_patterns = ['env', u'_build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+from sphinx.highlighting import lexers
+from delphin.extra.highlight import TdlLexer
+lexers['tdl'] = TdlLexer(startinline=True)
+
 # Global definitions
 rst_prolog = """
 .. role:: python(code)

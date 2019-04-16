@@ -10,7 +10,7 @@ from delphin.mrs.components import (
     IndividualConstraint as Icons,
     icons,
 )
-from delphin.mrs.config import (FIRST_NODEID, UNKNOWNSORT)
+from delphin.mrs.config import FIRST_NODEID
 from delphin.mrs import Mrs
 #from delphin.mrs import simplemrs  # for convenience in later tests
 from delphin.exceptions import XmrsError
