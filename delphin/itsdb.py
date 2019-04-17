@@ -102,7 +102,7 @@ from itertools import chain
 from contextlib import contextmanager
 import weakref
 
-from delphin.exceptions import ItsdbError
+from delphin.exceptions import PyDelphinException
 from delphin.util import (
     safe_int, stringtypes, parse_datetime
 )
@@ -146,6 +146,14 @@ _default_task_input_selectors = {
     'generate': 'result:mrs',
 }
 
+
+#############################################################################
+# Exceptions
+
+class ITSDBError(PyDelphinException):
+    """Raised when there is an error processing a [incr tsdb()] profile."""
+
+
 #############################################################################
 # Relations files
 
@@ -164,7 +172,7 @@ class Field(
     '''
     def __new__(cls, name, datatype, key=False, partial=False, comment=None):
         if partial and not key:
-            raise ItsdbError('a partial key must also be a key')
+            raise ITSDBError('a partial key must also be a key')
         return super(Field, cls).__new__(
             cls, name, datatype, key, partial, comment
         )
@@ -227,7 +235,7 @@ class Relation(tuple):
 class _RelationJoin(Relation):
     def __new__(cls, rel1, rel2, on=None):
         if set(rel1.name.split('+')).intersection(rel2.name.split('+')):
-            raise ItsdbError('Cannot join tables with the same name; '
+            raise ITSDBError('Cannot join tables with the same name; '
                              'try renaming the table.')
 
         name = '{}+{}'.format(rel1.name, rel2.name)
@@ -257,7 +265,7 @@ class _RelationJoin(Relation):
             self.index(name)
         except KeyError:
             return False
-        except ItsdbError:
+        except ITSDBError:
             pass  # ambiguous field name
         return True
 
@@ -269,7 +277,7 @@ class _RelationJoin(Relation):
                 if qfieldname in self._index:
                     qfieldnames.append(qfieldname)
             if len(qfieldnames) > 1:
-                raise ItsdbError(
+                raise ITSDBError(
                     "ambiguous field name; include the table name "
                     "(e.g., 'item:i-id' instead of 'i-id')")
             elif len(qfieldnames) == 1:
@@ -347,7 +355,7 @@ class Relations(object):
             if table_m is not None:
                 table_name = table_m.group('table')
                 if table_name in seen:
-                    raise ItsdbError(
+                    raise ITSDBError(
                         'Table {} already defined.'.format(table_name)
                     )
                 current_table = (table_name, [])
@@ -364,7 +372,7 @@ class Relations(object):
                     Field(name, datatype, key, partial, comment)
                 )
             elif line != '':
-                raise ItsdbError('Invalid line: ' + line)
+                raise ITSDBError('Invalid line: ' + line)
         return cls(tables)
 
     def __contains__(self, key):
@@ -413,7 +421,7 @@ class Relations(object):
             list: (table, fieldname) pairs describing the path from
                 the source to target tables
         Raises:
-            :class:`delphin.exceptions.ItsdbError`: when no path is
+            :class:`delphin.exceptions.ITSDBError`: when no path is
                 found
         Example:
             >>> relations.path('item', 'result')
@@ -448,7 +456,7 @@ class Relations(object):
             else:
                 break
 
-        raise ItsdbError('no relation path found from {} to {}'
+        raise ITSDBError('no relation path found from {} to {}'
                          .format(source, target))
 
 
@@ -480,7 +488,7 @@ class Record(list):
         iterable = list(iterable)
 
         if len(fields) != len(iterable):
-            raise ItsdbError(
+            raise ITSDBError(
                 'Incorrect number of column values for {} table: {} != {}\n{}'
                 .format(fields.name, len(iterable), len(fields), iterable)
             )
@@ -533,7 +541,7 @@ class Record(list):
             try:
                 index = fields.index(key)
             except KeyError:
-                raise ItsdbError('Invalid field name(s): ' + key)
+                raise ITSDBError('Invalid field name(s): ' + key)
             iterable[index] = value
         return cls(fields, iterable)
 
@@ -588,7 +596,7 @@ class Record(list):
         """
         tablename, _, key = key.rpartition(':')
         if tablename and tablename not in self.fields.name.split('+'):
-            raise ItsdbError('column requested from wrong table: {}'
+            raise ITSDBError('column requested from wrong table: {}'
                              .format(tablename))
         try:
             index = self.fields.index(key)
@@ -706,7 +714,7 @@ class Table(object):
         """
         if path is None:
             if not self.is_attached():
-                raise ItsdbError('no path given for detached table')
+                raise ITSDBError('no path given for detached table')
             else:
                 path = self.path
         path = _normalize_table_path(path)
@@ -773,11 +781,11 @@ class Table(object):
             encoding: the character encoding of the files in the testsuite
         """
         if self.is_attached():
-            raise ItsdbError('already attached at {}'.format(self.path))
+            raise ITSDBError('already attached at {}'.format(self.path))
 
         try:
             path = _table_filename(path)
-        except ItsdbError:
+        except ITSDBError:
             # neither path nor path.gz exist; create new empty file
             # (note: if the file were non-empty this would be destructive)
             path = _normalize_table_path(path)
@@ -785,7 +793,7 @@ class Table(object):
         else:
             # path or path.gz exists; check if merging would be a problem
             if os.stat(path).st_size > 0 and len(self._records) > 0:
-                raise ItsdbError(
+                raise ITSDBError(
                     'cannot attach non-empty table to non-empty file')
 
         self.path = path
@@ -815,7 +823,7 @@ class Table(object):
            this may vary by system.
         """
         if not self.is_attached():
-            raise ItsdbError('already detached')
+            raise ITSDBError('already detached')
         records = self._records
         for i, line in self._enum_lines():
             if records[i] is None:
@@ -841,11 +849,11 @@ class Table(object):
         Returns:
             A list of `(row_index, record)` tuples of modified records
         Raises:
-            :class:`delphin.exceptions.ItsdbError`: when called on a
+            :class:`delphin.exceptions.ITSDBError`: when called on a
                 detached table
         """
         if not self.is_attached():
-            raise ItsdbError('changes are not tracked for detached tables.')
+            raise ITSDBError('changes are not tracked for detached tables.')
         return [(i, self[i]) for i, row in enumerate(self._records)
                 if row is not None]
 
@@ -918,9 +926,9 @@ class Table(object):
                         if i == index),
                        None)
             if row is None:
-                raise ItsdbError('could not retrieve row in attached table')
+                raise ITSDBError('could not retrieve row in attached table')
         else:
-            raise ItsdbError('invalid row in detached table: {}'.format(index))
+            raise ITSDBError('invalid row in detached table: {}'.format(index))
 
         return Record._make(self.fields, row, self, index)
 
@@ -991,14 +999,14 @@ def _normalize_table_path(path):
 def _get_relation_from_table_path(path):
     rpath = os.path.join(os.path.dirname(path), _relations_filename)
     if not os.path.exists(rpath):
-        raise ItsdbError(
+        raise ITSDBError(
             'No relation is specified and a relations file could '
             'not be found.'
         )
     rels = Relations.from_file(rpath)
     name = os.path.basename(_normalize_table_path(path))
     if name not in rels:
-        raise ItsdbError(
+        raise ITSDBError(
             'Table \'{}\' not found in the relations.'.format(name)
         )
     # successfully inferred the relations for the table
@@ -1007,7 +1015,7 @@ def _get_relation_from_table_path(path):
 
 def _cast_record_to_str_tuple(record, fields):
     if len(record) != len(fields):
-        raise ItsdbError('wrong number of fields')
+        raise ITSDBError('wrong number of fields')
     return tuple(_cast_to_str(value, field)
                  for value, field in zip(record, fields))
 
@@ -1042,7 +1050,7 @@ class TestSuite(object):
         elif relations is not None and os.path.isfile(relations):
             self.relations = Relations.from_file(relations)
         else:
-            raise ItsdbError(
+            raise ITSDBError(
                 'Either the relations parameter must be provided or '
                 '*path* must point to a directory with a relations file.'
             )
@@ -1066,7 +1074,7 @@ class TestSuite(object):
     def reload(self):
         """Discard temporary changes and reload the database from disk."""
         if self._path is None:
-            raise ItsdbError('cannot reload an in-memory testsuite')
+            raise ITSDBError('cannot reload an in-memory testsuite')
         for tablename in self.relations:
             self._reload_table(tablename)
 
@@ -1076,7 +1084,7 @@ class TestSuite(object):
         path = os.path.join(self._path, tablename)
         try:
             path = _table_filename(path)
-        except ItsdbError:
+        except ITSDBError:
             # path doesn't exist
             path = _normalize_table_path(path)
             open(path, 'w').close()  # create empty file
@@ -1192,7 +1200,7 @@ class TestSuite(object):
         if table is not None:
             try:
                 _table_filename(os.path.join(self._path, table))
-            except ItsdbError:
+            except ITSDBError:
                 return False
         return True
 
@@ -1216,7 +1224,7 @@ class TestSuite(object):
             try:
                 fn = _table_filename(os.path.join(self._path, table))
                 size += os.stat(fn).st_size
-            except ItsdbError:
+            except ITSDBError:
                 pass
         return size
 
@@ -1299,7 +1307,7 @@ def _prepare_source(selector, source):
     """Normalize source rows and selectors."""
     tablename, fields = get_data_specifier(selector)
     if len(fields) != 1:
-        raise ItsdbError(
+        raise ITSDBError(
             'Selector must specify exactly one data column: {}'
             .format(selector)
         )
@@ -1378,7 +1386,7 @@ def decode_row(line, fields=None):
     cols = list(map(unescape, cols))
     if fields is not None:
         if len(cols) != len(fields):
-            raise ItsdbError(
+            raise ITSDBError(
                 'Wrong number of fields: {} != {}'
                 .format(len(cols), len(fields))
             )
@@ -1410,7 +1418,7 @@ def _cast_to_datatype(col, field):
 def _cast_to_str(col, field):
     if col is None:
         if field.key:
-            raise ItsdbError('missing key: {}'.format(field.name))
+            raise ITSDBError('missing key: {}'.format(field.name))
         col = field.default_value()
     return unicode(col)
 
@@ -1483,7 +1491,7 @@ def _table_filename(tbl_filename):
     regular text file path.
 
     Raises:
-        :class:`delphin.exceptions.ItsdbError`: when neither the .gz
+        :class:`delphin.exceptions.ITSDBError`: when neither the .gz
             nor text file exist.
     """
     tbl_filename = str(tbl_filename)  # convert any Path objects
@@ -1500,7 +1508,7 @@ def _table_filename(tbl_filename):
     elif os.path.exists(gzfn):
         tbl_filename = gzfn
     else:
-        raise ItsdbError(
+        raise ITSDBError(
             'Table does not exist at {}(.gz)'
             .format(tbl_filename)
         )
@@ -1546,7 +1554,7 @@ def _write_table(profile_dir, table_name, rows, fields,
                         'inefficient compression.')
 
     if not os.path.isdir(profile_dir):
-        raise ItsdbError('Profile directory does not exist: {}'
+        raise ITSDBError('Profile directory does not exist: {}'
                          .format(profile_dir))
 
     with tempfile.NamedTemporaryFile(
@@ -1634,7 +1642,7 @@ def select_rows(cols, rows, mode='list', cast=True):
     elif mode == 'row':
         modecast = lambda cols, data: encode_row(data)
     else:
-        raise ItsdbError('Invalid mode for select operation: {}\n'
+        raise ITSDBError('Invalid mode for select operation: {}\n'
                          '  Valid options include: list, dict, row'
                          .format(mode))
     for row in rows:
@@ -1711,7 +1719,7 @@ def join(table1, table2, on=None, how='inner', name=None):
         name (str): the name assigned to the resulting table
     """
     if how not in ('inner', 'left'):
-        ItsdbError('Only \'inner\' and \'left\' join methods are allowed.')
+        ITSDBError('Only \'inner\' and \'left\' join methods are allowed.')
     # validate and normalize the pivot
     on = _join_pivot(on, table1, table2)
     # the fields of the joined table
@@ -1740,7 +1748,7 @@ def _join_pivot(on, table1, table2):
     if not on:
         on = set(table1.fields.keys()).intersection(table2.fields.keys())
         if not on:
-            raise ItsdbError(
+            raise ITSDBError(
                 'No shared key to join on in the \'{}\' and \'{}\' tables.'
                 .format(table1.name, table2.name)
             )

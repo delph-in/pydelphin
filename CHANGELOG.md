@@ -12,6 +12,7 @@ these changes are prefixed with "**BREAKING**"
 
 ### Added
 
+* `delphin.exceptions.PyDelphinSyntaxError`
 * `delphin.lnk`
 * `delphin.lnk.LnkError`
 * `delphin.predicate`
@@ -47,6 +48,12 @@ these changes are prefixed with "**BREAKING**"
 
 ### Moved or Renamed
 
+* `delphin.exceptions.ItsdbError` to `delphin.itsdb.ITSDBError`
+* `delphin.exceptions.REPPError` to `delphin.repp.REPPError`
+* `delphin.exceptions.TdlError` to `delphin.tdl.TDLError`
+* `delphin.exceptions.TdlParsingError` to `delphin.tdl.TDLSyntaxError`
+* `delphin.exceptions.TdlWarning` to `delphin.tdl.TDLWarning`
+* `delphin.exceptions.TSQLSyntaxError` to `delphin.tsql.TSQLSyntaxError`
 * `delphin.extra.highlight.TdlLexer` to `delphin.extra.highlight.TDLLexer`
 * `delphin.mrs.util.rargname_sortkey()` to `delphin.sembase.role_priority()`
 * `delphin.mrs.components.Lnk` to `delphin.lnk.Lnk`

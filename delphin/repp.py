@@ -28,7 +28,11 @@ from collections import namedtuple
 
 from delphin.tokens import YyToken, YyTokenLattice
 from delphin.lnk import Lnk
-from delphin.exceptions import REPPError
+from delphin.exceptions import PyDelphinException
+
+
+class REPPError(PyDelphinException):
+    """Raised when there is an error in tokenizing with REPP."""
 
 
 class REPPStep(namedtuple(

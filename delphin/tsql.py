@@ -93,9 +93,15 @@ import operator
 import copy
 import re
 
-from delphin.exceptions import TSQLSyntaxError
+from delphin.exceptions import PyDelphinSyntaxError
 from delphin.util import LookaheadIterator, parse_datetime
 from delphin import itsdb
+
+
+### CUSTOM EXCEPTIONS #########################################################
+
+class TSQLSyntaxError(PyDelphinSyntaxError):
+    """Raised when encountering an invalid TSQL query."""
 
 
 ### QUERY INSPECTION ##########################################################

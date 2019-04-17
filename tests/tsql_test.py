@@ -5,26 +5,25 @@ import pytest
 
 from delphin import tsql
 from delphin import itsdb
-from delphin.exceptions import TSQLSyntaxError
 
 from .commands_test import mini_testsuite as ts0
 
 
 def test_parse_query():
     parse = lambda s: tsql._parse_query(s)
-    with pytest.raises(TSQLSyntaxError):
+    with pytest.raises(tsql.TSQLSyntaxError):
         parse('info relations')
-    with pytest.raises(TSQLSyntaxError):
+    with pytest.raises(tsql.TSQLSyntaxError):
         parse('set max-results 5')
-    with pytest.raises(TSQLSyntaxError):
+    with pytest.raises(tsql.TSQLSyntaxError):
         parse('insert into item i-id values 10')
 
 
 def test_parse_select():
     parse = lambda s: tsql._parse_select(s)
-    with pytest.raises(TSQLSyntaxError):
+    with pytest.raises(tsql.TSQLSyntaxError):
         parse('*')
-    # with pytest.raises(TSQLSyntaxError):
+    # with pytest.raises(tsql.TSQLSyntaxError):
     #     parse('i-input from item report "%s"')
 
     assert parse('i-input') == {

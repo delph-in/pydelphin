@@ -64,5 +64,5 @@ delphin.semi
   Exceptions
   ----------
 
-  .. autoclass:: SemIError
+  .. autoexception:: SemIError
     :show-inheritance:

@@ -8,4 +8,16 @@ delphin.tsql
   suites with TSQL queries.
 
 .. automodule:: delphin.tsql
-  :members:
+
+   Module Functions
+   ----------------
+
+   .. autofunction:: inspect_query
+   .. autofunction:: query
+   .. autofunction:: select
+
+   Exceptions
+   ----------
+
+   .. autoexception:: TSQLSyntaxError
+      :show-inheritance:

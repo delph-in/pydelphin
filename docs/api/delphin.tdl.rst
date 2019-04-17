@@ -97,3 +97,15 @@ delphin.tdl
 
   .. autoclass:: WildCard
     :members:
+
+  Exceptions and Warnings
+  -----------------------
+
+  .. autoexception:: TDLError
+     :show-inheritance:
+
+  .. autoexception:: TDLSyntaxError
+     :show-inheritance:
+
+  .. autoexception:: TDLWarning
+     :show-inheritance:

@@ -84,9 +84,10 @@ def test_conjoin():
     assert len(conj) == 1 and list(conj.values()) == [{'h0', 'h1'}]
     conj = scope.conjoin(['h0', 'h1', 'h2', 'h3'],
                          [('h0', 'h1'), ('h2', 'h3')])
-    assert len(conj) == 2 and sorted(conj.values()) == [
-        {'h0', 'h1'}, {'h2', 'h3'}]
+    assert len(conj) == 2
+    assert {'h0', 'h1'} in conj.values()
+    assert {'h2', 'h3'} in conj.values()
     conj = scope.conjoin(['h0', 'h1', 'h2', 'h3'],
                          [('h0', 'h1'), ('h1', 'h2'), ('h2', 'h3')])
-    assert len(conj) == 1 and list(conj.values()) == [
-        {'h0', 'h1', 'h2', 'h3'}]
+    assert len(conj) == 1
+    assert {'h0', 'h1', 'h2', 'h3'} in conj.values()

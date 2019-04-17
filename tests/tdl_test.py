@@ -24,9 +24,10 @@ from delphin.tdl import (
     LexicalRuleDefinition,
     TypeEnvironment,
     InstanceEnvironment,
-    FileInclude
-)
-from delphin.exceptions import TdlError, TdlParsingError, TdlWarning
+    FileInclude,
+    TDLError,
+    TDLSyntaxError,
+    TDLWarning)
 
 
 def tdlparse(s):
@@ -182,7 +183,7 @@ def test_ConsList():
     assert c['REST.FIRST'] is not None
     assert c['REST.REST'] == AVM()
     c.terminate(tdl.EMPTY_LIST_TYPE)
-    with pytest.raises(TdlError):
+    with pytest.raises(TDLError):
         c.append(TypeIdentifier('c'))
 
     c = ConsList([TypeIdentifier('a')], end=Coreference('x'))
@@ -252,7 +253,7 @@ def test_TypeDefinition():
     assert t.documentation(level='top') == []
 
     # must have a supertype  (test currently only at parse-time)
-    # with pytest.raises(TdlError):
+    # with pytest.raises(TDLError):
     #     TypeDefinition('t', Conjunction([AVM([('ATTR', String('s'))])]))
 
     t = TypeDefinition('t', Conjunction([AVM([('ATTR', String('s'))]),
@@ -293,21 +294,21 @@ def test_parse_identifiers():
     assert tdlparse(u'和_c_⚠ := b.').identifier == u'和_c_⚠'
     assert tdlparse(u'格里姆斯比•罗伊洛特_n_1 := b.').identifier == (
         u'格里姆斯比•罗伊洛特_n_1')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a:b := b.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a[b := b.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a!b := b.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a|b := b.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a.b := b.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('#a := b.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a&b := b.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a,b := b.')
 
 
@@ -340,7 +341,7 @@ def test_parse_string_features():
 
 
 def test_quoted_symbol():
-    with pytest.warns(TdlWarning):
+    with pytest.warns(TDLWarning):
         t = tdlparse("a := b & [ ATTR 'val ].")
     assert isinstance(t['ATTR'], TypeIdentifier)
     assert t['ATTR'] == 'val'
@@ -401,7 +402,7 @@ def test_parse_feature_path():
 def test_parse_coreferences():
     tdlparse('a := b.')
 
-    # with pytest.raises(TdlError):
+    # with pytest.raises(TDLError):
     #     tdlparse('a := b & [ ATTR1 #x & 1, ATTR2 1 ].')
 
     tdlparse('a := b & [ ATTR1 #x & 1, ATTR2 #x ].')
@@ -414,45 +415,45 @@ def test_parse_typedef():
     tdlparse('a := b & [ ].')
     tdlparse('a := b & [ ATTR val, ATTR2.ATTR3 "val" ].')
     # with warning
-    with pytest.warns(TdlWarning):
+    with pytest.warns(TDLWarning):
         tdlparse('a :< b.')
     # problems
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a :=')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := .')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b &')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b &.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ]')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ] ].')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ATTR')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ATTR ].')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ATTR val')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ATTR val ]')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ATTR val,')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ATTR val.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ATTR val, ]')
     # syntactically coherent but missing required elements
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := [ ].')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := """doc""".')
 
 
@@ -463,9 +464,9 @@ def test_parse_typeaddendum():
     tdlparse('a :+ [ ATTR val ].')
     tdlparse('a :+ b & [ ATTR val, ATTR2.ATTR3 "val" ].')
     # problems (most tests covered by type definition)
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a :+ .')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a :+ b &.')
 
 
@@ -481,11 +482,11 @@ def test_parse_lexicalruledefinition():
     assert lr.affix_type == 'suffix'
     assert lr.patterns == [('y', 'ies'), ('!c', '!cs'), ('?i', 'us')]
     # problems (most tests covered by type definition)
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := %infix (i a) infix-rule.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := %prefix (a) bad-rule.')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := %prefix (a b c) bad-rule.')
 
 
@@ -520,13 +521,13 @@ def test_parse_docstrings():
 
     # parsing errors
 
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & """doc""".')
 
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('a := b """doc""" & c.')
 
-    # with pytest.raises(TdlError):
+    # with pytest.raises(TDLError):
     #     tdlparse('a := """doc-only""".')
 
     # ignored
@@ -540,11 +541,11 @@ def test_parse_letterset():
     assert isinstance(ls, LetterSet)
     assert ls.var == '!a'
     assert ls.characters == 'ab)c'
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('%letter-set (!a abc)')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('%(letter-set (?a abc))')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('%(letter-set (!a ab c))')
 
 
@@ -553,11 +554,11 @@ def test_parse_wildcard():
     assert isinstance(wc, WildCard)
     assert wc.var == '?a'
     assert wc.characters == 'ab)c'
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('%wild-card (?a abc)')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('%(wild-card (!a abc))')
-    with pytest.raises(TdlParsingError):
+    with pytest.raises(TDLSyntaxError):
         tdlparse('%(wild-card (?a ab c))')
 
 

@@ -16,3 +16,4 @@ delphin.lnk
    ----------
 
    .. autoexception:: LnkError
+      :show-inheritance:

@@ -40,7 +40,10 @@ import io
 import textwrap
 import warnings
 
-from delphin.exceptions import (TdlError, TdlParsingError, TdlWarning)
+from delphin.exceptions import (
+    PyDelphinException,
+    PyDelphinSyntaxError,
+    PyDelphinWarning)
 from delphin.tfs import FeatureStructure
 from delphin.util import LookaheadIterator
 
@@ -60,7 +63,21 @@ _max_inline_list_items = 3  # number of list items that may appear inline
 _line_width = 79  # try not to go beyond this number of characters
 
 
-# Classes for TDL entities
+### Exceptions
+
+class TDLError(PyDelphinException):
+    """Raised when there is an error in processing TDL."""
+
+
+class TDLSyntaxError(PyDelphinSyntaxError):
+    """Raised when parsing TDL text fails."""
+
+
+class TDLWarning(PyDelphinWarning):
+    """Raised when parsing unsupported TDL features."""
+
+
+### Classes for TDL entities
 
 class Term(object):
     """
@@ -344,7 +361,7 @@ class ConsList(AVM):
         Args:
             value (:class:`Conjunction`, :class:`Term`): item to add
         Raises:
-            :class:`TdlError`: when appending to a closed list
+            :class:`TDLError`: when appending to a closed list
         """
         if self._avm is not None and not self.terminated:
             path = self._last_path
@@ -354,7 +371,7 @@ class ConsList(AVM):
             self._last_path = path + LIST_TAIL
             self[self._last_path] = AVM()
         else:
-            raise TdlError('Cannot append to a closed list.')
+            raise TDLError('Cannot append to a closed list.')
 
     def terminate(self, end):
         """
@@ -375,7 +392,7 @@ class ConsList(AVM):
             use as the end of the list.
         """
         if self.terminated:
-            raise TdlError('Cannot terminate a closed list.')
+            raise TDLError('Cannot terminate a closed list.')
         if end == LIST_TYPE:
             self.terminated = False
         elif end == EMPTY_LIST_TYPE:
@@ -388,7 +405,7 @@ class ConsList(AVM):
             self[self._last_path] = end
             self.terminated = True
         else:
-            raise TdlError('Empty list must be {} or {}'.format(
+            raise TDLError('Empty list must be {} or {}'.format(
                 LIST_TYPE, EMPTY_LIST_TYPE))
 
 
@@ -563,7 +580,7 @@ class Conjunction(object):
             elif isinstance(term, Coreference):
                 corefs.append(term)
             else:
-                raise TdlError('unexpected term {}'.format(term))
+                raise TDLError('unexpected term {}'.format(term))
         self._terms = corefs + types + avms
 
     @property
@@ -844,8 +861,6 @@ class FileInclude(object):
         self.basedir = basedir
 
 
-
-
 # NOTE: be careful rearranging subpatterns in _tdl_lex_re; some must
 #       appear before others, e.g., """ before ", <! before <, etc.,
 #       to prevent short-circuiting from blocking the larger patterns
@@ -995,10 +1010,10 @@ def _lex(stream):
                     yield (gid, s, line_no)
                     break
                 elif gid == 30:
-                    raise TdlParsingError(
-                        ('Syntax error:\n  {}\n {}^'
-                         .format(line, ' ' * m.start())),
-                        line_number=line_no)
+                    raise TDLSyntaxError(
+                        lineno=line_no,
+                        offset=m.start(),
+                        text=line)
                 else:
                     # token = None
                     # if not (6 < gid < 20):
@@ -1025,8 +1040,9 @@ def _bounded(p1, p2, line, pos, line_no, lines):
                 line_no, line = next(lines)
             except StopIteration:
                 pattern = 'docstring' if p1 == '"""' else 'block comment'
-                raise TdlParsingError('Unterminated {}'.format(pattern),
-                                      line_number=start_line_no)
+                raise TDLSyntaxError(
+                    'unterminated {}'.format(pattern),
+                    lineno=start_line_no)
             pos = end = 0
     substrings.append(line[pos:end])
     end += len(p2)
@@ -1078,7 +1094,7 @@ def _parse2(f):
     try:
         for event in _parse_tdl(tokens):
             yield event
-    except TdlParsingError as ex:
+    except TDLSyntaxError as ex:
         if hasattr(f, 'name'):
             ex.filename = f.name
         raise
@@ -1120,13 +1136,13 @@ def _parse_tdl(tokens):
                 obj = _parse_tdl_include(tokens)
                 yield ('FileInclude', obj, line_no)
             else:
-                raise TdlParsingError(
-                    'Syntax error; unexpected token: {}'.format(token),
-                    line_number=line_no)
+                raise TDLSyntaxError(
+                    'unexpected token: {}'.format(token),
+                    lineno=line_no)
             if environment is not None and obj is not None:
                 environment.entries.append(obj)
     except StopIteration:
-        raise TdlParsingError('Unexpected end of input.')
+        raise TDLSyntaxError('unexpected end of input.')
 
 
 def _parse_tdl_definition(identifier, tokens):
@@ -1144,14 +1160,14 @@ def _parse_tdl_definition(identifier, tokens):
                 'Subtype operator :< encountered at line {} for '
                 '{}; Continuing as if it were the := operator.'
                 .format(line_no, identifier),
-                TdlWarning)
+                TDLWarning)
         conjunction, nextgid = _parse_tdl_conjunction(tokens)
         if isinstance(conjunction, Term):
             conjunction = Conjunction([conjunction])
         if len(conjunction.types()) == 0:
-            raise TdlParsingError('No supertypes defined.',
-                                  identifier=identifier,
-                                  line_number=line_no)
+            raise TDLSyntaxError(
+                'no supertypes defined on {}'.format(identifier),
+                lineno=line_no)
         obj = TypeDefinition(identifier, conjunction)
 
     elif gid == 8:
@@ -1163,14 +1179,14 @@ def _parse_tdl_definition(identifier, tokens):
         obj = TypeAddendum(identifier, conjunction)
 
     else:
-        raise TdlParsingError("Expected: := or :+",
-                              line_number=line_no)
+        raise TDLSyntaxError("expected: := or :+",
+                             lineno=line_no)
 
     if nextgid == 1:  # pre-dot docstring
         _, token, _, nextgid = _shift(tokens)
         obj.docstring = token
     if nextgid != 10:  # . dot
-        raise TdlParsingError('Expected: .', line_number=line_no)
+        raise TDLSyntaxError('expected: .', lineno=line_no)
     tokens.next()
 
     return obj
@@ -1188,9 +1204,9 @@ def _parse_letterset(token, line_no):
             chars = re.sub(r'\\(.)', r'\1', m.group(2))
             return WildCard(m.group(1), chars)
     # if execution reached here there was a problems
-    raise TdlParsingError(
+    raise TDLSyntaxError(
         'invalid letter-set or wild-card: {}'.format(token),
-        line_number=line_no)
+        lineno=line_no)
 
 
 def _parse_tdl_affixes(tokens):
@@ -1237,7 +1253,7 @@ def _parse_tdl_term(tokens):
             'Single-quoted symbol encountered at line {}; '
             'Continuing as if it were a regular symbol.'
             .format(line_no),
-            TdlWarning)
+            TDLWarning)
         term = TypeIdentifier(token, docstring=doc)
     elif gid == 6:  # regex
         term = Regex(token, docstring=doc)
@@ -1255,8 +1271,8 @@ def _parse_tdl_term(tokens):
     elif gid == 24:  # identifier
         term = TypeIdentifier(token, docstring=doc)
     else:
-        raise TdlParsingError('Expected a TDL conjunction term.',
-                              line_number=line_no)
+        raise TDLSyntaxError('expected a TDL conjunction term.',
+                             lineno=line_no, text=token)
     return term, nextgid
 
 
@@ -1266,8 +1282,8 @@ def _parse_tdl_feature_structure(tokens):
     if gid != 16:  # ] feature structure terminator
         while True:
             if gid != 24:  # identifier (attribute name)
-                raise TdlParsingError('Expected a feature name',
-                                      line_number=line_no)
+                raise TDLSyntaxError('Expected a feature name',
+                                     lineno=line_no, text=token)
             path = [token]
             while nextgid == 10:  # . dot
                 tokens.next()
@@ -1286,8 +1302,8 @@ def _parse_tdl_feature_structure(tokens):
                 gid, _, _, nextgid = _shift(tokens)
                 break
             else:
-                raise TdlParsingError('Expected: , or ]',
-                                      line_number=line_no)
+                raise TDLSyntaxError('expected: , or ]',
+                                     lineno=line_no)
 
     assert gid == 16
 
@@ -1319,12 +1335,12 @@ def _parse_tdl_list(tokens, break_gid):
             elif nextgid == 12:  # , comma delimiter
                 _, _, _, nextgid = _shift(tokens)
             else:
-                raise TdlParsingError('Expected: comma or end of list')
+                raise TDLSyntaxError('expected: comma or end of list')
 
         gid, _, line_no, nextgid = _shift(tokens)
         if gid != break_gid:
-            raise TdlParsingError('Expected: end of list',
-                                  line_number=line_no)
+            raise TDLSyntaxError('expected: end of list',
+                                 lineno=line_no)
 
     if len(values) == 0 and end is None:
         end = EMPTY_LIST_TYPE
@@ -1335,8 +1351,8 @@ def _parse_tdl_list(tokens, break_gid):
 def _parse_tdl_begin_environment(tokens):
     gid, envtype, lineno = tokens.next()
     if gid != 27:
-        raise TdlParsingError('Expected: :type or :instance',
-                              line_number=lineno)
+        raise TDLSyntaxError('expected: :type or :instance',
+                             lineno=lineno, text=envtype)
     gid, token, lineno = tokens.next()
     if envtype == ':instance':
         status = envtype[1:]
@@ -1344,40 +1360,41 @@ def _parse_tdl_begin_environment(tokens):
             status = tokens.next()[1]
             gid, token, lineno = tokens.next()
         elif gid != 10:
-            raise TdlParsingError('Expected: :status or .',
-                                  line_number=lineno)
+            raise TDLSyntaxError('expected: :status or .',
+                                 lineno=lineno)
         env = InstanceEnvironment(status)
     else:
         env = TypeEnvironment()
     if gid != 10:
-        raise TdlParsingError('Expected: .', line_number=lineno)
+        raise TDLSyntaxError('expected: .', lineno=lineno, text=token)
     return env
 
 
 def _parse_tdl_end_environment(tokens, env):
     _, envtype, lineno = tokens.next()
     if envtype == ':type' and not isinstance(env, TypeEnvironment):
-        raise TdlParsingError('Expected: :type', line_number=lineno)
+        raise TDLSyntaxError('expected: :type', lineno=lineno, text=envtype)
     elif envtype == ':instance' and not isinstance(env, InstanceEnvironment):
-        raise TdlParsingError('Expected: :instance', line_number=lineno)
+        raise TDLSyntaxError('expected: :instance',
+                             lineno=lineno, text=envtype)
     gid, _, lineno = tokens.next()
     if gid != 10:
-        raise TdlParsingError('Expected: .', line_number=lineno)
+        raise TDLSyntaxError('expected: .', lineno=lineno)
     return envtype
 
 
 def _parse_tdl_include(tokens):
     gid, path, lineno = tokens.next()
     if gid != 4:
-        raise TdlParsingError('Expected: a quoted filename',
-                              line_number=lineno)
+        raise TDLSyntaxError('expected: a quoted filename',
+                             lineno=lineno, text=path)
     gid, _, lineno = tokens.next()
     if gid != 10:
-        raise TdlParsingError('Expected: .', line_number=lineno)
+        raise TDLSyntaxError('expected: .', lineno=lineno)
     return FileInclude(path)
 
 
-# Serialization helpers
+### Serialization helpers
 
 def format(obj, indent=0):
     """
@@ -1428,7 +1445,7 @@ def _format_term(term, indent):
     }.get(term.__class__, None)
 
     if fmt is None:
-        raise TdlError('not a valid term: {}'
+        raise TDLError('not a valid term: {}'
                        .format(term.__class__.__name__))
 
     if term.docstring is not None:

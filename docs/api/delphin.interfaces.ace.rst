@@ -52,3 +52,9 @@ delphin.interfaces.ace
   .. autoclass:: AceGenerator
     :show-inheritance:
     :members:
+
+  Exceptions
+  ----------
+
+  .. autoexception:: AceProcessError
+     :show-inheritance:

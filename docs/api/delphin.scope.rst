@@ -19,3 +19,4 @@ delphin.scope
    ----------
 
    .. autoexception:: ScopeError
+      :show-inheritance:

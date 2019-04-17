@@ -97,3 +97,9 @@ Utility Functions
 .. autofunction:: delphin.itsdb.decode_row
 .. autofunction:: delphin.itsdb.encode_row
 .. autofunction:: delphin.itsdb.get_data_specifier
+
+Exceptions
+----------
+
+.. autoexception:: ITSDBError
+   :show-inheritance:

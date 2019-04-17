@@ -395,7 +395,7 @@ def mkprof(destination, source=None, relations=None, where=None,
                 try:
                     rows = tsql.select(
                         '* from {} {}'.format(table, where), sts, cast=False)
-                except itsdb.ItsdbError:
+                except itsdb.ITSDBError:
                     rows = sts[table]
                 dts.write({table: rows}, gzip=gzip)
     dts.reload()

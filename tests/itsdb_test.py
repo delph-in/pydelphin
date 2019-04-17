@@ -211,7 +211,7 @@ def test_Relations_path():
         r.path('foo', 'result')
     with pytest.raises(KeyError):
         r.path('item', 'bar')
-    with pytest.raises(itsdb.ItsdbError):
+    with pytest.raises(itsdb.ITSDBError):
         r.path('item', 'fold')
 
 
@@ -227,7 +227,7 @@ def test_Record():
     assert r.get('unknown') == None
     assert str(r) == '0@sentence'
     # incorrect number of fields
-    with pytest.raises(itsdb.ItsdbError):
+    with pytest.raises(itsdb.ITSDBError):
         itsdb.Record(rels['item'], [0])
     # None values get set to default, and
     # non-string values are left as-is
@@ -245,10 +245,10 @@ def test_Record():
     assert r['i-id'] == r[0] == 0
     assert r['i-input'] == r[1] == ''
     # missing keys are not ok
-    with pytest.raises(itsdb.ItsdbError):
+    with pytest.raises(itsdb.ITSDBError):
         r = itsdb.Record.from_dict(rels['item'], {'i-input': 'sentence'})
     # invalid fields are not ok
-    with pytest.raises(itsdb.ItsdbError):
+    with pytest.raises(itsdb.ITSDBError):
         r = itsdb.Record.from_dict(rels['item'], {'i-id': 0, 'surface': 'sentence'})
 
 
@@ -274,7 +274,7 @@ class TestTable(object):
                        gzipped_single_item_skeleton):
         # I'm not sure this should be an error if 'item' is defined
         # in the relations file
-        with pytest.raises(itsdb.ItsdbError):
+        with pytest.raises(itsdb.ITSDBError):
             itsdb.Table.from_file(os.path.join(empty_profile, 'item'))
         # table attached to a file
         table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
@@ -292,7 +292,7 @@ class TestTable(object):
         fields = itsdb.Relations.from_string(_simple_relations)['item']
         table = itsdb.Table(fields, records=[(10, 'Birds chirp.')])
         path = tmpdir.join('item')
-        with pytest.raises(itsdb.ItsdbError):
+        with pytest.raises(itsdb.ITSDBError):
             table.write()  # cannot write to detached table without *path*
         table.write(path=str(path))  # can write with *path*
         assert path.check()
@@ -332,7 +332,7 @@ class TestTable(object):
         table.write()
         assert open(item_fn).read() == ''
         # attach already attached table
-        with pytest.raises(itsdb.ItsdbError):
+        with pytest.raises(itsdb.ITSDBError):
             table.attach(item_fn)
         os.unlink(item_fn)
         # attach non-empty table to empty file
@@ -360,7 +360,7 @@ class TestTable(object):
         table.write(gzip=False)  # just reset for the next test
         # attach non-empty table to non-empty file
         table = itsdb.Table(fields, records=[(20, 'Wolves howl.')])
-        with pytest.raises(itsdb.ItsdbError):
+        with pytest.raises(itsdb.ITSDBError):
             table.attach(item_fn)
         assert open(item_fn).read() == '10@Birds chirp.\n'
 
@@ -429,10 +429,10 @@ class TestTable(object):
         fields = itsdb.Relations.from_string(_simple_relations)['item']
         table = itsdb.Table(fields)
         # detached tables do not track changes
-        with pytest.raises(itsdb.ItsdbError):
+        with pytest.raises(itsdb.ITSDBError):
             table.list_changes()
         table.append((10, 'Dogs bark.'))
-        with pytest.raises(itsdb.ItsdbError):
+        with pytest.raises(itsdb.ITSDBError):
             table.list_changes()
         # attching to a new file makes uncommitted records into changes
         table.attach(os.path.join(empty_profile, 'item'))
@@ -451,7 +451,7 @@ class TestTable(object):
         assert table.list_changes() == [(0, table[0]), (1, table[1])]
         # detaching makes changes untrackable again
         table.detach()
-        with pytest.raises(itsdb.ItsdbError):
+        with pytest.raises(itsdb.ITSDBError):
             table.list_changes()
 
     def test_append(self, single_item_skeleton):
