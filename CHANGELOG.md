@@ -19,6 +19,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.predicate.create()` -- replaces `Pred.realpred()`
 * `delphin.predicate.is_surface()`
 * `delphin.predicate.is_abstract()`
+* `delphin.scope`
 * `delphin.sembase`
 * `delphin.semi`
   - `TOP_TYPE`

@@ -106,6 +106,8 @@ def _bfs(g, start=None):
 
 
 def _connected_components(nodes, edges):
+    if not edges:
+        return [{node} for node in nodes]
     g = {n: set() for n in nodes}
     for n1, n2 in edges:
         g[n1].add(n2)

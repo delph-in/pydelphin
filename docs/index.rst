@@ -40,6 +40,7 @@ PyDelphin
   api/delphin.predicate.rst
   api/delphin.mrs.rst
   api/delphin.repp.rst
+  api/delphin.scope.rst
   api/delphin.semi.rst
   api/delphin.tdl.rst
   api/delphin.tfs.rst
