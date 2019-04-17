@@ -47,6 +47,7 @@ these changes are prefixed with "**BREAKING**"
 
 ### Moved or Renamed
 
+* `delphin.extra.highlight.TdlLexer` to `delphin.extra.highlight.TDLLexer`
 * `delphin.mrs.util.rargname_sortkey()` to `delphin.sembase.role_priority()`
 * `delphin.mrs.components.Lnk` to `delphin.lnk.Lnk`
 * `delphin.mrs.components._LnkMixin` to `delphin.lnk.LnkMixin`
@@ -106,6 +107,7 @@ these changes are prefixed with "**BREAKING**"
 
 ### Changed
 
+* `delphin.extra.highlight` add docstrings and wild-card to TDL highlighter
 * `delphin.semi.load()` takes an `encoding` parameter
 * `delphin.semi` dictionary schema removes empty/default values; changes
   structure of predicate synopses

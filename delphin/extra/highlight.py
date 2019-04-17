@@ -13,7 +13,7 @@ from pygments.token import (
 
 _tdl_break_characters = re.escape(r'<>!=:.#&,[];$()^/')
 
-class TdlLexer(RegexLexer):
+class TDLLexer(RegexLexer):
     """
     A Pygments-based Lexer for Typed Description Language.
     """
@@ -27,7 +27,7 @@ class TdlLexer(RegexLexer):
             include('comment'),
             (r'(\S+?)(\s*)(:[=<+])', bygroups(Name.Class, Text, Operator),
              'typedef'),
-            (r'(%)(\s*\(\s*)(letter-set)',
+            (r'(%)(\s*\(\s*)(letter-set|wild-card)',
              bygroups(Operator, Punctuation, Name.Builtin),
              ('letterset', 'letterset')),  # need to pop twice
             (r':begin', Name.Builtin, 'macro')
@@ -87,6 +87,7 @@ class TdlLexer(RegexLexer):
             include('conjunction')
         ],
         'strings': [
+            (r'"""([^"\\]|\\.|"(?!")|""(?!"))*"""', String.Doc),
             (r'"[^"\\]*(?:\\.[^"\\]*)*"', String.Double),
             (r"'[^ \\]*(?:\\.[^ \\]*)*", String.Single),
             (r"\^[^ \\]*(?:\\.[^ \\]*)*\$", String.Regex)
