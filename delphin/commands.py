@@ -22,8 +22,6 @@ from delphin.util import safe_int, SExpr
 from delphin.exceptions import PyDelphinException
 
 
-logging.basicConfig()
-
 ###############################################################################
 ### CONVERT ###################################################################
 
