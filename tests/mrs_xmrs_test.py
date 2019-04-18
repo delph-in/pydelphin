@@ -11,7 +11,7 @@ from delphin.exceptions import XmrsError
 # constructing them manually is cumbersome. Try to avoid using it for
 # the basic Xmrs tests, because we must assume simplemrs is working as
 # expected (make sure the simplemrs tests pass, too)
-read = simplemrs.loads_one
+read = simplemrs.decode
 
 class TestXmrs():
     def test_empty(self):

@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from collections import deque, namedtuple
 from functools import wraps
+from enum import IntEnum
 
 
 def deprecated(message=None, final_version=None, alternative=None):
@@ -308,6 +309,133 @@ class LookaheadIterator(object):
             self._buffer_fill(n + 1)
             datum = buffer[n]
         return datum
+
+
+class LookaheadLexer(LookaheadIterator):
+    def __init__(self, iterable, error_class, n=1024):
+        self._errcls = error_class
+        super().__init__(iterable, n=n)
+
+    def expect(self, *args, skip=None):
+        vals = []
+        for (ttype, tform) in args:
+            gid, token, lineno = self.next(skip=skip)
+            err = None
+            if ttype is not None and gid != ttype:
+                err = str(ttype)
+            elif tform is not None and token != tform:
+                err = repr(tform)
+            if err is not None:
+                raise self._errcls('expected: ' + err,
+                                   lineno=lineno, text=token)
+            vals.append(token)
+        if len(args) == 1:
+            return vals[0]
+        else:
+            return vals
+
+    def accept(self, arg, skip=None, drop=False):
+        ttype, tform = arg
+        gid, token, lineno = self.peek(skip=skip, drop=drop)
+        if ((ttype is None or gid == ttype)
+                and (tform is None or token == tform)):
+            self.next(skip=skip)
+            return token
+        return None
+
+    def choice(self, *args, skip=None):
+        gid, token, lineno = self.next(skip=skip)
+        for (ttype, tform) in args:
+            if ((ttype is None or gid == ttype)
+                    and (tform is None or token == tform)):
+                return gid, token
+        errs = [str(ttype) if ttype is not None else repr(tform)
+                for ttype, tform in args]
+        raise self._errcls('expected one of: ' + ', '.join(errs),
+                           lineno=lineno, text=token)
+
+    def expect_type(self, *args, skip=None):
+        return self.expect(*((arg, None) for arg in args), skip=skip)
+
+    def expect_form(self, *args, skip=None):
+        return self.expect(*((None, arg) for arg in args), skip=skip)
+
+    def accept_type(self, arg, skip=None, drop=False):
+        return self.accept((arg, None), skip=skip, drop=drop)
+
+    def accept_form(self, arg, skip=None, drop=False):
+        return self.accept((None, arg), skip=skip, drop=drop)
+
+    def choice_type(self, *args, skip=None):
+        return self.choice(*((arg, None) for arg in args), skip=skip)
+
+    def choice_form(self, *args, skip=None):
+        return self.choice(*((None, arg) for arg in args), skip=skip)
+
+
+class Lexer(object):
+    def __init__(self, tokens, error_class=None):
+        self.tokens = tokens
+        self.tokentypes = None
+
+        if error_class is None:
+            from delphin.exceptions import PyDelphinSyntaxError as error_class
+        self._errcls = error_class
+
+        self._configure()
+
+    def _configure(self):
+        patterns = []
+        types = []
+        desc = {}
+        for group, token in enumerate(self.tokens, 1):
+            pattern, name = token
+
+            numgroups = re.compile(pattern).groups
+            if numgroups == 0:
+                pattern = '(' + pattern + ')'
+            elif numgroups != 1:
+                raise ValueError(
+                    'pattern does not have 0 or 1 group: ' + pattern)
+            patterns.append(pattern)
+
+            name, _, description = name.partition(':')
+            if description:
+                desc[name] = description
+            types.append(name)
+
+        self._re = re.compile('|'.join(patterns))
+        e = IntEnum('TokenTypes', types)
+        e.__str__ = lambda self, desc=desc: desc.get(self.name, self.name)
+        self.tokentypes = e
+
+    def lex(self, lineiter):
+        return LookaheadLexer(self.prelex(lineiter), self._errcls)
+
+    def prelex(self, lineiter):
+        """
+        Lex the input string
+
+        Yields:
+            (gid, token, line_number)
+        """
+        lines = enumerate(lineiter, 1)
+        lineno = pos = 0
+        try:
+            for lineno, line in lines:
+                matches = self._re.finditer(line)
+                for m in matches:
+                    gid = m.lastindex
+                    if gid == self.tokentypes.UNEXPECTED:
+                        raise self._errcls(
+                            'unexpected input',
+                            lineno=lineno,
+                            offset=pos,
+                            text=line)
+                    token = m.group(gid)
+                    yield (gid, token, lineno)
+        except StopIteration:
+            pass
 
 
 # modified from https://www.python.org/dev/peps/pep-0263/#defining-the-encoding

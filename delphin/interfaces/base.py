@@ -107,7 +107,7 @@ class ParseResult(dict):
             if isinstance(mrs, dict):
                 mrs = Mrs.from_dict(mrs)
             elif isinstance(mrs, str):
-                mrs = simplemrs.loads_one(mrs)
+                mrs = simplemrs.decode(mrs)
         return mrs
 
     def eds(self):

@@ -4,10 +4,10 @@ import pytest
 from delphin.mrs import compare, simplemrs
 
 # empty
-m0 = simplemrs.loads_one('''[ ]''')
+m0 = simplemrs.decode('''[ ]''')
 
 # "It rains."
-m1 = simplemrs.loads_one('''
+m1 = simplemrs.decode('''
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
@@ -15,7 +15,7 @@ m1 = simplemrs.loads_one('''
 ''')
 
 # m1 but with different Lnk values
-m1b = simplemrs.loads_one('''
+m1b = simplemrs.decode('''
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ "_rain_v_1_rel"<0:6> LBL: h1 ARG0: e2 ] >
@@ -23,7 +23,7 @@ m1b = simplemrs.loads_one('''
 ''')
 
 # m1 but with different properties (TENSE)
-m1c = simplemrs.loads_one('''
+m1c = simplemrs.decode('''
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
   RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
@@ -31,7 +31,7 @@ m1c = simplemrs.loads_one('''
 ''')
 
 # m1 but with unlinked LTOP
-m1d = simplemrs.loads_one('''
+m1d = simplemrs.decode('''
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
@@ -39,7 +39,7 @@ m1d = simplemrs.loads_one('''
 ''')
 
 # m1 but with equated LTOP
-m1e = simplemrs.loads_one('''
+m1e = simplemrs.decode('''
 [ LTOP: h1
   INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
@@ -47,7 +47,7 @@ m1e = simplemrs.loads_one('''
 ''')
 
 # "It snows." like m1, but with a different pred
-m1f = simplemrs.loads_one('''
+m1f = simplemrs.decode('''
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ "_snow_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
@@ -56,7 +56,7 @@ m1f = simplemrs.loads_one('''
 
 # "It rains (something)" like m1, but with a different arity (in the
 # ERG this might be a different _rain_ pred)
-m1g = simplemrs.loads_one('''
+m1g = simplemrs.decode('''
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ARG1: i6] >
@@ -68,7 +68,7 @@ m1g = simplemrs.loads_one('''
 # to singular (even if it isn't plausible for the ERG with the rest
 # of the configuration) so I can test that local properties don't
 # get ignored when comparing overall structure
-pathological1 = simplemrs.loads_one('''
+pathological1 = simplemrs.decode('''
 [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ udef_q_rel<0:13> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: pl ] RSTR: h5 BODY: h6 ]
           [ udef_q_rel<0:4> LBL: h7 ARG0: x8 [ x PERS: 3 NUM: pl IND: + ] RSTR: h9 BODY: h10 ]
@@ -97,7 +97,7 @@ pathological1 = simplemrs.loads_one('''
 # changed "dogs" to "dog" in a similar local position but different in the
 # overall graph:
 # "Dogs and dogs chase dogs and dog and chase dogs and dogs"
-pathological2 = simplemrs.loads_one('''
+pathological2 = simplemrs.decode('''
 [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ udef_q_rel<0:13> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: pl ] RSTR: h5 BODY: h6 ]
           [ udef_q_rel<0:4> LBL: h7 ARG0: x8 [ x PERS: 3 NUM: pl IND: + ] RSTR: h9 BODY: h10 ]
@@ -125,7 +125,7 @@ pathological2 = simplemrs.loads_one('''
 
 # x1 and x2 differ only by the presence of '_rel' at the end of the predicates
 
-x1 = simplemrs.loads_one('''
+x1 = simplemrs.decode('''
 [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
   RELS: < [ proper_q<0:6> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: sg IND: + ] RSTR: h5 BODY: h6 ]
           [ named<0:6> LBL: h7 CARG: "Abrams" ARG0: x3 ]
@@ -133,7 +133,7 @@ x1 = simplemrs.loads_one('''
   HCONS: < h0 qeq h1 h5 qeq h7 > ]
 ''')
 
-x2 = simplemrs.loads_one('''
+x2 = simplemrs.decode('''
 [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
   RELS: < [ proper_q_rel<0:6> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: sg IND: + ] RSTR: h5 BODY: h6 ]
           [ named_rel<0:6> LBL: h7 CARG: "Abrams" ARG0: x3 ]

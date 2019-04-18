@@ -15,12 +15,14 @@ def test_split():
         variable.split('1x')
 
 
-def test_sort():
-    assert variable.sort('x1') == 'x'
-    assert variable.sort('event10') == 'event'
-    assert variable.sort('ref-ind2') == 'ref-ind'
+def test_type():
+    assert variable.type('x1') == 'x'
+    assert variable.type('event10') == 'event'
+    assert variable.type('ref-ind2') == 'ref-ind'
     with pytest.raises(ValueError):
-        variable.sort('x')
+        variable.type('x')
+    # and sort alias
+    assert variable.sort('x1') == 'x'
 
 
 def test_id():

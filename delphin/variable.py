@@ -4,7 +4,7 @@
 Functions for working with MRS variables.
 
 This module contains functions to inspect the type and identifier of
-variables (:func:`split`, :func:`sort`, :func:`id`) and check if a
+variables (:func:`split`, :func:`type`, :func:`id`) and check if a
 variable string is well-formed (:func:`is_valid`). It additionally has
 constants for the standard variable types (:data:`UNKNOWN`,
 :data:`INDIVIDUAL`, :data:`INSTANCE_OR_HANDLE`, :data:`EVENTUALITY`,
@@ -80,7 +80,7 @@ variable_re = re.compile(r'^([-\w]*[^\s\d])(\d+)$')
 
 def split(var):
     """
-    Split a valid variable string into its variable sort and id.
+    Split a valid variable string into its variable type and id.
 
     Examples:
         >>> variable.split('h3')
@@ -95,17 +95,22 @@ def split(var):
         return match.groups()
 
 
-def sort(var):
+def type(var):
     """
-    Return the sort (i.e., type) of a valid variable string.
+    Return the type (i.e., sort) of a valid variable string.
+
+    :func:`sort` is an alias for :func:`type`.
 
     Examples:
-        >>> variable.sort('h3')
+        >>> variable.type('h3')
         'h'
-        >>> variable.sort('ref-ind12')
+        >>> variable.type('ref-ind12')
         'ref-ind'
     """
     return split(var)[0]
+
+
+sort = type
 
 
 def id(var):
@@ -157,23 +162,23 @@ class VariableFactory(object):
         self.index = {}  # to map vid to created variable
         self.store = {}  # to recall properties from varstrings
 
-    def new(self, sort, properties=None):
+    def new(self, type, properties=None):
         """
-        Create a new variable for the given *sort*.
+        Create a new variable for the given *type*.
 
         Args:
-            sort (str): the type of the variable to produce
+            type (str): the type of the variable to produce
             properties (list): properties to associate with the variable
         Returns:
             A (variable, properties) tuple
         """
-        if sort is None:
-            sort = UNKNOWN
+        if type is None:
+            type = UNKNOWN
         # find next available vid
         vid, index = self.vid, self.index
         while vid in index:
             vid += 1
-        varstring = '{}{}'.format(sort, vid)
+        varstring = '{}{}'.format(type, vid)
         index[vid] = varstring
         if properties is None:
             properties = []

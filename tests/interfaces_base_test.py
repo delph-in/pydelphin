@@ -30,7 +30,7 @@ def test_ParseResult():
             {'relation': 'qeq', 'high': 'h0', 'low': 'h1'}
         ]
     }
-    mrs = simplemrs.loads_one(mrs_s)
+    mrs = simplemrs.decode(mrs_s)
 
     r = ParseResult(mrs=mrs_s)
     assert len(r) == 1

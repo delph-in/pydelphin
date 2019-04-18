@@ -7,13 +7,14 @@ these changes are prefixed with "**BREAKING**"
 
 ### Python Versions
 
-* Removed Python 2.7 support
-* Removed Python 3.4 support
+* Removed Python 2.7 support (#115)
+* Removed Python 3.4 support (#213)
 
 ### Added
 
 * `delphin.exceptions.PyDelphinSyntaxError`
 * `delphin.lnk`
+* `delphin.lnk.Lnk.default()`
 * `delphin.lnk.LnkError`
 * `delphin.predicate`
 * `delphin.predicate.PredicateError`
@@ -21,7 +22,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.predicate.is_surface()`
 * `delphin.predicate.is_abstract()`
 * `delphin.scope`
-* `delphin.sembase`
+* `delphin.sembase`:
+  - `property_priority()`
 * `delphin.semi`
   - `TOP_TYPE`
   - `STRING_TYPE`
@@ -39,6 +41,8 @@ these changes are prefixed with "**BREAKING**"
   - `items()`
   - `update()` -- incorporate subhierarchies
 * `delphin.tfs.TypeHierarchyNode`
+* `delphin.util.LookaheadLexer`
+* `delphin.util.Lexer`
 * `delphin.variable`
   - `hierarchy`
   - `INDIVIDUAL`
@@ -68,7 +72,8 @@ these changes are prefixed with "**BREAKING**"
   `delphin.predicate.is_valid()`
 * `delphin.mrs.semi` to `delphin.semi`
 * `delphin.mrs.components.var_re` to `delphin.variable.variable_re`
-* `delphin.mrs.components.var_sort` to `delphin.variable.sort`
+* `delphin.mrs.components.var_sort` to `delphin.variable.type`
+  (`delphin.variable.sort` is an alias)
 * `delphin.mrs.components.var_id` to `delphin.variable.id`
 * `delphin.mrs.components.sort_vid_split` to `delphin.variable.split`
 * `delphin.mrs.components._VarGenerator` to `delphin.variable.VariableFactory`
@@ -121,6 +126,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.extra.highlight` add docstrings and wild-card to TDL highlighter
 * `delphin.interfaces.ace` no longer raise `ValueError` when grammar file does
   not exist; the `ACEProcessError` now handles this
+* `delphin.lnk.Lnk` can have an unspecified state (via the `Lnk.default()`
+  classmethod) where `str(lnk) == ''` so we don't have to check for `None`
 * `delphin.semi.load()` takes an `encoding` parameter
 * `delphin.semi` dictionary schema removes empty/default values; changes
   structure of predicate synopses

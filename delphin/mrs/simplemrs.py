@@ -3,40 +3,16 @@
 Serialization functions for the SimpleMRS format.
 """
 
-
-# Author: Michael Wayne Goodman <goodmami@uw.edu>
-
-from collections import deque, defaultdict
 import re
-from warnings import warn
 
-from delphin.mrs import Mrs
-from delphin.mrs.components import (
-    ElementaryPredication, HandleConstraint, IndividualConstraint,
-    hcons, icons
-)
-from delphin.mrs.config import CONSTARG_ROLE
+from delphin.util import Lexer
+from delphin import predicate
 from delphin.lnk import Lnk
+from delphin.sembase import (role_priority, property_priority)
 from delphin import variable
-from delphin.sembase import role_priority
-from delphin.exceptions import (
-    XmrsDeserializationError as XDE,
-    XmrsError,
-    XmrsWarning
-)
+from delphin.mrs import (EP, HCons, ICons, MRS, MRSSyntaxError)
 
-try:
-    from pygments import highlight as highlight_
-    from pygments.formatters import TerminalFormatter
-    from delphin.extra.highlight import SimpleMrsLexer, mrs_colorscheme
-    lexer = SimpleMrsLexer()
-    formatter = TerminalFormatter(bg='dark', colorscheme=mrs_colorscheme)
-    def highlight(text):
-        return highlight_(text, lexer, formatter)
-except ImportError:
-    # warnings.warn
-    def highlight(text):
-        return text
+TOP_FEATURE = 'TOP'
 
 # versions are:
 #  * 1.0 long running standard
@@ -54,451 +30,337 @@ _default_mrs_delim = '\n'
 # Pickle-API methods
 
 
-def load(fh, single=False, version=_default_version, errors='warn'):
+def load(source):
     """
     Deserialize SimpleMRSs from a file (handle or filename)
 
     Args:
-        fh (str, file): input filename or file object
-        single: if `True`, only return the first read Xmrs object
-        errors: if `'strict'`, ill-formed MRSs raise an error; if
-            `'warn'`, raise a warning instead; if `'ignore'`, do not
-            warn or raise errors for ill-formed MRSs
+        source (str, file): input filename or file object
     Returns:
-        a generator of Xmrs objects (unless the *single* option is
-        `True`)
+        a list of MRS objects
     """
-    if hasattr(fh, 'read'):
-        s = fh.read()
+    if hasattr(source, 'read'):
+        ms = list(_decode(source))
     else:
-        s = open(fh, 'r').read()
-    return loads(s, single=single, version=version, errors=errors)
+        with open(source) as fh:
+            ms = list(_decode(fh))
+    return ms
 
 
-def loads(s, single=False, version=_default_version, errors='warn'):
+def loads(s):
     """
     Deserialize SimpleMRS string representations
 
     Args:
         s (str): a SimpleMRS string
-        single (bool): if `True`, only return the first Xmrs object
-        errors: if `'strict'`, ill-formed MRSs raise an error; if
-            `'warn'`, raise a warning instead; if `'ignore'`, do not
-            warn or raise errors for ill-formed MRSs
     Returns:
-        a generator of Xmrs objects (unless *single* is `True`)
+        a list of MRS objects
     """
-    ms = deserialize(s, version=version, errors=errors)
-    if single:
-        return next(ms)
-    else:
-        return ms
+    ms = list(_decode(s.splitlines()))
+    return ms
 
 
-def dump(destination, ms, single=False, version=_default_version, properties=True,
-         pretty_print=False, color=False, **kwargs):
+def dump(ms, destination, properties=True, indent=False, encoding='utf-8'):
     """
-    Serialize Xmrs objects to SimpleMRS and write to a file
+    Serialize MRS objects to SimpleMRS and write to a file
 
     Args:
+        ms: an iterator of MRS objects to serialize
         destination: filename or file object where data will be written
-        ms: an iterator of Xmrs objects to serialize (unless the
-            *single* option is `True`)
-        single: if `True`, treat *ms* as a single Xmrs object
-            instead of as an iterator
-        properties: if `False`, suppress variable properties
-        pretty_print: if `True`, add newlines and indentation
-        color: if `True`, colorize the output with ANSI color codes
+        properties: if `False`, suppress morphosemantic properties
+        indent (bool, int): if `True` or an integer value, add
+            newlines and indentation
+        encoding (str): if *destination* is a filename, write to the
+            file with the given encoding; otherwise it is ignored
     """
-    text = dumps(ms,
-                 single=single,
-                 version=version,
-                 properties=properties,
-                 pretty_print=pretty_print,
-                 color=color,
-                 **kwargs)
-
+    text = dumps(ms, properties=properties, indent=indent)
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w') as fh:
+        with open(destination, 'w', encoding=encoding) as fh:
             print(text, file=fh)
 
 
-def dumps(ms, single=False, version=_default_version, properties=True,
-          pretty_print=False, color=False, **kwargs):
+def dumps(ms, properties=True, indent=False):
     """
-    Serialize an Xmrs object to a SimpleMRS representation
+    Serialize MRS objects to a SimpleMRS representation
 
     Args:
-        ms: an iterator of Xmrs objects to serialize (unless the
-            *single* option is `True`)
-        single: if `True`, treat *ms* as a single Xmrs object instead
-            of as an iterator
+        ms: an iterator of MRS objects to serialize
         properties: if `False`, suppress variable properties
-        pretty_print: if `True`, add newlines and indentation
-        color: if `True`, colorize the output with ANSI color codes
+        indent (bool, int): if `True` or an integer value, add
+            newlines and indentation
     Returns:
-        a SimpleMrs string representation of a corpus of Xmrs
+        a SimpleMRS string representation of a corpus of MRS objects
     """
-    if not pretty_print and kwargs.get('indent'):
-        pretty_print = True
-    if single:
-        ms = [ms]
-    return serialize(ms, version=version, properties=properties,
-                     pretty_print=pretty_print, color=color)
+    return _encode(ms, properties=properties, indent=indent)
 
 
-# for convenience
+def decode(s):
+    """
+    Deserialize an MRS object from a SimpleMRS string.
+    """
+    lexer = SimpleMRSLexer.lex(s.splitlines())
+    return _decode_mrs(lexer)
 
-load_one = lambda fh, **kwargs: load(fh, single=True, **kwargs)
-loads_one = lambda s, **kwargs: loads(s, single=True, **kwargs)
-dump_one = lambda fh, m, **kwargs: dump(fh, m, single=True, **kwargs)
-dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
+
+def encode(m, properties=True, indent=False):
+    """
+    Serialize a MRS object to a SimpleMRS string.
+
+    Args:
+        m: an MRS object
+        properties (bool): if `False`, suppress variable properties
+        indent (bool, int): if `True` or an integer value, add
+            newlines and indentation
+    Returns:
+        a SimpleMRS-serialization of the MRS object
+    """
+    return _encode([m], properties=properties, indent=indent)
+
 
 ##############################################################################
 ##############################################################################
 # Deserialization
 
-# The _tokenizer has 3 sub-regexen:
-#   the first is for strings (e.g. "_dog_n_rel", "\"quoted string\"")
-#   the second looks for unquoted type preds (lookahead for space or lnk)
-#   the second is for args, variables, preds, etc (e.g. ARG1, _dog_n_rel, x4)
-#   the last is for contentful punctuation (e.g. [ ] < > : # @)
 
-_tokenizer = re.compile(r'("[^"\\]*(?:\\.[^"\\]*)*"'
-                       r'|_(?:[^ \n<]|<(?![-0-9:#@ ]*>))*'
-                       r'|[^ \n:#@\[\]"<>]+'
-                       r'|[:#@\[\]<>])')
-
-
-def tokenize(string):
-    """Split the SimpleMrs string into tokens."""
-    return deque(_tokenizer.findall(string))
-
-
-def _invalid_token_error(token, expected):
-    raise XDE('Invalid token: "{}"\tExpected: "{}"'.format(token, expected))
+SimpleMRSLexer = Lexer(
+    tokens=[
+        (r'\[',                                'LBRACK:['),
+        (r'\]',                                'RBRACK:]'),
+        (r'<(?:-?\d+[:#]-?\d+|@\d+|\d+(?: +\d+)*)>',
+                                               'LNK:a lnk value'),
+        (r'"([^"\\]*(?:\\.[^"\\]*)*)"',        'DQSTRING:a string'),
+        (r"'([^ \n:<>\[\]])",                  'SQSYMBOL:a quoted symbol'),
+        (r'<',                                 'LANGLE:<'),
+        (r'>',                                 'RANGLE:>'),
+        (r'([^\s:<>\[\]]+):',                  'FEATURE:a feature'),
+        (r'(?:[^ \n\]<]+|<(?![-0-9:#@ ]*>))+', 'SYMBOL:a symbol'),
+        (r'[^\s]',                             'UNEXPECTED'),
+    ],
+    error_class=MRSSyntaxError)
 
 
-def deserialize(string, version=_default_version, errors='warn'):
-    # FIXME: consider buffering this so we don't read the whole string at once
-    tokens = tokenize(string)
-    while tokens:
-        yield _read_mrs(tokens, version, errors)
+LBRACK   = SimpleMRSLexer.tokentypes.LBRACK
+RBRACK   = SimpleMRSLexer.tokentypes.RBRACK
+LNK      = SimpleMRSLexer.tokentypes.LNK
+DQSTRING = SimpleMRSLexer.tokentypes.DQSTRING
+SQSYMBOL = SimpleMRSLexer.tokentypes.SQSYMBOL
+LANGLE   = SimpleMRSLexer.tokentypes.LANGLE
+RANGLE   = SimpleMRSLexer.tokentypes.RANGLE
+FEATURE  = SimpleMRSLexer.tokentypes.FEATURE
+SYMBOL   = SimpleMRSLexer.tokentypes.SYMBOL
 
 
-def _read_literals(tokens, *toks):
-    for tok in toks:
-        token = tokens.popleft()
-        if token != tok:
-            raise XDE(
-                'Expected \'{}\': {}'.format(tok, ' '.join(list(tokens)))
-            )
-
-
-def _read_mrs(tokens, version, errors):
-    #return read_mrs(tokens)
+def _decode(lineiter):
+    lexer = SimpleMRSLexer.lex(lineiter)
     try:
-        _read_literals(tokens, '[')
-        top = idx = surface = lnk = None
-        vars_ = {}
-        if version >= 1.1:
-            if tokens[0] == '<':
-                lnk = _read_lnk(tokens)
-            if tokens[0].startswith('"'):  # and tokens[0].endswith('"'):
-                surface = tokens.popleft()[1:-1]  # get rid of first quotes
-        if tokens[0].upper() in ('LTOP', 'TOP'):
-            tokens.popleft()  # LTOP / TOP
-            _read_literals(tokens, ':')
-            top = tokens.popleft()
-            vars_[top] = []
-        if tokens[0].upper() == 'INDEX':
-            tokens.popleft()  # INDEX
-            _read_literals(tokens, ':')
-            idx = tokens.popleft()
-            vars_[idx] = _read_props(tokens)
-        rels = _read_rels(tokens, vars_)
-        hcons = _read_cons(tokens, 'HCONS', vars_)
-        icons = _read_cons(tokens, 'ICONS', vars_)
-        _read_literals(tokens, ']')
-        # at this point, we could uniquify proplists in vars_, but most
-        # likely it isn't necessary, and might harm things if we
-        # leave potential dupes in there. let's see how it plays out.
-        m = Mrs(top=top, index=idx, rels=rels,
-                hcons=hcons, icons=icons,
-                lnk=lnk, surface=surface, vars=vars_)
-    except IndexError:
-        _unexpected_termination_error()
-    if errors != 'ignore':
-        try:
-            m.validate()
-        except XmrsError as ex:
-            if errors == 'warn':
-                warn(str(ex), XmrsWarning)
-            elif errors == 'strict':
-                raise
-    return m
+        while lexer.peek():
+            yield _decode_mrs(lexer)
+    except StopIteration:
+        pass
 
 
-def _read_props(tokens):
-    props = []
-    if tokens[0] == '[':
-        tokens.popleft()  # [
-        vartype = tokens.popleft()  # this gets discarded though
-        while tokens[0] != ']':
-            key = tokens.popleft()
-            _read_literals(tokens, ':')
-            val = tokens.popleft()
-            props.append((key, val))
-        tokens.popleft()  # ]
-    return props
-
-
-def _read_rels(tokens, vars_):
-    rels = None
-    nid = 10000
-    if tokens[0].upper() == 'RELS':
-        rels = []
-        tokens.popleft()  # RELS
-        _read_literals(tokens, ':', '<')
-        while tokens[0] != '>':
-            rels.append(_read_ep(tokens, nid, vars_))
-            nid += 1
-        tokens.popleft()  # >
-    return rels
-
-
-def _read_ep(tokens, nid, vars_):
-    # reassign these locally to avoid global lookup
-    CARG = CONSTARG_ROLE
-    is_var = variable.is_valid
-    # begin parsing
-    _read_literals(tokens, '[')
-    pred = tokens.popleft()
-    lnk = _read_lnk(tokens)
-    surface = label = None
-    if tokens[0].startswith('"'):
-        surface = tokens.popleft()[1:-1]  # get rid of first quotes
-    if tokens[0].upper() == 'LBL':
-        tokens.popleft()  # LBL
-        _read_literals(tokens, ':')
-        label = tokens.popleft()
-        vars_[label] = []
-    args = {}
-    while tokens[0] != ']':
-        role = tokens.popleft().upper()
-        _read_literals(tokens, ':')
-        val = tokens.popleft()
-        if role.upper() == CARG:
-            if val and (val[0], val[-1]) == ('"', '"'):
-                val = val[1:-1]
-        elif is_var(val):
-            props = _read_props(tokens)
-            if val not in vars_:
-                vars_[val] = []
-            vars_[val].extend(props)
-        args[role] = val
-    tokens.popleft()  # ]
-    return ElementaryPredication(nid, pred, label, args, lnk, surface)
-
-
-def _read_cons(tokens, constype, vars_):
-    cons = None
-    if tokens[0].upper() == constype:
-        cons = []
-        tokens.popleft()  # (H|I)CONS
-        _read_literals(tokens, ':', '<')
-        while tokens[0] != '>':
-            left = tokens.popleft()
-            lprops = _read_props(tokens)
-            reln = tokens.popleft().lower()
-            rght = tokens.popleft()
-            rprops = _read_props(tokens)
-            cons.append((left, reln, rght))
-            # update properties
-            if left not in vars_: vars_[left] = []
-            vars_[left].extend(lprops)
-            if rght not in vars_: vars_[rght] = []
-            vars_[rght].extend(lprops)
-        tokens.popleft()  # >
-    return cons
-
-
-def _read_lnk(tokens):
-    """Read and return a tuple of the pred's lnk type and lnk value,
-       if a pred lnk is specified."""
-    # < FROM : TO > or < FROM # TO > or < TOK... > or < @ EDGE >
-    lnk = None
-    if tokens[0] == '<':
-        tokens.popleft()  # we just checked this is a left angle
-        if tokens[0] == '>':
-            pass  # empty <> brackets the same as no lnk specified
-        # edge lnk: ['@', EDGE, ...]
-        elif tokens[0] == '@':
-            tokens.popleft()  # remove the @
-            lnk = Lnk.edge(tokens.popleft())  # edge lnks only have one number
-        # character span lnk: [FROM, ':', TO, ...]
-        elif tokens[1] == ':':
-            lnk = Lnk.charspan(tokens.popleft(), tokens[1])
-            tokens.popleft()  # this should be the colon
-            tokens.popleft()  # and this is the cto
-        # chart vertex range lnk: [FROM, '#', TO, ...]
-        elif tokens[1] == '#':
-            lnk = Lnk.chartspan(tokens.popleft(), tokens[1])
-            tokens.popleft()  # this should be the hash
-            tokens.popleft()  # and this is the to vertex
-        # tokens lnk: [(TOK,)+ ...]
+def _decode_mrs(lexer):
+    top = index = xarg = lnk = surface = identifier = None
+    rels = []
+    hcons = []
+    icons = []
+    variables = {}
+    lexer.expect_type(LBRACK)
+    lnk = _decode_lnk(lexer)
+    surface = lexer.accept_type(DQSTRING)
+    feature = lexer.accept_type(FEATURE)
+    while feature is not None:
+        feature = feature.upper()
+        if feature in ('LTOP', 'TOP'):
+            top = lexer.expect_type(SYMBOL).lower()
+        elif feature == 'INDEX':
+            index = _decode_variable(lexer, variables)
+        elif feature == 'RELS':
+            lexer.expect_type(LANGLE)
+            while lexer.peek()[0] == LBRACK:
+                rels.append(_decode_rel(lexer, variables))
+            lexer.expect_type(RANGLE)
+        elif feature == 'HCONS':
+            lexer.expect_type(LANGLE)
+            while lexer.peek()[0] == SYMBOL:
+                hcons.append(_decode_cons(lexer, HCons, variables))
+            lexer.expect_type(RANGLE)
+        elif feature == 'ICONS':
+            lexer.expect_type(LANGLE)
+            while lexer.peek()[0] == SYMBOL:
+                icons.append(_decode_cons(lexer, ICons, variables))
+            lexer.expect_type(RANGLE)
         else:
-            lnkdata = []
-            while tokens[0] != '>':
-                lnkdata.append(int(tokens.popleft()))
-            lnk = Lnk.tokens(lnkdata)
-        _read_literals(tokens, '>')
+            raise ValueError('invalid feature: ' + feature)
+        feature = lexer.accept_type(FEATURE)
+    lexer.expect_type(RBRACK)
+    return MRS(top, index, rels, hcons,
+               icons=icons, variables=variables,
+               lnk=lnk, surface=surface, identifier=identifier)
+
+
+def _decode_lnk(lexer):
+    lnk = lexer.accept_type(LNK)
+    if lnk is not None:
+        lnk = Lnk(lnk)
     return lnk
 
 
-def _unexpected_termination_error():
-    raise XDE('Invalid MRS: Unexpected termination.')
+def _decode_variable(lexer, variables):
+    var = lexer.expect_type(SYMBOL).lower()
+    if var not in variables:
+        variables[var] = {}
+    props = variables[var]
+    if lexer.accept_type(LBRACK):
+        lexer.accept_type(SYMBOL)  # variable type
+        feature = lexer.accept_type(FEATURE)
+        while feature is not None:
+            value = lexer.expect_type(SYMBOL)
+            props[feature.upper()] = value.lower()
+            feature = lexer.accept_type(FEATURE)
+        lexer.expect_type(RBRACK)
+    return var
+
+
+def _decode_rel(lexer, variables):
+    args = {}
+    surface = None
+    lexer.expect_type(LBRACK)
+    pred = predicate.normalize(
+        lexer.choice_type(DQSTRING, SQSYMBOL, SYMBOL)[1])
+    lnk = _decode_lnk(lexer)
+    surface = lexer.accept_type(DQSTRING)
+    _, label = lexer.expect((FEATURE, 'LBL'), (SYMBOL, None))
+    # any remaining are arguments or a constant
+    role = lexer.accept_type(FEATURE)
+    while role is not None:
+        role = role.upper()
+        if role == 'CARG':
+            value = lexer.expect_type(DQSTRING)
+        else:
+            value = _decode_variable(lexer, variables)
+        args[role] = value
+        role = lexer.accept_type(FEATURE)
+    lexer.expect_type(RBRACK)
+    return EP(pred,
+              label.lower(),
+              args=args,
+              lnk=lnk,
+              surface=surface,
+              base=None)
+
+
+def _decode_cons(lexer, cls, variables):
+    lhs = _decode_variable(lexer, variables)
+    relation = lexer.expect_type(SYMBOL).lower()
+    rhs = _decode_variable(lexer, variables)
+    return cls(lhs, relation, rhs)
+
 
 ##############################################################################
 ##############################################################################
 # Encoding
 
-
-def serialize(ms, version=_default_version, properties=True,
-              pretty_print=False, color=False):
-    """Serialize an MRS structure into a SimpleMRS string."""
-    delim = '\n' if pretty_print else _default_mrs_delim
-    output = delim.join(
-        _serialize_mrs(m, properties=properties,
-                       version=version, pretty_print=pretty_print)
-        for m in ms
-    )
-    if color:
-        output = highlight(output)
-    return output
+def _encode(ms, properties=True, indent=False):
+    if indent is None or indent is False:
+        indent = False  # normalize None to False
+        delim = ' '
+    else:
+        indent = True  # normalize integers to True
+        delim = '\n'
+    return delim.join(_encode_mrs(m, properties, indent) for m in ms)
 
 
-def _serialize_mrs(m, properties, version=_default_version, pretty_print=False):
-    # note that varprops is modified as a side-effect of the lower
-    # functions
+def _encode_mrs(m, properties, indent):
+    # attempt to convert if necessary
+    if not isinstance(m, MRS):
+        m = MRS.from_xmrs(m)
+
+    delim = '\n  ' if indent else ' '
     if properties:
-        varprops = {v: d['props'] for v, d in m._vars.items() if d['props']}
+        varprops = {v: m.properties(v) for v in m.variables}
     else:
         varprops = {}
-    toks = []
-    if version >= 1.1:
-        header_toks = []
-        if m.lnk is not None and m.lnk.data != (-1, -1):  # don't do <-1:-1>
-            header_toks.append(_serialize_lnk(m.lnk))
-        if m.surface is not None:
-            header_toks.append('"{}"'.format(m.surface))
-        if header_toks:
-            toks.append(' '.join(header_toks))
+    parts = [
+        _encode_surface_info(m),
+        _encode_hook(m, varprops, indent),
+        _encode_rels(m.rels, varprops, indent),
+        _encode_hcons(m.hcons),
+        _encode_icons(m.icons, varprops)
+    ]
+    return '[ {} ]'.format(
+        delim.join(
+            ' '.join(tokens) for tokens in parts if tokens))
+
+
+def _encode_surface_info(m):
+    tokens = []
+    if m.lnk is not None and m.lnk.data != (-1, -1):
+        tokens.append(str(m.lnk))
+    if m.surface is not None:
+        tokens.append('"{}"'.format(m.surface))
+    return tokens
+
+
+def _encode_hook(m, varprops, indent):
+    delim = '\n  ' if indent else ' '
+    tokens = []
     if m.top is not None:
-        toks.append(_serialize_argument(
-            'TOP' if version >= 1.1 else 'LTOP', m.top, varprops
-        ))
+        tokens.append('{}: {}'.format(TOP_FEATURE, m.top))
     if m.index is not None:
-        toks.append(_serialize_argument(
-            'INDEX', m.index, varprops
-        ))
-    delim = ' ' if not pretty_print else '\n          '
-    toks.append('RELS: < {eps} >'.format(
-        eps=delim.join(_serialize_ep(ep, varprops, version=version)
-                       for ep in m.eps())
-    ))
-    toks += [_serialize_hcons(hcons(m))]
-    icons_ = icons(m)
-    if icons_:  # make unconditional for "ICONS: < >"
-        toks += [_serialize_icons(icons_)]
-    delim = ' ' if not pretty_print else '\n  '
-    return '{} {} {}'.format('[', delim.join(toks), ']')
+        tokens.append('INDEX: {}'.format(_encode_variable(m.index, varprops)))
+    if tokens:
+        tokens = [delim.join(tokens)]
+    return tokens
 
 
-def _serialize_argument(rargname, value, varprops):
-    """Serialize an MRS argument into the SimpleMRS format."""
-    _argument = '{rargname}: {value}{props}'
-    if rargname == CONSTARG_ROLE:
-        value = '"{}"'.format(value)
-    props = ''
-    if value in varprops:
-        props = ' [ {} ]'.format(
-            ' '.join(
-                [variable.sort(value)] +
-                list(map('{0[0]}: {0[1]}'.format,
-                         [(k.upper(), v) for k, v in varprops[value]]))
-            )
-        )
-        del varprops[value]  # only print props once
-    return _argument.format(
-        rargname=rargname,
-        value=str(value),
-        props=props
-    )
+def _encode_variable(var, varprops):
+    tokens = [var]
+    if varprops.get(var):
+        tokens.append('[')
+        tokens.append(variable.type(var))
+        for prop in sorted(varprops[var], key=property_priority):
+            val = varprops[var][prop]
+            tokens.append(prop + ':')
+            tokens.append(val)
+        tokens.append(']')
+        del varprops[var]
+    return ' '.join(tokens)
 
 
-def _serialize_ep(ep, varprops, version=_default_version):
-    """Serialize an Elementary Predication into the SimpleMRS encoding."""
-    # ('nodeid', 'pred', 'label', 'args', 'lnk', 'surface', 'base')
-    args = ep[3]
-    arglist = ' '.join([_serialize_argument(rarg, args[rarg], varprops)
-                        for rarg in sorted(args, key=role_priority)])
-    if version < 1.1 or len(ep) < 6 or ep[5] is None:
-        surface = ''
-    else:
-        surface = ' "%s"' % ep[5]
-    lnk = None if len(ep) < 5 else ep[4]
-    pred = ep[1]
-    return '[ {pred}{lnk}{surface} LBL: {label}{s}{args} ]'.format(
-        pred=pred,
-        lnk=_serialize_lnk(lnk),
-        surface=surface,
-        label=str(ep[2]),
-        s=' ' if arglist else '',
-        args=arglist
-    )
+def _encode_rels(rels, varprops, indent):
+    delim = ('\n  ' + ' ' * len('RELS: < ')) if indent else ' '
+    tokens = []
+    for rel in rels:
+        pred = '{}{}'.format(rel.predicate, str(rel.lnk))
+        reltoks = ['[', pred]
+        if rel.surface is not None:
+            reltoks.append('"{}"'.format(rel.surface))
+        reltoks.extend(('LBL:', rel.label))
+        for arg in sorted(rel.args, key=role_priority):
+            val = rel.args[arg]
+            reltoks.extend((arg + ':', _encode_variable(val, varprops)))
+        reltoks.append(']')
+        tokens.append(' '.join(reltoks))
+    if tokens:
+        tokens = ['RELS: <'] + [delim.join(tokens)] + ['>']
+    return tokens
+
+def _encode_hcons(hcons):
+    tokens = ['{} {} {}'.format(hc.hi, hc.relation, hc.lo)
+              for hc in hcons]
+    if tokens:
+        tokens = ['HCONS: <'] + [' '.join(tokens)] + ['>']
+    return tokens
 
 
-def _serialize_lnk(lnk):
-    """Serialize a predication lnk to surface form into the SimpleMRS
-       encoding."""
-    s = ""
-    if lnk is not None:
-        s = '<'
-        if lnk.type == Lnk.CHARSPAN:
-            cfrom, cto = lnk.data
-            s += ''.join([str(cfrom), ':', str(cto)])
-        elif lnk.type == Lnk.CHARTSPAN:
-            cfrom, cto = lnk.data
-            s += ''.join([str(cfrom), '#', str(cto)])
-        elif lnk.type == Lnk.TOKENS:
-            s += ' '.join([str(t) for t in lnk.data])
-        elif lnk.type == Lnk.EDGE:
-            s += ''.join(['@', str(lnk.data)])
-        s += '>'
-    return s
-
-
-def _serialize_hcons(hcons):
-    """Serialize [HandleConstraints] into the SimpleMRS encoding."""
-    toks = ['HCONS:', '<']
-    for hc in hcons:
-        toks.extend(hc)
-        # reln = hcon[1]
-        # toks += [hcon[0], rel, str(hcon.lo)]
-    toks += ['>']
-    return ' '.join(toks)
-
-
-def _serialize_icons(icons):
-    """Serialize [IndividualConstraints] into the SimpleMRS encoding."""
-    toks = ['ICONS:', '<']
-    for ic in icons:
-        toks.extend(ic)
-        # toks += [str(icon.left),
-        #          icon.relation,
-        #          str(icon.right)]
-    toks += ['>']
-    return ' '.join(toks)
+def _encode_icons(icons, varprops):
+    tokens = ['{} {} {}'.format(_encode_variable(ic.left, varprops),
+                                ic.relation,
+                                _encode_variable(ic.right, varprops))
+              for ic in icons]
+    if tokens:
+        tokens = ['ICONS: <'] + [' '.join(tokens)] + ['>']
+    return tokens

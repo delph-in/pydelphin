@@ -108,6 +108,7 @@ class Lnk(object):
     # These types determine how a lnk on an EP or MRS are to be
     # interpreted, and thus determine the data type/structure of the
     # lnk data.
+    UNSPECIFIED = -1
     CHARSPAN = 0  # Character span; a pair of offsets
     CHARTSPAN = 1  # Chart vertex span: a pair of indices
     TOKENS = 2  # Token numbers: a list of indices
@@ -130,11 +131,19 @@ class Lnk(object):
             else:
                 self.type = Lnk.TOKENS
                 self.data = tuple(map(int, arg.split()))
-        elif arg in (Lnk.CHARSPAN, Lnk.CHARTSPAN, Lnk.TOKENS, Lnk.EDGE):
+        elif arg in (Lnk.UNSPECIFIED, Lnk.CHARSPAN, Lnk.CHARTSPAN,
+                     Lnk.TOKENS, Lnk.EDGE):
             self.type = arg
             self.data = data
         else:
             raise LnkError('invalid Lnk: {}'.format(repr((arg, data))))
+
+    @classmethod
+    def default(cls):
+        """
+        Create a Lnk object for when no information is given.
+        """
+        return cls(Lnk.UNSPECIFIED, '')
 
     @classmethod
     def charspan(cls, start, end):
@@ -179,7 +188,9 @@ class Lnk(object):
         return cls(Lnk.EDGE, int(edge))
 
     def __str__(self):
-        if self.type == Lnk.CHARSPAN:
+        if self.type == Lnk.UNSPECIFIED:
+            return ''
+        elif self.type == Lnk.CHARSPAN:
             return '<{}:{}>'.format(self.data[0], self.data[1])
         elif self.type == Lnk.CHARTSPAN:
             return '<{}#{}>'.format(self.data[0], self.data[1])

@@ -7,17 +7,17 @@ from delphin.mrs.components import Node
 from delphin.mrs.config import CVARSORT
 
 # empty
-empty = simplemrs.loads_one('''[ ]''')
+empty = simplemrs.decode('''[ ]''')
 
 # "It rains."
-it_rains = simplemrs.loads_one('''
+it_rains = simplemrs.decode('''
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
   HCONS: < h0 qeq h1 > ]
 ''')
 
-dogs_chase_Kim = simplemrs.loads_one('''
+dogs_chase_Kim = simplemrs.decode('''
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ udef_q_rel<0:4> LBL: h4 ARG0: x3 RSTR: h5 BODY: h6 ]
@@ -29,7 +29,7 @@ dogs_chase_Kim = simplemrs.loads_one('''
 ''')
 
 # example from Jacy with duplicate ARG0s
-kotaenakatta = simplemrs.loads_one('''
+kotaenakatta = simplemrs.decode('''
 [ TOP: h0
   INDEX: e2 [ e TENSE: past MOOD: indicative PROG: - PERF: - ASPECT: default_aspect PASS: - SF: prop ]
   RELS: < [ "_kotaeru_v_3_rel"<0:2> LBL: h4 ARG0: e2 ARG1: i3 ]
@@ -38,7 +38,7 @@ kotaenakatta = simplemrs.loads_one('''
 '''
 )
 
-nearly_every_dog_barked = simplemrs.loads_one('''
+nearly_every_dog_barked = simplemrs.decode('''
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
   RELS: < [ _nearly_x_deg_rel<0:6> LBL: h4 ARG0: e5 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: u6 ]
@@ -50,7 +50,7 @@ nearly_every_dog_barked = simplemrs.loads_one('''
 )
 
 # ltop different from index
-kim_probably_sleeps = simplemrs.loads_one('''
+kim_probably_sleeps = simplemrs.decode('''
 [ LTOP: h0
   INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
   RELS: < [ proper_q<0:3> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: sg IND: + ] RSTR: h5 BODY: h6 ]

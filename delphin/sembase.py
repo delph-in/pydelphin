@@ -9,3 +9,22 @@ def role_priority(role):
         role
     )
 
+
+def property_priority(prop):
+    """
+    Return a representation of property priority for ordering.
+
+    Note:
+       The ordering provided by this function was modeled on the ERG
+       and Jacy grammars and may be irrelevant for others.
+    """
+    prop = prop.upper()
+    proplist = (
+        'PERS', 'NUM', 'GEND', 'IND', 'PT', 'PRONTYPE',
+        'SF', 'TENSE', 'MOOD', 'PROG', 'PERF', 'ASPECT', 'PASS'
+    )
+    try:
+        return (proplist.index(prop), prop)
+    except ValueError:
+        return (len(proplist), prop)
+

@@ -661,8 +661,8 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
 
     for (key, testrows, goldrows) in matched_rows:
         (test_unique, shared, gold_unique) = mrs_compare.compare_bags(
-            [simplemrs.loads_one(row[2]) for row in testrows],
-            [simplemrs.loads_one(row[2]) for row in goldrows])
+            [simplemrs.decode(row[2]) for row in testrows],
+            [simplemrs.decode(row[2]) for row in goldrows])
         yield {'id': key,
                'input': i_inputs[key],
                'test': test_unique,

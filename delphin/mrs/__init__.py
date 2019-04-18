@@ -43,5 +43,8 @@ from .components import (
 )
 from .xmrs import Xmrs, Mrs, Dmrs
 
+from ._exceptions import MRSSyntaxError
+from ._mrs import EP, HCons, ICons, MRS
+
 __all__ = ['Node', 'ElementaryPredication',
            'HandleConstraint', 'Link', 'Xmrs', 'Mrs', 'Dmrs']

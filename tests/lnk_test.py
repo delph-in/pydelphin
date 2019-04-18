@@ -8,6 +8,12 @@ class TestLnk():
         # don't allow just any Lnk type
         with pytest.raises(LnkError): Lnk('lnktype', (0, 1))
 
+    def testDefault(self):
+        lnk = Lnk.default()
+        assert lnk.type == Lnk.UNSPECIFIED
+        assert str(lnk) == ''
+        repr(lnk)  # no error
+
     def testCharSpanLnk(self):
         lnk = Lnk.charspan(0, 1)
         assert lnk.type == Lnk.CHARSPAN
