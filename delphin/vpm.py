@@ -35,7 +35,7 @@ def load(source, semi=None):
     Args:
         source: a filename or file-like object containing the VPM
             definitions
-        semi (:class:`~delphin.mrs.semi.SemI`, optional): if provided,
+        semi (:class:`~delphin.semi.SemI`, optional): if provided,
             it is passed to the VPM constructor
     Returns:
         a :class:`VPM` instance
@@ -109,7 +109,7 @@ class VPM(object):
             featmap is a tuple of two lists: (source_features,
             target_features); and valmap is a list of value tuples:
             (source_values, OP, target_values)
-        semi (:class:`~delphin.mrs.semi.SemI`, optional): if provided,
+        semi (:class:`~delphin.semi.SemI`, optional): if provided,
             this is used for more sophisticated value comparisons
     """
 

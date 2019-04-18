@@ -7,7 +7,7 @@ else:
 
 import pytest
 
-from delphin.mrs import vpm
+from delphin import vpm
 
 
 def test_invalid():

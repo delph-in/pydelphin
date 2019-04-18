@@ -74,6 +74,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.components._VarGenerator` to `delphin.variable.VariableFactory`
 * `delphin.mrs.config.UNKNOWNSORT` to `delphin.variable.UNKNOWN`
 * `delphin.mrs.config.HANDLESORT` to `delphin.variable.HANDLE`
+* `delphin.mrs.vpm` to `delphin.vpm`
 
 ### Removed
 

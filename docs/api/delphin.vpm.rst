@@ -1,8 +1,8 @@
 
-delphin.mrs.vpm
-===============
+delphin.vpm
+===========
 
-.. automodule:: delphin.mrs.vpm
+.. automodule:: delphin.vpm
 
    Module functions
    ----------------
