@@ -10,7 +10,6 @@ within Python.
 
 import sys
 import os
-import io
 import json
 from functools import partial
 import logging
@@ -274,10 +273,10 @@ def _read_ace_parse(s):
         # with --tsdb-stdout
         elif line.startswith('('):
             while line:
-                expr = SExpr.parse(line)
-                line = expr.remainder.lstrip()
-                if len(expr.data) == 2 and expr.data[0] == ':results':
-                    for result in expr.data[1]:
+                data, remainder = SExpr.parse(line)
+                line = remainder.lstrip()
+                if len(data) == 2 and data[0] == ':results':
+                    for result in data[1]:
                         for key, val in result:
                             if key == ':mrs':
                                 yield simplemrs.loads(val, single=True)
@@ -370,7 +369,7 @@ def mkprof(destination, source=None, relations=None, where=None,
         raise ValueError('invalid or missing relations file: {}'
                          .format(relations))
     # setup destination testsuite
-    _prepare_output_directory(destination)
+    os.makedirs(destination, exist_ok=True)
     dts = itsdb.TestSuite(path=destination, relations=relations)
     # input is sentences on stdin
     if source is None:
@@ -579,7 +578,7 @@ def repp(file, config=None, module=None, active=None,
         for line in file:
             _repp(r, line, format, trace_level)
     else:
-        with io.open(file, encoding='utf-8') as fh:
+        with open(file, encoding='utf-8') as fh:
             for line in fh:
                 _repp(r, line, format, trace_level)
 
@@ -669,17 +668,3 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
                'test': test_unique,
                'shared': shared,
                'gold': gold_unique}
-
-
-###############################################################################
-### HELPER FUNCTIONS ##########################################################
-
-
-def _prepare_output_directory(path):
-    try:
-        os.makedirs(path)  # exist_ok=True is available from Python 3.2
-    except OSError as ex:  # PermissionError is available from Python 3.3
-        if ex.errno == 17 and os.path.isdir(path):
-            pass  # existing directory; maybe it's usable
-        else:
-            raise

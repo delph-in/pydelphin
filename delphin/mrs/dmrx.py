@@ -5,8 +5,6 @@ DMRX (XML for DMRS) serialization and deserialization.
 
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
-from __future__ import print_function
-
 from collections import OrderedDict
 import re
 import xml.etree.ElementTree as etree

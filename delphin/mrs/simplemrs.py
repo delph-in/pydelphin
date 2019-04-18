@@ -6,8 +6,6 @@ Serialization functions for the SimpleMRS format.
 
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
-from __future__ import print_function
-
 from collections import deque, defaultdict
 import re
 from warnings import warn

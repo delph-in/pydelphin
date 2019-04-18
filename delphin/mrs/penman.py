@@ -10,8 +10,6 @@ encoded as PENMAN graphs. In this sense, it is somewhat like how JSON
 formatting of \*MRS is handled in PyDelphin.
 """
 
-from __future__ import absolute_import, print_function
-
 import penman
 
 from delphin.mrs.config import LTOP_NODEID

@@ -64,11 +64,7 @@ by these methods (i.e. the same as via dict-access).
 import json
 
 import requests
-try:
-    # Python 3
-    from urllib.parse import urljoin
-except ImportError:
-    from urlparse import urljoin
+from urllib.parse import urljoin
 
 from delphin.interfaces.base import ParseResponse, Processor
 

@@ -80,21 +80,12 @@ method, for which a new :class:`~delphin.interfaces.base.FieldMapper`
 class must be defined.
 """
 
-from __future__ import print_function
-# TODO: Remove when Python2.7 support is gone
-try:
-    unicode
-except NameError:
-    unicode = str
-
 import os
 import re
-from gzip import GzipFile, open as gzopen
+from gzip import open as gzopen
 import tempfile
 import shutil
 import logging
-import io
-from io import TextIOWrapper
 from collections import (
     defaultdict, namedtuple, OrderedDict, Sequence, Mapping
 )
@@ -1418,7 +1409,7 @@ def _cast_to_str(col, field):
         if field.key:
             raise ITSDBError('missing key: {}'.format(field.name))
         col = field.default_value()
-    return unicode(col)
+    return str(col)
 
 
 def encode_row(fields):
@@ -1435,9 +1426,8 @@ def encode_row(fields):
     Returns:
         A [incr tsdb()]-encoded string
     """
-    # NOTE: str(f) only works for Python3
-    unicode_fields = [unicode(f) for f in fields]
-    escaped_fields = map(escape, unicode_fields)
+    str_fields = [str(f) for f in fields]
+    escaped_fields = map(escape, str_fields)
     return _field_delimiter.join(escaped_fields)
 
 
@@ -1523,14 +1513,10 @@ def _open_table(tbl_filename, encoding):
     """
     path = _table_filename(tbl_filename)
     if path.endswith('.gz'):
-        # gzip.open() cannot use mode='rt' until Python2.7 support
-        # is gone; until then use TextIOWrapper
-        gzfile = GzipFile(path, mode='r')
-        gzfile.read1 = gzfile.read  # Python2 hack
-        with TextIOWrapper(gzfile, encoding=encoding) as f:
+        with gzopen(path, mode='rt', encoding=encoding) as f:
             yield f
     else:
-        with io.open(path, encoding=encoding) as f:
+        with open(path, encoding=encoding) as f:
             yield f
 
 

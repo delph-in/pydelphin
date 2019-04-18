@@ -26,9 +26,6 @@ Example:
 
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
-from __future__ import print_function
-
-
 def dump(destination, ms, single=False, pretty_print=False, **kwargs):
     """
     Serialize Xmrs objects to the Prolog representation and write to a file.

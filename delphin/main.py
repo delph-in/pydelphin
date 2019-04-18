@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from __future__ import unicode_literals
-
 import sys
 import os
 import argparse
@@ -130,12 +128,8 @@ def _make_itsdb_actions(items):
     return actions
 
 
-# textwrap does not have indent() in Python2.7, so use this for now:
-def redent(s):
-    lines = textwrap.dedent(s).splitlines()
-    if lines[0].strip() == '':
-        lines = lines[1:]
-    return '\n'.join('  ' + line for line in lines)
+def _redent(s):
+    return textwrap.indent(textwrap.dedent(s), '  ')
 
 
 parser = argparse.ArgumentParser(
@@ -353,7 +347,7 @@ subparser.add_parser(
     'convert',
     parents=[common_parser, convert_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=redent("""
+    description=_redent("""
         Convert between various DELPH-IN Semantics representations.
 
         Available bidirectional codecs:
@@ -373,14 +367,14 @@ subparser.add_parser(
     'select',
     parents=[common_parser, select_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=redent("""
+    description=_redent("""
         Select data from [incr tsdb()] testsuites.
         """))
 subparser.add_parser(
     'mkprof',
     parents=[common_parser, mkprof_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=redent("""
+    description=_redent("""
         This command creates testsuites. There are four usage patterns:
 
             delphin mkprof --input=sentences.txt --relations=../relations ...
@@ -403,7 +397,7 @@ subparser.add_parser(
     'process',
     parents=[common_parser, process_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=redent("""
+    description=_redent("""
         Use a processor (namely ACE) to process each item in the [incr tsdb()]
         testsuite given by --source (TESTSUITE if --source is not given). For
         standard [incr tsdb()] schemata, input items given by the following
@@ -421,7 +415,7 @@ subparser.add_parser(
 subparser.add_parser(
     'compare', parents=[common_parser, compare_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=redent("""
+    description=_redent("""
         Compare MRS results in test and gold [incr tsdb()] testsuites.
 
         Graph isomorphism is used to determine if two MRSs are equivalent and
@@ -431,7 +425,7 @@ subparser.add_parser(
 subparser.add_parser(
     'repp', parents=[common_parser, repp_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=redent("""
+    description=_redent("""
         Tokenize sentences using a Regular Expression PreProcessor (REPP).
 
         This front-end to the delphin.repp module makes it easy to tokenize

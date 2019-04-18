@@ -33,10 +33,7 @@ expressions.
 .. _`DELPH-IN Wiki`: http://moin.delph-in.net/
 """
 
-from __future__ import unicode_literals
-
 import re
-import io
 import textwrap
 import warnings
 
@@ -46,8 +43,6 @@ from delphin.exceptions import (
     PyDelphinWarning)
 from delphin.tfs import FeatureStructure
 from delphin.util import LookaheadIterator
-
-str = type(u'')  # short-term fix for Python 2
 
 # Values for list expansion
 LIST_TYPE = '*list*'        #: type of lists in TDL
@@ -168,9 +163,6 @@ class TypeIdentifier(TypeTerm):
         docstring (str): documentation string
     """
 
-    def __unicode__(self):
-        return self.__str__()
-
     def __eq__(self, other):
         if (isinstance(other, TypeTerm) and
                 not isinstance(other, TypeIdentifier)):
@@ -196,9 +188,6 @@ class String(TypeTerm):
         docstring (str): documentation string
     """
 
-    def __unicode__(self):
-        return self.__str__()
-
 
 class Regex(TypeTerm):
     """
@@ -211,9 +200,6 @@ class Regex(TypeTerm):
     Attributes:
         docstring (str): documentation string
     """
-
-    def __unicode__(self):
-        return self.__str__()
 
 
 class AVM(FeatureStructure, Term):
@@ -1081,19 +1067,16 @@ def iterparse(source, encoding='utf-8'):
         <String object (_eucalyptus_n_1_rel) at 140625748595960>
     """
     if hasattr(source, 'read'):
-        for event in _parse2(source):
-            yield event
+        yield from _parse(source)
     else:
-        with io.open(source, encoding=encoding) as fh:
-            for event in _parse2(fh):
-                yield event
+        with open(source, encoding=encoding) as fh:
+            yield from _parse(fh)
 
 
-def _parse2(f):
+def _parse(f):
     tokens = LookaheadIterator(_lex(f))
     try:
-        for event in _parse_tdl(tokens):
-            yield event
+        yield from _parse_tdl(tokens)
     except TDLSyntaxError as ex:
         if hasattr(f, 'name'):
             ex.filename = f.name

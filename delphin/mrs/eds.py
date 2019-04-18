@@ -3,8 +3,6 @@
 Elementary Dependency Structures (EDS).
 """
 
-from __future__ import print_function
-
 from itertools import count
 
 from delphin.util import _bfs, _connected_components

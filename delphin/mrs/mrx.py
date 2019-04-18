@@ -5,8 +5,6 @@ MRX (XML for MRS) serialization and deserialization.
 
 # Author: Michael Wayne Goodman <goodmami@uw.edu>
 
-from __future__ import print_function
-
 from collections import defaultdict
 import xml.etree.ElementTree as etree
 
@@ -103,9 +101,7 @@ def dumps(ms, single=False, properties=True,
         single: if `True`, treat *ms* as a single Xmrs object instead
             of as an iterator
         properties: if `False`, suppress variable properties
-        encoding: the character encoding of the string (`"unicode"`
-            returns a regular (unicode) string in Python 3 and a
-            unicode string in Python 2)
+        encoding: the character encoding of the string
         pretty_print: if `True`, add newlines and indentation
     Returns:
         a MRX string representation of a corpus of Xmrs

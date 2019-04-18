@@ -16,11 +16,8 @@ retaining character indices from the original input string.
   URL http://www.aclweb.org/anthology/P12-2074.
 
 """
-from __future__ import unicode_literals
 
 from os.path import exists, dirname, basename, join as joinpath
-import io
-import warnings
 import re
 from sre_parse import parse_template
 from array import array
@@ -216,10 +213,7 @@ class _REPPGroupCall(_REPPOperation):
 
     def _apply(self, s, active):
         if active is not None and self.name in active:
-            # TODO 'yield from' may be useful here when Python2.7 is
-            # no longer supported. See issue #115
-            for step in self.modules[self.name]._apply(s, active):
-                yield step
+            yield from self.modules[self.name]._apply(s, active)
 
 
 class _REPPIterativeGroup(_REPPGroup):
@@ -301,7 +295,7 @@ class REPP(object):
         confdir = dirname(path)
 
         # TODO: can TDL parsing be repurposed for this variant?
-        conf = io.open(path, encoding='utf-8').read()
+        conf = open(path, encoding='utf-8').read()
         conf = re.sub(r';.*', '', conf).replace('\n',' ')
         m = re.search(
             r'repp-modules\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.', conf)
@@ -518,7 +512,7 @@ def _tokenize(result, pattern):
 def _repp_lines(path):
     if not exists(path):
         raise REPPError('REPP file not found: {}'.format(path))
-    return io.open(path, encoding='utf-8').read().splitlines()
+    return open(path, encoding='utf-8').read().splitlines()
 
 def _parse_repp(lines, r, directory):
     ops = list(_parse_repp_group(lines, r, directory))

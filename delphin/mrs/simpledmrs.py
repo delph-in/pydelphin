@@ -10,10 +10,7 @@ at the command line, because XML (DMRX) is not easy to read).
 Deserialization is not provided.
 """
 
-from __future__ import print_function
-
 from collections import OrderedDict
-from io import BytesIO
 import re
 
 from delphin.lnk import Lnk
@@ -25,20 +22,6 @@ from delphin.mrs.config import EQ_POST, CVARSORT, CONSTARG_ROLE
 ##############################################################################
 ##############################################################################
 # Pickle-API methods
-
-
-# def load(fh, single=False):
-#     ms = deserialize(fh)
-#     if single:
-#         ms = next(ms)
-#     return ms
-
-
-# def loads(s, single=False, encoding='utf-8'):
-#     ms = deserialize(BytesIO(bytes(s, encoding=encoding)))
-#     if single:
-#         ms = next(ms)
-#     return ms
 
 
 def dump(destination, ms, **kwargs):
