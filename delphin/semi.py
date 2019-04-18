@@ -24,6 +24,7 @@ import warnings
 from delphin import tfs
 from delphin.exceptions import (
     PyDelphinException,
+    PyDelphinSyntaxError,
     PyDelphinWarning
 )
 
@@ -78,15 +79,15 @@ _synopsis_re = re.compile(
 
 
 class SemIError(PyDelphinException):
-    """
-    Raised when loading an invalid SEM-I.
-    """
+    """Raised when loading an invalid SEM-I."""
+
+
+class SemISyntaxError(PyDelphinSyntaxError):
+    """Raised when loading an invalid SEM-I."""
 
 
 class SemIWarning(PyDelphinWarning):
-    """
-    Warning class for questionable SEM-Is.
-    """
+    """Warning class for questionable SEM-Is."""
 
 
 def load(fn, encoding='utf-8'):
@@ -107,14 +108,14 @@ def load(fn, encoding='utf-8'):
 
 def _read_file(fn, basedir, encoding):
     data = {
-        'variables': [],
-        'properties': [],
-        'roles': [],
+        'variables': {},
+        'properties': {},
+        'roles': {},
         'predicates': {},
     }
     section = None
 
-    for line in open(fn, 'r', encoding=encoding):
+    for lineno, line in enumerate(open(fn, 'r', encoding=encoding), 1):
         line = line.lstrip()
 
         if not line or line.startswith(';'):
@@ -124,7 +125,9 @@ def _read_file(fn, basedir, encoding):
         if match is not None:
             name = match.group('name')
             if name not in _SEMI_SECTIONS:
-                raise ValueError('Invalid SEM-I section: {}'.format(name))
+                raise SemISyntaxError(
+                    'invalid SEM-I section',
+                    filename=fn, lineno=lineno, text=line)
             else:
                 section = name
             continue
@@ -134,9 +137,12 @@ def _read_file(fn, basedir, encoding):
             include_fn = pjoin(basedir, match.group('filename').rstrip())
             include_data = _read_file(
                 include_fn, dirname(include_fn), encoding)
-            data['variables'].extend(include_data.get('variables', []))
-            data['properties'].extend(include_data.get('properties', []))
-            data['roles'].extend(include_data.get('roles', []))
+            for key, val in include_data['variables'].items():
+                _incorporate(data['variables'], key, val, include_fn)
+            for key, val in include_data['properties'].items():
+                _incorporate(data['properties'], key, val, include_fn)
+            for key, val in include_data['roles'].items():
+                _incorporate(data['roles'], key, val, include_fn)
             for pred, d in include_data['predicates'].items():
                 if pred not in data['predicates']:
                     data['predicates'][pred] = {
@@ -148,7 +154,7 @@ def _read_file(fn, basedir, encoding):
                 if d.get('synopses'):
                     data['predicates'][pred]['synopses'].extend(d['synopses'])
 
-        if section == 'variables':
+        elif section == 'variables':
             # e.g. e < i : PERF bool, TENSE tense.
             match = _variable_entry_re.match(line)
             if match is not None:
@@ -162,9 +168,11 @@ def _read_file(fn, basedir, encoding):
                     properties = [pair.split() for pair in pairs]
                 v = {'parents': supertypes, 'properties': properties}
                 # v = type(identifier, supertypes, d)
-                data['variables'].append((identifier, v))
+                _incorporate(data['variables'], identifier, v, fn)
             else:
-                raise ValueError('Invalid entry: {}'.format(line))
+                raise SemISyntaxError(
+                    'invalid variable',
+                    filename=fn, lineno=lineno, text=line)
 
         elif section == 'properties':
             # e.g. + < bool.
@@ -174,18 +182,23 @@ def _read_file(fn, basedir, encoding):
                 supertypes = match.group('parents') or []
                 if supertypes:
                     supertypes = supertypes.split(' & ')
-                data['properties'].append((_type, {'parents': supertypes}))
+                _incorporate(
+                    data['properties'], _type, {'parents': supertypes}, fn)
             else:
-                raise ValueError('Invalid entry: {}'.format(line))
+                raise SemISyntaxError(
+                    'invalid property',
+                    filename=fn, lineno=lineno, text=line)
 
         elif section == 'roles':
             # e.g. + < bool.
             match = _role_entry_re.match(line)
             if match is not None:
-                rargname, value = match.group('role'), match.group('value')
-                data['roles'].append((rargname, {'value': value}))
+                role, value = match.group('role'), match.group('value')
+                _incorporate(data['roles'], role, {'value': value}, fn)
             else:
-                raise ValueError('Invalid entry: {}'.format(line))
+                raise SemISyntaxError(
+                    'invalid role',
+                    filename=fn, lineno=lineno, text=line)
 
         elif section == 'predicates':
             # e.g. _predicate_n_1 : ARG0 x { IND + }.
@@ -215,6 +228,12 @@ def _read_file(fn, basedir, encoding):
                         {'roles': roles})
 
     return data
+
+
+def _incorporate(d, key, val, fn):
+    if key in d:
+        warnings.warn("'{}' redefined in {}".format(key, fn), SemIWarning)
+    d[key] = val
 
 
 class SynopsisRole(tuple):
@@ -358,14 +377,18 @@ class SemI(object):
         self.roles = {}
         self.predicates = tfs.TypeHierarchy(TOP_TYPE)
         # validate and normalize inputs
-        self._init_properties(properties)
-        self._init_variables(variables)
-        self._init_roles(roles)
-        self._init_predicates(predicates)
+        if properties:
+            self._init_properties(properties)
+        if variables:
+            self._init_variables(variables)
+        if roles:
+            self._init_roles(roles)
+        if predicates:
+            self._init_predicates(predicates)
 
     def _init_properties(self, properties):
         subhier = {}
-        for prop, data in dict(properties or []).items():
+        for prop, data in properties.items():
             prop = prop.lower()
             parents = data.get('parents')
             _add_to_subhierarchy(subhier, prop, parents, None)
@@ -373,7 +396,7 @@ class SemI(object):
 
     def _init_variables(self, variables):
         subhier = {}
-        for var, data in dict(variables or []).items():
+        for var, data in variables.items():
             var = var.lower()
             parents = data.get('parents')
             properties = []
@@ -386,7 +409,7 @@ class SemI(object):
         self.variables.update(subhier)
 
     def _init_roles(self, roles):
-        for role, data in dict(roles or []).items():
+        for role, data in roles.items():
             role = role.upper()
             var = data['value'].lower()
             if not (var == STRING_TYPE or var in self.variables):
@@ -396,7 +419,7 @@ class SemI(object):
     def _init_predicates(self, predicates):
         subhier = {}
         propcache = {v: dict(node.data) for v, node in self.variables.items()}
-        for pred, data in dict(predicates or []).items():
+        for pred, data in predicates.items():
             pred = pred.lower()
             parents = data.get('parents')
             synopses = []

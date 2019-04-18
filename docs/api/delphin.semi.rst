@@ -61,8 +61,14 @@ delphin.semi
 
   .. autoclass:: SynopsisRole
 
-  Exceptions
-  ----------
+  Exceptions and Warnings
+  -----------------------
 
   .. autoexception:: SemIError
+    :show-inheritance:
+
+  .. autoexception:: SemISyntaxError
+    :show-inheritance:
+
+  .. autoexception:: SemIWarning
     :show-inheritance:

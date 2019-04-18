@@ -4,6 +4,19 @@ delphin.mrs.vpm
 
 .. automodule:: delphin.mrs.vpm
 
-  .. autofunction:: load
-  .. autoclass:: VPM
-    :members:
+   Module functions
+   ----------------
+
+   .. autofunction:: load
+
+   Classes
+   -------
+
+   .. autoclass:: VPM
+      :members:
+
+   Exceptions
+   ----------
+
+   .. autoexception:: VPMSyntaxError
+      :show-inheritance:

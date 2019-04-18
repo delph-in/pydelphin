@@ -5,10 +5,25 @@ if version_info > (3,):
 else:
     from io import BytesIO as S
 
-# import pytest
+import pytest
 
 from delphin.mrs import vpm
 
+
+def test_invalid():
+    with pytest.raises(vpm.VPMSyntaxError):
+        vpm.load(S('<>'))
+    with pytest.raises(vpm.VPMSyntaxError):
+        vpm.load(S('event >< e'))
+    with pytest.raises(vpm.VPMSyntaxError):
+        vpm.load(S('a : b\n'
+                   ' 1 2 >> 3'))
+    with pytest.raises(vpm.VPMSyntaxError):
+        vpm.load(S('a : b\n'
+                   ' 1 >> 2 3'))
+    with pytest.raises(vpm.VPMSyntaxError):
+        vpm.load(S('a b : c d\n'
+                   ' 1 >> 2'))
 
 def test_type_map_single_rule_no_semi():
     assert vpm.load(S('event <> e')).apply('event2', {}) == ('e2', {})
@@ -140,4 +155,3 @@ def test_prop_map_no_semi():
 
 def test_prop_map_with_semi():
     pass
-    

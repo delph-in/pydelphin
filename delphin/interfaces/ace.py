@@ -83,7 +83,7 @@ from delphin.__about__ import __version__ as pydelphin_version
 from delphin.exceptions import PyDelphinException
 
 
-class AceProcessError(PyDelphinException):
+class ACEProcessError(PyDelphinException):
     """Raised when the ACE process has crashed and cannot be recovered."""
 
 
@@ -120,8 +120,6 @@ class AceProcess(Processor):
 
     def __init__(self, grm, cmdargs=None, executable=None, env=None,
                  tsdbinfo=True, **kwargs):
-        if not os.path.isfile(grm):
-            raise ValueError("Grammar file %s does not exist." % grm)
         self.grm = grm
 
         self.cmdargs = cmdargs or []
@@ -172,7 +170,7 @@ class AceProcess(Processor):
             'start': datetime.now()
         })
         if self._p.poll() is not None and self._p.returncode != 0:
-            raise AceProcessError('Process closed on startup; see <stderr>.')
+            raise ACEProcessError('Process closed on startup; see <stderr>.')
 
     def __enter__(self):
         return self

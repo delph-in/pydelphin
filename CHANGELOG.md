@@ -27,6 +27,7 @@ these changes are prefixed with "**BREAKING**"
   - `STRING_TYPE`
   - `SemI.find_synopsis()`
   - `SemIError`
+  - `SemISyntaxError`
   - `SemIWarning`
   - `Synopsis`
   - `SynopsisRole`
@@ -45,6 +46,7 @@ these changes are prefixed with "**BREAKING**"
   - `EVENTUALITY`
   - `INSTANCE`
   - `is_valid()`
+* `delphin.mrs.vpm.VPMSyntaxError`
 
 ### Moved or Renamed
 
@@ -55,6 +57,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.exceptions.TdlWarning` to `delphin.tdl.TDLWarning`
 * `delphin.exceptions.TSQLSyntaxError` to `delphin.tsql.TSQLSyntaxError`
 * `delphin.extra.highlight.TdlLexer` to `delphin.extra.highlight.TDLLexer`
+* `delphin.interfaces.ace.AceProcessError` to `delphin.interfaces.ace.ACEProcessError`
 * `delphin.mrs.util.rargname_sortkey()` to `delphin.sembase.role_priority()`
 * `delphin.mrs.components.Lnk` to `delphin.lnk.Lnk`
 * `delphin.mrs.components._LnkMixin` to `delphin.lnk.LnkMixin`
@@ -115,12 +118,17 @@ these changes are prefixed with "**BREAKING**"
 ### Changed
 
 * `delphin.extra.highlight` add docstrings and wild-card to TDL highlighter
+* `delphin.interfaces.ace` no longer raise `ValueError` when grammar file does
+  not exist; the `ACEProcessError` now handles this
 * `delphin.semi.load()` takes an `encoding` parameter
 * `delphin.semi` dictionary schema removes empty/default values; changes
   structure of predicate synopses
+* `delphin.semi` warns when a type is redefined
 * `delphin.tfs` -- errors raise `TypeHierarchyError` instead of `ValueError`
 * `delphin.tfs` nodes in the hierarchy are now TypeHierarchyNodes and may
   contain arbitrary data in addition to the parents and children
+* `delphin.mrs.vpm` raises `VPMSyntaxError` on bad inputs instead of
+  `AssertionError`
 
 
 ## [v0.9.2][]

@@ -15,6 +15,12 @@ def test_properties(tmpdir):
     assert all([x in s.properties for x in ('bool', '+', '-')])
     assert s.properties.subsumes('bool', '+')
     assert not s.properties.compatible('+', '-')
+    # redefinition
+    p.write('properties:\n'
+            '  bool.\n'
+            '  bool.\n')
+    with pytest.warns(semi.SemIWarning):
+        semi.load(str(p))
 
 
 def test_variables(tmpdir):
@@ -38,6 +44,12 @@ def test_variables(tmpdir):
     assert s.variables['x'].data == []
     assert all(s.variables.subsumes('u', v) for v in 'iepx')
     assert not s.variables.compatible('e', 'x')
+    # redefinition
+    p.write('variables:\n'
+            '  u.\n'
+            '  u.\n')
+    with pytest.warns(semi.SemIWarning):
+        semi.load(str(p))
 
 
 def test_roles(tmpdir):
@@ -52,6 +64,14 @@ def test_roles(tmpdir):
     assert all([r in s.roles for r in ('ARG0', 'CARG')])
     assert s.roles['ARG0'] == 'i'
     assert s.roles['CARG'] == 'string'
+    # redefinition
+    p.write('variables:\n'
+            '  i.\n'
+            'roles:\n'
+            '  ARG0 : i.\n'
+            '  ARG0 : i.\n')
+    with pytest.warns(semi.SemIWarning):
+        semi.load(str(p))
 
 
 def test_predicates(tmpdir):
@@ -135,6 +155,14 @@ def test_include(tmpdir):
     assert '_able_a_1' in s.predicates
     assert 'can_able' in s.predicates['_able_a_1'].parents
     assert len(s.predicates['_able_a_1'].data) == 2
+    # redefinition
+    a.write('variables:\n'
+            '  i.\n'
+            'include: b.smi\n')
+    b.write('variables:\n'
+            '  i.\n')
+    with pytest.warns(semi.SemIWarning):
+        semi.load(str(a))
 
 
 def test_comments(tmpdir):

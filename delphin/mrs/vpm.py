@@ -14,12 +14,18 @@ variable properties (e.g. `PNG: 1pl` might map to `PERS: 1` and
 
 import re
 
+from delphin.exceptions import PyDelphinSyntaxError
 from delphin import variable
 
 _LR_OPS = set(['<>', '>>', '==', '=>'])
 _RL_OPS = set(['<>', '<<', '==', '<='])
 _SUBSUME_OPS = set(['<>', '<<', '>>'])
 _EQUAL_OPS = set(['==', '<=', '=>'])
+_ALL_OPS = _LR_OPS.union(_RL_OPS)
+
+
+class VPMSyntaxError(PyDelphinSyntaxError):
+    """Raised when loading an invalid VPM."""
 
 
 def load(source, semi=None):
@@ -41,11 +47,12 @@ def load(source, semi=None):
             return _load(fh, semi)
 
 def _load(fh, semi):
+    filename = getattr(fh, 'name', '<stream>')
     typemap = []
     propmap = []
     curmap = typemap
     lh, rh = 1, 1  # number of elements expected on each side
-    for line in fh:
+    for lineno, line in enumerate(fh, 1):
         line = line.lstrip()
 
         if not line or line.startswith(';'):
@@ -63,15 +70,30 @@ def _load(fh, semi):
         match = re.match(r'(?P<lvals>.*)(?P<op>[<>=]{2})(?P<rvals>.*)$', line)
         if match is not None:
             lvals = match.group('lvals').split()
+            op = match.group('op')
             rvals = match.group('rvals').split()
-            assert len(lvals) == lh
-            assert len(rvals) == rh
-            curmap.append((lvals, match.group('op'), rvals))
+            msg, offset = '', -1
+            if len(lvals) != lh:
+                msg = 'wrong number of values on left side'
+                offset = match.end('lvals')
+            if op not in _ALL_OPS:
+                msg = 'invalid operator'
+                offset = match.end('op')
+            elif len(rvals) != rh:
+                msg = 'wrong number of values on right side'
+                offset = match.end('rvals')
+            if msg:
+                raise VPMSyntaxError(msg, filename=filename,
+                                     lineno=lineno, offset=offset,
+                                     text=line)
+            curmap.append((lvals, op, rvals))
             continue
 
-        raise ValueError('Invalid line in VPM file: {}'.format(line))
+        raise VPMSyntaxError('invalid line in VPM file',
+                             filename=filename, lineno=lineno, text=line)
 
     return VPM(typemap, propmap, semi)
+
 
 class VPM(object):
     """

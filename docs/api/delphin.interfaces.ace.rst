@@ -56,5 +56,5 @@ delphin.interfaces.ace
   Exceptions
   ----------
 
-  .. autoexception:: AceProcessError
+  .. autoexception:: ACEProcessError
      :show-inheritance:
