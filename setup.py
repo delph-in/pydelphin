@@ -14,7 +14,8 @@ with open(os.path.join(base_dir, 'README.md'), encoding='utf-8') as f:
 # thanks: https://snarky.ca/clarifying-pep-518/
 docs_require = [
     'sphinx',
-    'sphinx-rtd-theme'
+    'sphinx-rtd-theme',
+    'sphinx_autodoc_typehints'
 ]
 tests_require = [
     'pytest'
