@@ -10,7 +10,7 @@ from delphin.mrs import (
     simplemrs,
     eds,
 )
-from delphin.util import SExpr, stringtypes
+from delphin.util import SExpr
 
 
 class Processor(object):
@@ -71,7 +71,7 @@ class ParseResult(dict):
         if drv is not None:
             if isinstance(drv, dict):
                 drv = Derivation.from_dict(drv)
-            elif isinstance(drv, stringtypes):
+            elif isinstance(drv, str):
                 drv = Derivation.from_string(drv)
         return drv
 
@@ -81,7 +81,7 @@ class ParseResult(dict):
         may be a standalone datum, or embedded in the derivation.
         """
         tree = self.get('tree')
-        if isinstance(tree, stringtypes):
+        if isinstance(tree, str):
             tree = SExpr.parse(tree).data
         elif tree is None:
             drv = self.get('derivation')
@@ -106,7 +106,7 @@ class ParseResult(dict):
         if mrs is not None:
             if isinstance(mrs, dict):
                 mrs = Mrs.from_dict(mrs)
-            elif isinstance(mrs, stringtypes):
+            elif isinstance(mrs, str):
                 mrs = simplemrs.loads_one(mrs)
         return mrs
 
@@ -119,7 +119,7 @@ class ParseResult(dict):
         if _eds is not None:
             if isinstance(_eds, dict):
                 _eds = eds.Eds.from_dict(_eds)
-            elif isinstance(_eds, stringtypes):
+            elif isinstance(_eds, str):
                 _eds = eds.loads_one(_eds)
         return _eds
 
@@ -167,7 +167,7 @@ class ParseResponse(dict):
         """
         toks = self.get('tokens', {}).get(tokenset)
         if toks is not None:
-            if isinstance(toks, stringtypes):
+            if isinstance(toks, str):
                 toks = YyTokenLattice.from_string(toks)
             elif isinstance(toks, Sequence):
                 toks = YyTokenLattice.from_list(toks)

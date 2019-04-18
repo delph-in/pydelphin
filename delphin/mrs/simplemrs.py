@@ -12,7 +12,6 @@ from collections import deque, defaultdict
 import re
 from warnings import warn
 
-from delphin.util import stringtypes
 from delphin.mrs import Mrs
 from delphin.mrs.components import (
     ElementaryPredication, HandleConstraint, IndividualConstraint,
@@ -71,10 +70,10 @@ def load(fh, single=False, version=_default_version, errors='warn'):
         a generator of Xmrs objects (unless the *single* option is
         `True`)
     """
-    if isinstance(fh, stringtypes):
-        s = open(fh, 'r').read()
-    else:
+    if hasattr(fh, 'read'):
         s = fh.read()
+    else:
+        s = open(fh, 'r').read()
     return loads(s, single=single, version=version, errors=errors)
 
 

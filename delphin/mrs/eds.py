@@ -7,7 +7,7 @@ from __future__ import print_function
 
 from itertools import count
 
-from delphin.util import stringtypes, _bfs, _connected_components
+from delphin.util import _bfs, _connected_components
 from delphin.mrs.xmrs import Xmrs
 from delphin import predicate
 from delphin import variable
@@ -383,10 +383,10 @@ def load(fh, single=False):
         a generator of :class:`Eds` objects (unless the *single* option
         is `True`)
     """
-    if isinstance(fh, stringtypes):
-        s = open(fh, 'r').read()
-    else:
+    if hasattr(fh, 'read'):
         s = fh.read()
+    else:
+        s = open(fh, 'r').read()
     return loads(s, single=single)
 
 

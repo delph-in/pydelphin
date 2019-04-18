@@ -78,7 +78,7 @@ import locale; locale.setlocale(locale.LC_ALL, '')
 encoding = locale.getpreferredencoding(False)
 
 from delphin.interfaces.base import ParseResponse, Processor
-from delphin.util import SExpr, stringtypes
+from delphin.util import SExpr
 from delphin.__about__ import __version__ as pydelphin_version
 from delphin.exceptions import PyDelphinException
 
@@ -685,12 +685,12 @@ def _tsdb_response(response, line):
                         res['mrs'] = resval.strip()
                     elif reskey == ':surface':
                         res['surface'] = resval.strip()
-                    elif isinstance(resval, stringtypes):
+                    elif isinstance(resval, str):
                         res[reskey[1:]] = resval.strip()
                     else:
                         res[reskey[1:]] = resval
                 response['results'].append(res)
-        elif isinstance(val, stringtypes):
+        elif isinstance(val, str):
             response[key[1:]] = val.strip()
         else:
             response[key[1:]] = val

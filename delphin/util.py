@@ -1,12 +1,12 @@
 
-from __future__ import absolute_import
 
-import warnings, codecs, io
+import warnings
+import codecs
 import re
 from datetime import datetime
-
-from collections import deque
+from collections import deque, namedtuple
 from functools import wraps
+
 
 def deprecated(message=None, final_version=None, alternative=None):
     if message is None:
@@ -32,10 +32,6 @@ def deprecated(message=None, final_version=None, alternative=None):
         return deprecated_wrapper
     return deprecated_decorator
 
-try:
-    stringtypes = (str, unicode)  # Python 2
-except NameError:
-    stringtypes = (str,)  # Python 3
 
 def safe_int(x):
     try:
@@ -149,7 +145,7 @@ def _connected_components(nodes, edges):
 # S-expressions
 #  e.g. (:n-inputs . 3) or (S (NP (NNS Dogs)) (VP (VBZ bark)))
 
-from delphin.lib.pegre import PegreResult
+SExprResult = namedtuple('SExprResult', 'data remainder')
 
 # escapes from https://en.wikipedia.org/wiki/S-expression#Use_in_Lisp
 _SExpr_escape_chars = r'"\s\(\)\[\]\{\}\\;'
@@ -161,12 +157,12 @@ def _SExpr_unescape_symbol(s):
 def _SExpr_unescape_string(s):
     return re.sub(r'\\(["\\])', r'\1', s)
 
-class SExprParser(object):
+class _SExprParser(object):
     def parse(self, s):
         i = 0
         n = len(s)
         while i < n and s[i].isspace(): i += 1
-        if i == n: return PegreResult('', [], None)
+        if i == n: return SExprResult([], '')
         assert s[i] == '('
         i += 1
         while i < n and s[i].isspace(): i += 1
@@ -206,7 +202,7 @@ class SExprParser(object):
                 if len(xs) == 3 and xs[1] == '.':
                     xs = tuple(xs[::2])
                 if len(stack) == 0:
-                    return PegreResult(s[i+1:], xs, None)
+                    return SExprResult(xs, s[i+1:])
                 else:
                     stack[-1].append(xs)
                 i += 1
@@ -219,7 +215,7 @@ class SExprParser(object):
                 stack[-1].append(_SExpr_unescape_symbol(m.group(0)))
                 i += len(m.group(0))
 
-SExpr = SExprParser()
+SExpr = _SExprParser()
 
 # attach an additional method for convenience
 def _format_SExpr(d):
@@ -227,7 +223,7 @@ def _format_SExpr(d):
         return '({} . {})'.format(d[0], d[1])
     elif isinstance(d, (tuple, list)):
         return '({})'.format(' '.join(map(_format_SExpr, d)))
-    elif isinstance(d, stringtypes):
+    elif isinstance(d, str):
         return d
     else:
         return repr(d)
@@ -320,7 +316,7 @@ _encoding_symbol_re = re.compile(
 
 def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
     encoding = None
-    with io.open(filename, 'rb') as fh:
+    with open(filename, 'rb') as fh:
         line1 = fh.readline()
     # strip off any UTF-8 BOM and leading spaces
     if line1.startswith(codecs.BOM_UTF8):
@@ -347,4 +343,3 @@ def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
         encoding = default_encoding
 
     return encoding
-

@@ -103,9 +103,7 @@ from contextlib import contextmanager
 import weakref
 
 from delphin.exceptions import PyDelphinException
-from delphin.util import (
-    safe_int, stringtypes, parse_datetime
-)
+from delphin.util import (safe_int, parse_datetime)
 from delphin.interfaces.base import FieldMapper
 
 ##############################################################################
@@ -240,7 +238,7 @@ class _RelationJoin(Relation):
 
         name = '{}+{}'.format(rel1.name, rel2.name)
         # the fields of the joined table, merging shared columns in *on*
-        if isinstance(on, stringtypes):
+        if isinstance(on, str):
             on = _split_cols(on)
         elif on is None:
             on = []
@@ -983,7 +981,7 @@ class Table(object):
             cols: an iterable of Field (column) names
             mode: how to return the data
         """
-        if isinstance(cols, stringtypes):
+        if isinstance(cols, str):
             cols = _split_cols(cols)
         if not cols:
             cols = [f.name for f in self.fields]
@@ -1146,7 +1144,7 @@ class TestSuite(object):
             path = self._path
         if tables is None:
             tables = self._data
-        elif isinstance(tables, stringtypes):
+        elif isinstance(tables, str):
             tables = {tables: self[tables]}
         elif isinstance(tables, Mapping):
             pass
@@ -1154,7 +1152,7 @@ class TestSuite(object):
             tables = dict((table, self[table]) for table in tables)
         if relations is None:
             relations = self.relations
-        elif isinstance(relations, stringtypes):
+        elif isinstance(relations, str):
             relations = Relations.from_file(relations)
 
         # prepare destination
@@ -1743,7 +1741,7 @@ def join(table1, table2, on=None, how='inner', name=None):
 
 
 def _join_pivot(on, table1, table2):
-    if isinstance(on, stringtypes):
+    if isinstance(on, str):
         on = _split_cols(on)
     if not on:
         on = set(table1.fields.keys()).intersection(table2.fields.keys())
