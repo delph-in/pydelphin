@@ -137,7 +137,9 @@ these changes are prefixed with "**BREAKING**"
   contain arbitrary data in addition to the parents and children
 * `delphin.mrs.vpm` raises `VPMSyntaxError` on bad inputs instead of
   `AssertionError`
-
+* MRS/DMRS/EDS serialization codecs now use the harmonized module layout (#3):
+  - `delphin.mrs.simplemrs`
+  - `delphin.mrs.mrx`
 
 ## [v0.9.2][]
 

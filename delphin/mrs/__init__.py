@@ -44,7 +44,15 @@ from .components import (
 from .xmrs import Xmrs, Mrs, Dmrs
 
 from ._exceptions import MRSSyntaxError
-from ._mrs import EP, HCons, ICons, MRS
+from ._mrs import (
+    EP,
+    HCons,
+    ICons,
+    MRS,
+    INTRINSIC_ROLE,
+    RESTRICTION_ROLE,
+    BODY_ROLE,
+    CONSTANT_ROLE)
 
 __all__ = ['Node', 'ElementaryPredication',
            'HandleConstraint', 'Link', 'Xmrs', 'Mrs', 'Dmrs']

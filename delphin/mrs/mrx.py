@@ -3,140 +3,131 @@
 MRX (XML for MRS) serialization and deserialization.
 """
 
-# Author: Michael Wayne Goodman <goodmami@uw.edu>
-
-from collections import defaultdict
+import io
+import re
 import xml.etree.ElementTree as etree
 
-from delphin.mrs import Mrs
+from delphin.mrs import MRS, EP, HCons, ICons, CONSTANT_ROLE
 from delphin import predicate
 from delphin.lnk import Lnk
 from delphin import variable
-from delphin.mrs.components import (
-    ElementaryPredication, HandleConstraint, IndividualConstraint,
-    elementarypredications, hcons, icons
-)
-from delphin.exceptions import XmrsDeserializationError as XDE
-from delphin.mrs.config import IVARG_ROLE
+from delphin.sembase import role_priority, property_priority
 
 
 ##############################################################################
 ##############################################################################
 # Pickle-API methods
 
-
-def load(fh, single=False):
+def load(source):
     """
     Deserialize MRX from a file (handle or filename)
 
     Args:
-        fh (str, file): input filename or file object
-        single: if `True`, only return the first read Xmrs object
+        source (str, file): input filename or file object
     Returns:
-        a generator of Xmrs objects (unless the *single* option is
-        `True`)
+        a list of MRS objects
     """
-    ms = deserialize(fh)
-    if single:
-        ms = next(ms)
+    if hasattr(source, 'read'):
+        ms = list(_decode(source))
+    else:
+        with open(source) as fh:
+            ms = list(_decode(fh))
     return ms
 
 
-def loads(s, single=False):
+def loads(s):
     """
     Deserialize MRX string representations
 
     Args:
-        s (str): a MRX string
-        single (bool): if `True`, only return the first Xmrs object
+        s (str): an MRX string
     Returns:
-        a generator of Xmrs objects (unless *single* is `True`)
+        a list of MRS objects
     """
-    corpus = etree.fromstring(s)
-    if single:
-        ds = _deserialize_mrs(next(corpus))
-    else:
-        ds = (_deserialize_mrs(mrs_elem) for mrs_elem in corpus)
-    return ds
+    ms = list(_decode(io.StringIO(s)))
+    return ms
 
 
-def dump(destination, ms, single=False, properties=True,
-         encoding='unicode', pretty_print=False, **kwargs):
+def dump(ms, destination, properties=True, indent=False, encoding='utf-8'):
     """
-    Serialize Xmrs objects to MRX and write to a file
+    Serialize MRS objects to MRX and write to a file
 
     Args:
+        ms: an iterator of MRS objects to serialize
         destination: filename or file object where data will be written
-        ms: an iterator of Xmrs objects to serialize (unless the
-            *single* option is `True`)
-        single: if `True`, treat *ms* as a single Xmrs object
-            instead of as an iterator
-        properties: if `False`, suppress variable properties
-        encoding: the character encoding of the string prior
-            writing to a file (generally `"unicode"` is desired)
-        pretty_print: if `True`, add newlines and indentation
+        properties: if `False`, suppress morphosemantic properties
+        indent (bool, int): if `True` or an integer value, add
+            newlines and indentation
+        encoding (str): if *destination* is a filename, write to the
+            file with the given encoding; otherwise it is ignored
     """
-    text = dumps(ms,
-                 single=single,
-                 properties=properties,
-                 encoding=encoding,
-                 pretty_print=pretty_print,
-                 **kwargs)
-
+    text = dumps(ms, properties=properties, indent=indent)
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w') as fh:
+        with open(destination, 'w', encoding=encoding) as fh:
             print(text, file=fh)
 
 
-def dumps(ms, single=False, properties=True,
-          encoding='unicode', pretty_print=False, **kwargs):
+def dumps(ms, properties=True, indent=False):
     """
-    Serialize an Xmrs object to a MRX representation
+    Serialize MRS objects to an MRX representation
 
     Args:
-        ms: an iterator of Xmrs objects to serialize (unless the
-            *single* option is `True`)
-        single: if `True`, treat *ms* as a single Xmrs object instead
-            of as an iterator
+        ms: an iterator of MRS objects to serialize
         properties: if `False`, suppress variable properties
-        encoding: the character encoding of the string
-        pretty_print: if `True`, add newlines and indentation
+        indent (bool, int): if `True` or an integer value, add
+            newlines and indentation
     Returns:
-        a MRX string representation of a corpus of Xmrs
+        an MRX string representation of a corpus of MRS objects
     """
-    if not pretty_print and kwargs.get('indent'):
-        pretty_print = True
-    if single:
-        ms = [ms]
-    return serialize(ms, properties=properties,
-                     encoding=encoding, pretty_print=pretty_print)
+    e = _encode(ms, properties=properties)
+    string = _tostring(e, indent, 1)
+    return string
 
-# for convenience
 
-load_one = lambda fh: load(fh, single=True)
-loads_one = lambda s: loads(s, single=True)
-dump_one = lambda fh, m, **kwargs: dump(fh, m, single=True, **kwargs)
-dumps_one = lambda m, **kwargs: dumps(m, single=True, **kwargs)
+def decode(s):
+    """
+    Deserialize an MRS object from an MRX string.
+    """
+    elem = etree.fromstring(s)
+    return _decode_mrs(elem)
+
+
+def encode(m, properties=True, indent=False):
+    """
+    Serialize a MRS object to an MRX string.
+
+    Args:
+        m: an MRS object
+        properties (bool): if `False`, suppress variable properties
+        indent (bool, int): if `True` or an integer value, add
+            newlines and indentation
+    Returns:
+        an MRX-serialization of the MRS object
+    """
+    e = _encode_mrs(m, properties=properties)
+    string = _tostring(e, indent, 0)
+    return string
+
 
 ##############################################################################
 ##############################################################################
 # Decoding
 
 
-def deserialize(fh):
+def _decode(fh):
     # <!ELEMENT mrs-list (mrs)*>
     # if memory becomes a big problem, consider catching start events,
     # get the root element (later start events can be ignored), and
     # root.clear() after decoding each mrs
     for _, elem in etree.iterparse(fh, events=('end',)):
         if elem.tag == 'mrs':
-            yield _deserialize_mrs(elem)
+            yield _decode_mrs(elem)
             elem.clear()
 
 
-def _deserialize_mrs(elem):
+def _decode_mrs(elem):
     # <!ELEMENT mrs (label, var, (ep|hcons)*)>
     # <!ATTLIST mrs
     #           cfrom     CDATA #IMPLIED
@@ -144,43 +135,48 @@ def _deserialize_mrs(elem):
     #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
     elem = elem.find('.')  # in case elem is ElementTree rather than Element
-    variables = defaultdict(list)
-    # normalize_vars(elem) # try to make all vars have a sort
+    variables = {}
     top = elem.find('label')
     if top is not None:
         top = _decode_label(top)
     index = elem.find('var')
     if index is not None:
         index = _decode_var(index, variables=variables)
-    return Mrs(top=top,
-               index=index,
-               rels=[_decode_ep(ep, variables) for ep in elem.iter('ep')],
-               hcons=list(map(_decode_hcons, elem.iter('hcons'))),
-               icons=list(map(_decode_icons, elem.iter('icons'))), # future
+    rels = [_decode_ep(ep, variables) for ep in elem.iter('ep')]
+    hcons = [_decode_hcons(hc, variables) for hc in elem.iter('hcons')]
+    icons = [_decode_icons(ic, variables) for ic in elem.iter('icons')]
+    return MRS(top,
+               index,
+               rels,
+               hcons,
+               icons=icons,
+               variables=variables,
                lnk=_decode_lnk(elem.get('cfrom'), elem.get('cto')),
                surface=elem.get('surface'),
-               identifier=elem.get('ident'),
-               vars=variables)
+               identifier=elem.get('ident'))
 
 
 def _decode_label(elem):
     # <!ELEMENT label (extrapair*)>
     # <!ATTLIST label
     #           vid CDATA #REQUIRED >
-    return _decode_var(elem, sort='h')
+    vid = elem.get('vid')
+    # ignoring extrapairs
+    return 'h' + vid
 
 
-def _decode_var(elem, sort=None, variables=None):
+
+def _decode_var(elem, variables):
     # <!ELEMENT var (extrapair*)>
     # <!ATTLIST var
     #           vid  CDATA #REQUIRED
     #           sort (x|e|h|u|l|i) #IMPLIED >
-    if variables is None: variables = defaultdict(list)
     vid = elem.get('vid')
-    srt = sort or elem.get('sort')
-    var = '%s%s' % (srt, str(vid))
-    props = _decode_extrapairs(elem.iter('extrapair'))
-    variables[var].extend(props)
+    srt = elem.get('sort').lower()
+    var = srt + vid
+    varprops = variables.setdefault(var, {})
+    for prop, val in _decode_extrapairs(elem.iter('extrapair')):
+        varprops[prop] = val
     return var
 
 
@@ -188,7 +184,8 @@ def _decode_extrapairs(elems):
     # <!ELEMENT extrapair (path,value)>
     # <!ELEMENT path (#PCDATA)>
     # <!ELEMENT value (#PCDATA)>
-    return [(e.find('path').text.upper(), e.find('value').text) for e in elems]
+    return [(e.find('path').text.upper(), e.find('value').text.lower())
+            for e in elems]
 
 
 def _decode_ep(elem, variables=None):
@@ -198,14 +195,13 @@ def _decode_ep(elem, variables=None):
     #           cto   CDATA #IMPLIED
     #           surface   CDATA #IMPLIED
     #           base      CDATA #IMPLIED >
-    return ElementaryPredication(None,  # no nodeid in MRS
-                                 _decode_pred(elem.find('./')),
-                                 _decode_label(elem.find('label')),
-                                 args=_decode_args(elem, variables=variables),
-                                 lnk=_decode_lnk(elem.get('cfrom'),
-                                                elem.get('cto')),
-                                 surface=elem.get('surface'),
-                                 base=elem.get('base'))
+    args = _decode_args(elem, variables=variables)
+    return EP(_decode_pred(elem.find('./')),
+              _decode_label(elem.find('label')),
+              args=args,
+              lnk=_decode_lnk(elem.get('cfrom'), elem.get('cto')),
+              surface=elem.get('surface'),
+              base=elem.get('base'))
 
 
 def _decode_pred(elem):
@@ -226,8 +222,6 @@ def _decode_pred(elem):
 
 def _decode_args(elem, variables=None):
     # <!ELEMENT fvpair (rargname, (var|constant))>
-    # iv is the intrinsic variable (probably ARG0, given by IVARG_ROLE)
-    # carg is the constant arg (e.g. a quoted string; given by CONSTARG_ROLE)
     # This code assumes that only cargs have constant values, and all
     # other args (including IVs) have var values.
     args = {}
@@ -241,29 +235,31 @@ def _decode_args(elem, variables=None):
     return args
 
 
-def _decode_hcons(elem):
+def _decode_hcons(elem, variables):
     # <!ELEMENT hcons (hi, lo)>
     # <!ATTLIST hcons
     #           hreln (qeq|lheq|outscopes) #REQUIRED >
     # <!ELEMENT hi (var)>
     # <!ELEMENT lo (label|var)>
+    hi = _decode_var(elem.find('hi/var'), variables)
     lo = elem.find('lo/')
-    return HandleConstraint(_decode_var(elem.find('hi/var')),
-                            elem.get('hreln'),
-                            _decode_var(lo) if lo.tag == 'var' else
-                            _decode_label(lo))
+    if lo.tag == 'var':
+        lo = _decode_var(lo, variables)
+    else:
+        lo = _decode_label(lo)
+    return HCons(hi, elem.get('hreln'), lo)
 
 
 # this isn't part of the spec; just putting here in case it's added later
-def _decode_icons(elem):
+def _decode_icons(elem, variables):
     # <!ELEMENT icons (left, right)>
     # <!ATTLIST icons
     #           ireln #REQUIRED >
     # <!ELEMENT left (var)>
     # <!ELEMENT right (var)>
-    return IndividualConstraint(_decode_var(elem.find('left/var')),
-                                elem.get('ireln'),
-                                _decode_var(elem.find('right/var')))
+    return ICons(_decode_var(elem.find('left/var'), variables),
+                 elem.get('ireln'),
+                 _decode_var(elem.find('right/var'), variables))
 
 
 def _decode_lnk(cfrom, cto):
@@ -279,23 +275,20 @@ def _decode_lnk(cfrom, cto):
 # Encoding
 
 
-def serialize(ms, properties=True, encoding='unicode', pretty_print=False):
+def _encode(ms, properties):
     e = etree.Element('mrs-list')
     for m in ms:
         e.append(_encode_mrs(m, properties))
-    if pretty_print:
-        import re
-        pprint_re = re.compile(r'(<mrs[^-]|</mrs>|</mrs-list>'
-                               r'|<ep\s|<fvpair>|<extrapair>|<hcons\s)',
-                               re.IGNORECASE)
-        string = etree.tostring(e, encoding=encoding)
-        return pprint_re.sub(r'\n\1', string)
-    return etree.tostring(e, encoding=encoding)
+    return e
 
 
 def _encode_mrs(m, properties):
+    # attempt to convert if necessary
+    if not isinstance(m, MRS):
+        m = MRS.from_xmrs(m)
+
     if properties:
-        varprops = {v: d['props'] for v, d in m._vars.items() if d['props']}
+        varprops = {v: m.properties(v) for v in m.variables}
     else:
         varprops = {}
     attributes = {'cfrom': str(m.cfrom), 'cto': str(m.cto)}
@@ -308,12 +301,12 @@ def _encode_mrs(m, properties):
         e.append(_encode_label(m.top))
     if m.index is not None:
         e.append(_encode_variable(m.index, varprops))
-    for ep in elementarypredications(m):
+    for ep in m.rels:
         e.append(_encode_ep(ep, varprops))
-    for hcon in hcons(m):
-        e.append(_encode_hcon(hcon))
-    for icon in icons(m):
-        e.append(_encode_icon(icon))
+    for hc in m.hcons:
+        e.append(_encode_hcon(hc, varprops))
+    for ic in m.icons:
+        e.append(_encode_icon(ic, varprops))
     return e
 
 
@@ -322,13 +315,13 @@ def _encode_label(label):
     return etree.Element('label', vid=vid)
 
 
-def _encode_variable(v, varprops=None):
-    if varprops is None: varprops = {}
+def _encode_variable(v, varprops):
     srt, vid = variable.split(v)
     var = etree.Element('var', vid=vid, sort=srt)
-    if v in varprops:
-        var.extend(_encode_extrapair(key, val)
-                   for key, val in varprops[v])
+    if varprops.get(v):
+        for key in sorted(varprops[v], key=property_priority):
+            val = varprops[v][key]
+            var.append(_encode_extrapair(key, val))
         del varprops[v]
     return var
 
@@ -343,20 +336,21 @@ def _encode_extrapair(key, value):
     return extrapair
 
 
-def _encode_ep(ep, varprops=None):
+def _encode_ep(ep, varprops):
     attributes = {'cfrom': str(ep.cfrom), 'cto': str(ep.cto)}
     if ep.surface is not None:
         attributes['surface'] = ep.surface
     if ep.base is not None:
         attributes['base'] = ep.base
     e = etree.Element('ep', attrib=attributes)
-    e.append(_encode_pred(ep.pred))
+    e.append(_encode_pred(ep.predicate))
     e.append(_encode_label(ep.label))
-    for rargname, val in ep.args.items():
-        if variable.is_valid(val):
-            e.append(_encode_arg(rargname, _encode_variable(val, varprops)))
+    for role in sorted(ep.args, key=role_priority):
+        val = ep.args[role]
+        if role == CONSTANT_ROLE:
+            e.append(_encode_arg(CONSTANT_ROLE, _encode_constant(val)))
         else:
-            e.append(_encode_arg(rargname, _encode_constant(val)))
+            e.append(_encode_arg(role, _encode_variable(val, varprops)))
     return e
 
 
@@ -392,20 +386,38 @@ def _encode_constant(value):
     return const
 
 
-def _encode_hcon(hcon):
+def _encode_hcon(hcon, varprops):
     hcons_ = etree.Element('hcons', hreln=hcon.relation)
     hi = etree.Element('hi')
-    hi.append(_encode_variable(hcon.hi))
+    hi.append(_encode_variable(hcon.hi, varprops))
     lo = etree.Element('lo')
-    lo.append(_encode_variable(hcon.lo))
+    lo.append(_encode_label(hcon.lo))
     hcons_.extend([hi, lo])
     return hcons_
 
-def _encode_icon(icon):
+
+def _encode_icon(icon, varprops):
     icons_ = etree.Element('icons', ireln=icon.relation)
     left = etree.Element('left')
-    left.append(_encode_variable(icon.left))
+    left.append(_encode_variable(icon.left, varprops))
     right = etree.Element('right')
-    right.append(_encode_variable(icon.right))
+    right.append(_encode_variable(icon.right, varprops))
     icons_.extend([left, right])
     return icons_
+
+
+def _tostring(e, indent, offset):
+    string = etree.tostring(e, encoding='unicode')
+    if indent is not None and indent is not False:
+        if indent is True:
+            indent = 0
+        def indentmatch(m):
+            return '\n' + (' ' * indent * (m.lastindex + offset)) + m.group()
+        string = re.sub(
+            r'(</mrs-list>)'
+            r'|(<mrs[^-]|</mrs>)'
+            r'|(<ep\s|<fvpair>|<extrapair>|<hcons\s|<icons\s>)',
+            indentmatch,
+            string)
+    return string.strip()
+

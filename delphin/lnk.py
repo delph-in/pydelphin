@@ -115,7 +115,10 @@ class Lnk(object):
     EDGE = 3  # An edge identifier: a number
 
     def __init__(self, arg, data=None):
-        if data is None and (arg[:1], arg[-1:]) == ('<', '>'):
+        if arg is None:
+            self.type = Lnk.UNSPECIFIED
+            self.data = None
+        elif data is None and (arg[:1], arg[-1:]) == ('<', '>'):
             arg = arg[1:-1]
             if arg.startswith('@'):
                 self.type = Lnk.EDGE
@@ -131,8 +134,7 @@ class Lnk(object):
             else:
                 self.type = Lnk.TOKENS
                 self.data = tuple(map(int, arg.split()))
-        elif arg in (Lnk.UNSPECIFIED, Lnk.CHARSPAN, Lnk.CHARTSPAN,
-                     Lnk.TOKENS, Lnk.EDGE):
+        elif arg in (Lnk.CHARSPAN, Lnk.CHARTSPAN, Lnk.TOKENS, Lnk.EDGE):
             self.type = arg
             self.data = data
         else:
@@ -143,7 +145,7 @@ class Lnk(object):
         """
         Create a Lnk object for when no information is given.
         """
-        return cls(Lnk.UNSPECIFIED, '')
+        return cls(None)
 
     @classmethod
     def charspan(cls, start, end):
@@ -204,6 +206,18 @@ class Lnk(object):
 
     def __eq__(self, other):
         return self.type == other.type and self.data == other.data
+
+    def __ne__(self, other):
+        if not isinstance(other, Lnk):
+            return NotImplemented
+        return not (self == other)
+
+    def __bool__(self):
+        if self.type == Lnk.UNSPECIFIED or not self.data:
+            return False
+        if self.type == Lnk.CHARSPAN and data == (-1, -1):
+            return False
+        return True
 
 
 class LnkMixin(object):

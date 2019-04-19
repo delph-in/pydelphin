@@ -3,7 +3,6 @@ from typing import Iterable, Mapping
 
 from delphin.lnk import Lnk, LnkMixin
 from delphin import (
-    sembase,
     variable,
     scope
 )
@@ -82,8 +81,7 @@ class EP(LnkMixin):
             self.label,
             self.predicate,
             ', '.join('{} {}'.format(role, val)
-                      for role, val
-                      in sorted(self.args.items(), key=role_priority)),
+                      for role, val in self.args.items()),
             id(self))
 
     ## Properties interpreted from roles
@@ -151,14 +149,14 @@ class HCons(object):
             return NotImplemented
         return not (self == other)
 
-    @classmethod
-    def qeq(cls, hi, lo):
-        return cls(hi, HCons.QEQ, lo)
-
     def __repr__(self):
         return '<HCons object ({} {} {}) at {}>'.format(
                str(self.hi), self.relation, str(self.lo), id(self)
         )
+
+    @classmethod
+    def qeq(cls, hi, lo):
+        return cls(hi, HCons.QEQ, lo)
 
 
 class ICons(object):
