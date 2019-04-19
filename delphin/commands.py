@@ -137,9 +137,13 @@ def _get_codec(codec, load=True):
         from delphin.mrs import mrx
         return mrx.loads if load else mrx.dumps
 
+    elif codec == 'mrs-json':
+        from delphin.mrs import mrsjson
+        return mrsjson.loads if load else mrsjson.dumps
+
     elif codec == 'mrs-prolog' and not load:
-        from delphin.mrs import prolog
-        return prolog.dumps
+        from delphin.mrs import mrsprolog
+        return mrsprolog.dumps
 
     elif codec == 'dmrx':
         from delphin.mrs import dmrx
@@ -153,9 +157,8 @@ def _get_codec(codec, load=True):
         from delphin.extra import latex
         return latex.dmrs_tikz_dependency
 
-    elif codec in ('mrs-json', 'dmrs-json', 'eds-json'):
-        cls = {'mrs-json': _MRS_JSON,
-               'dmrs-json': _DMRS_JSON,
+    elif codec in ('dmrs-json', 'eds-json'):
+        cls = {'dmrs-json': _DMRS_JSON,
                'eds-json': _EDS_JSON}[codec]
         return cls().loads if load else cls().dumps
 
@@ -267,7 +270,7 @@ def _read_ace_parse(s):
         # regular ACE output
         elif line.startswith('['):
             m = line.partition(' ;  ')[0].strip()
-            m = simplemrs.loads(m, single=True)
+            m = simplemrs.decode(m)
             m.surface = surface
             yield m
         # with --tsdb-stdout
@@ -279,7 +282,7 @@ def _read_ace_parse(s):
                     for result in data[1]:
                         for key, val in result:
                             if key == ':mrs':
-                                yield simplemrs.loads(val, single=True)
+                                yield simplemrs.decode(val)
         elif line == '\n':
             if newline:
                 surface = None

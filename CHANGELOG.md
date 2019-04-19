@@ -71,6 +71,7 @@ these changes are prefixed with "**BREAKING**"
   `delphin.predicate.normalize()`
 * `delphin.mrs.components.is_valid_pred_string()` to
   `delphin.predicate.is_valid()`
+* `delphin.mrs.prolog` to `delphin.mrs.mrsprolog`
 * `delphin.mrs.semi` to `delphin.semi`
 * `delphin.mrs.components.var_re` to `delphin.variable.variable_re`
 * `delphin.mrs.components.var_sort` to `delphin.variable.type`
@@ -142,6 +143,7 @@ these changes are prefixed with "**BREAKING**"
   `AssertionError`
 * MRS/DMRS/EDS serialization codecs now use the harmonized module layout (#3):
   - `delphin.mrs.mrsjson` (new)
+  - `delphin.mrs.mrsprolog` (encode-only)
   - `delphin.mrs.mrx`
   - `delphin.mrs.simplemrs`
 
