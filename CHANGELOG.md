@@ -16,6 +16,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.lnk`
 * `delphin.lnk.Lnk.default()`
 * `delphin.lnk.LnkError`
+* `delphin.mrs.mrsjson`
 * `delphin.predicate`
 * `delphin.predicate.PredicateError`
 * `delphin.predicate.create()` -- replaces `Pred.realpred()`
@@ -79,6 +80,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.components._VarGenerator` to `delphin.variable.VariableFactory`
 * `delphin.mrs.config.UNKNOWNSORT` to `delphin.variable.UNKNOWN`
 * `delphin.mrs.config.HANDLESORT` to `delphin.variable.HANDLE`
+* `delphin.mrs.Mrs.from_dict()` to `delphin.mrs.mrsjson.from_dict()`
+* `delphin.mrs.Mrs.to_dict()` to `delphin.mrs.mrsjson.to_dict()`
 * `delphin.mrs.vpm` to `delphin.vpm`
 
 ### Removed
@@ -138,8 +141,10 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.vpm` raises `VPMSyntaxError` on bad inputs instead of
   `AssertionError`
 * MRS/DMRS/EDS serialization codecs now use the harmonized module layout (#3):
-  - `delphin.mrs.simplemrs`
+  - `delphin.mrs.mrsjson` (new)
   - `delphin.mrs.mrx`
+  - `delphin.mrs.simplemrs`
+
 
 ## [v0.9.2][]
 

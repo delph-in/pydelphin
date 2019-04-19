@@ -4,10 +4,9 @@ from datetime import datetime
 
 from delphin.derivation import Derivation
 from delphin.tokens import YyTokenLattice
+from delphin.mrs import mrsjson, simplemrs
 from delphin.mrs import (
-    Mrs,
     Dmrs,
-    simplemrs,
     eds,
 )
 from delphin.util import SExpr
@@ -105,7 +104,7 @@ class ParseResult(dict):
         mrs = self.get('mrs')
         if mrs is not None:
             if isinstance(mrs, dict):
-                mrs = Mrs.from_dict(mrs)
+                mrs = mrsjson.from_dict(mrs)
             elif isinstance(mrs, str):
                 mrs = simplemrs.decode(mrs)
         return mrs

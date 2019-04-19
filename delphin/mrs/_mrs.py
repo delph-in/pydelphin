@@ -309,15 +309,8 @@ class MRS(LnkMixin):
         """Return the properties associated with variable *var*."""
         return self.variables[var]
 
-    @classmethod
-    def from_dmrs(self, d):
-        pass
 
-    @classmethod
-    def from_dict(self, d):
-        pass
-
-
+### Helper functions
 
 def _fill_variables(vars, top, index, rels, hcons, icons):
     if top is not None and top not in vars:
