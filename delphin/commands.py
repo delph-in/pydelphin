@@ -26,7 +26,7 @@ from delphin.exceptions import PyDelphinException
 
 def convert(path, source_fmt, target_fmt, select='result:mrs',
             properties=True, show_status=False, predicate_modifiers=False,
-            color=False, pretty_print=False, indent=None):
+            color=False, indent=None):
     """
     Convert between various DELPH-IN Semantics representations.
 
@@ -46,10 +46,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
             not an EDS format; default: `False`)
         color (bool): apply syntax highlighting if `True` and
             *target_fmt* is `"simplemrs"` (default: `False`)
-        pretty_print (bool): if `True`, format the output with
-            newlines and default indentation (default: `False`)
         indent (int, optional): specifies an explicit number of spaces
-            for indentation (implies *pretty_print*)
+            for indentation
     Returns:
         str: the converted representation
     """
@@ -57,9 +55,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
         raise ValueError(
             'Conversion from EDS to non-EDS currently not supported.')
 
-    if indent:
-        pretty_print = True
-        indent = 4 if indent is True else safe_int(indent)
+    if indent is not True and indent is not False and indent is not None:
+        indent = safe_int(indent)
 
     if len(tsql.inspect_query('select ' + select)['projection']) != 1:
         raise ValueError('Exactly 1 column must be given in selection query: '
@@ -83,11 +80,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     # write
     dumps = _get_codec(target_fmt, load=False)
     kwargs = {}
-    if color: kwargs['color'] = color
-    if pretty_print: kwargs['pretty_print'] = pretty_print
     if indent: kwargs['indent'] = indent
     if target_fmt == 'eds':
-        kwargs['pretty_print'] = pretty_print
         kwargs['show_status'] = show_status
     if target_fmt.startswith('eds'):
         kwargs['predicate_modifiers'] = predicate_modifiers
@@ -100,7 +94,7 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     #     return dumps(xs, **kwargs)
     head, joiner, tail = _get_output_details(target_fmt)
     parts = []
-    if pretty_print:
+    if indent is not None:
         joiner = joiner.strip() + '\n'
     def _trim(s):
         if head and s.startswith(head):
@@ -117,12 +111,18 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
             s = _trim(s)
             parts.append(s)
     # set these after so head and tail are used correctly in _trim
-    if pretty_print:
+    if indent is not None:
         if head:
             head += '\n'
         if tail:
             tail = '\n' + tail
-    return head + joiner.join(parts) + tail
+
+    output = head + joiner.join(parts) + tail
+
+    if color and target_fmt == 'simplemrs':
+        output = _colorize(output)
+
+    return output
 
 
 def _get_codec(codec, load=True):
@@ -215,11 +215,8 @@ class _MRS_JSON(object):
     def dumps(self,
               xs,
               properties=True,
-              pretty_print=False,
               indent=None,
               **kwargs):
-        if pretty_print and indent is None:
-            indent = 2
         return json.dumps(
             [
                 self.CLS.to_dict(
@@ -291,6 +288,15 @@ def _read_ace_parse(s):
                 newline = True
         else:
             pass
+
+
+def _colorize(text):
+    from pygments import highlight as hl
+    from pygments.formatters import TerminalFormatter
+    from delphin.extra.highlight import SimpleMrsLexer, mrs_colorscheme
+    lexer = SimpleMrsLexer()
+    formatter = TerminalFormatter(bg='dark', colorscheme=mrs_colorscheme)
+    return hl(text, lexer, formatter)
 
 
 ###############################################################################

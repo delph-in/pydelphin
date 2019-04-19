@@ -51,7 +51,6 @@ def call_convert(args):
         args.to,
         properties=(not args.no_properties),
         color=color,
-        pretty_print=args.pretty_print or args.indent is not None,
         indent=args.indent,
         select=args.select,
         show_status=args.show_status,
@@ -186,13 +185,12 @@ convert_parser.add_argument(
     action='store_true',
     help='suppress morphosemantic properties')
 convert_parser.add_argument(
-    '--pretty-print',
-    action='store_true',
-    help='format in a more human-readable way')
-convert_parser.add_argument(
     '--indent',
     metavar='N',
-    help='format with explicit indent N (implies --pretty-print)')
+    nargs='?',
+    default=False,
+    const=True,
+    help='format with explicit indent N')
 convert_parser.add_argument(
     '--color',
     metavar='WHEN',

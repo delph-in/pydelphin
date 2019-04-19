@@ -297,7 +297,7 @@ def _encode_mrs(m, properties, indent):
 
 def _encode_surface_info(m):
     tokens = []
-    if m.lnk is not None and m.lnk.data != (-1, -1):
+    if m.lnk:
         tokens.append(str(m.lnk))
     if m.surface is not None:
         tokens.append('"{}"'.format(m.surface))

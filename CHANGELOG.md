@@ -87,6 +87,7 @@ these changes are prefixed with "**BREAKING**"
 
 ### Removed
 
+* `delphin.commands.convert` `pretty_print` parameter
 * `delphin.derivation.UdfNode.basic_entity()`
 * `delphin.derivation.UdfNode.lexical_type()`
 * `delphin.itsdb.ItsdbProfile`
