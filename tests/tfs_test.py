@@ -66,6 +66,9 @@ def test_TypeHierarchyNode():
     n = N(['a', 'b'], data=2)
     assert n.parents == ['a', 'b']
     assert n.data == 2
+    # case normalization
+    n = N(['A', 'b'])
+    assert n.parents == ['a', 'b']
 
 
 class TypeHierarchyTest():
@@ -81,6 +84,7 @@ class TypeHierarchyTest():
         th = tfs.TypeHierarchy('*top*')
         th['a'] = '*top*'
         assert th['a'].parents == ['*top*']
+        assert th['A'].parents == ['*top*']  # case insensitive
         assert th['*top*'].children == ['a']
         th['b'] = '*top*'
         th['c'] = ('a', 'b')

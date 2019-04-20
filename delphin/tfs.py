@@ -207,13 +207,14 @@ class TypeHierarchyNode(object):
     def __init__(self, parents, data=None):
         if not parents:
             raise ValueError('no parents specified')
+        parents = [parent.lower() for parent in parents]
         self._parents = list(parents)
         self._children = set()
         self.data = data
 
     @classmethod
     def top(cls):
-        node = cls([None])   # just a sentinel to avoid the ValueError
+        node = cls([''])     # just a sentinel to avoid the ValueError
         node._parents.pop()  # now remove the None
         return node
 
@@ -242,8 +243,9 @@ class TypeHierarchy(object):
     """
     A Type Hierarchy.
 
-    Type hierarchies have certain properties, such as a unique top node,
-    multiple inheritance, and unique greatest-lower-bound (glb) types.
+    Type hierarchies have certain properties, such as a unique top
+    node, multiple inheritance, case insensitivity, and unique
+    greatest-lower-bound (glb) types.
 
     Note:
         Checks for unique glbs is not yet implemented.
@@ -294,6 +296,7 @@ class TypeHierarchy(object):
         top: the hierarchy's top type
     """
     def __init__(self, top, hierarchy=None):
+        top = top.lower()
         self._top = top
         self._hier = {top: TypeHierarchyNode.top()}
         if hierarchy is not None:
@@ -318,6 +321,7 @@ class TypeHierarchy(object):
         self._insert(typename, node)
 
     def _insert(self, typename, node):
+        typename = typename.lower()
         if typename in self._hier:
             raise TypeHierarchyError('type already in hierarchy: ' + typename)
         self._check_node_integrity(node)
@@ -337,14 +341,14 @@ class TypeHierarchy(object):
                                      .format(', '.join(sorted(redundant))))
 
     def __getitem__(self, typename):
-        return self._hier[typename]
+        return self._hier[typename.lower()]
 
     def __iter__(self):
         return iter(typename for typename in self._hier
                     if typename != self._top)
 
     def __contains__(self, typename):
-        return typename in self._hier
+        return typename.lower() in self._hier
 
     def __len__(self):
         return len(self._hier) - 1  # ignore top
@@ -379,7 +383,7 @@ class TypeHierarchy(object):
                 a disconnected or cyclic hierarchy.
         """
         hierarchy = self._hier
-        subhier = {t: _ensure_node(n) for t, n in subhierarchy.items()}
+        subhier = {t.lower(): _ensure_node(n) for t, n in subhierarchy.items()}
         while subhier:
             eligible = [typename for typename, node in subhier.items()
                         if all(parent in hierarchy for parent in node.parents)]
@@ -409,10 +413,12 @@ class TypeHierarchy(object):
 
     def subsumes(self, a, b):
         """Return `True` if type *a* subsumes type *b*."""
+        a, b = a.lower(), b.lower()
         return a == b or b in self.descendants(a)
 
     def compatible(self, a, b):
         """Return `True` if type *a* is compatible with type *b*."""
+        a, b = a.lower(), b.lower()
         return len(set([a] + self.descendants(a))
                    .intersection([b] + self.descendants(b))) > 0
 

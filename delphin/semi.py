@@ -21,6 +21,7 @@ from os.path import dirname, join as pjoin
 from operator import itemgetter
 import warnings
 
+from delphin.predicate import normalize as normalize_predicate
 from delphin import tfs
 from delphin.exceptions import (
     PyDelphinException,
@@ -507,6 +508,8 @@ class SemI(object):
         """
         Return the first matching synopsis for *predicate*.
 
+        *predicate* will be normalized before lookup.
+
         Synopses can be matched by a set of roles or an ordered list
         of variable types. If no condition is given, the first synopsis
         is returned.
@@ -531,6 +534,7 @@ class SemI(object):
              ('ARG2', 'i', [], False)]
         """
 
+        predicate = normalize_predicate(predicate)
         if predicate not in self.predicates:
             raise SemIError('undefined predicate: {}'.format(predicate))
         if roles is not None:
@@ -538,19 +542,19 @@ class SemI(object):
         if variables is not None:
             variables = [var.lower() for var in variables]
         found = False
-        for synopsis in self.predicates[predicate]:
-            if roles is not None and roles != set(d[0] for d in synopsis):
+        for synopsis in self.predicates[predicate].data:
+            if roles is not None and roles != set(d.name for d in synopsis):
                 continue
             if (variables is not None and (
                     len(synopsis) != len(variables) or
-                    not all(self.subsumes(d[1], t)
+                    not all(self.variables.subsumes(d.value, t)
                             for d, t in zip(synopsis, variables)))):
                 continue
             found = synopsis
             break
         if found is False:
             raise SemIError('no valid synopsis for {}({})'
-                            .format(predicate, ', '.join(variables)))
+                            .format(predicate, ', '.join(variables or [])))
         return found
 
 
