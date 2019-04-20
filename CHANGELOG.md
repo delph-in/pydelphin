@@ -16,6 +16,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.lnk`
 * `delphin.lnk.Lnk.default()`
 * `delphin.lnk.LnkError`
+* `delphin.mrs.indexedmrs`
 * `delphin.mrs.mrsjson`
 * `delphin.predicate`
 * `delphin.predicate.PredicateError`
@@ -128,6 +129,7 @@ these changes are prefixed with "**BREAKING**"
 
 ### Changed
 
+* `delphin.commands.convert` `--sem-i` parameter
 * `delphin.extra.highlight` add docstrings and wild-card to TDL highlighter
 * `delphin.interfaces.ace` no longer raise `ValueError` when grammar file does
   not exist; the `ACEProcessError` now handles this

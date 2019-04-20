@@ -53,8 +53,10 @@ def call_convert(args):
         color=color,
         indent=args.indent,
         select=args.select,
+        ## below are format-specific kwargs
         show_status=args.show_status,
-        predicate_modifiers=args.predicate_modifiers))
+        predicate_modifiers=args.predicate_modifiers,
+        semi=args.semi))
 
 
 def call_select(args):
@@ -168,7 +170,8 @@ convert_parser.add_argument(
     '--from',
     metavar='FMT',
     default='simplemrs',
-    choices=('simplemrs ace mrx mrs-json dmrx dmrs-json dmrs-penman '
+    choices=('simplemrs ace mrx mrs-json indexedmrs '
+             'dmrx dmrs-json dmrs-penman '
              'eds eds-json eds-penman'.split()),
     help='original representation (default: simplemrs)')
 convert_parser.add_argument(
@@ -176,7 +179,7 @@ convert_parser.add_argument(
     '--to',
     metavar='FMT',
     default='simplemrs',
-    choices=('simplemrs mrx mrs-json mrs-prolog '
+    choices=('simplemrs mrx mrs-json indexedmrs mrs-prolog '
              'simpledmrs dmrx dmrs-json dmrs-penman dmrs-tikz '
              'eds eds-json eds-penman'.split()),
     help='target representation (default: simplemrs)')
@@ -197,6 +200,12 @@ convert_parser.add_argument(
     default='auto',
     help='(auto|always|never) use ANSI color (default: auto)')
 convert_parser.add_argument(
+    '--select',
+    metavar='QUERY',
+    default='result:mrs',
+    help=('TSQL query for selecting MRS data when PATH points to '
+          'a testsuite directory (default: result:mrs)'))
+convert_parser.add_argument(
     '--show-status',
     action='store_true',
     help='(--to=eds only) annotate disconnected graphs and nodes')
@@ -205,11 +214,10 @@ convert_parser.add_argument(
     action='store_true',
     help='(--to=eds* only) attempt to join disconnected graphs')
 convert_parser.add_argument(
-    '--select',
-    metavar='QUERY',
-    default='result:mrs',
-    help=('TSQL query for selecting MRS data when PATH points to '
-          'a testsuite directory (default: result:mrs)'))
+    '--sem-i',
+    dest='semi',
+    metavar='PATH',
+    help='(--to=indexedmrs only) path to a SEM-I')
 
 # Arguments for the select command
 select_parser = argparse.ArgumentParser(add_help=False)

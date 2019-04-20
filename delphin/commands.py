@@ -13,10 +13,12 @@ import os
 import json
 from functools import partial
 import logging
+import warnings
 
 from delphin import itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.mrs import xmrs
+from delphin.semi import SemI, load as load_semi
 from delphin.util import safe_int, SExpr
 from delphin.exceptions import PyDelphinException
 
@@ -25,8 +27,9 @@ from delphin.exceptions import PyDelphinException
 ### CONVERT ###################################################################
 
 def convert(path, source_fmt, target_fmt, select='result:mrs',
-            properties=True, show_status=False, predicate_modifiers=False,
-            color=False, indent=None):
+            properties=True, color=False, indent=None,
+            show_status=False, predicate_modifiers=False,
+            semi=None):
     """
     Convert between various DELPH-IN Semantics representations.
 
@@ -39,15 +42,17 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
             is not a testsuite directory; default: `"result:mrs"`)
         properties (bool): include morphosemantic properties if `True`
             (default: `True`)
+        color (bool): apply syntax highlighting if `True` and
+            *target_fmt* is `"simplemrs"` (default: `False`)
+        indent (int, optional): specifies an explicit number of spaces
+            for indentation
         show_status (bool): show disconnected EDS nodes (ignored if
             *target_fmt* is not `"eds"`; default: `False`)
         predicate_modifiers (bool): apply EDS predicate modification
             for certain kinds of patterns (ignored if *target_fmt* is
             not an EDS format; default: `False`)
-        color (bool): apply syntax highlighting if `True` and
-            *target_fmt* is `"simplemrs"` (default: `False`)
-        indent (int, optional): specifies an explicit number of spaces
-            for indentation
+        semi: a :class:`delphin.semi.SemI` object or path to a SEM-I
+            (ignored if *target_fmt* is not `indexedmrs`)
     Returns:
         str: the converted representation
     """
@@ -62,20 +67,30 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
         raise ValueError('Exactly 1 column must be given in selection query: '
                          '(e.g., result:mrs)')
 
+    if semi is not None and not isinstance(semi, SemI):
+        assert os.path.isfile(semi)
+        # lets ignore the SEM-I warnings until the questions are resolved
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            semi = load_semi(semi)
+
     # read
     loads = _get_codec(source_fmt)
+    kwargs = {}
+    if source_fmt == 'indexedmrs' and semi is not None:
+        kwargs['semi'] = semi
     if path is None:
-        xs = loads(sys.stdin.read())
+        xs = loads(sys.stdin.read(), **kwargs)
     elif hasattr(path, 'read'):
-        xs = loads(path.read())
+        xs = loads(path.read(), **kwargs)
     elif os.path.isdir(path):
         ts = itsdb.TestSuite(path)
         xs = [
-            next(iter(loads(r[0])), None)
+            next(iter(loads(r[0], **kwargs)), None)
             for r in tsql.select(select, ts)
         ]
     else:
-        xs = loads(open(path, 'r').read())
+        xs = loads(open(path, 'r').read(), **kwargs)
 
     # write
     dumps = _get_codec(target_fmt, load=False)
@@ -85,6 +100,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
         kwargs['show_status'] = show_status
     if target_fmt.startswith('eds'):
         kwargs['predicate_modifiers'] = predicate_modifiers
+    if target_fmt == 'indexedmrs' and semi is not None:
+        kwargs['semi'] = semi
     kwargs['properties'] = properties
 
     # this is not a great way to improve robustness when converting
@@ -140,6 +157,10 @@ def _get_codec(codec, load=True):
     elif codec == 'mrs-json':
         from delphin.mrs import mrsjson
         return mrsjson.loads if load else mrsjson.dumps
+
+    elif codec == 'indexedmrs':
+        from delphin.mrs import indexedmrs
+        return indexedmrs.loads if load else indexedmrs.dumps
 
     elif codec == 'mrs-prolog' and not load:
         from delphin.mrs import mrsprolog
