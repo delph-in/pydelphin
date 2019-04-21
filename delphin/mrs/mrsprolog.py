@@ -24,6 +24,7 @@ Example:
 """
 
 from delphin.sembase import role_priority
+from delphin.mrs import CONSTANT_ROLE
 
 
 def dump(ms, destination, properties=True, indent=False, encoding='utf-8'):

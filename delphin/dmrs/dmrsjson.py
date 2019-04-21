@@ -166,7 +166,7 @@ def from_dict(d):
         return None if x is None else Lnk.charspan(x['from'], x['to'])
     nodes = []
     for node in d.get('nodes', []):
-        properties = node.get('sortinfo', {})
+        properties = dict(node.get('sortinfo', {}))  # make a copy
         type = None
         if CVARSORT in properties:
             type = properties.pop(CVARSORT)
