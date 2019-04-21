@@ -171,7 +171,7 @@ convert_parser.add_argument(
     metavar='FMT',
     default='simplemrs',
     choices=('simplemrs ace mrx mrs-json indexedmrs '
-             'dmrx dmrs-json dmrs-penman '
+             'simpledmrs dmrx dmrs-json dmrs-penman '
              'eds eds-json eds-penman'.split()),
     help='original representation (default: simplemrs)')
 convert_parser.add_argument(

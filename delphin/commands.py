@@ -167,21 +167,24 @@ def _get_codec(codec, load=True):
         return mrsprolog.dumps
 
     elif codec == 'dmrx':
-        from delphin.mrs import dmrx
+        from delphin.dmrs import dmrx
         return dmrx.loads if load else dmrx.dumps
 
-    elif codec == 'simpledmrs' and not load:
-        from delphin.mrs import simpledmrs
-        return simpledmrs.dumps
+    elif codec == 'dmrs-json':
+        from delphin.dmrs import dmrsjson
+        return dmrsjson.loads if load else dmrsjson.dumps
+
+    elif codec == 'simpledmrs':
+        from delphin.dmrs import simpledmrs
+        return simpledmrs.loads if load else simpledmrs.dumps
 
     elif codec == 'dmrs-tikz' and not load:
         from delphin.extra import latex
         return latex.dmrs_tikz_dependency
 
-    elif codec in ('dmrs-json', 'eds-json'):
-        cls = {'dmrs-json': _DMRS_JSON,
-               'eds-json': _EDS_JSON}[codec]
-        return cls().loads if load else cls().dumps
+    elif codec == 'eds-json':
+        edsjson = _EDS_JSON()
+        return edsjson.loads if load else edsjson.dumps
 
     elif codec in ('dmrs-penman', 'eds-penman'):
         if codec == 'dmrs-penman':
@@ -206,7 +209,6 @@ def _get_output_details(codec):
         return ('<mrs-list', '', '</mrs-list>')
 
     elif codec == 'dmrx':
-        from delphin.mrs import dmrx
         return ('<dmrs-list>', '', '</dmrs-list>')
 
     elif codec in ('mrs-json', 'dmrs-json', 'eds-json'):
@@ -246,10 +248,6 @@ class _MRS_JSON(object):
                     properties=properties) for x in xs
             ],
             indent=indent)
-
-
-class _DMRS_JSON(_MRS_JSON):
-    CLS = xmrs.Dmrs
 
 
 class _EDS_JSON(_MRS_JSON):

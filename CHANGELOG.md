@@ -12,6 +12,7 @@ these changes are prefixed with "**BREAKING**"
 
 ### Added
 
+* `delphin.dmrs.dmrsjson`
 * `delphin.exceptions.PyDelphinSyntaxError`
 * `delphin.lnk`
 * `delphin.lnk.Lnk.default()`
@@ -152,6 +153,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.vpm` raises `VPMSyntaxError` on bad inputs instead of
   `AssertionError`
 * MRS/DMRS/EDS serialization codecs now use the harmonized module layout (#3):
+  - `delphin.dmrs.dmrsjson` (new)
   - `delphin.dmrs.dmrx`
   - `delphin.dmrs.simpledmrs` (now read/write)
   - `delphin.mrs.mrsjson` (new)

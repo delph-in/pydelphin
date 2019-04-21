@@ -220,8 +220,9 @@ def _decode_node(nodeid, lexer):
 
 
 def _decode_link(start, lexer):
-    role, _, post, _, end, _ = lexer.expect_type(
-        SYMBOL, SLASH, SYMBOL, ARROW, SYMBOL, SEMICOLON)
+    role = lexer.accept_type(SYMBOL)
+    _, post, _, end, _ = lexer.expect_type(
+        SLASH, SYMBOL, ARROW, SYMBOL, SEMICOLON)
     return Link(start, end, role, post)
 
 
