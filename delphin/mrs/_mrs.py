@@ -214,7 +214,7 @@ class MRS(LnkMixin):
         variables: mapping of variables to property maps
         lnk: surface alignment
         surface: surface string
-        base: base form
+        identifier: a discourse-utterance identifier
     """
 
     __slots__ = ('top', 'index',

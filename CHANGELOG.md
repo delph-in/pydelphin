@@ -85,6 +85,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.Mrs.from_dict()` to `delphin.mrs.mrsjson.from_dict()`
 * `delphin.mrs.Mrs.to_dict()` to `delphin.mrs.mrsjson.to_dict()`
 * `delphin.mrs.vpm` to `delphin.vpm`
+* `delphin.mrs.Dmrs` to `delphin.mrs.DMRS`
+* `delphin.mrs.Mrs` to `delphin.mrs.MRS`
 
 ### Removed
 
