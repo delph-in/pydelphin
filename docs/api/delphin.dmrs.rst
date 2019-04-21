@@ -4,11 +4,18 @@ delphin.dmrs
 
 .. automodule:: delphin.dmrs
 
-  .. autoclass:: DMRS
-     :members:
+   .. toctree::
 
-  .. autoclass:: Node
-     :members:
+      delphin.dmrs.dmrx.rst
 
-  .. autoclass:: Link
-     :members:
+   Classes
+   -------
+
+   .. autoclass:: DMRS
+      :members:
+
+   .. autoclass:: Node
+      :members:
+
+   .. autoclass:: Link
+      :members:

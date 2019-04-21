@@ -9,7 +9,6 @@ delphin.mrs
 
   delphin.mrs.compare.rst
   delphin.mrs.components.rst
-  delphin.mrs.dmrx.rst
   delphin.mrs.eds.rst
   delphin.mrs.indexedmrs.rst
   delphin.mrs.mrsjson.rst
