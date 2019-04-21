@@ -16,8 +16,11 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.lnk`
 * `delphin.lnk.Lnk.default()`
 * `delphin.lnk.LnkError`
+* `delphin.dmrs`
+* `delphin.dmrs.DMRSSyntaxError`
 * `delphin.mrs.indexedmrs`
 * `delphin.mrs.mrsjson`
+* `delphin.mrs.MRSSyntaxError`
 * `delphin.predicate`
 * `delphin.predicate.PredicateError`
 * `delphin.predicate.create()` -- replaces `Pred.realpred()`
@@ -64,7 +67,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.exceptions.TSQLSyntaxError` to `delphin.tsql.TSQLSyntaxError`
 * `delphin.extra.highlight.TdlLexer` to `delphin.extra.highlight.TDLLexer`
 * `delphin.interfaces.ace.AceProcessError` to `delphin.interfaces.ace.ACEProcessError`
-* `delphin.mrs.util.rargname_sortkey()` to `delphin.sembase.role_priority()`
+* `delphin.mrs.Dmrs` to `delphin.dmrs.DMRS`
+* `delphin.mrs.dmrx` to `delphin.dmrs.dmrx`
 * `delphin.mrs.components.Lnk` to `delphin.lnk.Lnk`
 * `delphin.mrs.components._LnkMixin` to `delphin.lnk.LnkMixin`
 * `delphin.mrs.components.split_pred_string()` to `delphin.predicate.split()`
@@ -72,8 +76,6 @@ these changes are prefixed with "**BREAKING**"
   `delphin.predicate.normalize()`
 * `delphin.mrs.components.is_valid_pred_string()` to
   `delphin.predicate.is_valid()`
-* `delphin.mrs.prolog` to `delphin.mrs.mrsprolog`
-* `delphin.mrs.semi` to `delphin.semi`
 * `delphin.mrs.components.var_re` to `delphin.variable.variable_re`
 * `delphin.mrs.components.var_sort` to `delphin.variable.type`
   (`delphin.variable.sort` is an alias)
@@ -82,12 +84,14 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.components._VarGenerator` to `delphin.variable.VariableFactory`
 * `delphin.mrs.config.UNKNOWNSORT` to `delphin.variable.UNKNOWN`
 * `delphin.mrs.config.HANDLESORT` to `delphin.variable.HANDLE`
+* `delphin.mrs.Mrs` to `delphin.mrs.MRS`
 * `delphin.mrs.Mrs.from_dict()` to `delphin.mrs.mrsjson.from_dict()`
 * `delphin.mrs.Mrs.to_dict()` to `delphin.mrs.mrsjson.to_dict()`
+* `delphin.mrs.prolog` to `delphin.mrs.mrsprolog`
+* `delphin.mrs.semi` to `delphin.semi`
+* `delphin.mrs.simpledmrs` to `delphin.dmrs.simpledmrs`
+* `delphin.mrs.util.rargname_sortkey()` to `delphin.sembase.role_priority()`
 * `delphin.mrs.vpm` to `delphin.vpm`
-* `delphin.mrs.Dmrs` to `delphin.dmrs.DMRS`
-* `delphin.mrs.dmrx` to `delphin.dmrs.dmrx`
-* `delphin.mrs.Mrs` to `delphin.mrs.MRS`
 
 ### Removed
 
@@ -148,8 +152,10 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.vpm` raises `VPMSyntaxError` on bad inputs instead of
   `AssertionError`
 * MRS/DMRS/EDS serialization codecs now use the harmonized module layout (#3):
+  - `delphin.dmrs.dmrx`
+  - `delphin.dmrs.simpledmrs` (now read/write)
   - `delphin.mrs.mrsjson` (new)
-  - `delphin.mrs.mrsprolog` (encode-only)
+  - `delphin.mrs.mrsprolog` (write-only)
   - `delphin.mrs.mrx`
   - `delphin.mrs.simplemrs`
 

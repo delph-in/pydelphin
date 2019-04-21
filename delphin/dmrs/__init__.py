@@ -3,6 +3,7 @@
 Dependency Minimal Recursion Semantics
 """
 
+from ._exceptions import DMRSSyntaxError
 from ._dmrs import (
     DMRS,
     Node,

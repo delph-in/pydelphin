@@ -215,7 +215,7 @@ class Lnk(object):
     def __bool__(self):
         if self.type == Lnk.UNSPECIFIED or not self.data:
             return False
-        if self.type == Lnk.CHARSPAN and data == (-1, -1):
+        if self.type == Lnk.CHARSPAN and self.data == (-1, -1):
             return False
         return True
 
