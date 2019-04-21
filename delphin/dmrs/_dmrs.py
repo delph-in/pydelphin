@@ -1,4 +1,6 @@
 
+from typing import Iterable
+
 from delphin.lnk import Lnk, LnkMixin
 
 TOP_NODEID       = 0
@@ -121,7 +123,7 @@ class Link(object):
 
     __slots__ = ('start', 'end', 'role', 'post')
 
-    def __init__(self, start, end, role, post):
+    def __init__(self, start: int, end: int, role: str, post: str):
         self.start = start
         self.end = end
         self.role = role
@@ -176,9 +178,14 @@ class DMRS(LnkMixin):
     __slots__ = ('top', 'index', 'nodes', 'links',
                  'lnk', 'surface', 'identifier')
 
-    def __init__(self, top=None, index=None,
-                 nodes=None, links=None,
-                 lnk=None, surface=None, identifier=None):
+    def __init__(self,
+                 top: str = None,
+                 index: str = None,
+                 nodes: Iterable[Node] = None,
+                 links: Iterable[Link] = None,
+                 lnk: Lnk = None,
+                 surface=None,
+                 identifier=None):
         self.top = top
         self.index = index
         if nodes is None:
