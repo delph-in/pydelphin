@@ -174,6 +174,10 @@ def _get_codec(codec, load=True):
         from delphin.dmrs import dmrsjson
         return dmrsjson.loads if load else dmrsjson.dumps
 
+    elif codec == 'dmrs-penman':
+        from delphin.dmrs import dmrspenman
+        return dmrspenman.loads if load else dmrspenman.dumps
+
     elif codec == 'simpledmrs':
         from delphin.dmrs import simpledmrs
         return simpledmrs.loads if load else simpledmrs.dumps
@@ -186,11 +190,8 @@ def _get_codec(codec, load=True):
         edsjson = _EDS_JSON()
         return edsjson.loads if load else edsjson.dumps
 
-    elif codec in ('dmrs-penman', 'eds-penman'):
-        if codec == 'dmrs-penman':
-            model = xmrs.Dmrs
-        elif codec == 'eds-penman':
-            from delphin.mrs.eds import Eds as model
+    elif codec == 'eds-penman':
+        from delphin.mrs.eds import Eds as model
         func = _penman_loads if load else _penman_dumps
         return partial(func, model=model)
 

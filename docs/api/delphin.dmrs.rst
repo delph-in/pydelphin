@@ -63,5 +63,6 @@ delphin.dmrs
    .. toctree::
 
       delphin.dmrs.dmrsjson.rst
+      delphin.dmrs.dmrspenman.rst
       delphin.dmrs.dmrx.rst
       delphin.dmrs.simpledmrs.rst

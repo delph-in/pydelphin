@@ -3,8 +3,8 @@ from typing import Iterable
 
 from delphin.lnk import Lnk, LnkMixin
 
-TOP_NODEID       = 0
-FIRST_NODEID     = 10000
+TOP_NODE_ID      = 0
+FIRST_NODE_ID    = 10000
 RESTRICTION_ROLE = 'RSTR' # DMRS establishes that quantifiers have a RSTR link
 EQ_POST          = 'EQ'
 HEQ_POST         = 'HEQ'
@@ -186,13 +186,12 @@ class DMRS(LnkMixin):
                  lnk: Lnk = None,
                  surface=None,
                  identifier=None):
+        top, links = _normalize_top_and_links(top, links)
         self.top = top
         self.index = index
         if nodes is None:
             nodes = []
         self.nodes = nodes
-        if links is None:
-            links = []
         self.links = links
         if lnk is None:
             lnk = Lnk.default()
@@ -212,3 +211,22 @@ class DMRS(LnkMixin):
         if not isinstance(other, DMRS):
             return NotImplemented
         return not (self == other)
+
+    def is_quantifier(self, node_id):
+        """
+        Return `True` if *node_id* is a quantifier node.
+        """
+        return any(link.role == RESTRICTION_ROLE
+                   for link in self.links if link.start == node_id)
+
+
+def _normalize_top_and_links(top, links):
+    _links = []
+    if links is not None:
+        for link in links:
+            if link.start == TOP_NODE_ID:
+                if top is None:
+                    top = link.end
+                else:
+                    _links.append(link)
+    return top, _links

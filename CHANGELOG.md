@@ -67,7 +67,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.exceptions.TdlWarning` to `delphin.tdl.TDLWarning`
 * `delphin.exceptions.TSQLSyntaxError` to `delphin.tsql.TSQLSyntaxError`
 * `delphin.extra.highlight.TdlLexer` to `delphin.extra.highlight.TDLLexer`
-* `delphin.interfaces.ace.AceProcessError` to `delphin.interfaces.ace.ACEProcessError`
+* `delphin.interfaces.ace.AceProcessError` to
+  `delphin.interfaces.ace.ACEProcessError`
 * `delphin.mrs.Dmrs` to `delphin.dmrs.DMRS`
 * `delphin.mrs.dmrx` to `delphin.dmrs.dmrx`
 * `delphin.mrs.components.Lnk` to `delphin.lnk.Lnk`
@@ -88,6 +89,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.Mrs` to `delphin.mrs.MRS`
 * `delphin.mrs.Mrs.from_dict()` to `delphin.mrs.mrsjson.from_dict()`
 * `delphin.mrs.Mrs.to_dict()` to `delphin.mrs.mrsjson.to_dict()`
+* `delphin.mrs.penman` to `delphin.dmrs.dmrspenman`
 * `delphin.mrs.prolog` to `delphin.mrs.mrsprolog`
 * `delphin.mrs.semi` to `delphin.semi`
 * `delphin.mrs.simpledmrs` to `delphin.dmrs.simpledmrs`
@@ -154,6 +156,7 @@ these changes are prefixed with "**BREAKING**"
   `AssertionError`
 * MRS/DMRS/EDS serialization codecs now use the harmonized module layout (#3):
   - `delphin.dmrs.dmrsjson` (new)
+  - `delphin.dmrs.dmrspenman`
   - `delphin.dmrs.dmrx`
   - `delphin.dmrs.simpledmrs` (now read/write)
   - `delphin.mrs.mrsjson` (new)
