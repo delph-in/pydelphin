@@ -191,13 +191,13 @@ def _get_codec(codec, load=True):
         return edsjson.loads if load else edsjson.dumps
 
     elif codec == 'eds-penman':
-        from delphin.mrs.eds import Eds as model
+        from delphin.eds import EDS as model
         func = _penman_loads if load else _penman_dumps
         return partial(func, model=model)
 
     elif codec == 'eds':
-        from delphin.mrs import eds
-        return eds.loads if load else eds.dumps
+        from delphin.eds import edsnative
+        return edsnative.loads if load else edsnative.dumps
 
     elif load:
         raise ValueError('invalid source format: ' + codec)
@@ -252,8 +252,8 @@ class _MRS_JSON(object):
 
 
 class _EDS_JSON(_MRS_JSON):
-    from delphin.mrs import eds
-    CLS = eds.Eds
+    from delphin import eds
+    CLS = eds.EDS
 
 
 # load Penman module on demand

@@ -12,7 +12,13 @@ these changes are prefixed with "**BREAKING**"
 
 ### Added
 
+* `delphin.dmrs` package (see *Moved or Renamed*)
 * `delphin.dmrs.dmrsjson`
+* `delphin.eds` package (see *Moved or Renamed*):
+  - `BOUND_VARIABLE_ROLE`
+  - `EDSSyntaxError`
+  - `PREDICATE_MODIFIER_ROLE`
+* `delphin.eds.edsnative`
 * `delphin.exceptions.PyDelphinSyntaxError`
 * `delphin.lnk`
 * `delphin.lnk.Lnk.default()`
@@ -86,6 +92,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.components._VarGenerator` to `delphin.variable.VariableFactory`
 * `delphin.mrs.config.UNKNOWNSORT` to `delphin.variable.UNKNOWN`
 * `delphin.mrs.config.HANDLESORT` to `delphin.variable.HANDLE`
+* `delphin.mrs.eds` to `delphin.eds` and `delphin.eds.edsnative`
+* `delphin.mrs.eds.Eds` to `delphin.eds.EDS`
 * `delphin.mrs.Mrs` to `delphin.mrs.MRS`
 * `delphin.mrs.Mrs.from_dict()` to `delphin.mrs.mrsjson.from_dict()`
 * `delphin.mrs.Mrs.to_dict()` to `delphin.mrs.mrsjson.to_dict()`
@@ -159,6 +167,7 @@ these changes are prefixed with "**BREAKING**"
   - `delphin.dmrs.dmrspenman`
   - `delphin.dmrs.dmrx`
   - `delphin.dmrs.simpledmrs` (now read/write)
+  - `delphin.eds.edsnative` (now separate from `eds` module)
   - `delphin.mrs.mrsjson` (new)
   - `delphin.mrs.mrsprolog` (write-only)
   - `delphin.mrs.mrx`

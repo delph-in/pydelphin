@@ -33,6 +33,7 @@ PyDelphin
   api/delphin.commands.rst
   api/delphin.derivation.rst
   api/delphin.dmrs.rst
+  api/delphin.eds.rst
   api/delphin.exceptions.rst
   api/delphin.extra.rst
   api/delphin.interfaces.rst

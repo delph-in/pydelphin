@@ -33,7 +33,6 @@ class Node(LnkMixin):
         lnk: surface alignment
         surface: surface string
         base: base form
-        carg: constant argument string
     Attributes:
         id: node identifier
         predicate: semantic predicate
@@ -159,10 +158,10 @@ class DMRS(LnkMixin):
     (index) node may only be set via the *index* parameter.
 
     Args:
+        top: the id of the scopal top node
+        index: the id of the non-scopal top node
         nodes: an iterable of DMRS nodes
         links: an iterable of DMRS links
-        top: the scopal top node
-        index: the non-scopal top node
         lnk: surface alignment
         surface: surface string
         identifier: a discourse-utterance identifier
@@ -214,7 +213,7 @@ class DMRS(LnkMixin):
 
     def is_quantifier(self, node_id):
         """
-        Return `True` if *node_id* is a quantifier node.
+        Return `True` if *node_id* is the id of a quantifier node.
         """
         return any(link.role == RESTRICTION_ROLE
                    for link in self.links if link.start == node_id)

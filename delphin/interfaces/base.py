@@ -6,7 +6,7 @@ from delphin.derivation import Derivation
 from delphin.tokens import YyTokenLattice
 from delphin.mrs import mrsjson, simplemrs
 from delphin.dmrs import dmrsjson
-from delphin.mrs import eds
+from delphin.eds import edsnative
 from delphin.util import SExpr
 
 
@@ -117,7 +117,7 @@ class ParseResult(dict):
             if isinstance(_eds, dict):
                 _eds = eds.Eds.from_dict(_eds)
             elif isinstance(_eds, str):
-                _eds = eds.loads_one(_eds)
+                _eds = edsnative.decode(_eds)
         return _eds
 
     def dmrs(self):
