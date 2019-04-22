@@ -66,6 +66,5 @@ delphin.mrs
 
       delphin.mrs.compare.rst
       delphin.mrs.components.rst
-      delphin.mrs.penman.rst
       delphin.mrs.query.rst
       delphin.mrs.xmrs.rst

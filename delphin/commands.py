@@ -191,9 +191,8 @@ def _get_codec(codec, load=True):
         return edsjson.loads if load else edsjson.dumps
 
     elif codec == 'eds-penman':
-        from delphin.eds import EDS as model
-        func = _penman_loads if load else _penman_dumps
-        return partial(func, model=model)
+        from delphin.eds import edspenman
+        return edspenman.loads if load else edspenman.dumps
 
     elif codec == 'eds':
         from delphin.eds import edsnative
@@ -218,23 +217,6 @@ def _get_output_details(codec):
     else:
         return ('', ' ', '')
 
-
-# load Penman module on demand
-
-def _penman_loads(s, model=None, **kwargs):
-    from delphin.mrs import penman
-    return penman.loads(s, model=model, **kwargs)
-
-def _penman_dumps(xs, model=None, **kwargs):
-    from delphin.mrs import penman
-    strings = []
-    for x in xs:
-        try:
-            strings.append(penman.dumps([x], model=model, **kwargs))
-        except penman.penman.EncodeError:
-            logging.error('Invalid graph; possibly disconnected')
-            strings.append('')
-    return '\n'.join(strings)
 
 # read simplemrs from ACE output
 

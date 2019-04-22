@@ -12,14 +12,23 @@ these changes are prefixed with "**BREAKING**"
 
 ### Added
 
-* `delphin.dmrs` package (see *Moved or Renamed*)
+* `delphin.dmrs` package (see *Moved or Renamed*):
+  - `CVARSORT`
+  - `DMRSSyntaxError`
+  - `EQ_POST`
+  - `H_POST`
+  - `HEQ_POST`
+  - `NEQ_POST`
+  - `RESTRICTION_ROLE`
 * `delphin.dmrs.dmrsjson`
+* `delphin.dmrs.dmrspenman`
 * `delphin.eds` package (see *Moved or Renamed*):
   - `BOUND_VARIABLE_ROLE`
   - `EDSSyntaxError`
   - `PREDICATE_MODIFIER_ROLE`
 * `delphin.eds.edsjson`
 * `delphin.eds.edsnative`
+* `delphin.eds.edspenman`
 * `delphin.exceptions.PyDelphinSyntaxError`
 * `delphin.lnk`
 * `delphin.lnk.Lnk.default()`
@@ -94,15 +103,19 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.Dmrs` to `delphin.dmrs.DMRS`
 * `delphin.mrs.Dmrs.from_dict()` to `delphin.dmrs.dmrsjson.from_dict()`
 * `delphin.mrs.Dmrs.to_dict()` to `delphin.dmrs.dmrsjson.to_dict()`
+* `delphin.mrs.Dmrs.from_triples()` to `delphin.dmrs.dmrspenman.from_triples()`
+* `delphin.mrs.Dmrs.to_triples()` to `delphin.dmrs.dmrspenman.to_triples()`
 * `delphin.mrs.dmrx` to `delphin.dmrs.dmrx`
 * `delphin.mrs.eds` to `delphin.eds` and `delphin.eds.edsnative`
 * `delphin.mrs.eds.Eds` to `delphin.eds.EDS`
 * `delphin.mrs.eds.Eds.from_dict()` to `delphin.eds.edsjson.from_dict()`
 * `delphin.mrs.eds.Eds.to_dict()` to `delphin.eds.edsjson.to_dict()`
+* `delphin.mrs.eds.Eds.from_triples()` to `delphin.eds.edspenman.from_triples()`
+* `delphin.mrs.eds.Eds.to_triples()` to `delphin.eds.edspenman.to_triples()`
 * `delphin.mrs.Mrs` to `delphin.mrs.MRS`
 * `delphin.mrs.Mrs.from_dict()` to `delphin.mrs.mrsjson.from_dict()`
 * `delphin.mrs.Mrs.to_dict()` to `delphin.mrs.mrsjson.to_dict()`
-* `delphin.mrs.penman` to `delphin.dmrs.dmrspenman`
+* `delphin.mrs.penman` to `delphin.dmrs.dmrspenman` and `delphin.eds.edspenman`
 * `delphin.mrs.prolog` to `delphin.mrs.mrsprolog`
 * `delphin.mrs.semi` to `delphin.semi`
 * `delphin.mrs.simpledmrs` to `delphin.dmrs.simpledmrs`
@@ -175,6 +188,7 @@ these changes are prefixed with "**BREAKING**"
   - `delphin.dmrs.simpledmrs` (now read/write)
   - `delphin.eds.edsnative` (now separate from `eds` module)
   - `delphin.eds.edsjson` (new)
+  - `delphin.eds.edspenman`
   - `delphin.mrs.mrsjson` (new)
   - `delphin.mrs.mrsprolog` (write-only)
   - `delphin.mrs.mrx`

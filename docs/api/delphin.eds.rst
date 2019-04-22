@@ -41,3 +41,4 @@ delphin.eds
 
       delphin.eds.edsjson.rst
       delphin.eds.edsnative.rst
+      delphin.eds.edspenman.rst

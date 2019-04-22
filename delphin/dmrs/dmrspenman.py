@@ -39,7 +39,7 @@ def loads(s):
     return xs
 
 
-def dump(ds, destination, properties=False, indent=True, encoding='utf-8'):
+def dump(ds, destination, properties=False, indent=False, encoding='utf-8'):
     """
     Serialize DMRS objects to a PENMAN file.
 
@@ -62,7 +62,7 @@ def dump(ds, destination, properties=False, indent=True, encoding='utf-8'):
             print(text, file=fh)
 
 
-def dumps(ds, properties=False, indent=True):
+def dumps(ds, properties=False, indent=False):
     """
     Serialize DMRS objects to a PENMAN string.
 
