@@ -39,4 +39,5 @@ delphin.eds
 
    .. toctree::
 
+      delphin.eds.edsjson.rst
       delphin.eds.edsnative.rst

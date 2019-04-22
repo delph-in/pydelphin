@@ -98,8 +98,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     if indent: kwargs['indent'] = indent
     if target_fmt == 'eds':
         kwargs['show_status'] = show_status
-    if target_fmt.startswith('eds'):
-        kwargs['predicate_modifiers'] = predicate_modifiers
+    # if target_fmt.startswith('eds'):
+    #     kwargs['predicate_modifiers'] = predicate_modifiers
     if target_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
     kwargs['properties'] = properties
@@ -187,7 +187,7 @@ def _get_codec(codec, load=True):
         return latex.dmrs_tikz_dependency
 
     elif codec == 'eds-json':
-        edsjson = _EDS_JSON()
+        from delphin.eds import edsjson
         return edsjson.loads if load else edsjson.dumps
 
     elif codec == 'eds-penman':
@@ -217,43 +217,6 @@ def _get_output_details(codec):
 
     else:
         return ('', ' ', '')
-
-
-# simulate json codecs for MRS and DMRS
-
-class _MRS_JSON(object):
-    CLS = xmrs.Mrs
-
-    def getlist(self, o):
-        if isinstance(o, dict):
-            return [o]
-        else:
-            return o
-
-    def load(self, f):
-        return [self.CLS.from_dict(d) for d in self.getlist(json.load(f))]
-
-    def loads(self, s):
-        return [self.CLS.from_dict(d) for d in self.getlist(json.loads(s))]
-
-    def dumps(self,
-              xs,
-              properties=True,
-              indent=None,
-              **kwargs):
-        return json.dumps(
-            [
-                self.CLS.to_dict(
-                    (x if isinstance(x, self.CLS)
-                       else self.CLS.from_xmrs(x, **kwargs)),
-                    properties=properties) for x in xs
-            ],
-            indent=indent)
-
-
-class _EDS_JSON(_MRS_JSON):
-    from delphin import eds
-    CLS = eds.EDS
 
 
 # load Penman module on demand

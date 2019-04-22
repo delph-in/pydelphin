@@ -18,6 +18,7 @@ these changes are prefixed with "**BREAKING**"
   - `BOUND_VARIABLE_ROLE`
   - `EDSSyntaxError`
   - `PREDICATE_MODIFIER_ROLE`
+* `delphin.eds.edsjson`
 * `delphin.eds.edsnative`
 * `delphin.exceptions.PyDelphinSyntaxError`
 * `delphin.lnk`
@@ -75,8 +76,6 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.extra.highlight.TdlLexer` to `delphin.extra.highlight.TDLLexer`
 * `delphin.interfaces.ace.AceProcessError` to
   `delphin.interfaces.ace.ACEProcessError`
-* `delphin.mrs.Dmrs` to `delphin.dmrs.DMRS`
-* `delphin.mrs.dmrx` to `delphin.dmrs.dmrx`
 * `delphin.mrs.components.Lnk` to `delphin.lnk.Lnk`
 * `delphin.mrs.components._LnkMixin` to `delphin.lnk.LnkMixin`
 * `delphin.mrs.components.split_pred_string()` to `delphin.predicate.split()`
@@ -92,8 +91,14 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.components._VarGenerator` to `delphin.variable.VariableFactory`
 * `delphin.mrs.config.UNKNOWNSORT` to `delphin.variable.UNKNOWN`
 * `delphin.mrs.config.HANDLESORT` to `delphin.variable.HANDLE`
+* `delphin.mrs.Dmrs` to `delphin.dmrs.DMRS`
+* `delphin.mrs.Dmrs.from_dict()` to `delphin.dmrs.dmrsjson.from_dict()`
+* `delphin.mrs.Dmrs.to_dict()` to `delphin.dmrs.dmrsjson.to_dict()`
+* `delphin.mrs.dmrx` to `delphin.dmrs.dmrx`
 * `delphin.mrs.eds` to `delphin.eds` and `delphin.eds.edsnative`
 * `delphin.mrs.eds.Eds` to `delphin.eds.EDS`
+* `delphin.mrs.eds.Eds.from_dict()` to `delphin.eds.edsjson.from_dict()`
+* `delphin.mrs.eds.Eds.to_dict()` to `delphin.eds.edsjson.to_dict()`
 * `delphin.mrs.Mrs` to `delphin.mrs.MRS`
 * `delphin.mrs.Mrs.from_dict()` to `delphin.mrs.mrsjson.from_dict()`
 * `delphin.mrs.Mrs.to_dict()` to `delphin.mrs.mrsjson.to_dict()`
@@ -122,6 +127,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.components.Pred`
 * `delphin.mrs.convert()`
 * `delphin.mrs.path`
+* `delphin.mrs.penman`
 * `delphin.mrs.query.find_quantifier()`
 * `delphin.mrs.query.get_outbound_args()`
 * `delphin.mrs.query.intrinsic_variable()`
@@ -168,6 +174,7 @@ these changes are prefixed with "**BREAKING**"
   - `delphin.dmrs.dmrx`
   - `delphin.dmrs.simpledmrs` (now read/write)
   - `delphin.eds.edsnative` (now separate from `eds` module)
+  - `delphin.eds.edsjson` (new)
   - `delphin.mrs.mrsjson` (new)
   - `delphin.mrs.mrsprolog` (write-only)
   - `delphin.mrs.mrx`
