@@ -226,6 +226,6 @@ def _normalize_top_and_links(top, links):
             if link.start == TOP_NODE_ID:
                 if top is None:
                     top = link.end
-                else:
-                    _links.append(link)
+            else:
+                _links.append(link)
     return top, _links

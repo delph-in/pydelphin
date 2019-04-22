@@ -2,7 +2,7 @@
 import pytest
 
 from delphin.interfaces.base import ParseResponse, ParseResult
-from delphin.mrs.eds import Eds
+from delphin.eds import edsjson
 from delphin.mrs import simplemrs
 from delphin.dmrs import dmrsjson
 from delphin.derivation import Derivation
@@ -86,7 +86,7 @@ def test_ParseResult():
         }
     }
     eds_s = '{e2: e2:_rain_v_1<3:9>[]}'
-    eds = Eds.from_dict(eds_d)
+    eds = edsjson.from_dict(eds_d)
 
     r = ParseResult(eds=eds_s)
     assert len(r) == 1
