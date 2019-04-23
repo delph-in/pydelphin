@@ -30,6 +30,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.eds.edsnative`
 * `delphin.eds.edspenman`
 * `delphin.exceptions.PyDelphinSyntaxError`
+* `delphin.hierarchy`
 * `delphin.lnk`
 * `delphin.lnk.Lnk.default()`
 * `delphin.lnk.LnkError`

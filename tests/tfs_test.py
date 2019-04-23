@@ -55,7 +55,7 @@ def test_TypeHierarchyNode():
         N()
     with pytest.raises(ValueError):
         N([])
-    n = N.top()
+    n = N(None)
     assert n.parents == []
     n = N(['*top*'])
     assert n.parents == ['*top*']
@@ -71,7 +71,7 @@ def test_TypeHierarchyNode():
     assert n.parents == ['a', 'b']
 
 
-class TypeHierarchyTest():
+class TestTypeHierarchy(object):
     def test_init(self):
         with pytest.raises(TypeError):
             tfs.TypeHierarchy()
@@ -98,7 +98,7 @@ class TypeHierarchyTest():
         with pytest.raises(tfs.TypeHierarchyError):
             th['e'] = 'f'
         # invalid parent data type
-        with pytest.raises(tfs.TypeHierarchyError):
+        with pytest.raises(TypeError):
             th['1'] = 1
 
     def test_update(self):
@@ -108,15 +108,15 @@ class TypeHierarchyTest():
         th.update({'c': ('a', 'b')})
         assert th['c'].parents == ['a', 'b']
         th.update({'d': tfs.TypeHierarchyNode(['a'])})
-        assert th['d'].parents == 'a'
+        assert th['d'].parents == ['a']
         # exists
         with pytest.raises(tfs.TypeHierarchyError):
             th.update({'a': '*top*'})
         # parent doesn't exist
         with pytest.raises(tfs.TypeHierarchyError):
-            th.update({'a': '*top*'})
+            th.update({'a': 'f'})
         # invalid parent data type
-        with pytest.raises(tfs.TypeHierarchyError):
+        with pytest.raises(TypeError):
             th.update({'1': 1})
         # cycle
         with pytest.raises(tfs.TypeHierarchyError):
