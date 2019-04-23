@@ -281,7 +281,8 @@ class MRS(LnkMixin):
         Returns:
             delphin.scope.ScopeTree
         """
-        labels = set(ep.label for ep in self.rels)
+        scopes = {label: [ep.iv for ep in eps]
+                  for label, eps in self.scopes().items()}
         _hcmap = {hc.hi: hc for hc in self.hcons}
         qeqs = []
         heqs = []
@@ -289,14 +290,14 @@ class MRS(LnkMixin):
             qeqs.append((self.top, _hcmap[self.top].lo))
         for ep in self.rels:
             for arg in ep.outgoing_args('h').values():
-                if arg in labels:
+                if arg in scopes:
                     heqs.append(ep.label, arg)
                 elif arg in _hcmap:
                     hc = _hcmap[arg]
                     assert hc.relation == HCons.QEQ
                     qeqs.append((ep.label, hc.lo))
         assert len(self.hcons) == len(qeqs)  # are all accounted for?
-        return scope.ScopeTree(self.top, labels, heqs, qeqs)
+        return scope.ScopeTree(self.top, scopes, heqs, qeqs)
 
     def scopes(self):
         """Return a mapping of scope labels to EPs sharing that scope."""

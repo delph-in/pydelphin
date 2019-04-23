@@ -20,6 +20,8 @@ conjunction as a whole.
 
 """
 
+from typing import Mapping
+
 from delphin.exceptions import PyDelphinException
 from delphin.util import _connected_components
 
@@ -34,18 +36,22 @@ class ScopeTree(object):
 
     Args:
         top: the top scope handle
-        labels: list of scope labels
+        scopes: mapping of scope labels to ids of scoped predications
         heqs: list of (hi, lo) pairs of *immediate-outscopes* constraints
         qeqs: list of (hi, lo) pairs of *qeq* constraints
+    Example:
+        >>> stree = ScopeTree('h0', {'h1': [1, 2], 'h2': [3]},
+        ...                   [('h1', 'h2')], [('h0', 'h1')])
     """
 
-    __slots__ = ('top', 'tree', 'qeqs', '_dcache')
+    __slots__ = ('top', 'tree', 'qeqs', '_nodecache', '_dcache')
 
-    def __init__(self, top, labels, heqs=None, qeqs=None):
+    def __init__(self, top, scopes, heqs=None, qeqs=None):
         self.top = top
-        self.tree = {label: set() for label in labels}
+        self.tree = {label: set() for label in scopes}
+        self._nodecache = {label: set(ids) for label, ids in scopes.items()}
         self.qeqs = {}
-        self._dcache = {}
+        self._dcache = {}  # descendant cache
 
         if heqs:
             for hi, lo in heqs:
@@ -112,16 +118,54 @@ class ScopeTree(object):
         """
         return b in self.descendants(a)
 
+    def representatives(self, nsargs: Mapping):
+        """
+        Find the scope representatives for the given scope *label*.
+
+        Args:
+            nsargs: a mapping of non-scopal arguments from the source
+                identifier (node id or intrinsic variable) to the
+                target identifier (roles are not included)
+        Example:
+            >>> sent = 'The new chef whose soup accidentally spilled quit.'
+            >>> m = ace.parse(grm, sent).result(0).mrs()
+            >>> # in this example there are 4 EPs in scope h7
+            >>> print('  '.join('{0.iv}:{0.predicate}'.format(ep)
+            ...                 for ep in m.scopes()['h7']))
+            e8:_new_a_1  x3:_chef_n_1  e15:_accidental_a_1  e16:_spill_v_1
+            >>> stree = m.scopetree()
+            >>> nsargs = {ep.iv: set(ep.outgoing_args('exi').values())
+            ...           for ep in m.rels}
+            >>> # there are 2 candidate representatives for scope h7
+            >>> print(stree.representatives(nsargs)['h7'])
+            ['e16', 'x3']
+        """
+        reps = {}
+        for label in self.tree:
+            ids = self._nodecache[label]
+            scoped_ids = set(ids)
+            for desc_label in self.descendants(label):
+                scoped_ids.update(self._nodecache[desc_label])
+            nested_scopes = {id: scoped_ids.intersection(nsargs.get(id))
+                             for id in ids}
+
+            def rep_test(id):
+                return len(scoped_ids.intersection(nsargs.get(id))) == 0
+
+            candidates = list(filter(rep_test, ids))
+            reps[label] = candidates
+        return reps
+
     def configurations(self):
         pass
 
 
-def conjoin(scopes, eq_constraints):
+def conjoin(labels, eq_constraints):
     """
     Conjoin multiple scopes with equality constraints.
 
     Args:
-        scopes: an iterable of scope labels
+        labels: an iterable of scope labels
         eq_constraints: a list of pairs of equated scope labels
     Returns:
         A mapping of the new merged scope labels to the set of old
@@ -132,7 +176,7 @@ def conjoin(scopes, eq_constraints):
         {'h1': {'h1'}, 'h2': {'h2', 'h3'}}
     """
     scopemap = {}
-    for component in _connected_components(scopes, eq_constraints):
+    for component in _connected_components(labels, eq_constraints):
         rep = next(iter(component))
         scopemap[rep] = component
     return scopemap
