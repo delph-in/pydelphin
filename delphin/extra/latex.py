@@ -5,12 +5,7 @@ Generate LaTeX snippets for rendering DELPH-IN data.
 from collections import defaultdict
 
 from delphin import predicate
-from delphin.mrs.components import nodes, links
-from delphin.mrs.config import (
-    RSTR_ROLE, EQ_POST, H_POST
-)
-
-from delphin.mrs.xmrs import Xmrs
+from delphin import dmrs
 
 # latex character escaping code copied from Xigt:
 #   (https://github.com/xigt/xigt)
@@ -39,25 +34,26 @@ def _latex_escape(s):
         s = s.replace(c, r)
     return s
 
-def dmrs_tikz_dependency(xs, **kwargs):
+def dmrs_tikz_dependency(ds, **kwargs):
     """
-    Return a LaTeX document with each Xmrs in *xs* rendered as DMRSs.
+    Return a LaTeX document with a rendering of each DMRS in *ds*.
 
     DMRSs use the `tikz-dependency` package for visualization.
     """
+
     def link_label(link):
-        return '{}/{}'.format(link.rargname or '', link.post)
+        return '{}/{}'.format(link.role or '', link.post)
 
     def label_edge(link):
-        if link.post == H_POST and link.rargname == RSTR_ROLE:
+        if link.post == dmrs.H_POST and link.role == dmrs.RESTRICTION_ROLE:
             return 'rstr'
-        elif link.post == EQ_POST:
+        elif link.post == dmrs.EQ_POST:
             return 'eq'
         else:
             return 'arg'
 
-    if isinstance(xs, Xmrs):
-        xs = [xs]
+    if isinstance(ds, dmrs.DMRS):
+        ds = [ds]
 
     lines = """\\documentclass{standalone}
 
@@ -67,7 +63,7 @@ def dmrs_tikz_dependency(xs, **kwargs):
 %%%
 %%% style for dmrs graph
 %%%
-\\depstyle{dmrs}{edge unit distance=1.5ex, 
+\\depstyle{dmrs}{edge unit distance=1.5ex,
   label style={above, scale=.9, opacity=0, text opacity=1},
   baseline={([yshift=-0.7\\baselineskip]current bounding box.north)}}
 %%% set text opacity=0 to hide text, opacity = 0 to hide box
@@ -76,27 +72,27 @@ def dmrs_tikz_dependency(xs, **kwargs):
 \\depstyle{rstr}{edge below, dotted, label style={text opacity=1}}
 \\depstyle{eq}{edge below, label style={text opacity=1}}
 \\depstyle{icons}{edge below, dashed}
-\\providecommand{\\named}{}  
+\\providecommand{\\named}{}
 \\renewcommand{\\named}{named}
 
 %%% styles for predicates and roles (from mrs.sty)
-\\providecommand{\\spred}{} 
+\\providecommand{\\spred}{}
 \\renewcommand{\\spred}[1]{\\mbox{\\textsf{#1}}}
-\\providecommand{\\srl}{} 
+\\providecommand{\\srl}{}
 \\renewcommand{\\srl}[1]{\\mbox{\\textsf{\\smaller #1}}}
 %%%
 
 \\begin{document}""".split("\n")
-    
-    for ix, x in enumerate(xs):
-        lines.append("%%%\n%%% {}\n%%%".format(ix+1)) 
+
+    for j, d in enumerate(ds):
+        lines.append("%%%\n%%% {}\n%%%".format(j+1))
         lines.append("\\begin{dependency}[dmrs]")
-        ns = nodes(x)
+        ns = d.nodes
         ### predicates
         lines.append("  \\begin{deptext}[column sep=10pt]")
         for i, n in enumerate(ns):
             sep = "\\&"  if  (i < len(ns) - 1) else  "\\\\"
-            pred = _latex_escape(predicate.normalize(n.pred))
+            pred = _latex_escape(predicate.normalize(n.predicate))
             pred = "\\named{}" if pred == 'named' else pred
             if n.carg is not None:
                 print(n.carg.strip('"'))
@@ -104,23 +100,21 @@ def dmrs_tikz_dependency(xs, **kwargs):
             lines.append("    \\spred{{{}}} {}     % node {}".format(
                 pred, sep, i+1))
         lines.append("  \\end{deptext}")
-        nodeidx = {n.nodeid: i+1 for i, n in enumerate(ns)}
+        nodeidx = {n.id: i for i, n in enumerate(ns, 1)}
+
         ### links
-        for link in links(x):
-            if link.start == 0:
-                lines.append(
-                    '  \\deproot[root]{{{}}}{{{}}}'.format(
-                        nodeidx[link.end],
-                        '\\srl{TOP}'  # _latex_escape('/' + link.post)
-                    )
-                )
-            else:
-                lines.append('  \\depedge[{}]{{{}}}{{{}}}{{\\srl{{{}}}}}'.format(
-                    label_edge(link),
-                    nodeidx[link.start],
-                    nodeidx[link.end],
-                    _latex_escape(link_label(link))
-                ))
+        if d.top is not None:
+            lines.append('  \\deproot[root]{{{}}}{{{}}}'
+                         .format(d.top, '\\srl{TOP}'))
+            # _latex_escape('/' + link.post)
+
+        for link in d.links:
+            lines.append('  \\depedge[{}]{{{}}}{{{}}}{{\\srl{{{}}}}}'.format(
+                label_edge(link),
+                nodeidx[link.start],
+                nodeidx[link.end],
+                _latex_escape(link_label(link))
+            ))
         ### placeholder for icons
         lines.append('%  \\depedge[icons]{f}{t}{FOCUS}')
         lines.append('\\end{dependency}\n')

@@ -51,11 +51,10 @@ from input containing markup or other noise).
 Support for lnk values in PyDelphin is rather simple. The :class:`Lnk`
 class is able to parse lnk strings and model the contents for
 serialization of semantic representations. In addition, semantic
-entities such as DMRS :class:`Nodes <delphin.mrs.components.Node>` and
-MRS :class:`EPs <delphin.mrs.components.ElementaryPredication>` have
-`cfrom` and `cto` attributes which are the start and end pointers for
-character spans (defaulting to `-1` if a character span is not
-specified for the entity).
+entities such as DMRS :class:`Nodes <delphin.dmrs.Node>` and MRS
+:class:`EPs <delphin.mrs.EP>` have `cfrom` and `cto` attributes which
+are the start and end pointers for character spans (defaulting to `-1`
+if a character span is not specified for the entity).
 """
 
 from delphin.exceptions import PyDelphinException

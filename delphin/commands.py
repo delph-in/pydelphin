@@ -17,7 +17,6 @@ import warnings
 
 from delphin import itsdb, tsql
 from delphin.lnk import Lnk
-from delphin.mrs import xmrs
 from delphin.semi import SemI, load as load_semi
 from delphin.util import safe_int, SExpr
 from delphin.exceptions import PyDelphinException

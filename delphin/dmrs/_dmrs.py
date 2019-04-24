@@ -123,6 +123,8 @@ class Link(object):
     __slots__ = ('start', 'end', 'role', 'post')
 
     def __init__(self, start: int, end: int, role: str, post: str):
+        if not (isinstance(start, int) and isinstance(end, int)):
+            raise TypeError('start and end node ids must be of type int')
         self.start = start
         self.end = end
         self.role = role
@@ -178,8 +180,8 @@ class DMRS(LnkMixin):
                  'lnk', 'surface', 'identifier')
 
     def __init__(self,
-                 top: str = None,
-                 index: str = None,
+                 top: int = None,
+                 index: int = None,
                  nodes: Iterable[Node] = None,
                  links: Iterable[Link] = None,
                  lnk: Lnk = None,

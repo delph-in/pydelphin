@@ -183,8 +183,8 @@ def _decode_dmrs(lexer):
             links.append(_decode_link(nodeid, lexer))
     lexer.expect_type(RBRACE)
 
-    return DMRS(top=top,
-                index=index,
+    return DMRS(top=int(top),
+                index=int(index),
                 nodes=nodes,
                 links=links,
                 lnk=lnk,
@@ -215,15 +215,15 @@ def _decode_node(nodeid, lexer):
     nodetype = lexer.accept_type(SYMBOL)
     properties = dict(_decode_properties(lexer))
     lexer.expect_type(SEMICOLON)
-    return Node(nodeid, predicate, type=nodetype, properties=properties,
-                carg=carg, lnk=lnk)
+    return Node(int(nodeid), predicate, type=nodetype,
+                properties=properties, carg=carg, lnk=lnk)
 
 
 def _decode_link(start, lexer):
     role = lexer.accept_type(SYMBOL)
     _, post, _, end, _ = lexer.expect_type(
         SLASH, SYMBOL, ARROW, SYMBOL, SEMICOLON)
-    return Link(start, end, role, post)
+    return Link(int(start), int(end), role, post)
 
 
 ##############################################################################

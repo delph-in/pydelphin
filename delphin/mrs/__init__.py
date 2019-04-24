@@ -36,13 +36,6 @@ will use the same methods.
   Association for Computational Linguistics, 2009.
 """
 
-# these may be order-sensitive
-from .components import (
-    Node, ElementaryPredication,
-    HandleConstraint, Link
-)
-from .xmrs import Xmrs, Mrs, Dmrs
-
 from ._exceptions import MRSSyntaxError
 from ._mrs import (
     EP,
@@ -54,5 +47,13 @@ from ._mrs import (
     BODY_ROLE,
     CONSTANT_ROLE)
 
-__all__ = ['Node', 'ElementaryPredication',
-           'HandleConstraint', 'Link', 'Xmrs', 'Mrs', 'Dmrs']
+__all__ = [
+    'MRS',
+    'EP',
+    'HCons',
+    'ICons',
+    'INTRINSIC_ROLE',
+    'RESTRICTION_ROLE',
+    'BODY_ROLE',
+    'CONSTANT_ROLE',
+]

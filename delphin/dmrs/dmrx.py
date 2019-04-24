@@ -163,7 +163,7 @@ def _decode_node(elem):
     type = None
     if CVARSORT in sortinfo:
         type = sortinfo.pop(CVARSORT)
-    return Node(id=elem.get('nodeid'),
+    return Node(id=int(elem.get('nodeid')),
                 predicate=_decode_pred(elem.find('*[1]')),
                 type=type,
                 properties=sortinfo,  # without cvarsort; see above
@@ -213,8 +213,8 @@ def _decode_link(elem):
     #           to   CDATA #REQUIRED >
     # <!ELEMENT rargname (#PCDATA)>
     # <!ELEMENT post (#PCDATA)>
-    return Link(start=elem.get('from'),
-                end=elem.get('to'),
+    return Link(start=int(elem.get('from')),
+                end=int(elem.get('to')),
                 role=getattr(elem.find('rargname'), 'text', None),
                 post=getattr(elem.find('post'), 'text', None))
 

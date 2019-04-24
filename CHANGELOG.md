@@ -135,17 +135,11 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.itsdb.filter_rows()`
 * `delphin.itsdb.get_relations()`
 * `delphin.itsdb.make_skeleton()`
-* `delphin.mrs.components.ElementaryPredication.__lt__()`
-* `delphin.mrs.components.Node.is_quantifier()`
-* `delphin.mrs.components.Node.__lt__()`
-* `delphin.mrs.components.Pred`
+* `delphin.mrs.components`
 * `delphin.mrs.convert()`
 * `delphin.mrs.path`
 * `delphin.mrs.penman`
-* `delphin.mrs.query.find_quantifier()`
-* `delphin.mrs.query.get_outbound_args()`
-* `delphin.mrs.query.intrinsic_variable()`
-* `delphin.mrs.query.nodeid()`
+* `delphin.mrs.query`
 * `delphin.mrs.semi.Predicate`
 * `delphin.mrs.semi.Property`
 * `delphin.mrs.semi.Role`
@@ -169,6 +163,7 @@ these changes are prefixed with "**BREAKING**"
 
 * `delphin.commands.convert` `--sem-i` parameter
 * `delphin.extra.highlight` add docstrings and wild-card to TDL highlighter
+* `delphin.extra.latex` update to work with new DMRS class
 * `delphin.interfaces.ace` no longer raise `ValueError` when grammar file does
   not exist; the `ACEProcessError` now handles this
 * `delphin.lnk.Lnk` can have an unspecified state (via the `Lnk.default()`
