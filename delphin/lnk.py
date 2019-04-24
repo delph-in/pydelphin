@@ -224,7 +224,13 @@ class LnkMixin(object):
     A mixin class for adding `cfrom` and `cto` properties on structures.
     """
 
-    __slots__ = ()
+    __slots__ = ('lnk', 'surface')
+
+    def __init__(self, lnk, surface):
+        if lnk is None:
+            lnk = Lnk.default()
+        self.lnk = lnk
+        self.surface = surface
 
     @property
     def cfrom(self):

@@ -2,6 +2,7 @@
 from typing import Iterable, Mapping
 
 from delphin.lnk import Lnk, LnkMixin
+from delphin.sembase import Predication, ScopingSemanticStructure
 from delphin import (
     variable,
     scope
@@ -12,9 +13,11 @@ INTRINSIC_ROLE   = 'ARG0'
 RESTRICTION_ROLE = 'RSTR'
 BODY_ROLE        = 'BODY'
 CONSTANT_ROLE    = 'CARG'
+# the following is only used internally
+_QUANTIFIER_TYPE = 'q'
 
 
-class EP(LnkMixin):
+class EP(Predication):
     """
     An MRS elementary predication (EP).
 
@@ -32,6 +35,8 @@ class EP(LnkMixin):
         surface: surface string
         base: base form
     Attributes:
+        id: an identifier (same as :attr:`iv` except for quantifiers
+            which replace the `iv`'s variable type with `q`)
         predicate: semantic predicate
         label: scope handle
         args: mapping of roles to values
@@ -44,8 +49,7 @@ class EP(LnkMixin):
         base: base form
     """
 
-    __slots__ = ('predicate', 'label', 'args',
-                 'lnk', 'surface', 'base')
+    __slots__ = ('label', 'args')
 
     def __init__(self,
                  predicate: str,
@@ -56,13 +60,15 @@ class EP(LnkMixin):
                  base=None):
         if args is None:
             args = {}
-        self.predicate = predicate
+        # EPs formally do not have identifiers but they are very useful
+        iv = args.get(INTRINSIC_ROLE)
+        if RESTRICTION_ROLE in args:
+            id = '{}{}'.format(_QUANTIFIER_TYPE, variable.id(iv))
+        else:
+            id = iv  # note: iv (and hence, id) are possibly None
+        super().__init__(id, predicate, lnk, surface, base)
         self.label = label
         self.args = args
-        if lnk is None:
-            lnk = Lnk.default()
-        self.lnk = lnk
-        self.surface = surface
         self.base = base
 
     def __eq__(self, other):
@@ -201,7 +207,7 @@ class ICons(object):
 #         pass
 
 
-class MRS(LnkMixin):
+class MRS(ScopingSemanticStructure):
     """
     A semantic representation in Minimal Recursion Semantics.
 
@@ -217,11 +223,7 @@ class MRS(LnkMixin):
         identifier: a discourse-utterance identifier
     """
 
-    __slots__ = ('top', 'index',
-                 'rels', 'hcons', 'icons', 'variables',
-                 'lnk', 'surface', 'identifier',
-                 # '_epidx', '_hcidx', '_icidx'
-                 )
+    __slots__ = ('rels', 'hcons', 'icons', 'variables')
 
     def __init__(self,
                  top: str,
@@ -233,6 +235,9 @@ class MRS(LnkMixin):
                  lnk: Lnk = None,
                  surface=None,
                  identifier=None):
+
+        super().__init__(self, top, index, lnk, surface, identifier)
+
         if rels is None:
             rels = []
         if hcons is None:
@@ -241,18 +246,13 @@ class MRS(LnkMixin):
             icons = []
         if variables is None:
             variables = {}
-        self.top = top
-        self.index = index
+
         self.rels = rels
         self.hcons = hcons
         self.icons = icons
         self.variables = _fill_variables(
             variables, top, index, rels, hcons, icons)
-        if lnk is None:
-            lnk = Lnk.default()
-        self.lnk = lnk
-        self.surface = surface
-        self.identifier = identifier
+
         # # indices for faster lookup
         # self._epidx = {ep.intrinsic_variable: ep for ep in rels
         #                if ep.intrinsic_variable is not None}

@@ -5,7 +5,8 @@ Elementary Dependency Structures (EDS).
 
 from typing import Iterable
 
-from delphin.lnk import Lnk, LnkMixin
+from delphin.lnk import Lnk
+from delphin.sembase import Predication, SemanticStructure
 
 BOUND_VARIABLE_ROLE     = 'BV'
 PREDICATE_MODIFIER_ROLE = 'ARG1'
@@ -15,7 +16,7 @@ PREDICATE_MODIFIER_ROLE = 'ARG1'
 ##############################################################################
 # EDS classes
 
-class Node(LnkMixin):
+class Node(Predication):
     """
     An EDS node.
 
@@ -41,8 +42,7 @@ class Node(LnkMixin):
         base: base form
     """
 
-    __slots__ = ('id', 'predicate', 'type', 'properties', 'carg',
-                 'lnk', 'surface', 'base')
+    __slots__ = ('type', 'properties', 'carg')
 
     def __init__(self,
                  id: int,
@@ -53,18 +53,12 @@ class Node(LnkMixin):
                  lnk: Lnk = None,
                  surface=None,
                  base=None):
-        self.id = id
-        self.predicate = predicate
+        super().__init__(id, predicate, lnk, surface, base)
         self.type = type
         if not properties:
             properties = {}
         self.properties = properties
         self.carg = carg
-        if lnk is None:
-            lnk = Lnk.default()
-        self.lnk = lnk
-        self.surface = surface
-        self.base = base
 
     def __eq__(self, other):
         if not isinstance(other, Node):
@@ -114,7 +108,7 @@ class Edge(object):
         return not self.__eq__(other)
 
 
-class EDS(LnkMixin):
+class EDS(SemanticStructure):
     """
     An Elementary Dependency Structure (EDS) instance.
 
@@ -126,18 +120,26 @@ class EDS(LnkMixin):
         top: the id of the graph's top node
         nodes: an iterable of EDS nodes
         edges: an iterable of EDS edges
+        lnk: surface alignment
+        surface: surface string
+        identifier: a discourse-utterance identifier
     """
 
-    __slots__ = ('top', 'nodes', 'edges')
+    __slots__ = ('nodes', 'edges')
 
     def __init__(self,
                  top: str = None,
                  nodes: Iterable[Node] = None,
-                 edges: Iterable[Edge] = None):
+                 edges: Iterable[Edge] = None,
+                 lnk: Lnk = None,
+                 surface=None,
+                 identifier=None):
+
+        super().__init__(top, lnk, surface, identifier)
+
         if nodes is None: nodes = []
         if edges is None: edges = []
 
-        self.top = top
         self.nodes = nodes
         self.edges = edges
 

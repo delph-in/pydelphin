@@ -7,6 +7,12 @@ delphin.dmrs
    Module Constants
    ----------------
 
+   .. data:: FIRST_NODE_ID
+
+      The node identifier `10000` which is conventionally the first
+      identifier used in a DMRS structure. This constant is mainly
+      used for DMRS conversion or serialization.
+
    .. data:: RESTRICTION_ROLE
 
       The `RSTR` role used in links to select the restriction of a

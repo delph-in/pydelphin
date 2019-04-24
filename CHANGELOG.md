@@ -47,6 +47,9 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.scope`
 * `delphin.sembase`:
   - `property_priority()`
+  - `Predication`
+  - `SemantictStructure`
+  - `ScopingSemanticStructure`
 * `delphin.semi`
   - `TOP_TYPE`
   - `STRING_TYPE`

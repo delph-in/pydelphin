@@ -1,7 +1,8 @@
 
 from typing import Iterable
 
-from delphin.lnk import Lnk, LnkMixin
+from delphin.lnk import Lnk
+from delphin.sembase import Predication, ScopingSemanticStructure
 
 TOP_NODE_ID      = 0
 FIRST_NODE_ID    = 10000
@@ -15,7 +16,7 @@ CVARSORT         = 'cvarsort'
 BARE_EQ_ROLE     = 'MOD'
 
 
-class Node(LnkMixin):
+class Node(Predication):
     """
     A DMRS node.
 
@@ -47,8 +48,7 @@ class Node(LnkMixin):
         base: base form
     """
 
-    __slots__ = ('id', 'predicate', 'type', 'properties', 'carg',
-                 'lnk', 'surface', 'base')
+    __slots__ = ('type', 'properties', 'carg')
 
     def __init__(self,
                  id: int,
@@ -59,18 +59,15 @@ class Node(LnkMixin):
                  lnk: Lnk = None,
                  surface=None,
                  base=None):
-        self.id = id
-        self.predicate = predicate
+        if not isinstance(id, int):
+            raise TypeError('node id must be of type int')
+        id = id
+        super().__init__(id, predicate, lnk, surface, base)
         self.type = type
         if not properties:
             properties = {}
         self.properties = properties
         self.carg = carg
-        if lnk is None:
-            lnk = Lnk.default()
-        self.lnk = lnk
-        self.surface = surface
-        self.base = base
 
     @property
     def sortinfo(self):
@@ -149,7 +146,7 @@ class Link(object):
         return not self.__eq__(other)
 
 
-class DMRS(LnkMixin):
+class DMRS(ScopingSemanticStructure):
     """
     Dependency Minimal Recursion Semantics (DMRS) class.
 
@@ -176,8 +173,7 @@ class DMRS(LnkMixin):
     >>> d = DMRS(top=10000, index=10000, [rain], [arg1_link])
     """
 
-    __slots__ = ('top', 'index', 'nodes', 'links',
-                 'lnk', 'surface', 'identifier')
+    __slots__ = ('nodes', 'links')
 
     def __init__(self,
                  top: int = None,
@@ -188,17 +184,11 @@ class DMRS(LnkMixin):
                  surface=None,
                  identifier=None):
         top, links = _normalize_top_and_links(top, links)
-        self.top = top
-        self.index = index
+        super().__init__(top, index, lnk, surface, identifier)
         if nodes is None:
             nodes = []
         self.nodes = nodes
         self.links = links
-        if lnk is None:
-            lnk = Lnk.default()
-        self.lnk = lnk
-        self.surface = surface
-        self.identifier = identifier
 
     def __eq__(self, other):
         if not isinstance(other, DMRS):
