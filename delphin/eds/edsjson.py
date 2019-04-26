@@ -6,7 +6,7 @@ EDS-JSON serialization and deserialization.
 import json
 
 from delphin.lnk import Lnk
-from delphin.eds import EDS, Node, Edge
+from delphin.eds import EDS, Node
 
 
 def load(source):
@@ -129,8 +129,7 @@ def to_dict(eds, properties=True):
     for node in eds.nodes:
         nd = {
             'label': node.predicate,
-            'edges': {edge.role: edge.end
-                      for edge in _edges_from(eds, node.id)}
+            'edges': node.edges
         }
         if node.lnk is not None:
             nd['lnk'] = {'from': node.cfrom, 'to': node.cto}
@@ -162,14 +161,9 @@ def from_dict(d):
             Node(id=nodeid,
                  predicate=node['label'],
                  type=nodetype,
+                 edges=node.get('edges', {}),
                  properties=props,
                  carg=node.get('carg'),
                  lnk=lnk))
-        edges.extend(Edge(nodeid, end, role)
-                     for role, end in node.get('edges', {}).items())
     nodes.sort(key=lambda n: (n.cfrom, -n.cto))
-    return EDS(top, nodes=nodes, edges=edges)
-
-
-def _edges_from(e, nid):
-    return [edge for edge in e.edges if edge.start == nid]
+    return EDS(top, nodes=nodes)

@@ -2,7 +2,8 @@
 from typing import Iterable
 
 from delphin.lnk import Lnk
-from delphin.sembase import Predication, ScopingSemanticStructure
+from delphin.sembase import Predication
+from delphin.scope import ScopingSemanticStructure
 
 TOP_NODE_ID      = 0
 FIRST_NODE_ID    = 10000
@@ -173,7 +174,7 @@ class DMRS(ScopingSemanticStructure):
     >>> d = DMRS(top=10000, index=10000, [rain], [arg1_link])
     """
 
-    __slots__ = ('nodes', 'links')
+    __slots__ = ('links')
 
     def __init__(self,
                  top: int = None,
@@ -183,12 +184,17 @@ class DMRS(ScopingSemanticStructure):
                  lnk: Lnk = None,
                  surface=None,
                  identifier=None):
+
         top, links = _normalize_top_and_links(top, links)
-        super().__init__(top, index, lnk, surface, identifier)
-        if nodes is None:
-            nodes = []
-        self.nodes = nodes
+
+        super().__init__(top, index, nodes, lnk, surface, identifier)
+
         self.links = links
+
+    @property
+    def nodes(self):
+        """Alias of :attr:`predications`."""
+        return self.predications
 
     def __eq__(self, other):
         if not isinstance(other, DMRS):
@@ -198,17 +204,25 @@ class DMRS(ScopingSemanticStructure):
                 and self.nodes == other.nodes
                 and self.links == other.links)
 
-    def __ne__(self, other):
-        if not isinstance(other, DMRS):
-            return NotImplemented
-        return not (self == other)
+    ## SemanticStructure methods
 
-    def is_quantifier(self, node_id):
+    def arguments(self, types=None):
+        pass
+
+    def properties(self, id):
+        return self[id].properties
+
+    def is_quantifier(self, id):
         """
-        Return `True` if *node_id* is the id of a quantifier node.
+        Return `True` if *id* is the id of a quantifier node.
         """
         return any(link.role == RESTRICTION_ROLE
-                   for link in self.links if link.start == node_id)
+                   for link in self.links if link.start == id)
+
+    ## ScopingSemanticStructure methods
+
+    def scopes(self):
+        pass
 
 
 def _normalize_top_and_links(top, links):

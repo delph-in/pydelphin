@@ -7,13 +7,15 @@ delphin.scope
    Classes
    -------
 
-   .. autoclass:: ScopeTree
+   .. autoclass:: ScopingSemanticStructure
+      :show-inheritance:
       :members:
 
    Module Functions
    ----------------
 
    .. autofunction:: conjoin
+   .. autofunction:: representatives
 
    Exceptions
    ----------

@@ -8,24 +8,24 @@ from delphin.dmrs import DMRS, Node, Link, simpledmrs
 @pytest.fixture
 def it_rains_heavily_dmrs():
     d = DMRS(
-        '20', '10',
-        nodes=[Node('10', '_rain_v_1', type='e', properties={'TENSE': 'past'}),
-               Node('20', '_heavy_a_1', type='e')],
-        links=[Link('20', '10', 'ARG1', 'EQ')])
+        20, 10,
+        nodes=[Node(10, '_rain_v_1', type='e', properties={'TENSE': 'past'}),
+               Node(20, '_heavy_a_1', type='e')],
+        links=[Link(20, 10, 'ARG1', 'EQ')])
     return d
 
 
 @pytest.fixture
 def abrams_barked_dmrs():
     d = DMRS(
-        '30', '30',
-        nodes=[Node('10', 'udef_q'),
-               Node('20', 'named', type='x',
+        30, 30,
+        nodes=[Node(10, 'udef_q'),
+               Node(20, 'named', type='x',
                     carg='Abrams', lnk=Lnk.charspan(0,6)),
-               Node('30', '_bark_v_1', type='e', properties={'TENSE': 'past'},
+               Node(30, '_bark_v_1', type='e', properties={'TENSE': 'past'},
                     lnk=Lnk.charspan(7,13))],
-        links=[Link('10', '20', 'RSTR', 'H'),
-               Link('30', '20', 'ARG1', 'NEQ')],
+        links=[Link(10, 20, 'RSTR', 'H'),
+               Link(30, 20, 'ARG1', 'NEQ')],
         lnk=Lnk.charspan(0,14),
         surface='Abrams barked.',
         identifier='1000380')

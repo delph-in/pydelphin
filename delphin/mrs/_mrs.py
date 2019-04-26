@@ -1,12 +1,14 @@
 
 from typing import Iterable, Mapping
+from operator import itemgetter
 
 from delphin.lnk import Lnk, LnkMixin
-from delphin.sembase import Predication, ScopingSemanticStructure
-from delphin import (
-    variable,
-    scope
+from delphin import variable
+from delphin.sembase import (
+    Predication,
+    Constraint
 )
+from delphin.scope import ScopingSemanticStructure
 
 
 INTRINSIC_ROLE   = 'ARG0'
@@ -119,7 +121,7 @@ class EP(Predication):
         return RESTRICTION_ROLE in self.args
 
 
-class HCons(object):
+class HCons(Constraint):
     """
     A relation between two handles.
 
@@ -128,44 +130,27 @@ class HCons(object):
         relation: the relation of the constraint (nearly always
             `"qeq"`, but `"lheq"` and `"outscopes"` are also valid)
         lo: the lower-scoped handle
-    Attributes:
-        hi: the higher-scoped handle
-        relation: the relation of the constraint
-        lo: the lower-scoped handle
     """
 
-    __slots__ = ('hi', 'relation', 'lo')
+    __slots__ = ()
 
     QEQ = 'qeq'  # Equality modulo Quantifiers
     LHEQ = 'lheq'  # Label-Handle Equality
     OUTSCOPES = 'outscopes'  # Outscopes
 
-    def __init__(self, hi: str, relation: str, lo: str):
-        self.hi = hi
-        self.relation = relation
-        self.lo = lo
+    def __new__(cls, hi: str, relation: str, lo: str):
+        return super().__new__(cls, hi, relation, lo)
 
-    def __eq__(self, other):
-        return (self.hi == other.hi
-                and self.relation == other.relation
-                and self.lo == other.lo)
-
-    def __ne__(self, other):
-        if not isinstance(other, HCons):
-            return NotImplemented
-        return not (self == other)
-
-    def __repr__(self):
-        return '<HCons object ({} {} {}) at {}>'.format(
-               str(self.hi), self.relation, str(self.lo), id(self)
-        )
+    hi       = property(itemgetter(0), doc='the higher-scoped handle')
+    relation = property(itemgetter(1), doc='the constraint relation')
+    lo       = property(itemgetter(2), doc='the lower-scoped handle')
 
     @classmethod
     def qeq(cls, hi, lo):
         return cls(hi, HCons.QEQ, lo)
 
 
-class ICons(object):
+class ICons(Constraint):
     """
     Individual Constraint: A relation between two variables.
 
@@ -173,33 +158,19 @@ class ICons(object):
         left: intrinsic variable of the constraining EP
         relation: relation of the constraint
         right: intrinsic variable of the constrained EP
-    Attributes:
-        left: intrinsic variable of the constraining EP
-        relation: relation of the constraint
-        right: intrinsic variable of the constrained EP
     """
 
-    __slots__ = ('left', 'relation', 'right')
+    __slots__ = ()
 
-    def __init__(self, left, relation, right):
-        self.left = left
-        self.relation = relation
-        self.right = right
+    def __new__(cls, left: str, relation: str, right: str):
+        return super().__new__(cls, left, relation, right)
 
-    def __eq__(self, other):
-        return (self.left == other.left
-                and self.relation == other.relation
-                and self.right == other.right)
-
-    def __ne__(self, other):
-        if not isinstance(other, ICons):
-            return NotImplemented
-        return not (self == other)
-
-    def __repr__(self):
-        return '<ICons object ({} {} {}) at {}>'.format(
-               str(self.left), self.relation, str(self.right), id(self)
-        )
+    left     = property(itemgetter(0),
+                        doc='the intrinsic variable of the constraining EP')
+    relation = property(itemgetter(1),
+                        doc='the constraint relation')
+    right    = property(itemgetter(2),
+                        doc='the intrinsic variable of the constrained EP')
 
 
 # class MRSFragment(object):
@@ -223,7 +194,7 @@ class MRS(ScopingSemanticStructure):
         identifier: a discourse-utterance identifier
     """
 
-    __slots__ = ('rels', 'hcons', 'icons', 'variables')
+    __slots__ = ('hcons', 'icons', 'variables')
 
     def __init__(self,
                  top: str,
@@ -236,10 +207,8 @@ class MRS(ScopingSemanticStructure):
                  surface=None,
                  identifier=None):
 
-        super().__init__(self, top, index, lnk, surface, identifier)
+        super().__init__(top, index, rels, lnk, surface, identifier)
 
-        if rels is None:
-            rels = []
         if hcons is None:
             hcons = []
         if icons is None:
@@ -247,17 +216,15 @@ class MRS(ScopingSemanticStructure):
         if variables is None:
             variables = {}
 
-        self.rels = rels
         self.hcons = hcons
         self.icons = icons
         self.variables = _fill_variables(
             variables, top, index, rels, hcons, icons)
 
-        # # indices for faster lookup
-        # self._epidx = {ep.intrinsic_variable: ep for ep in rels
-        #                if ep.intrinsic_variable is not None}
-        # self._hcidx = {hc.hi: hc for hc in hcons}
-        # self._icidx = {ic.left: ic for ic in icons}
+    @property
+    def rels(self):
+        """Alias for :attr:`predications`."""
+        return self.predications
 
     def __eq__(self, other):
         if not isinstance(other, MRS):
@@ -269,10 +236,52 @@ class MRS(ScopingSemanticStructure):
                 and self.icons == other.icons
                 and self.variables == other.variables)
 
-    def __ne__(self, other):
-        if not isinstance(other, MRS):
-            return NotImplemented
-        return not (self == other)
+    ## SemanticStructure methods
+
+    def arguments(self, types=None):
+        args = {}
+        for ep in self.rels:
+            id = ep.id
+            for role, value in ep.args.items():
+                if role not in (INTRINSIC_ROLE, CONSTANT_ROLE):
+                    if types is None or variable.type(value) in types:
+                        args.setdefault(id, {})[role] = value
+        return args
+
+    def properties(self, var):
+        """Return the properties associated with variable *var*."""
+        return self.variables[var]
+
+    def is_quantifier(self, id):
+        """Return `True` if *var* is the bound variable of a quantifier."""
+        return ...
+
+    ## ScopingSemanticStructure methods
+
+    def scopal_arguments(self, qeq=None):
+        scargs = {}
+        if qeq:
+            hcmap = {hc.hi: hc.lo for hc in self.hcons}
+        else:
+            hcmap = {}
+        for ep in self.rels:
+            for arg in ep.outgoing_args('h').values():
+                if arg in hcmap:
+                    pass
+
+    def non_scopal_arguments(self):
+        ivs = {ep.iv for ep in self.rels if not ep.is_quantifier()}
+        nsargs = {}
+        for src, role, tgt in self.arguments().items():
+            if tgt in ivs:
+                nsargs.setdefault(src, {})[role] = tgt
+
+    def scopes(self):
+        """Return a mapping of scope labels to EPs sharing that scope."""
+        scopes = {}
+        for ep in self.rels:
+            scopes.setdefault(ep.label, []).append(ep.id)
+        return scopes
 
     def scopetree(self):
         """
@@ -298,17 +307,6 @@ class MRS(ScopingSemanticStructure):
                     qeqs.append((ep.label, hc.lo))
         assert len(self.hcons) == len(qeqs)  # are all accounted for?
         return scope.ScopeTree(self.top, scopes, heqs, qeqs)
-
-    def scopes(self):
-        """Return a mapping of scope labels to EPs sharing that scope."""
-        scopes = {}
-        for ep in self.rels:
-            scopes.setdefault(ep.label, []).append(ep)
-        return scopes
-
-    def properties(self, var):
-        """Return the properties associated with variable *var*."""
-        return self.variables[var]
 
 
 ### Helper functions

@@ -6,7 +6,7 @@ Serialization functions for the "native" EDS format.
 from delphin import variable
 from delphin.lnk import Lnk
 from delphin.sembase import (role_priority, property_priority)
-from delphin.eds import (EDS, Node, Edge, EDSSyntaxError)
+from delphin.eds import (EDS, Node, EDSSyntaxError)
 from delphin.util import (_bfs, Lexer)
 
 
@@ -170,15 +170,20 @@ def _decode_eds(lexer):
         lexer.accept_type(NODESTATUS)
         start, _ = lexer.expect_type(SYMBOL, COLON)
         nodes.append(_decode_node(start, lexer))
-        edges.extend(_decode_edges(start, lexer))
     lexer.expect_type(RBRACE)
-    return EDS(top=top, nodes=nodes, edges=edges)
+    return EDS(top=top, nodes=nodes)
 
 
 def _decode_node(start, lexer):
     predicate = lexer.expect_type(SYMBOL).lower()
     lnk = Lnk(lexer.accept_type(LNK))
     carg = lexer.accept_type(CARG)
+    nodetype, properties = _decode_properties(start, lexer)
+    edges = _decode_edges(start, lexer)
+    return Node(start, predicate, nodetype, edges, properties, carg, lnk)
+
+
+def _decode_properties(start, lexer):
     nodetype = None
     properties = {}
     if lexer.accept_type(LBRACE):
@@ -190,16 +195,16 @@ def _decode_node(start, lexer):
                 if not lexer.accept_type(COMMA):
                     break
         lexer.expect_type(RBRACE)
-    return Node(start, predicate, nodetype, properties, carg, lnk)
+    return nodetype, properties
 
 
 def _decode_edges(start, lexer):
-    edges = []
+    edges = {}
     lexer.expect_type(LBRACKET)
     if lexer.peek()[0] != RBRACKET:
         while True:
             role, end = lexer.expect_type(SYMBOL, SYMBOL)
-            edges.append(Edge(start, end, role.upper()))
+            edges[role.upper()] = end
             if not lexer.accept_type(COMMA):
                 break
     lexer.expect_type(RBRACKET)
@@ -222,9 +227,9 @@ def _encode_eds(e, properties, show_status, indent):
     # determine if graph is connected
     g = {node.id: set() for node in e.nodes}
     for node in e.nodes:
-        for edge in _edges_from(e, node.id):
-            g[node.id].add(edge.end)
-            g[edge.end].add(node.id)
+        for target in node.edges.values():
+            g[node.id].add(target)
+            g[target].add(node.id)
     nidgrp = _bfs(g, start=e.top)
 
     status = ''
@@ -237,8 +242,7 @@ def _encode_eds(e, properties, show_status, indent):
     ed_list = []
     for node in e.nodes:
         membership = connected if node.id in nidgrp else disconnected
-        edges = _edges_from(e, node.id)
-        ed_list.append(membership + _encode_node(node, edges, properties))
+        ed_list.append(membership + _encode_node(node, properties))
 
     return '{{{top}{status}{delim}{ed_list}{enddelim}}}'.format(
         top=e.top + ':' if e.top is not None else ':',
@@ -248,12 +252,15 @@ def _encode_eds(e, properties, show_status, indent):
         enddelim='\n' if indent else ''
     )
 
-def _encode_node(node, edges, properties):
+def _encode_node(node, properties):
     parts = [node.id, ':', node.predicate]
+
     if node.lnk:
         parts.append(str(node.lnk))
+
     if node.carg is not None:
         parts.append('("{}")'.format(node.carg))
+
     if properties and (node.properties or node.type):
         parts.append('{')
         parts.append(node.type or variable.UNKNOWN)
@@ -263,14 +270,13 @@ def _encode_node(node, edges, properties):
                                            key=property_priority)]
             parts.append(' ' + ', '.join(proplist))
         parts.append('}')
+
     parts.append('[')
     edgelist = []
-    for edge in sorted(edges, key=lambda edge: role_priority(edge.role)):
-        edgelist.append('{} {}'.format(edge.role, edge.end))
+    edges = node.edges
+    for role in sorted(edges, key=role_priority):
+        edgelist.append('{} {}'.format(role, edges[role]))
     parts.append(', '.join(edgelist))
     parts.append(']')
+
     return ''.join(parts)
-
-
-def _edges_from(e, nid):
-    return [edge for edge in e.edges if edge.start == nid]

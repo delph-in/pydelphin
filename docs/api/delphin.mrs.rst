@@ -30,15 +30,19 @@ delphin.mrs
    -------
 
    .. autoclass:: MRS
+      :show-inheritance:
       :members:
 
    .. autoclass:: EP
+      :show-inheritance:
       :members:
 
    .. autoclass:: HCons
+      :show-inheritance:
       :members:
 
    .. autoclass:: ICons
+      :show-inheritance:
       :members:
 
    Exceptions

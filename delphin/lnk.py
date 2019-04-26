@@ -226,7 +226,7 @@ class LnkMixin(object):
 
     __slots__ = ('lnk', 'surface')
 
-    def __init__(self, lnk, surface):
+    def __init__(self, lnk=None, surface=None):
         if lnk is None:
             lnk = Lnk.default()
         self.lnk = lnk

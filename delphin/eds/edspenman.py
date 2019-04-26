@@ -7,7 +7,7 @@ import penman
 
 from delphin.lnk import Lnk
 from delphin.sembase import (role_priority, property_priority)
-from delphin.eds import (EDS, Node, Edge)
+from delphin.eds import (EDS, Node)
 
 
 def load(source):
@@ -129,9 +129,8 @@ def to_triples(e, properties=True):
         if properties:
             for prop in sorted(node.properties, key=property_priority):
                 triples.append((nid, prop.lower(), node.properties[prop]))
-        edges = sorted(_edges_from(e, nid), key=lambda x: role_priority(x.role))
-        for edge in edges:
-            triples.append((nid, edge.role, edge.end))
+        for role in sorted(node.edges, key=role_priority):
+            triples.append((nid, role, node.edges[role]))
     return triples
 
 
@@ -143,8 +142,8 @@ def from_triples(triples):
     for src, rel, tgt in triples:
         if src not in nd:
             nids.append(src)
-            nd[src] = {'pred': None, 'type': None, 'props': {},
-                       'lnk': None, 'carg': None}
+            nd[src] = {'pred': None, 'type': None, 'edges': {},
+                       'props': {}, 'lnk': None, 'carg': None}
         if rel == 'predicate':
             nd[src]['pred'] = tgt
         elif rel == 'lnk':
@@ -158,17 +157,14 @@ def from_triples(triples):
         elif rel.islower():
             nd[src]['props'][rel.upper()] = tgt
         else:
-            edges.append(Edge(src, tgt, rel))
+            nd[src]['edges'][rel] = tgt
     nodes = [Node(nid,
                   nd[nid]['pred'],
                   type=nd[nid]['type'],
+                  edges=nd[nid]['edges'],
                   properties=nd[nid]['props'],
                   carg=nd[nid]['carg'],
                   lnk=nd[nid]['lnk'])
              for nid in nids]
     top = nids[0] if nids else None
-    return EDS(top=top, nodes=nodes, edges=edges)
-
-
-def _edges_from(e, nid):
-    return [edge for edge in e.edges if edge.start == nid]
+    return EDS(top=top, nodes=nodes)

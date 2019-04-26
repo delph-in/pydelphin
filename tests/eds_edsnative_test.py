@@ -4,7 +4,6 @@ import pytest
 from delphin.eds import (
     EDS,
     Node,
-    Edge,
     edsnative)
 
 
@@ -12,11 +11,10 @@ from delphin.eds import (
 def dogs_bark_from_mrs():
     return {
         'top': 'e2',
-        'nodes': [Node('e2', '_bark_v_1', type='e'),
-                  Node('_1', 'udef_q'),
-                  Node('x4', '_dog_n_1', type='x')],
-        'edges': [Edge('e2', 'x4', 'ARG1'),
-                  Edge('_1', 'x4', 'BV')]}
+        'nodes': [Node('e2', '_bark_v_1', type='e', edges={'ARG1': 'x4'}),
+                  Node('_1', 'udef_q', edges={'BV': 'x4'}),
+                  Node('x4', '_dog_n_1', type='x')]
+        }
 
 
 def test_decode():

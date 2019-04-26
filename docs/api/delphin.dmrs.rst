@@ -50,18 +50,22 @@ delphin.dmrs
    -------
 
    .. autoclass:: DMRS
+      :show-inheritance:
       :members:
 
    .. autoclass:: Node
+      :show-inheritance:
       :members:
 
    .. autoclass:: Link
+      :show-inheritance:
       :members:
 
    Exceptions
    ----------
 
    .. autoexception:: DMRSSyntaxError
+      :show-inheritance:
 
    Serialization Formats
    ---------------------

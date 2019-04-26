@@ -21,18 +21,18 @@ delphin.eds
    -------
 
    .. autoclass:: EDS
+      :show-inheritance:
       :members:
 
    .. autoclass:: Node
-      :members:
-
-   .. autoclass:: Edge
+      :show-inheritance:
       :members:
 
    Exceptions
    ----------
 
    .. autoexception:: EDSSyntaxError
+      :show-inheritance:
 
    Serialization Formats
    ---------------------
