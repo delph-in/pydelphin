@@ -57,14 +57,3 @@ delphin.mrs
       delphin.mrs.mrsprolog.rst
       delphin.mrs.mrx.rst
       delphin.mrs.simplemrs.rst
-
-   Additional Functionality
-   ------------------------
-
-   .. toctree::
-      :maxdepth: 1
-
-      delphin.mrs.compare.rst
-      delphin.mrs.components.rst
-      delphin.mrs.query.rst
-      delphin.mrs.xmrs.rst
