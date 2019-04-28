@@ -59,8 +59,10 @@ if a character span is not specified for the entity).
 
 from delphin.exceptions import PyDelphinException
 
+
 class LnkError(PyDelphinException):
     """Raised on invalid Lnk values or operations."""
+
 
 class Lnk(object):
     """
@@ -114,7 +116,7 @@ class Lnk(object):
     EDGE = 3  # An edge identifier: a number
 
     def __init__(self, arg, data=None):
-        if arg is None:
+        if not arg:
             self.type = Lnk.UNSPECIFIED
             self.data = None
         elif data is None and (arg[:1], arg[-1:]) == ('<', '>'):

@@ -127,9 +127,10 @@ class EDS(SemanticStructure):
         else:
             ntypes = {}
         for node in self.nodes:
+            args[node.id] = {}
             for role, target in node.edges.items():
                 if types is None or ntypes.get(target) in types:
-                    args.setdefault(node.id, {})[role] = target
+                    args[node.id][role] = target
         return args
 
     def properties(self, id):

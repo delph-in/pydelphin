@@ -33,191 +33,27 @@ from delphin.exceptions import PyDelphinException
 from delphin.util import _connected_components
 
 
-### Types
+# Constants
 
-ScopeMap = Mapping[Identifier, Iterable[Identifier]]  # e.g., {'h1': ['e2', 'e6']}
-ScopeConstraints = Iterable[Tuple[Identifier, str, Identifier]]
+LHEQ = 'lheq'            # label-handle equality
+OUTSCOPES = 'outscopes'  # directly or indirectly takes scope over
+QEQ = 'qeq'              # equality modulo quantifiers
 
-### Exceptions
+
+# Types
+
+ScopeMap = Mapping[Identifier, Predications]
+ScopeEqualities = Iterable[Tuple[str, str]]
+ScopeConstraints = Iterable[Tuple[str, str, str]]
+
+
+# Exceptions
 
 class ScopeError(PyDelphinException):
     """Raised on invalid scope operations."""
 
 
-### Module Functions
-
-def tree_fragments():
-    pass
-
-def partial_ordering():
-    pass
-
-    # class ScopeTree(object):
-    # """
-    # An underspecified scope tree.
-
-    # Args:
-    #     top: the top scope handle
-    #     scopes: mapping of scope labels to ids of scoped predications
-    #     heqs: list of (hi, lo) pairs of *immediate-outscopes* constraints
-    #     qeqs: list of (hi, lo) pairs of *qeq* constraints
-    # Example:
-    #     >>> stree = ScopeTree('h0', {'h1': [1, 2], 'h2': [3]},
-    #     ...                   [('h1', 'h2')], [('h0', 'h1')])
-    # """
-
-    # __slots__ = ('top', 'tree', 'qeqs', '_nodecache', '_dcache')
-
-    # def __init__(self, x):
-    #     self.top = x.top
-    #     scopes = x.scopes()
-    #     heqs = x.scopal_arguments(qeq=False)
-    #     qeqs = x.scopal_arguments(qeq=True)
-
-    # def __init__(self, top, scopes, heqs=None, qeqs=None):
-    #     self.top = top
-    #     self.tree = {label: set() for label in scopes}
-    #     self._nodecache = {label: set(ids) for label, ids in scopes.items()}
-    #     self.qeqs = {}
-    #     self._dcache = {}  # descendant cache
-
-    #     if heqs:
-    #         for hi, lo in heqs:
-    #             if hi == lo:
-    #                 raise ScopeError('scopes cannot outscope themselves')
-    #             self.tree[hi].add(lo)
-
-    #     if qeqs:
-    #         for hi, lo in qeqs:
-    #             self.qeqs.setdefault(hi, set()).add(lo)
-
-    # def descendants(self, label, with_qeqs=True):
-    #     """
-    #     Return the set of nodes that scope lower than *label*.
-
-    #     Args:
-    #         label: the top label from which to gather descendants
-    #         with_qeqs: if `True`, include descendants linked by qeq
-    #     Returns:
-    #         set: the set of descendants of *label*
-    #     Example:
-    #         >>> st = ScopeTree('h0', ['h1', 'h2', 'h3'],
-    #         ...                heqs=[('h1', 'h2')], qeqs=[('h0', 'h1')])
-    #         >>> st.descendants('h0')
-    #         {'h1', 'h2'}
-    #     """
-    #     if label != self.top and label not in self.tree:
-    #         raise ScopeError('invalid scope label: {}'.format(label))
-    #     if label not in self._dcache:
-    #         self._cache_descendants(label, with_qeqs, set())
-    #     return self._dcache[label]
-
-    # def _cache_descendants(self, label, with_qeqs, seen):
-    #     if label in seen:
-    #         raise ScopeError('cycle in scope tree involves: {}'
-    #                          .format(', '.join(map(str, seen))))
-    #     seen.add(label)
-
-    #     children = self.tree.get(label, set())
-    #     if with_qeqs:
-    #         children.update(self.qeqs.get(label, []))
-
-    #     descendants = set(children)
-    #     for child in children:
-    #         if child not in self._dcache:
-    #             self._cache_descendants(child, with_qeqs, seen)
-    #         descendants.update(self._dcache[child])
-
-    #     self._dcache[label] = descendants
-
-    # def outscopes(self, a, b):
-    #     """
-    #     Return `True` if *a* outscopes *b*.
-
-    #     Example
-    #         >>> st = ScopeTree('h0', ['h1', 'h2', 'h3'],
-    #         ...                heqs=[('h1', 'h2')], qeqs=[('h0', 'h1')])
-    #         >>> st.outscopes('h0', 'h2')
-    #         True
-    #         >>> st.outscopes('h2', 'h0')
-    #         False
-    #         >>> st.outscopes('h0', 'h3')
-    #         False
-    #     """
-    #     return b in self.descendants(a)
-
-    # def configurations(self):
-    #     pass
-
-
-def conjoin(labels: ScopeMap, eq_constraints: ScopeConstraints) -> ScopeMap:
-    """
-    Conjoin multiple scopes with equality constraints.
-
-    Args:
-        labels: an iterable of scope labels
-        eq_constraints: a list of pairs of equated scope labels
-    Returns:
-        A mapping of the new merged scope labels to the set of old
-        scope labels. Each new scope label is taken arbitrarily from
-        its set of old labels.
-    Example:
-        >>> scope.conjoin(['h1', 'h2', 'h3'], [('h2', 'h3')])
-        {'h1': {'h1'}, 'h2': {'h2', 'h3'}}
-    """
-    scopemap = {}
-    for component in _connected_components(labels, eq_constraints):
-        rep = next(iter(component))
-        scopemap[rep] = component
-    return scopemap
-
-
-def representatives(self, nsargs: ArgumentStructure):
-    """
-    Find the scope representatives
-
-    Args:
-        nsargs: a mapping of non-scopal arguments from the source
-            identifier (node id or intrinsic variable) to the
-            target identifier (roles are not included)
-    Example:
-        >>> sent = 'The new chef whose soup accidentally spilled quit.'
-        >>> m = ace.parse(grm, sent).result(0).mrs()
-        >>> # in this example there are 4 EPs in scope h7
-        >>> print('  '.join('{0.iv}:{0.predicate}'.format(ep)
-        ...                 for ep in m.scopes()['h7']))
-        e8:_new_a_1  x3:_chef_n_1  e15:_accidental_a_1  e16:_spill_v_1
-        >>> stree = m.scopetree()
-        >>> nsargs = {ep.iv: set(ep.outgoing_args('exi').values())
-        ...           for ep in m.rels}
-        >>> # there are 2 candidate representatives for scope h7
-        >>> print(stree.representatives(nsargs)['h7'])
-        ['e16', 'x3']
-    """
-    reps = {}
-    for label in self.tree:
-        ids = self._nodecache[label]
-        scoped_ids = set(ids)
-        for desc_label in self.descendants(label):
-            scoped_ids.update(self._nodecache[desc_label])
-        nested_scopes = {id: scoped_ids.intersection(nsargs.get(id))
-                         for id in ids}
-        def rep_test(id):
-            return len(scoped_ids.intersection(nsargs.get(id))) == 0
-
-        candidates = list(filter(rep_test, ids))
-        reps[label] = candidates
-    return reps
-
-
-def link_subsumes(m1, m2):
-    """Link-subsumes from Copestake et al. 2014.
-    MRS m1 subsumes m2 if m1 is a scope-underspecified form of m2.
-    That is, m2 is equivalent to m1 except it has additional label equalities."""
-    pass
-
-
-### Classes
+# Classes
 
 class ScopingSemanticStructure(SemanticStructure):
     """
@@ -246,19 +82,26 @@ class ScopingSemanticStructure(SemanticStructure):
         super().__init__(top, predications, lnk, surface, identifier)
         self.index = index
 
-    def scopal_arguments(self, qeq: bool = None) -> ArgumentStructure:
+    def arguments(self, types=None, scopal: bool = None) -> ArgumentStructure:
         """
-        Return scopal arguments in the structure.
+        Return a mapping of the argument structure.
 
-        Scopal arguments are those whose value is a range of nodes.
+        Args:
+            types: a container of predication or variable types that
+                may be targets
+            scopal: if `True`, only include scopal arguments; if
+                `False`, only include non-scopal arguments; if
+                unspecified or `None`, include both
         """
         raise NotImplementedError()
 
-    def non_scopal_arguments(self) -> ArgumentStructure:
+    def scope_constraints(self) -> ScopeConstraints:
         """
-        Return non-scopal arguments in the structure.
+        Return a list of expanded scope constraints.
 
-        Non-scopal arguments are those whose value is a single node.
+        This list goes beyond the usual qeq constraints and includes
+        immediate-outscopes and general outscopes constraints encoded
+        in the arguments of predications.
         """
         raise NotImplementedError()
 
@@ -267,3 +110,99 @@ class ScopingSemanticStructure(SemanticStructure):
         Return a mapping of scope labels to nodes sharing the scope.
         """
         raise NotImplementedError()
+
+
+# Module Functions
+
+def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
+    """
+    Conjoin multiple scopes with equality constraints.
+
+    Args:
+        scopes: a mapping of scope labels to predications
+        leqs: a list of pairs of equated scope labels
+    Returns:
+        A mapping of the labels to the predications of each conjoined
+        scope. The conjoined scope labels are taken arbitrarily from
+        each equated set).
+    Example:
+        >>> conjoined = scope.conjoin(mrs.scopes(), [('h2', 'h3')])
+        >>> {lbl: [p.id for p in ps] for lbl, ps in conjoined.items()}
+        {'h1': ['e2'], 'h2': ['x4', 'e6']}
+    """
+    scopemap = {}
+    for component in _connected_components(list(scopes), leqs):
+        rep = next(iter(component))
+        scopemap[rep] = []
+        for label in component:
+            scopemap[rep].extend(scopes[label])
+    return scopemap
+
+
+def domains(x: ScopingSemanticStructure) -> ScopeMap:
+    """
+    Return a mapping of scope labels to their domains.
+
+    The domain of a scope is the set of predications in the immediate
+    scope plus those in lower scopes as determined by the
+    predications' scopal arguments.
+
+    Args:
+        scopes: a mapping of scope labels to predications
+        constraints: a list of (handle, relation, label) scope
+            constraint triples
+    Returns:
+        A mapping of scope labels to their domains.
+    """
+    scopemap = {}
+    consmap = {}
+    for src, rel, tgt in constraints:
+        if rel != OUTSCOPES:
+            consmap.setdefault(src, []).append(tgt)
+    for label in scopes:
+        _update_domain(scopemap, label, scopes, consmap)
+    return scopemap
+
+
+def _update_domain(scopemap, label, scopes, consmap):
+    if label not in scopemap:
+        entities = scopes.get(label, [])
+        for label2 in consmap.get(label, []):
+            entities.extend(_update_domain(scopemap, label2, scopes, consmap))
+        scopemap[label] = entities
+    return scopemap[label]
+
+
+def representatives(x: ScopingSemanticStructure) -> ScopeMap:
+    """
+    Find the scope representatives
+
+    Args:
+        x: an MRS or a DMRS
+    Example:
+        >>> sent = 'The new chef whose soup accidentally spilled quit.'
+        >>> m = ace.parse(erg, sent).result(0).mrs()
+        >>> # in this example there are 4 EPs in scope h7
+        >>> print('  '.join('{0.iv}:{0.predicate}'.format(ep)
+        ...                 for ep in m.scopes()['h7']))
+        e8:_new_a_1  x3:_chef_n_1  e15:_accidental_a_1  e16:_spill_v_1
+        >>> reps = scope.representatives(m)
+        >>> # there are 2 candidate representatives for scope h7
+        >>> print([ep.iv for ep in reps['h7']])
+        ['x3', 'e16']
+    """
+    fullscopes = domains(x)
+    reps = {}
+    for label,  in fullscopes:
+        ids = self._nodecache[label]
+        scoped_ids = set(ids)
+        for desc_label in self.descendants(label):
+            scoped_ids.update(self._nodecache[desc_label])
+        nested_scopes = {id: scoped_ids.intersection(nsargs.get(id))
+                         for id in ids}
+        def rep_test(id):
+            return len(scoped_ids.intersection(nsargs.get(id))) == 0
+
+        candidates = list(filter(rep_test, ids))
+        reps[label] = candidates
+    return reps

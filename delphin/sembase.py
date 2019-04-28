@@ -87,6 +87,14 @@ class Predication(LnkMixin):
         self.predicate = predicate
         self.base = base
 
+    def __repr__(self):
+        return '<{} object ({}:{}{}) at {}>'.format(
+            self.__class__.__name__,
+            self.id,
+            self.predicate,
+            str(self.lnk),
+            id(self))
+
     def __ne__(self, other):
         if not isinstance(other, self.__class__):
             return NotImplemented
@@ -142,8 +150,14 @@ class SemanticStructure(LnkMixin):
         if predications is None:
             predications = []
         self.predications = predications
-        self._pidx = {p.id for p in predications}
+        self._pidx = {p.id: p for p in predications}
         self.identifier = identifier
+
+    def __repr__(self):
+        return '<{} object ({}) at {}>'.format(
+            self.__class__.__name__,
+            ' '.join(p.predicate for p in self.predications),
+            id(self))
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):

@@ -8,7 +8,7 @@ from delphin.sembase import (
     Predication,
     Constraint
 )
-from delphin.scope import ScopingSemanticStructure
+from delphin import scope
 
 
 INTRINSIC_ROLE   = 'ARG0'
@@ -25,9 +25,9 @@ class EP(Predication):
 
     EPs combine a predicate with various structural semantic
     properties. They must have a `predicate`, and `label`.  Arguments
-    are optional. Intrinsic arguments (`ARG0`) are not required, but
-    they are important for many semantic operations, and therefore it
-    is a good idea to include them.
+    are optional. Intrinsic arguments (`ARG0`) are not strictly
+    required, but they are important for many semantic operations, and
+    therefore it is a good idea to include them.
 
     Args:
         predicate: semantic predicate
@@ -96,23 +96,13 @@ class EP(Predication):
 
     @property
     def iv(self):
-        """The intrinsic argument (likely `ARG0`)."""
+        """The intrinsic variable (namely, the value of `ARG0`)."""
         return self.args.get(INTRINSIC_ROLE, None)
 
     @property
     def carg(self):
-        """The constant argument (likely `CARG`)."""
+        """The constant argument (namely, the value of `CARG`)."""
         return self.args.get(CONSTANT_ROLE, None)
-
-    def outgoing_args(self, variable_types=('e', 'h', 'x')):
-        """A mapping of roles to outgoing arguments."""
-        args = {}
-        for role, arg in self.args.items():
-            if role in (INTRINSIC_ROLE, CONSTANT_ROLE):
-                continue
-            if variable.sort(arg) in variable_types:
-                args[role] = arg
-        return args
 
     def is_quantifier(self):
         """
@@ -134,20 +124,19 @@ class HCons(Constraint):
 
     __slots__ = ()
 
-    QEQ = 'qeq'  # Equality modulo Quantifiers
-    LHEQ = 'lheq'  # Label-Handle Equality
-    OUTSCOPES = 'outscopes'  # Outscopes
-
     def __new__(cls, hi: str, relation: str, lo: str):
         return super().__new__(cls, hi, relation, lo)
 
-    hi       = property(itemgetter(0), doc='the higher-scoped handle')
-    relation = property(itemgetter(1), doc='the constraint relation')
-    lo       = property(itemgetter(2), doc='the lower-scoped handle')
+    hi = property(
+        itemgetter(0), doc='the higher-scoped handle')
+    relation = property(
+        itemgetter(1), doc='the constraint relation')
+    lo = property(
+        itemgetter(2), doc='the lower-scoped handle')
 
     @classmethod
     def qeq(cls, hi, lo):
-        return cls(hi, HCons.QEQ, lo)
+        return cls(hi, scope.QEQ, lo)
 
 
 class ICons(Constraint):
@@ -165,12 +154,12 @@ class ICons(Constraint):
     def __new__(cls, left: str, relation: str, right: str):
         return super().__new__(cls, left, relation, right)
 
-    left     = property(itemgetter(0),
-                        doc='the intrinsic variable of the constraining EP')
-    relation = property(itemgetter(1),
-                        doc='the constraint relation')
-    right    = property(itemgetter(2),
-                        doc='the intrinsic variable of the constrained EP')
+    left = property(
+        itemgetter(0), doc='the intrinsic variable of the constraining EP')
+    relation = property(
+        itemgetter(1), doc='the constraint relation')
+    right = property(
+        itemgetter(2), doc='the intrinsic variable of the constrained EP')
 
 
 # class MRSFragment(object):
@@ -178,7 +167,7 @@ class ICons(Constraint):
 #         pass
 
 
-class MRS(ScopingSemanticStructure):
+class MRS(scope.ScopingSemanticStructure):
     """
     A semantic representation in Minimal Recursion Semantics.
 
@@ -242,10 +231,11 @@ class MRS(ScopingSemanticStructure):
         args = {}
         for ep in self.rels:
             id = ep.id
+            args[id] = {}
             for role, value in ep.args.items():
                 if role not in (INTRINSIC_ROLE, CONSTANT_ROLE):
                     if types is None or variable.type(value) in types:
-                        args.setdefault(id, {})[role] = value
+                        args[id][role] = value
         return args
 
     def properties(self, var):
@@ -254,27 +244,34 @@ class MRS(ScopingSemanticStructure):
 
     def is_quantifier(self, id):
         """Return `True` if *var* is the bound variable of a quantifier."""
-        return ...
+        return RESTRICTION_ROLE in self[id].args
 
-    ## ScopingSemanticStructure methods
+    # ScopingSemanticStructure methods
 
-    def scopal_arguments(self, qeq=None):
-        scargs = {}
-        if qeq:
-            hcmap = {hc.hi: hc.lo for hc in self.hcons}
-        else:
-            hcmap = {}
-        for ep in self.rels:
-            for arg in ep.outgoing_args('h').values():
-                if arg in hcmap:
-                    pass
+    def scope_constraints(self, scopes=None):
+        # ivs = {ep.iv for ep in self.rels}
+        hcmap = {hc.hi: hc for hc in self.hcons}
+        labels = {ep.label for ep in self.rels}
+        argstr = self.arguments(types='h')
+        cons = []
 
-    def non_scopal_arguments(self):
-        ivs = {ep.iv for ep in self.rels if not ep.is_quantifier()}
-        nsargs = {}
-        for src, role, tgt in self.arguments().items():
-            if tgt in ivs:
-                nsargs.setdefault(src, {})[role] = tgt
+        if self.top in hcmap:
+            hc = hcmap[self.top]
+            cons.append((self.top, hc.relation, hc.lo))
+
+        for id, scargs in argstr.items():
+            label = self[id].label
+            for role, value in scargs.items():
+                if value in hcmap:
+                    hc = hcmap[value]
+                    cons.append((label, hc.relation, hc.lo))
+                elif value in labels:
+                    cons.append((label, scope.LHEQ, value))
+                # elif value in ivs:
+                #     label2 = self[value].label
+                #     if label != label2:
+                #         cons.append((label2, scope.OUTSCOPES, label))
+        return cons
 
     def scopes(self):
         """Return a mapping of scope labels to EPs sharing that scope."""
@@ -282,31 +279,6 @@ class MRS(ScopingSemanticStructure):
         for ep in self.rels:
             scopes.setdefault(ep.label, []).append(ep.id)
         return scopes
-
-    def scopetree(self):
-        """
-        Return a mapping of quantifier scopes.
-
-        Returns:
-            delphin.scope.ScopeTree
-        """
-        scopes = {label: [ep.iv for ep in eps]
-                  for label, eps in self.scopes().items()}
-        _hcmap = {hc.hi: hc for hc in self.hcons}
-        qeqs = []
-        heqs = []
-        if self.top in _hcmap:
-            qeqs.append((self.top, _hcmap[self.top].lo))
-        for ep in self.rels:
-            for arg in ep.outgoing_args('h').values():
-                if arg in scopes:
-                    heqs.append(ep.label, arg)
-                elif arg in _hcmap:
-                    hc = _hcmap[arg]
-                    assert hc.relation == HCons.QEQ
-                    qeqs.append((ep.label, hc.lo))
-        assert len(self.hcons) == len(qeqs)  # are all accounted for?
-        return scope.ScopeTree(self.top, scopes, heqs, qeqs)
 
 
 ### Helper functions

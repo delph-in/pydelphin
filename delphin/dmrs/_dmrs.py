@@ -1,9 +1,10 @@
 
 from typing import Iterable
 
+from delphin import variable
 from delphin.lnk import Lnk
 from delphin.sembase import Predication
-from delphin.scope import ScopingSemanticStructure
+from delphin import scope
 
 TOP_NODE_ID      = 0
 FIRST_NODE_ID    = 10000
@@ -129,7 +130,7 @@ class Link(object):
         self.post = post
 
     def __repr__(self):
-        return '<Link object (#{} :{}/{} #{}) at {}>'.format(
+        return '<Link object ({} :{}/{} {}) at {}>'.format(
             self.start, self.role or '', self.post, self.end, id(self)
         )
 
@@ -147,7 +148,7 @@ class Link(object):
         return not self.__eq__(other)
 
 
-class DMRS(ScopingSemanticStructure):
+class DMRS(scope.ScopingSemanticStructure):
     """
     Dependency Minimal Recursion Semantics (DMRS) class.
 
@@ -204,10 +205,18 @@ class DMRS(ScopingSemanticStructure):
                 and self.nodes == other.nodes
                 and self.links == other.links)
 
-    ## SemanticStructure methods
+    # SemanticStructure methods
 
     def arguments(self, types=None):
-        pass
+        args = {node.id: {} for node in self.nodes}
+        if types is not None:
+            ntypes = {node.id: node.type for node in self.nodes}
+        else:
+            ntypes = {}
+        for link in self.links:
+            if types is None or ntypes.get(link.end) in types:
+                args[link.start][link.role] = link.end
+        return args
 
     def properties(self, id):
         return self[id].properties
@@ -219,13 +228,24 @@ class DMRS(ScopingSemanticStructure):
         return any(link.role == RESTRICTION_ROLE
                    for link in self.links if link.start == id)
 
-    ## ScopingSemanticStructure methods
+    # ScopingSemanticStructure methods
 
     def scopes(self):
-        pass
+        vfac, h = variable.VariableFactory(), variable.HANDLE
+        prescopes = {vfac.new(h)[0]: [node] for node in self.nodes}
+        labelmap = {nodes[0].id: label for label, nodes in prescopes.items()}
+        leqs = [(labelmap[link.start], labelmap[link.end])
+                for link in self.links if link.post == EQ_POST]
+        return scope.conjoin(prescopes, leqs)
 
 
 def _normalize_top_and_links(top, links):
+    """
+    Original DMRS had a /H link from a special node id of 0 to
+    indicate the top node, but now the `top` attribute is used.
+    Remove any such links and use them to specify `top` if it was not
+    specified already (otherwise ignore them).
+    """
     _links = []
     if links is not None:
         for link in links:
