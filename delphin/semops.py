@@ -1,8 +1,11 @@
 
 from functools import singledispatch
 
+import networkx as nx
+
 from delphin.exceptions import PyDelphinException
 from delphin import variable
+from delphin import predicate
 from delphin import sembase
 from delphin import scope
 from delphin import mrs
@@ -42,7 +45,7 @@ def is_isomorphic(x1: sembase.SemanticStructure,
     """
     raise SemanticOperationError(
         'computation of isomorphism for {} objects is not defined'
-        .format(x.__class__.__name__))
+        .format(x1.__class__.__name__))
 
 
 @is_isomorphic.register(mrs.MRS)
@@ -72,17 +75,17 @@ def _make_mrs_digraph(x, properties):
         if ep.is_quantifier():
             iv += '(bound)'  # make sure node id is unique
         s = predicate.normalize(pred)
-        if CONSTANT_ROLE in args:
-            s += '({})'.format(args[CONSTANT_ROLE])
+        if mrs.CONSTANT_ROLE in args:
+            s += '({})'.format(args[mrs.CONSTANT_ROLE])
         if properties and not ep.is_quantifier():
             props = x.variables[iv]
             s += '{{{}}}'.format('|'.join(
                 '{}={}'.format(prop.upper(), props[prop].lower())
-                for prop in sorted(props, key=property_priority)))
+                for prop in sorted(props, key=sembase.property_priority)))
         dg.add_node(iv, sig=s)
         dg.add_edges_from((iv, args[role], {'sig': role})
-                          for role in sorted(args, key=role_priority)
-                          if role != CONSTANT_ROLE)
+                          for role in sorted(args, key=sembase.role_priority)
+                          if role != mrs.CONSTANT_ROLE)
     # hcons
     dg.add_edges_from((hc.hi, hc.lo, {'sig': hc.relation})
                       for hc in x.hcons)
@@ -110,7 +113,7 @@ def mrs_to_dmrs(m: mrs.MRS):
     """
     _non_link_roles = {mrs.INTRINSIC_ROLE, mrs.CONSTANT_ROLE}
     eps = list(enumerate(m.rels, dmrs.FIRST_NODE_ID))  # keep ids consistent
-    scopetree = m.scopetree()
+    representatives = scope.representatives(m)
     nodes, ivmap = _mrs_to_nodes(dmrs.Node, m, eps)
     links = _mrs_to_links(dmrs.Link, m, eps, ivmap)
     return dmrs.DMRS(
