@@ -331,8 +331,9 @@ def _encode_indexed(m, semi, properties, indent):
                           for hc in m.hcons))
     ]
     if m.icons:
-        body.append(i1.format(_encode_icons(ic)
-                              for ic in m.icons))
+        body.append(
+            i1.format(i2.join(_encode_icons(ic)
+                              for ic in m.icons)))
 
     return start + ''.join(body) + end
 
