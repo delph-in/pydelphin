@@ -111,11 +111,11 @@ def mrs_to_dmrs(m: mrs.MRS):
     Raises:
         SemanticOperationError: when the *m* cannot be converted
     """
-    _non_link_roles = {mrs.INTRINSIC_ROLE, mrs.CONSTANT_ROLE}
-    eps = list(enumerate(m.rels, dmrs.FIRST_NODE_ID))  # keep ids consistent
-    representatives = scope.representatives(m)
-    nodes, ivmap = _mrs_to_nodes(dmrs.Node, m, eps)
-    links = _mrs_to_links(dmrs.Link, m, eps, ivmap)
+    # keep ids consistent
+    idmap = {ep.id: i for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)}
+    nodes, ivmap = _mrs_to_nodes(dmrs.Node, m, idmap)
+    links, top = _mrs_to_links(dmrs.Link, m, idmap, ivmap)
+    index = ivmap[m.index] if m.index else None
     return dmrs.DMRS(
         top=top,
         index=index,
@@ -126,16 +126,17 @@ def mrs_to_dmrs(m: mrs.MRS):
         identifier=m.identifier)
 
 
-def _mrs_to_nodes(cls, m, eps):
+def _mrs_to_nodes(cls, m, idmap):
     nodes = []
     ivmap = {}
-    for node_id, ep in eps:
+    for ep in m.rels:
+        node_id = idmap[ep.id]
         iv = ep.iv
         nodes.append(
             cls(node_id,
                 ep.predicate,
                 variable.type(iv),
-                properties,
+                m.properties(iv),
                 ep.carg,
                 ep.lnk,
                 ep.surface,
@@ -145,14 +146,46 @@ def _mrs_to_nodes(cls, m, eps):
     return nodes, ivmap
 
 
-def _mrs_to_links(cls, m, eps, ivmap):
+def _mrs_to_links(cls, m, idmap, ivmap):
     links = []
-    scopetree = m.scopetree()
-    for src_id, ep in eps:
-        for role, value in ep.args.items():
-            if role in _non_link_roles:
-                continue
-            links.append(cls(src_id, tgt_id, role, post))
+    hcmap = {hc.hi: hc for hc in m.hcons}
+    reps = scope.representatives(m)
+
+    top = None
+    if m.top in hcmap:
+        lbl = hcmap[m.top].lo
+        rep = reps[lbl][0]
+        top = idmap[rep]
+    elif m.top in reps:
+        rep = reps[top][0]
+        top = idmap[rep]
+
+    for src, roleargs in m.arguments().items():
+        start = idmap[src]
+        for role, tgt in roleargs.items():
+
+            if tgt in ivmap:
+                if m[src].label == m[tgt].label:
+                    post = dmrs.EQ_POST
+                else:
+                    post = dmrs.NEQ_POST
+
+            elif tgt in reps and len(reps[tgt]) > 0:
+                tgt = reps[tgt][0]
+                post = dmrs.HEQ_POST
+
+            elif tgt in hcmap:
+                lo = hcmap[tgt].lo
+                tgt = reps[lo][0]
+                post = dmrs.H_POST
+
+            else:
+                continue  # e.g., BODY, dropped arguments, etc.
+
+            end = ivmap[tgt]
+            links.append(cls(start, end, role, post))
+
+    return links, top
 
 
 def dmrs_to_mrs(d: dmrs.DMRS):
@@ -176,131 +209,3 @@ def is_connected(x: sembase.SemanticStructure) -> bool:
 def has_intrinsic_variable_property(m: mrs.MRS) -> bool:
     pass
 
-
-# def mrs_scope_representatives(mrs):
-#     nested_scopes = mrs_nested_scopes(mrs)
-
-#     if scopeid not in self._scope_reps:
-#         scope_nodeids = self.scopes[scopeid]
-#         if len(scope_nodeids) == 1:
-#             self._scope_reps[scopeid] = list(scope_nodeids)
-#         else:
-#             nested_scope = self._nested_scope(scopeid)
-#             candidates = []
-#             for nodeid in scope_nodeids:
-#                 edges = [edge for edge in self.edgemap.get(nodeid, [])
-#                          if edge.mode == _Edge.VARARG]
-#                 if all(edge.end not in nested_scope for edge in edges):
-#                     candidates.append(nodeid)
-#             if len(candidates) > 1:
-#                 qs = set(self.qeqmap).union(self.qeqmap.values())
-#                 rank = {}
-#                 for nodeid in candidates:
-#                     node = self.nodemap[nodeid]
-#                     if nodeid in qs:
-#                         rank[nodeid] = 0
-#                     elif node.predicate.type == Predicate.ABSTRACT:
-#                         rank[nodeid] = 2
-#                     elif nodeid :
-#                         rank[nodeid] = 1
-#                 candidates.sort(key=lambda n: rank[n])
-#             self._scope_reps = candidates
-#         return self._scope_reps[scopeid]
-
-# def _nested_scope(self, scopeid):
-#     if scopeid not in self._nested_scopes:
-#         self._nested_scopes[scopeid] = ns = set(self.scopes[scopeid])
-#         for nodeid in list(ns):
-#             for edge in self.edgemap.get(nodeid, []):
-#                 if edge.mode in (_Edge.LBLARG, _Edge.QEQARG):
-#                     ns.update(self._nested_scope(edge.end))
-#     return self._nested_scopes[scopeid]
-
-
-# class _XMRS(_SemanticComponent):
-#     """
-#     Args:
-#         top (int): scopeid of top scope
-#         index (str): nodeid of top predication
-#         xarg (str): nodeid of external argument
-#         nodes (list): list of :class:`_Node` objects
-#         scopes (dict): map of scopeid (e.g., a label) to a set of nodeids
-#         edges (list): list of (nodeid, role, mode, target) tuples
-#         icons (list): list of (source, relation, target) tuples
-#         lnk: surface alignment of the whole structure
-#         surface: surface form of the whole structure
-#         identifier: corpus-level identifier
-#     """
-#     def __init__(self, top, index, xarg,
-#                  nodes, scopes, edges, icons,
-#                  lnk, surface, identifier):
-#         super(_XMRS, self).__init__(top, index, xarg, lnk, surface, identifier)
-#         self.nodes = nodes
-#         self.scopes = scopes
-#         self.edges = edges
-#         self.icons = icons
-
-#         self.nodemap = {node.nodeid: node for node in nodes}
-
-#         self.scopemap = {}
-#         for scopeid, nodeids in scopes.items():
-#             for nodeid in nodeids:
-#                 self.scopemap[nodeid] = scopeid
-#         self._nested_scopes = {}
-#         self._scope_reps = {}
-
-#         self.edgemap = {node.nodeid: {} for node in nodes}
-#         self.quantifiermap = {}
-#         self.ivmap = {}
-#         for edge in self.edges:
-#             self.edgemap[edge.start][edge.role] = edge
-#             if edge.role == 'RSTR':
-#                 self.quantifiermap[edge.start] = edge.end
-#             elif edge.mode == _Edge.INTARG:
-#                 self.ivmap[edge.start] = edge.end
-
-#     def is_quantifier(self, nodeid):
-#         return nodeid in self.quantifiermap
-
-#     def scope_representative(self, scopeid):
-#         reps = self.scope_representatives(scopeid)
-#         if reps:
-#             return reps[0]
-#         return None
-
-#     def scope_representatives(self, scopeid):
-#         if scopeid not in self._scope_reps:
-#             scope_nodeids = self.scopes[scopeid]
-#             if len(scope_nodeids) == 1:
-#                 self._scope_reps[scopeid] = list(scope_nodeids)
-#             else:
-#                 nested_scope = self._nested_scope(scopeid)
-#                 candidates = []
-#                 for nodeid in scope_nodeids:
-#                     edges = [edge for edge in self.edgemap.get(nodeid, [])
-#                              if edge.mode == _Edge.VARARG]
-#                     if all(edge.end not in nested_scope for edge in edges):
-#                         candidates.append(nodeid)
-#                 if len(candidates) > 1:
-#                     qs = set(self.qeqmap).union(self.qeqmap.values())
-#                     rank = {}
-#                     for nodeid in candidates:
-#                         node = self.nodemap[nodeid]
-#                         if nodeid in qs:
-#                             rank[nodeid] = 0
-#                         elif node.predicate.type == Predicate.ABSTRACT:
-#                             rank[nodeid] = 2
-#                         elif nodeid :
-#                             rank[nodeid] = 1
-#                     candidates.sort(key=lambda n: rank[n])
-#                 self._scope_reps = candidates
-#         return self._scope_reps[scopeid]
-
-#     def _nested_scope(self, scopeid):
-#         if scopeid not in self._nested_scopes:
-#             self._nested_scopes[scopeid] = ns = set(self.scopes[scopeid])
-#             for nodeid in list(ns):
-#                 for edge in self.edgemap.get(nodeid, []):
-#                     if edge.mode in (_Edge.LBLARG, _Edge.QEQARG):
-#                         ns.update(self._nested_scope(edge.end))
-#         return self._nested_scopes[scopeid]

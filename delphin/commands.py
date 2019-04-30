@@ -18,12 +18,31 @@ import warnings
 from delphin import itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
+from delphin import semops
 from delphin.util import safe_int, SExpr
 from delphin.exceptions import PyDelphinException
 
 
 ###############################################################################
 ### CONVERT ###################################################################
+
+_FORMAT_MAP = {
+    'simplemrs': 'mrs',
+    'ace': 'mrs',
+    'mrx': 'mrs',
+    'mrs-json': 'mrs',
+    'indexed-mrs': 'mrs',
+    'mrs-prolog': 'mrs',
+    'dmrx': 'dmrs',
+    'dmrs-json': 'dmrs',
+    'dmrs-penman': 'dmrs',
+    'simpledmrs': 'dmrs',
+    'dmrs-tikz': 'dmrs',
+    'eds': 'eds',
+    'eds-json': 'eds',
+    'eds-penman': 'eds'
+}
+
 
 def convert(path, source_fmt, target_fmt, select='result:mrs',
             properties=True, color=False, indent=None,
@@ -90,6 +109,10 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
         ]
     else:
         xs = loads(open(path, 'r').read(), **kwargs)
+
+    converter = _get_converter(source_fmt, target_fmt)
+    if converter:
+        xs = map(converter, xs)
 
     # write
     dumps = _get_codec(target_fmt, load=False)
@@ -201,6 +224,14 @@ def _get_codec(codec, load=True):
         raise ValueError('invalid source format: ' + codec)
     else:
         raise ValueError('invalid target format: ' + codec)
+
+
+def _get_converter(source_fmt, target_fmt):
+    src = _FORMAT_MAP[source_fmt]
+    tgt = _FORMAT_MAP[target_fmt]
+    if (src, tgt) == ('mrs', 'dmrs'):
+        return semops.mrs_to_dmrs
+    return None
 
 
 def _get_output_details(codec):
