@@ -41,6 +41,7 @@ def test_decode():
     assert len(e.edges) == 2
     assert e.nodes[3].predicate == '_bark_v_1'
 
+
 def test_encode(dogs_bark_from_mrs):
     d = EDS(**dogs_bark_from_mrs)
     assert edsnative.encode(d) == (

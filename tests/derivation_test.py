@@ -1,6 +1,4 @@
 
-import warnings
-
 import pytest
 
 from delphin.derivation import (
@@ -9,6 +7,7 @@ from delphin.derivation import (
     UdfTerminal as T,
     UdfToken as Tk
 )
+
 
 class TestUdfNode():
     def test_init(self):
@@ -19,8 +18,8 @@ class TestUdfNode():
         assert n.start == -1
         assert n.end == -1
         assert n.daughters == []
-        assert n.is_head() == True  # it has no siblings
-        assert n.type == None
+        assert n.is_head()  # it has no siblings
+        assert n.type is None
         n = N(1, 'entity', 0.5, 1, 2, [], head=True, type='type')
         assert n.id == 1
         assert n.entity == 'entity'
@@ -28,29 +27,35 @@ class TestUdfNode():
         assert n.start == 1
         assert n.end == 2
         assert n.daughters == []
-        assert n.is_head() == True
+        assert n.is_head()
         assert n.type == 'type'
+
 
 class TestDerivation():
     def test_init(self):
-        with pytest.raises(TypeError): D()
-        with pytest.raises(TypeError): D(1)
-        t = D(1, 'some-thing')
-        t = D(1, 'some-thing', 0.5, 0, 3, [T('some-token')])
+        with pytest.raises(TypeError):
+            D()
+        with pytest.raises(TypeError):
+            D(1)
+        D(1, 'some-thing')
+        D(1, 'some-thing', 0.5, 0, 3, [T('some-token')])
         # roots are special: id is None, entity is root, daughters must
         # exactly 1 node; rest are None
-        with pytest.raises(TypeError): t = D(None)
-        with pytest.raises(TypeError): t = D(None, 'some-root', 0.5)
-        with pytest.raises(TypeError): t = D(None, 'some-root', start=1)
-        with pytest.raises(TypeError): t = D(None, 'some-root', end=1)
+        with pytest.raises(TypeError):
+            D(None)
+        with pytest.raises(TypeError):
+            D(None, 'some-root', 0.5)
+        with pytest.raises(TypeError):
+            D(None, 'some-root', start=1)
+        with pytest.raises(TypeError):
+            D(None, 'some-root', end=1)
         with pytest.raises(ValueError):
-            t = D(None, 'some-root',
-                   daughters=[N(1, 'some-thing'), N(2, 'some-thing')])
+            D(None, 'some-root',
+              daughters=[N(1, 'some-thing'), N(2, 'some-thing')])
         with pytest.raises(ValueError):
-            t = D(None, 'some-root', daughters=[T('some-token')])
-        t = D(None, 'some-root', daughters=[N(1, 'some-thing')])
-        t = D(None, 'some-root', None, None, None,
-               daughters=[N(1, 'some-thing')])
+            D(None, 'some-root', daughters=[T('some-token')])
+        D(None, 'some-root', daughters=[N(1, 'some-thing')])
+        D(None, 'some-root', None, None, None, daughters=[N(1, 'some-thing')])
         # root not as top
         with pytest.raises(ValueError):
             D(1, 'some-thing', daughters=[
@@ -75,17 +80,19 @@ class TestDerivation():
         assert t.end == 6
         assert t.daughters == [T('some token')]
         t = D(None, 'some-root', daughters=[D(1, 'some-thing')])
-        assert t.id == None
+        assert t.id is None
         assert t.entity == 'some-root'
-        assert t.score == None
-        assert t.start == None
-        assert t.end == None
+        assert t.score is None
+        assert t.start is None
+        assert t.end is None
         assert len(t.daughters) == 1
 
     def test_fromstring(self):
-        with pytest.raises(ValueError): D.from_string('')
+        with pytest.raises(ValueError):
+            D.from_string('')
         # root with no children
-        with pytest.raises(ValueError): D.from_string('(some-root)')
+        with pytest.raises(ValueError):
+            D.from_string('(some-root)')
         # does not start with `(` or end with `)`
         with pytest.raises(ValueError):
             D.from_string(' (1 some-thing -1 -1 -1 ("token"))')
@@ -217,13 +224,12 @@ class TestDerivation():
         b = D.from_string('(1 some-thing -1 -1 -1 ("token"))')
         assert a != b
 
-
     def test_is_root(self):
         a = D.from_string('(1 some-thing -1 -1 -1 ("token"))')
-        assert a.is_root() == False
+        assert not a.is_root()
         a = D.from_string('(root (1 some-thing -1 -1 -1 ("token")))')
-        assert a.is_root() == True
-        assert a.daughters[0].is_root() == False
+        assert a.is_root()
+        assert not a.daughters[0].is_root()
 
     def test_is_head(self):
         # NOTE: is_head() is undefined for nodes with multiple
@@ -231,20 +237,20 @@ class TestDerivation():
         a = D.from_string('(root (1 some-thing -1 -1 -1'
                           '  (2 some-thing -1 -1 -1 ("a"))'
                           '  (3 some-thing -1 -1 -1 ("b"))))')
-        assert a.is_head() == True
+        assert a.is_head()
         node = a.daughters[0]
-        assert node.is_head() == True
-        assert node.daughters[0].is_head() == None
-        assert node.daughters[1].is_head() == None
+        assert node.is_head()
+        assert node.daughters[0].is_head() is None
+        assert node.daughters[1].is_head() is None
         # if one sibling is marked, all become decidable
         a = D.from_string('(root (1 some-thing -1 -1 -1'
                           '  (2 some-thing -1 -1 -1 ("a"))'
                           '  (3 ^some-thing -1 -1 -1 ("b"))))')
-        assert a.is_head() == True
+        assert a.is_head()
         node = a.daughters[0]
-        assert node.is_head() == True
-        assert node.daughters[0].is_head() == False
-        assert node.daughters[1].is_head() == True
+        assert node.is_head()
+        assert not node.daughters[0].is_head()
+        assert node.daughters[1].is_head()
 
     def test_entity(self):
         a = D.from_string('(root (1 some-thing -1 -1 -1'
@@ -268,15 +274,15 @@ class TestDerivation():
         a = D.from_string('(root (1 some-thing -1 -1 -1'
                           '  (2 a-thing -1 -1 -1 ("a"))'
                           '  (3 b-thing -1 -1 -1 ("b"))))')
-        assert a.type == None
+        assert a.type is None
         node = a.daughters[0]
-        assert node.type == None
-        assert node.daughters[0].type == None
-        assert node.daughters[1].type == None
+        assert node.type is None
+        assert node.daughters[0].type is None
+        assert node.daughters[1].type is None
         a = D.from_string('(root (1 some-thing@some-type -1 -1 -1'
                           '  (2 a-thing@a-type -1 -1 -1 ("a"))'
                           '  (3 b-thing@b-type -1 -1 -1 ("b"))))')
-        assert a.type == None
+        assert a.type is None
         node = a.daughters[0]
         assert node.type == 'some-type'
         assert node.daughters[0].type == 'a-type'
@@ -287,7 +293,8 @@ class TestDerivation():
                           '  (2 a-thing -1 -1 -1 ("a"))'
                           '  (3 b-thing -1 -1 -1 ("b"))))')
         assert [t.id for t in a.preterminals()] == [2, 3]
-        a = D.from_string('(root'
+        a = D.from_string(
+            '(root'
             ' (1 some-thing@some-type 0.4 0 5'
             '  (2 a-lex@a-type 0.8 0 1'
             '   ("a b"'
@@ -303,7 +310,8 @@ class TestDerivation():
                           '  (2 a-thing -1 -1 -1 ("a"))'
                           '  (3 b-thing -1 -1 -1 ("b"))))')
         assert [t.form for t in a.terminals()] == ['a', 'b']
-        a = D.from_string('(root'
+        a = D.from_string(
+            '(root'
             ' (1 some-thing@some-type 0.4 0 5'
             '  (2 a-lex@a-type 0.8 0 1'
             '   ("a b"'
@@ -479,7 +487,7 @@ class TestDerivation():
         assert D.from_dict(d) == D.from_string(s)
         s = (r'(root (1 ^some-thing@some-type -1 -1 -1 ("a b"'
              r' 2 "token [ +FORM \"a\" ]"'
-             r' 3 "token [ +FORM \"b\" ]")))' )
+             r' 3 "token [ +FORM \"b\" ]")))')
         d = {
             'entity': 'root',
             'daughters': [

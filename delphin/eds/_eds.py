@@ -8,6 +8,7 @@ from typing import Iterable
 from delphin.lnk import Lnk
 from delphin.sembase import Predication, SemanticStructure
 
+
 BOUND_VARIABLE_ROLE     = 'BV'
 PREDICATE_MODIFIER_ROLE = 'ARG1'
 
@@ -118,7 +119,7 @@ class EDS(SemanticStructure):
                          for role, target in node.edges.items())
         return edges
 
-    ## SemanticStructure methods
+    # SemanticStructure methods
 
     def arguments(self, types=None):
         args = {}

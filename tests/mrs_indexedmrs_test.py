@@ -9,6 +9,7 @@ from delphin.mrs import (
     indexedmrs)
 from delphin import semi
 
+
 @pytest.fixture
 def simple_semi():
     return semi.SemI.from_dict({
@@ -114,6 +115,7 @@ def test_decode(simple_semi):
         'MOOD': 'INDICATIVE',
         'PROG': '-',
         'PERF': '-'}
+
 
 def test_encode(simple_semi):
     m = MRS(top='h1', index='e3',

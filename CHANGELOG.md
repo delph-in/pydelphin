@@ -164,7 +164,7 @@ these changes are prefixed with "**BREAKING**"
 
 ### Changed
 
-* `delphin.commands.convert` `--sem-i` parameter
+* `delphin.commands.convert` add `--sem-i` parameter
 * `delphin.extra.highlight` add docstrings and wild-card to TDL highlighter
 * `delphin.extra.latex` update to work with new DMRS class
 * `delphin.interfaces.ace` no longer raise `ValueError` when grammar file does

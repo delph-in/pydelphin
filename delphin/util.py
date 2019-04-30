@@ -152,36 +152,46 @@ SExprResult = namedtuple('SExprResult', 'data remainder')
 _SExpr_escape_chars = r'"\s\(\)\[\]\{\}\\;'
 _SExpr_symbol_re = re.compile(r'(?:[^{}]+|\\.)+'.format(_SExpr_escape_chars))
 
+
 def _SExpr_unescape_symbol(s):
     return re.sub(r'\\([{}])'.format(_SExpr_escape_chars), r'\1', s)
 
+
 def _SExpr_unescape_string(s):
     return re.sub(r'\\(["\\])', r'\1', s)
+
 
 class _SExprParser(object):
     def parse(self, s):
         i = 0
         n = len(s)
-        while i < n and s[i].isspace(): i += 1
-        if i == n: return SExprResult([], '')
+        while i < n and s[i].isspace():
+            i += 1
+        if i == n:
+            return SExprResult([], '')
         assert s[i] == '('
         i += 1
-        while i < n and s[i].isspace(): i += 1
+        while i < n and s[i].isspace():
+            i += 1
         stack = [[]]
         while i < n:
             c = s[i]
             if c.isdigit() or c == '-' and s[i+1].isdigit():  # numbers
                 j = i + 1
-                while s[j].isdigit(): j += 1
+                while s[j].isdigit():
+                    j += 1
                 c = s[j]
                 if c in '.eE':  # float
                     if c == '.':
                         j += 1
-                        while s[j].isdigit(): j += 1
+                        while s[j].isdigit():
+                            j += 1
                     if c in 'eE':
                         j += 1
-                        if s[j] in '+=': j += 1
-                        while s[j].isdigit(): j += 1
+                        if s[j] in '+=':
+                            j += 1
+                        while s[j].isdigit():
+                            j += 1
                     stack[-1].append(float(s[i:j]))
                 else:  # int
                     stack[-1].append(int(s[i:j]))
@@ -216,7 +226,6 @@ class _SExprParser(object):
                 stack[-1].append(_SExpr_unescape_symbol(m.group(0)))
                 i += len(m.group(0))
 
-SExpr = _SExprParser()
 
 # attach an additional method for convenience
 def _format_SExpr(d):
@@ -229,6 +238,8 @@ def _format_SExpr(d):
     else:
         return repr(d)
 
+
+SExpr = _SExprParser()
 SExpr.format = _format_SExpr
 
 
@@ -419,14 +430,18 @@ class Lexer(object):
         Yields:
             (gid, token, line_number)
         """
+        # loop optimizations
+        finditer = self._re.finditer
+        UNEXPECTED = self.tokentypes.UNEXPECTED
+
         lines = enumerate(lineiter, 1)
         lineno = pos = 0
         try:
             for lineno, line in lines:
-                matches = self._re.finditer(line)
+                matches = finditer(line)
                 for m in matches:
                     gid = m.lastindex
-                    if gid == self.tokentypes.UNEXPECTED:
+                    if gid == UNEXPECTED:
                         raise self._errcls(
                             'unexpected input',
                             lineno=lineno,
@@ -441,6 +456,7 @@ class Lexer(object):
 # modified from https://www.python.org/dev/peps/pep-0263/#defining-the-encoding
 _encoding_symbol_re = re.compile(
     b'^.*?coding[:=][ \\t]*([-_.a-zA-Z0-9]+)', re.IGNORECASE)
+
 
 def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
     encoding = None

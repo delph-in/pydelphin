@@ -20,6 +20,7 @@ _yy_token = namedtuple(
     )
 )
 
+
 class YyToken(_yy_token):
     """
     A tuple of token data in the YY format.
@@ -130,6 +131,7 @@ _yy_re = re.compile(
         float=r'-?(0|[1-9]\d*)(\.\d+[eE][-+]?|\.|[eE][-+]?)\d+'
     )
 )
+
 
 class YyTokenLattice(object):
     """

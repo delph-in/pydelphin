@@ -50,17 +50,33 @@ API changes in new versions are documented in the
 
 PyDelphin implements the following DELPH-IN specifications:
 
-- [`delphin.derivation`][]:      [Derivation trees](http://moin.delph-in.net/ItsdbDerivations)
-- [`delphin.itsdb`][]:           [\[incr tsdb()\]](http://moin.delph-in.net/ItsdbTop) profiles
-- [`delphin.tsql`][]:            [TSQL](http://moin.delph-in.net/TsqlRfc) test suite queries
-- [`delphin.mrs`][]:             [Minimal Recursion Semantics](http://moin.delph-in.net/MrsRfc)
-- [`delphin.semi`][]:            [Semantic Interface](http://moin.delph-in.net/SemiRfc)
-- [`delphin.tdl`][]:             [Type-Description Language](http://moin.delph-in.net/TdlRfc)
-- [`delphin.tfs`][]:             Feature structures and type hierarchies
-- [`delphin.tokens`][]:          [YY Token lattices](http://moin.delph-in.net/PetInput#YY_Input_Mode)
-- [`delphin.repp`][]:            [Regular-Expression PreProcessor](http://moin.delph-in.net/ReppTop)
+Semantic Representations:
+- [`delphin.mrs`][]:  [Minimal Recursion Semantics](http://moin.delph-in.net/MrsRfc)
+- [`delphin.eds`][]:  [Elementary Dependency Structures](http://moin.delph-in.net/EdsTop)
+- [`delphin.dmrs`][]: [Dependency Minimal Recursion Semantics](http://moin.delph-in.net/RmrsDmrs)
 
-In addition, it provides the following packages and tools for convenience:
+Semantic Components and Interfaces:
+- [`delphin.semi`][]:      [Semantic Interface](http://moin.delph-in.net/SemiRfc)
+- [`delphin.vpm`][]:       [Variable Property Mapping](http://moin.delph-in.net/RmrsVpm)
+- [`delphin.variable`][]:  MRS variables
+- [`delphin.predicate`][]: [Semantic Predicates](http://moin.delph-in.net/PredicateRfc)
+- [`delphin.scope`][]:     Underspecified scope
+- [`delphin.lnk`][]:       Lnk surface alignments
+
+Grammar and Parse Inspection
+- [`delphin.derivation`][]: [Derivation trees](http://moin.delph-in.net/ItsdbDerivations)
+- [`delphin.tdl`][]:        [Type-Description Language](http://moin.delph-in.net/TdlRfc)
+- [`delphin.tfs`][]:        Feature structures and type hierarchies
+
+Tokenization:
+- [`delphin.repp`][]:   [Regular-Expression PreProcessor](http://moin.delph-in.net/ReppTop)
+- [`delphin.tokens`][]: [YY Token lattices](http://moin.delph-in.net/PetInput#YY_Input_Mode)
+
+Corpus Management and Processing
+- [`delphin.itsdb`][]: [\[incr tsdb()\]](http://moin.delph-in.net/ItsdbTop) profiles
+- [`delphin.tsql`][]:  [TSQL](http://moin.delph-in.net/TsqlRfc) test suite queries
+
+In addition, PyDelphin provides the following packages and tools for convenience:
 
 - [`delphin.commands`][]:        Functional or CLI interface to common tasks
 - [`delphin.interfaces.ace`][]:  Python wrapper for common tasks using [ACE](http://sweaglesw.org/linguistics/ace/)
@@ -71,18 +87,25 @@ In addition, it provides the following packages and tools for convenience:
 
 [`delphin.commands`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.commands.html
 [`delphin.derivation`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.derivation.html
-[`delphin.itsdb`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.itsdb.html
-[`delphin.tsql`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tsql.html
-[`delphin.mrs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.mrs.html
-[`delphin.tdl`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tdl.html
-[`delphin.tfs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tfs.html
-[`delphin.tokens`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tokens.html
-[`delphin.repp`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.repp.html
-[`delphin.semi`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.semi.html
+[`delphin.dmrs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.dmrs.html
+[`delphin.eds`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.eds.html
 [`delphin.extra.highlight`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.extra.html#module-delphin.extra.highlight
 [`delphin.extra.latex`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.extra.html#module-delphin.extra.latex
 [`delphin.interfaces.ace`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.interfaces.ace.html
 [`delphin.interfaces.rest`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.interfaces.rest.html
+[`delphin.itsdb`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.itsdb.html
+[`delphin.lnk`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.lnk.html
+[`delphin.mrs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.mrs.html
+[`delphin.predicate`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.predicate.html
+[`delphin.repp`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.repp.html
+[`delphin.scope`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.scope.html
+[`delphin.semi`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.semi.html
+[`delphin.tdl`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tdl.html
+[`delphin.tfs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tfs.html
+[`delphin.tokens`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tokens.html
+[`delphin.tsql`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.tsql.html
+[`delphin.variable`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.variable.html
+[`delphin.vpm`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.vpm.html
 
 
 ## Other Information
