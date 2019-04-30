@@ -253,13 +253,14 @@ def representatives(x: ScopingSemanticStructure, ranker=None) -> ScopeMap:
     within their scope as an argument (as `_book_n_of` above does not)
     are scope representatives.
 
-    The *ranker* argument, if given, is a function that takes a
-    predication id and returns a rank which is used to to sort the
-    representatives for each scope. As the id alone is probably not
-    enough information for useful sorting, it is helpful to create a
-    function configured for the input semantic structure *x*, as is
-    done with :func:`make_representative_priority`. If *ranker* is
-    not given or is `None`, no order is guaranteed.
+    The *ranker* argument is a function that takes a predication id
+    and returns a rank which is used to to sort the representatives
+    for each scope. As the id alone is probably not enough information
+    for useful sorting, it is helpful to create a function configured
+    for the input semantic structure *x*, as is done with
+    :func:`make_representative_priority`. If *ranker* is not given or
+    is `None`, :func:`make_representative_priority` is called on *x*
+    to make a default ranker.
 
     Args:
         x: an MRS or a DMRS
@@ -288,9 +289,10 @@ def representatives(x: ScopingSemanticStructure, ranker=None) -> ScopeMap:
             if len(nsargs.get(id, set()).intersection(uscope.ids)) == 0:
                 reps[label].append(id)
 
-    if ranker:
-        for label in reps:
-            reps[label].sort(key=ranker)
+    if ranker is None:
+        ranker = make_representative_priority(x)
+    for label in reps:
+        reps[label].sort(key=ranker)
 
     return reps
 
