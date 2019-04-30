@@ -9,7 +9,7 @@ from delphin.lnk import Lnk
 from delphin.sembase import Predication, SemanticStructure
 
 
-BOUND_VARIABLE_ROLE     = 'BV'
+BOUND_VARIABLE_ROLE = 'BV'
 PREDICATE_MODIFIER_ROLE = 'ARG1'
 
 
@@ -111,11 +111,12 @@ class EDS(SemanticStructure):
         """Alias of :attr:`predications`."""
         return self.predications
 
+    @property
     def edges(self):
-        """Return the list of all edges."""
+        """The list of all edges."""
         edges = []
         for node in self.nodes:
-            edges.append((node.id, role, target)
+            edges.extend((node.id, role, target)
                          for role, target in node.edges.items())
         return edges
 
@@ -142,3 +143,11 @@ class EDS(SemanticStructure):
         Return `True` if *id* is the id of a quantifier node.
         """
         return BOUND_VARIABLE_ROLE in self[id].edges
+
+    def get_quantifier(self, id):
+        """
+        Return the quantifier node that quantifies *id*.
+        """
+        return next((node for node in self.nodes
+                     if node.edges.get(BOUND_VARIABLE_ROLE) == id),
+                    None)
