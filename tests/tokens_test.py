@@ -28,7 +28,10 @@ def check_token(t, id, start, end, lnk, paths, form, surf, ipos, lrules, pos):
     assert t.id == id
     assert t.start == start
     assert t.end == end
-    assert t.lnk == lnk
+    if lnk:
+        assert t.lnk == lnk
+    else:
+        assert not t.lnk
     assert t.paths == paths
     assert t.form == form
     assert t.surface == surf

@@ -42,6 +42,8 @@ class YyToken(_yy_token):
                 ipos=0, lrules=("null",), pos=()):
         if form is None:
             raise TypeError('Missing required keyword argument \'form\'.')
+        if lnk is None:
+            lnk = Lnk.default()
         return super(YyToken, cls).__new__(
             cls, id, start, end, lnk, list(paths), form, surface,
             ipos, list(lrules), list(pos)
@@ -49,7 +51,7 @@ class YyToken(_yy_token):
 
     def __str__(self):
         parts = [str(self.id), str(self.start), str(self.end)]
-        if self.lnk is not None:
+        if self.lnk:
             parts.append(str(self.lnk))
         parts.append(' '.join(map(str, self.paths or [1])))
         if self.surface is None:
@@ -93,7 +95,7 @@ class YyToken(_yy_token):
             'end': self.end,
             'form': self.form
         }
-        if self.lnk is not None:
+        if self.lnk:
             cfrom, cto = self.lnk.data
             d['from'] = cfrom
             d['to'] = cto
@@ -192,10 +194,9 @@ class YyTokenLattice(object):
         return ' '.join(map(str, self.tokens))
 
     def __eq__(self, other):
-        print(self.tokens)
-        print(other.tokens)
-        if (isinstance(other, YyTokenLattice) and
-                len(self.tokens) == len(other.tokens) and
-                all(t1==t2 for t1, t2 in zip(self.tokens, other.tokens))):
+        if not isinstance(other, YyTokenLattice):
+            return NotImplemented
+        if (len(self.tokens) == len(other.tokens) and
+                all(t1 == t2 for t1, t2 in zip(self.tokens, other.tokens))):
             return True
         return False

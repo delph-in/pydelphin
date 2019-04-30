@@ -109,11 +109,11 @@ class Lnk(object):
     # These types determine how a lnk on an EP or MRS are to be
     # interpreted, and thus determine the data type/structure of the
     # lnk data.
-    UNSPECIFIED = -1
-    CHARSPAN = 0  # Character span; a pair of offsets
-    CHARTSPAN = 1  # Chart vertex span: a pair of indices
-    TOKENS = 2  # Token numbers: a list of indices
-    EDGE = 3  # An edge identifier: a number
+    UNSPECIFIED = 0
+    CHARSPAN = 1  # Character span; a pair of offsets
+    CHARTSPAN = 2  # Chart vertex span: a pair of indices
+    TOKENS = 3  # Token numbers: a list of indices
+    EDGE = 4  # An edge identifier: a number
 
     def __init__(self, arg, data=None):
         if not arg:
