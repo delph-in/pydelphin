@@ -11,11 +11,16 @@ delphin.scope
       :show-inheritance:
       :members:
 
+   .. autoclass:: UnderspecifiedScope
+      :members:
+
    Module Functions
    ----------------
 
    .. autofunction:: conjoin
+   .. autofunction:: tree_fragments
    .. autofunction:: representatives
+   .. autofunction:: make_representative_priority
 
    Exceptions
    ----------

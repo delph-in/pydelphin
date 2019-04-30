@@ -170,6 +170,9 @@ class SemanticStructure(LnkMixin):
             return NotImplemented
         return not (self == other)
 
+    def __contains__(self, id):
+        return id in self._pidx
+
     def __getitem__(self, id):
         return self._pidx[id]
 
@@ -183,4 +186,8 @@ class SemanticStructure(LnkMixin):
 
     def is_quantifier(self, id: Identifier) -> bool:
         """Return `True` if *id* represents a quantifier."""
+        raise NotImplementedError()
+
+    def get_quantifier(self, id: Identifier) -> Predication:
+        """Return the quantifier predication that quantifies *id*."""
         raise NotImplementedError()

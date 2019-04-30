@@ -232,7 +232,7 @@ class DMRS(scope.ScopingSemanticStructure):
 
     def scopes(self):
         vfac, h = variable.VariableFactory(), variable.HANDLE
-        prescopes = {vfac.new(h)[0]: [node] for node in self.nodes}
+        prescopes = {vfac.new(h)[0]: [node.id] for node in self.nodes}
         labelmap = {nodes[0].id: label for label, nodes in prescopes.items()}
         leqs = [(labelmap[link.start], labelmap[link.end])
                 for link in self.links if link.post == EQ_POST]

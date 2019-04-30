@@ -2,7 +2,7 @@
 from typing import Iterable, Mapping
 from operator import itemgetter
 
-from delphin.lnk import Lnk, LnkMixin
+from delphin.lnk import Lnk
 from delphin import variable
 from delphin.sembase import (
     Predication,
@@ -65,7 +65,7 @@ class EP(Predication):
         # EPs formally do not have identifiers but they are very useful
         iv = args.get(INTRINSIC_ROLE)
         if RESTRICTION_ROLE in args:
-            id = '{}{}'.format(_QUANTIFIER_TYPE, variable.id(iv))
+            id = _make_q_id(iv)
         else:
             id = iv  # note: iv (and hence, id) are possibly None
         super().__init__(id, predicate, lnk, surface, base)
@@ -92,7 +92,7 @@ class EP(Predication):
                       for role, val in self.args.items()),
             id(self))
 
-    ## Properties interpreted from roles
+    # Properties interpreted from roles
 
     @property
     def iv(self):
@@ -225,18 +225,7 @@ class MRS(scope.ScopingSemanticStructure):
                 and self.icons == other.icons
                 and self.variables == other.variables)
 
-    ## SemanticStructure methods
-
-    def arguments(self, types=None):
-        args = {}
-        for ep in self.rels:
-            id = ep.id
-            args[id] = {}
-            for role, value in ep.args.items():
-                if role not in (INTRINSIC_ROLE, CONSTANT_ROLE):
-                    if types is None or variable.type(value) in types:
-                        args[id][role] = value
-        return args
+    # SemanticStructure methods
 
     def properties(self, var):
         """Return the properties associated with variable *var*."""
@@ -246,7 +235,32 @@ class MRS(scope.ScopingSemanticStructure):
         """Return `True` if *var* is the bound variable of a quantifier."""
         return RESTRICTION_ROLE in self[id].args
 
+    def get_quantifier(self, id):
+        qid = _make_q_id(id)
+        if qid in self:
+            return self[qid]
+        return None
+
     # ScopingSemanticStructure methods
+
+    def arguments(self, types=None, scopal=None):
+        if scopal is None:
+            restricted_set = set(self.variables)
+        elif scopal:
+            restricted_set = set(ep.label for ep in self.rels)
+            restricted_set.update(hc.hi for hc in self.hcons)
+        else:
+            restricted_set = set(ep.iv for ep in self.rels)
+        args = {}
+        for ep in self.rels:
+            id = ep.id
+            args[id] = {}
+            for role, value in ep.args.items():
+                if (role not in (INTRINSIC_ROLE, CONSTANT_ROLE)
+                        and (types is None or variable.type(value) in types)
+                        and (value in restricted_set)):
+                    args[id][role] = value
+        return args
 
     def scope_constraints(self, scopes=None):
         # ivs = {ep.iv for ep in self.rels}
@@ -281,7 +295,11 @@ class MRS(scope.ScopingSemanticStructure):
         return scopes
 
 
-### Helper functions
+# Helper functions
+
+def _make_q_id(iv):
+    return _QUANTIFIER_TYPE + variable.split(iv)[1]
+
 
 def _fill_variables(vars, top, index, rels, hcons, icons):
     if top is not None and top not in vars:
