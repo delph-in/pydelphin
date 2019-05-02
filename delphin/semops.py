@@ -1,8 +1,6 @@
 
 from functools import singledispatch
 
-import networkx as nx
-
 from delphin.exceptions import PyDelphinException
 from delphin import variable
 from delphin import predicate
@@ -50,13 +48,15 @@ def is_isomorphic(x1: sembase.SemanticStructure,
 
 @is_isomorphic.register(mrs.MRS)
 def _is_mrs_isomorphic(m1, m2, properties=True):
+    import networkx as nx
+
     if not isinstance(m2, mrs.MRS):
         raise SemanticOperationError(
             'second argument is not an MRS object: {}'
             .format(m2.__class__.__name__))
 
-    m1dg = _make_mrs_digraph(m1, properties)
-    m2dg = _make_mrs_digraph(m2, properties)
+    m1dg = _make_mrs_digraph(m1, nx.DiGraph(), properties)
+    m2dg = _make_mrs_digraph(m2, nx.DiGraph(), properties)
 
     def nem(m1d, m2d):  # node-edge-match
         return m1d.get('sig') == m2d.get('sig')
@@ -64,8 +64,7 @@ def _is_mrs_isomorphic(m1, m2, properties=True):
     return nx.is_isomorphic(m1dg, m2dg, node_match=nem, edge_match=nem)
 
 
-def _make_mrs_digraph(x, properties):
-    dg = nx.DiGraph()
+def _make_mrs_digraph(x, dg, properties):
     # scope labels (may be targets of arguments or hcons)
     for label, eps in x.scopes().items():
         dg.add_edges_from((label, ep.iv, {'sig': 'eq-scope'}) for ep in eps)

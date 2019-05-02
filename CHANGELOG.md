@@ -131,6 +131,11 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.commands.convert` `pretty_print` parameter
 * `delphin.derivation.UdfNode.basic_entity()`
 * `delphin.derivation.UdfNode.lexical_type()`
+* `delphin.exceptions.XmrsError`
+* `delphin.exceptions.XmrsSerializationError`
+* `delphin.exceptions.XmrsDeserializationError`
+* `delphin.exceptions.XmrsStructureError`
+* `delphin.exceptions.XmrsWarning`
 * `delphin.itsdb.ItsdbProfile`
 * `delphin.itsdb.ItsdbSkeleton`
 * `delphin.itsdb.apply_rows()`

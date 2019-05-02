@@ -37,28 +37,3 @@ class PyDelphinSyntaxError(PyDelphinException):
         if self.message is not None:
             parts.append('{}: {}'.format(self.__class__.__name__, self.message))
         return '\n'.join(parts)
-
-
-class XmrsError(PyDelphinException):
-    """Raised when there is an error processing \*MRS objects."""
-    pass
-
-
-class XmrsSerializationError(XmrsError):
-    """Raised when serializing \*MRS objects fails."""
-    pass
-
-
-class XmrsDeserializationError(XmrsError):
-    """Raised when deserializing \*MRS objects fails."""
-    pass
-
-
-class XmrsStructureError(XmrsError):
-    """Raised when a \*MRS object is structurally ill-formed."""
-    pass
-
-
-class XmrsWarning(PyDelphinWarning):
-    """Warning class for \*MRS processing."""
-    pass

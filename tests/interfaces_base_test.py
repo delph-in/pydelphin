@@ -6,7 +6,6 @@ from delphin.eds import edsjson
 from delphin.mrs import simplemrs
 from delphin.dmrs import dmrsjson
 from delphin.derivation import Derivation
-from delphin.exceptions import XmrsDeserializationError
 from delphin.tokens import YyTokenLattice
 
 def test_ParseResult():
@@ -50,7 +49,7 @@ def test_ParseResult():
 
     # r = ParseResult(mrs='nonsense')
     # assert r['mrs'] == 'nonsense'
-    # with pytest.raises(XmrsDeserializationError):
+    # with pytest.raises(PyDelphinSyntaxError):
     #     r.mrs()
 
     dmrs_d = {
@@ -72,7 +71,7 @@ def test_ParseResult():
     # r = ParseResult(dmrs='nonsense')
     # assert len(r) == 1
     # assert r['dmrs'] == 'nonsense'
-    # with pytest.raises(XmrsDeserializationError):
+    # with pytest.raises(PyDelphinSyntaxError):
     #     r.dmrs()
 
     eds_d = {
@@ -101,7 +100,7 @@ def test_ParseResult():
     # r = ParseResult(eds='nonsense')
     # assert len(r) == 1
     # assert r['eds'] == 'nonsense'
-    # with pytest.raises(XmrsDeserializationError):
+    # with pytest.raises(PyDelphinSyntaxError):
     #     r.eds()
 
     # several changes were made to the below for compatibility:

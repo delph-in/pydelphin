@@ -92,8 +92,11 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
             warnings.simplefilter('ignore')
             semi = load_semi(semi)
 
-    # read
     loads = _get_codec(source_fmt)
+    dumps = _get_codec(target_fmt, load=False)
+    converter = _get_converter(source_fmt, target_fmt)
+
+    # read
     kwargs = {}
     if source_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
@@ -110,12 +113,10 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     else:
         xs = loads(open(path, 'r').read(), **kwargs)
 
-    converter = _get_converter(source_fmt, target_fmt)
     if converter:
         xs = map(converter, xs)
 
     # write
-    dumps = _get_codec(target_fmt, load=False)
     kwargs = {}
     if indent: kwargs['indent'] = indent
     if target_fmt == 'eds':
