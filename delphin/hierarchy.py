@@ -1,13 +1,6 @@
 
 """
 Basic support for hierarchies.
-
-The :class:`MultiHierarchy` class implements a
-multiply-parented hierarchy. While it can be used as-is,
-it mainly serves as a base class for other hierarchies, such as
-:class:`delphin.tfs.TypeHierarchy`, which extends it to allow for
-multiple parents, case-insensitive identifiers, subsumption tests,
-etc.
 """
 
 from delphin.exceptions import PyDelphinException
@@ -26,20 +19,20 @@ class MultiHierarchy(object):
     """
     A Multiply-Inheriting Hierarchy.
 
-    Hierarchies may be constructed when instantiating the class or
-    via the :meth:`update` method using a dictionary mapping identifiers
-    to parents, or one-by-one using dictionary-like access.
-    In both cases, the node values may be an individual parent name,
-    an iterable of parent names, or a :class:`HierarchyNode`
-    object. Retrieving a node via dictionary access on the identifier
-    returns a :class:`HierarchyNode` regardless of the method used
-    to create the node.
+    Hierarchies may be constructed when instantiating the class or via
+    the :meth:`update` method using a dictionary mapping identifiers
+    to parents. In both cases, the parents may be a string of
+    whitespace-separated parent identifiers or a tuple of (possibly
+    non-string) identifiers. Also, both methods may take a `data`
+    parameter which accepts a mapping from identifiers to arbitrary
+    data. Data for identifiers may be get and set individually with
+    dictionary key-access.
 
-    >>> h = Hierarchy('*top*', {'food': '*top*'})
-    >>> th.update({'utensil': '*top*', 'fruit': 'food'})
-    >>> th['apple'] = 'fruit'
-    >>> th['knife'] = HierarchyNode('utensil', data='info about knives')
-    >>> th['apple'].data = 'info about apples'
+    >>> h = Hierarchy('*top*', {'food': '*top*', 'utensil': '*top*'})
+    >>> th.update({'fruit': 'food', 'apple': 'fruit'})
+    >>> th['apple'] = 'about apples'
+    >>> th.update({'knife': 'utensil'}, data={'knife': 'about knives'})
+    >>> th.update({'vegetable': 'food', 'tomato': 'fruit vegetable'})
 
     In some ways the Hierarchy behaves like a dictionary, but it
     is not a subclass of :py:class:`dict` and does not implement all
@@ -51,7 +44,7 @@ class MultiHierarchy(object):
     3
     >>> list(h)
     ['a', 'b', 'c']
-    >>> Hierarchy('*top*', dict(h.items())) == h
+    >>> Hierarchy('*top*', {id: h.parents(id) for id in h}) == h
     True
 
     But others do not ignore the top node, namely those where you can
@@ -59,8 +52,10 @@ class MultiHierarchy(object):
 
     >>> '*top*' in h
     True
-    >>> h['*top*']
-    <HierarchyNode ... >
+    >>> print(h['*top*'])
+    None
+    >>> h.children('*top*')
+    {'a'}
 
     Args:
         top (str): unique top type
@@ -104,11 +99,19 @@ class MultiHierarchy(object):
 
     def __getitem__(self, identifier):
         identifier = self._norm(identifier)
-        return self._data[identifier]
+        data = None
+        try:
+            data = self._data[identifier]
+        except KeyError:
+            if identifier not in self:
+                raise
+        return data
 
     def __setitem__(self, identifier, data):
         identifier = self._norm(identifier)
-        self._hier[identifier]  # check for KeyError
+        if identifier not in self:
+            raise HierarchyError('cannot set data; not in hierarchy: {}'
+                                 .format(identifier))
         self._data[identifier] = data
 
     def __iter__(self):
@@ -121,16 +124,11 @@ class MultiHierarchy(object):
     def __len__(self):
         return len(self._hier) - 1  # ignore top
 
-    def get(self, identifier, default=None):
-        """Return the data associated with *identifier*."""
-        identifier = self._norm(identifier)
-        return self._data.get(identifier, default)
-
     def items(self):
         """
         Return the (identifier, data) pairs excluding the top node.
         """
-        value = self._data.get
+        value = self.__getitem__
         return [(identifier, value(identifier)) for identifier in self]
 
     def update(self, subhierarchy=None, data=None):

@@ -7,10 +7,7 @@ delphin.hierarchy
    Classes
    -------
 
-   .. autoclass:: Hierarchy
-      :members:
-
-   .. autoclass:: HierarchyNode
+   .. autoclass:: MultiHierarchy
       :members:
 
    Exceptions
