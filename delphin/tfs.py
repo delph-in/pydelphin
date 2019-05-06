@@ -13,11 +13,9 @@ compatibility.
 
 """
 
-from collections.abc import Iterable
-
 from delphin.hierarchy import (
-    HierarchyNode,
-    Hierarchy,
+    MultiHierarchyNode,
+    MultiHierarchy,
     HierarchyError)
 
 
@@ -186,7 +184,7 @@ class TypedFeatureStructure(FeatureStructure):
         self._type = value
 
 
-class TypeHierarchyNode(HierarchyNode):
+class TypeHierarchyNode(MultiHierarchyNode):
     """
     A node in a TypeHierarchy.
 
@@ -205,28 +203,12 @@ class TypeHierarchyNode(HierarchyNode):
         data: data associated with the type, or `None`
     """
 
-    def __init__(self, parents, data=None):
-        if parents is None:  # top node, probably
-            parent = parents
-        elif not parents:  # empty iterable, probably
-            raise ValueError('no parents specified')
-        else:
-            parent = tuple(map(self.normalize_identifier, parents))
-        super().__init__(parent, data=data)
-
     @staticmethod
     def normalize_identifier(typename):
         return typename.lower()
 
-    @property
-    def parents(self):
-        if self._parent is None:
-            return []
-        else:
-            return list(self._parent)
 
-
-class TypeHierarchy(Hierarchy):
+class TypeHierarchy(MultiHierarchy):
     """
     A Type Hierarchy.
 
@@ -286,50 +268,7 @@ class TypeHierarchy(Hierarchy):
     _nodecls = TypeHierarchyNode
     _errcls  = TypeHierarchyError
 
-    def _update_children(self, typename, node):
-        for parent in node.parents:
-            self._hier[parent]._children.add(typename)
-
-    def _check_node_integrity(self, node):
-        ancestors = set()
-        for parent in node.parents:
-            if parent not in self._hier:
-                raise TypeHierarchyError('parent not in hierarchy: ' + parent)
-            ancestors.update(self.ancestors(parent))
-        redundant = ancestors.intersection(node.parents)
-        if redundant:
-            raise TypeHierarchyError('redundant parents: {}'
-                                     .format(', '.join(sorted(redundant))))
-
-    def _node_is_eligible(self, node):
-        hierarchy = self._hier
-        return all(parent in hierarchy for parent in node.parents)
-
-    def _ensure_node(self, typename, node):
-        if isinstance(node, str):
-            node = TypeHierarchyNode([node])
-        elif isinstance(node, Iterable):
-            node = TypeHierarchyNode(node)
-        elif not isinstance(node, TypeHierarchyNode):
-            raise TypeError("cannot set '{}' to object of type {}"
-                            .format(typename, node.__class__.__name__))
-        return node
-
-    def ancestors(self, typename):
-        """Return the ancestor types of *typename*."""
-        xs = []
-        for parent in self._hier[typename].parents:
-            xs.append(parent)
-            xs.extend(self.ancestors(parent))
-        return xs
-
-    def subsumes(self, a, b):
-        """Return `True` if type *a* subsumes type *b*."""
-        a, b = a.lower(), b.lower()
-        return a == b or b in self.descendants(a)
-
-    def compatible(self, a, b):
-        """Return `True` if type *a* is compatible with type *b*."""
-        a, b = a.lower(), b.lower()
-        return len(set([a] + self.descendants(a))
-                   .intersection([b] + self.descendants(b))) > 0
+    def __init__(self, top, hierarchy=None, normalize_identifier=None):
+        if not normalize_identifier:
+            normalize_identifier = str.lower
+        super().__init__(top, hierarchy, normalize_identifier)

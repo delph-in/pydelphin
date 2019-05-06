@@ -10,11 +10,17 @@ multiple parents, case-insensitive identifiers, subsumption tests,
 etc.
 """
 
+from collections.abc import Iterable
+
 from delphin.exceptions import PyDelphinException
 
 
 class HierarchyError(PyDelphinException):
     """Raised for invalid operations on hierarchies."""
+
+
+def _norm_id(id):
+    return id
 
 
 class HierarchyNode(object):
@@ -42,10 +48,6 @@ class HierarchyNode(object):
         self._parent = parent
         self._children = set()
         self.data = data
-
-    @staticmethod
-    def normalize_identifier(identifier):
-        return identifier
 
     @property
     def parent(self):
@@ -116,11 +118,17 @@ class Hierarchy(object):
         top: the hierarchy's top identifier
     """
 
+    # _nodecls = HierarchyNode
     _nodecls = HierarchyNode
-    _errcls  = HierarchyError
+    _errcls = HierarchyError
 
-    def __init__(self, top, hierarchy=None):
-        self._norm = self._nodecls.normalize_identifier
+    def __init__(self, top, hierarchy=None, normalize_identifier=None):
+        if not normalize_identifier:
+            self._norm = _norm_id
+        elif not callable(normalize_identifier):
+            raise TypeError('not callable: {!r}'.format(normalize_identifier))
+        else:
+            self._norm = normalize_identifier
         top = self._norm(top)
         self._top = top
         self._hier = {top: self._nodecls(None)}
@@ -243,3 +251,107 @@ class Hierarchy(object):
             xs.append(child)
             xs.extend(self.descendants(child))
         return xs
+
+
+class MultiHierarchyNode(HierarchyNode):
+    """
+    A node in a MultiHierarchy.
+
+    When the node is inserted into a :class:`MultiHierarchy` and other
+    nodes are inserted which specify this node as its parent, the
+    :attr:`children` attribute will be updated to reflect those
+    subtypes. The :attr:`children` list is not meant to be set
+    manually.
+
+    Args:
+        parents: an iterable of the type's parents
+        data: arbitrary data associated with the type
+    Attributes:
+        parents: the parents of the type (immediate supertypes)
+        children: the children of the type (immediate subtypes)
+        data: data associated with the type, or `None`
+    """
+
+    def __init__(self, parents, data=None):
+        if parents is None:  # top node, probably
+            parent = parents
+        elif not parents:  # empty iterable, probably
+            raise ValueError('no parents specified')
+        else:
+            parent = tuple(map(self.normalize_identifier, parents))
+        super().__init__(parent, data=data)
+
+    @staticmethod
+    def normalize_identifier(typename):
+        return typename.lower()
+
+    @property
+    def parents(self):
+        if self._parent is None:
+            return []
+        else:
+            return list(self._parent)
+
+
+class MultiHierarchy(Hierarchy):
+    """
+    A Multiply-Inheriting Hierarchy.
+
+    Args:
+        top (str): unique top type
+        hierarchy (dict): mapping of `{child: node}` (see description
+            above concerning the `node` values)
+    Attributes:
+        top: the hierarchy's top type
+    """
+
+    _nodecls = MultiHierarchyNode
+
+    def _update_children(self, typename, node):
+        for parent in node.parents:
+            self._hier[parent]._children.add(typename)
+
+    def _check_node_integrity(self, node):
+        ancestors = set()
+        for parent in node.parents:
+            if parent not in self._hier:
+                raise self._errcls('parent not in hierarchy: ' + parent)
+            ancestors.update(self.ancestors(parent))
+        redundant = ancestors.intersection(node.parents)
+        if redundant:
+            raise self._errcls('redundant parents: {}'
+                               .format(', '.join(sorted(redundant))))
+
+    def _node_is_eligible(self, node):
+        hierarchy = self._hier
+        return all(parent in hierarchy for parent in node.parents)
+
+    def _ensure_node(self, typename, node):
+        if isinstance(node, str):
+            node = MultiHierarchyNode([node])
+        elif isinstance(node, Iterable):
+            node = MultiHierarchyNode(node)
+        elif not isinstance(node, MultiHierarchyNode):
+            raise TypeError("cannot set '{}' to object of type {}"
+                            .format(typename, node.__class__.__name__))
+        return node
+
+    def ancestors(self, typename):
+        """Return the ancestor types of *typename*."""
+        xs = []
+        for parent in self._hier[typename].parents:
+            xs.append(parent)
+            xs.extend(self.ancestors(parent))
+        return xs
+
+    def subsumes(self, a, b):
+        """Return `True` if type *a* subsumes type *b*."""
+        norm = self._norm
+        a, b = norm(a), norm(b)
+        return a == b or b in self.descendants(a)
+
+    def compatible(self, a, b):
+        """Return `True` if type *a* is compatible with type *b*."""
+        a, b = a.lower(), b.lower()
+        return len(set([a] + self.descendants(a))
+                   .intersection([b] + self.descendants(b))) > 0
