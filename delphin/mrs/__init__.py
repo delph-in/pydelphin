@@ -36,8 +36,8 @@ will use the same methods.
   Association for Computational Linguistics, 2009.
 """
 
-from ._exceptions import MRSSyntaxError
-from ._mrs import (
+from delphin.mrs._exceptions import MRSSyntaxError
+from delphin.mrs._mrs import (
     EP,
     HCons,
     ICons,

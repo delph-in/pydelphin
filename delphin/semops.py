@@ -110,11 +110,11 @@ def mrs_to_dmrs(m: mrs.MRS):
     Raises:
         SemanticOperationError: when the *m* cannot be converted
     """
-    # keep ids consistent
-    idmap = {ep.id: i for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)}
-    nodes, ivmap = _mrs_to_nodes(dmrs.Node, m, idmap)
-    links, top = _mrs_to_links(dmrs.Link, m, idmap, ivmap)
-    index = ivmap[m.index] if m.index else None
+    # EP id to node id map; create now to keep ids consistent
+    id_to_nid = {ep.id: i for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)}
+    nodes, iv_to_nid = _mrs_to_nodes(dmrs.Node, m, id_to_nid)
+    links, top = _mrs_to_links(dmrs.Link, m, id_to_nid, iv_to_nid)
+    index = iv_to_nid[m.index] if m.index else None
     return dmrs.DMRS(
         top=top,
         index=index,
@@ -125,11 +125,11 @@ def mrs_to_dmrs(m: mrs.MRS):
         identifier=m.identifier)
 
 
-def _mrs_to_nodes(cls, m, idmap):
+def _mrs_to_nodes(cls, m, id_to_nid):
     nodes = []
-    ivmap = {}
+    iv_to_nid = {}
     for ep in m.rels:
-        node_id = idmap[ep.id]
+        node_id = id_to_nid[ep.id]
         iv = ep.iv
         nodes.append(
             cls(node_id,
@@ -141,11 +141,11 @@ def _mrs_to_nodes(cls, m, idmap):
                 ep.surface,
                 ep.base))
         if not ep.is_quantifier():
-            ivmap[iv] = node_id
-    return nodes, ivmap
+            iv_to_nid[iv] = node_id
+    return nodes, iv_to_nid
 
 
-def _mrs_to_links(cls, m, idmap, ivmap):
+def _mrs_to_links(cls, m, id_to_nid, iv_to_nid):
     links = []
     hcmap = {hc.hi: hc for hc in m.hcons}
     reps = scope.representatives(m)
@@ -154,16 +154,16 @@ def _mrs_to_links(cls, m, idmap, ivmap):
     if m.top in hcmap:
         lbl = hcmap[m.top].lo
         rep = reps[lbl][0]
-        top = idmap[rep]
+        top = id_to_nid[rep]
     elif m.top in reps:
         rep = reps[top][0]
-        top = idmap[rep]
+        top = id_to_nid[rep]
 
     for src, roleargs in m.arguments().items():
-        start = idmap[src]
+        start = id_to_nid[src]
         for role, tgt in roleargs.items():
 
-            if tgt in ivmap:
+            if tgt in iv_to_nid:
                 if m[src].label == m[tgt].label:
                     post = dmrs.EQ_POST
                 else:
@@ -181,14 +181,80 @@ def _mrs_to_links(cls, m, idmap, ivmap):
             else:
                 continue  # e.g., BODY, dropped arguments, etc.
 
-            end = ivmap[tgt]
+            end = iv_to_nid[tgt]
             links.append(cls(start, end, role, post))
 
     return links, top
 
 
 def dmrs_to_mrs(d: dmrs.DMRS):
-    pass
+    qeq = mrs.HCons.qeq
+    vfac = variable.VariableFactory(starting_vid=0)
+
+    top = vfac.new(variable.HANDLE)[0]
+    id_to_lbl, id_to_iv = _dmrs_build_maps(d, vfac)
+
+    hcons = [qeq(top, id_to_lbl[d.top])]
+    icons = None
+    arguments = d.arguments()
+    rels = []
+    for node in d.nodes:
+        label = id_to_lbl[node.id]
+        args = {mrs.INTRINSIC_ROLE: id_to_iv[node.id]}
+        for role, tgt in arguments.get(node.id, {}).items():
+            end, role, post = l
+        arguments.get(node.id, {})
+        if d.is_quantifier(node.id):
+            pass
+        else:
+            pass
+            if node.carg is not None:
+                args[mrs.CONSTANT_ROLE] = node.carg
+        rels.append(
+            EP(node.predicate,
+               label,
+               args=args,
+               lnk=node.lnk,
+               surface=node.surface,
+               base=node.base))
+
+    return mrs.MRS(
+        top=top,
+        index=index,
+        rels=rels,
+        hcons=hcons,
+        icons=icons,
+        variables=vfac.store,
+        lnk=d.lnk,
+        surface=d.surface,
+        identifier=d.identifier)
+
+
+def _dmrs_build_maps(d, vfac):
+    scopes = d.scopes()
+    vfac.index.update(scopes.index)  # prevent labels from being reused
+    id_to_lbl = {}
+    for label, nodes in scopes.items():
+        id_to_lbl.update((node.id, label) for node in nodes)
+
+    id_to_iv = {node.id: vfac.new(node.type, node.properties)[0]
+                for node in d.nodes if not d.is_quantifier(node.id)}
+    for link in d.links:
+        if link.role == dmrs.RESTRICTION_ROLE:
+            id_to_iv[link.start] = id_to_iv[link.end]
+
+    return id_to_lbl, id_to_iv
+
+
+def _dmrs_to_arguments(d, vfac):
+    args = d.arguments()
+    for src, roleargs in args.items():
+        src_node = d[src]
+        type = src_node.type or variable.UNKNOWN
+        iv = vfac.new(type, src_node.properties)
+        roleargs[mrs.INTRINSIC_ROLE] = iv
+        for role, tgt in roleargs.items():
+            roleargs[role] 
 
 
 def mrs_to_eds(m: mrs.MRS, predicate_modifiers=True):

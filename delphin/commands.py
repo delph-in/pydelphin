@@ -644,7 +644,8 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
              "gold": number_of_unique_results_in_gold}
 
     """
-    from delphin.mrs import simplemrs, compare as mrs_compare
+    from delphin.mrs import simplemrs
+    from delphin.semops import isomorphism
 
     if not isinstance(testsuite, itsdb.TestSuite):
         testsuite = itsdb.TestSuite(testsuite)
@@ -665,7 +666,7 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
         0)
 
     for (key, testrows, goldrows) in matched_rows:
-        (test_unique, shared, gold_unique) = mrs_compare.compare_bags(
+        (test_unique, shared, gold_unique) = semops.compare_bags(
             [simplemrs.decode(row[2]) for row in testrows],
             [simplemrs.decode(row[2]) for row in goldrows])
         yield {'id': key,
