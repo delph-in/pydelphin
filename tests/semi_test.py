@@ -37,11 +37,11 @@ def test_variables(tmpdir):
     s = semi.load(str(p))
     assert len(s.variables) == 5
     assert all([v in s.variables for v in 'uiepx'])
-    assert s.variables['u'].data == []
-    assert s.variables['i'].data == []
-    assert s.variables['e'].data == [('PERF', 'bool'), ('TENSE', 'tense')]
-    assert s.variables['p'].data == []
-    assert s.variables['x'].data == []
+    assert s.variables['u'] == []
+    assert s.variables['i'] == []
+    assert s.variables['e'] == [('PERF', 'bool'), ('TENSE', 'tense')]
+    assert s.variables['p'] == []
+    assert s.variables['x'] == []
     assert all(s.variables.subsumes('u', v) for v in 'iepx')
     assert not s.variables.compatible('e', 'x')
     # redefinition
@@ -100,14 +100,14 @@ def test_predicates(tmpdir):
     s = semi.load(str(p))
     assert set(s.predicates) == {'existential_q', '_the_q', '_predicate_n_1',
                                  '_predicate_v_of', '_predominant_a_1'}
-    assert s.predicates['_the_q'].parents == ['existential_q']
-    assert s.predicates['_predicate_n_1'].parents == ['*top*']
-    assert s.predicates['_predicate_v_of'].parents == ['*top*']
-    assert s.predicates['_predominant_a_1'].parents == ['*top*']
-    assert len(s.predicates['_the_q'].data) == 0
-    assert len(s.predicates['_predicate_n_1'].data) == 1
-    assert len(s.predicates['_predicate_v_of'].data) == 1
-    assert len(s.predicates['_predominant_a_1'].data) == 2
+    assert s.predicates.parents('_the_q') == ('existential_q',)
+    assert s.predicates.parents('_predicate_n_1') == ('*top*',)
+    assert s.predicates.parents('_predicate_v_of') == ('*top*',)
+    assert s.predicates.parents('_predominant_a_1') == ('*top*',)
+    assert len(s.predicates['_the_q']) == 0
+    assert len(s.predicates['_predicate_n_1']) == 1
+    assert len(s.predicates['_predicate_v_of']) == 1
+    assert len(s.predicates['_predominant_a_1']) == 2
 
 
 def test_include(tmpdir):
@@ -153,8 +153,8 @@ def test_include(tmpdir):
     assert 'existential_q' in s.predicates
     assert 'can_able' in s.predicates
     assert '_able_a_1' in s.predicates
-    assert 'can_able' in s.predicates['_able_a_1'].parents
-    assert len(s.predicates['_able_a_1'].data) == 2
+    assert 'can_able' in s.predicates.parents('_able_a_1')
+    assert len(s.predicates['_able_a_1']) == 2
     # redefinition
     a.write('variables:\n'
             '  i.\n'
@@ -180,9 +180,9 @@ def test_comments(tmpdir):
 
 
 def test_consistency():
-    from delphin import tfs
+    from delphin import hierarchy
     # invalid hierarchy
-    with pytest.raises(tfs.TypeHierarchyError):
+    with pytest.raises(hierarchy.HierarchyError):
         semi.SemI(variables={'u': {'parents': []},
                              'i': {'parents': ['u', 'i']}})
     # undeclared variable
@@ -196,7 +196,8 @@ def test_consistency():
             predicates={
                 '_predicate_n_1': {
                     'parents': [],
-                    'synopses': [{'roles': [{'name': 'ARG0', 'value': 'i'}]}]}})
+                    'synopses': [
+                        {'roles': [{'name': 'ARG0', 'value': 'i'}]}]}})
     # undeclared properties
     with pytest.raises(semi.SemIError):
         semi.SemI(

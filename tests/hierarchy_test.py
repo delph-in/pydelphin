@@ -1,100 +1,130 @@
 
 import pytest
 
-from delphin.hierarchy import (HierarchyNode, Hierarchy, HierarchyError)
+from delphin.hierarchy import (
+    MultiHierarchy as MH,
+    HierarchyError)
 
 
-def test_HierarchyNode():
-    N = HierarchyNode
-    with pytest.raises(TypeError):
-        N()
-    n = N(None)
-    assert n.parent is None
-    n = N('*top*')
-    assert n.parent == '*top*'
-    assert n.children == []
-    assert n.data is None
-    n.data = 1
-    assert n.data == 1
-    n = N(('a', 'b'), data=2)
-    assert n.parent == ('a', 'b')
-    assert n.data == 2
-    # no case normalization
-    n = N('A')
-    assert n.parent == 'A'
-
-
-class TestHierarchy():
+class TestMultiHierarchy():
     def test_init(self):
         with pytest.raises(TypeError):
-            Hierarchy()
+            MH()
         with pytest.raises(HierarchyError):
-            Hierarchy('*top*', {'a': 'b'})
-        h = Hierarchy('*top*')
+            MH('*top*', {'a': 'b'})
+        h = MH('*top*')
         assert h is not None
+        h = MH('*top*', {'a': '*top*'}, {'a': 5})
+        assert h.top == '*top*'
+        h = MH('*top*', normalize_identifier=str.upper)
+        assert h.top == '*TOP*'
 
-    def test_get_set(self):
-        h = Hierarchy('*top*')
-        h['a'] = '*top*'
-        assert h['a'].parent == '*top*'
+    def test_parents(self):
+        h = MH('*top*',
+               {'a': '*top*', 'b': ('*top*',), 'c': 'a b', 'd': ('a', 'b')})
+        assert h.parents('d') == ('a', 'b')
+        assert h.parents('c') == ('a', 'b')
+        assert h.parents('b') == ('*top*',)
+        assert h.parents('a') == ('*top*',)
+        assert h.parents('*top*') == ()
         with pytest.raises(KeyError):
-            h['A']  # case sensitive
-        assert h['*top*'].children == ['a']
-        h['b'] = '*top*'
-        # no multiple parents
-        with pytest.raises(HierarchyError):
-            h['c'] = HierarchyNode(('b', 'c'))
-        # exists
-        with pytest.raises(HierarchyError):
-            h['a'] = '*top*'
-        # parent doesn't exist
-        with pytest.raises(HierarchyError):
-            h['e'] = 'f'
-        # invalid parent data type
-        with pytest.raises(TypeError):
-            h['c'] = ('b', 'c')
-        with pytest.raises(TypeError):
-            h['1'] = 1
+            h.parents('e')
+
+    def test_children(self):
+        h = MH('*top*',
+               {'a': '*top*', 'b': ('*top*',), 'c': 'a b', 'd': ('a', 'b')})
+        assert h.children('d') == set()
+        assert h.children('c') == set()
+        assert h.children('b') == {'c', 'd'}
+        assert h.children('a') == {'c', 'd'}
+        assert h.children('*top*') == {'a', 'b'}
+        with pytest.raises(KeyError):
+            h.children('e')
+
+    def test_ancestors(self):
+        h = MH('*top*',
+               {'a': '*top*', 'b': ('*top*',), 'c': 'a b', 'd': ('a', 'b')})
+        assert h.ancestors('d') == {'b', 'a', '*top*'}
+        assert h.ancestors('c') == {'b', 'a', '*top*'}
+        assert h.ancestors('b') == {'*top*'}
+        assert h.ancestors('a') == {'*top*'}
+        assert h.ancestors('*top*') == set()
+        with pytest.raises(KeyError):
+            h.ancestors('e')
+
+    def test_descendants(self):
+        h = MH('*top*',
+               {'a': '*top*', 'b': ('*top*',), 'c': 'a b', 'd': ('a', 'b')})
+        assert h.descendants('d') == set()
+        assert h.descendants('c') == set()
+        assert h.descendants('b') == {'c', 'd'}
+        assert h.descendants('a') == {'c', 'd'}
+        assert h.descendants('*top*') == {'a', 'b', 'c', 'd'}
+        with pytest.raises(KeyError):
+            h.descendants('e')
 
     def test_update(self):
-        h = Hierarchy('*top*')
+        h = MH('*top*')
         h.update({'a': '*top*', 'b': '*top*'})
-        assert h['a'].parent == '*top*'
-        h.update({'d': HierarchyNode('a')})
-        assert h['d'].parent == 'a'
+        assert h.parents('a') == ('*top*',)
+        h.update({'d': 'a'})
+        assert h.parents('d') == ('a',)
         # no multiple parents
         with pytest.raises(HierarchyError):
-            h.update({'c': HierarchyNode(('b', 'c'))})
+            h.update({'c': 'b c'})
         # exists
         with pytest.raises(HierarchyError):
             h.update({'a': '*top*'})
         # parent doesn't exist
         with pytest.raises(HierarchyError):
             h.update({'a': 'f'})
-        # invalid parent data type
-        with pytest.raises(TypeError):
-            h.update({'c': ('a', 'b')})
-        with pytest.raises(TypeError):
-            h.update({'1': 1})
+        # invalid parent data type (note: type checks currently disabled)
+        # with pytest.raises(TypeError):
+        #     h.update({'c': ('a', 'b')})
+        # with pytest.raises(TypeError):
+        #     h.update({'1': 1})
+
+    def test_get_set(self):
+        h = MH('*top*')
+        h.update({'a': '*top*'})
+        assert h.parents('a') == ('*top*',)
+        with pytest.raises(KeyError):
+            h['A']  # case sensitive
+        assert h.children('*top*') == {'a'}
+        h.update({'b': '*top*'})
+        # no multiple parents
+        with pytest.raises(HierarchyError):
+            h.update({'c': 'b c'})
+        # exists
+        with pytest.raises(HierarchyError):
+            h.update({'a': '*top*'})
+        # parent doesn't exist
+        with pytest.raises(HierarchyError):
+            h.update({'e': 'f'})
+        # invalid parent data type (note: type checks currently disabled)
+        # with pytest.raises(TypeError):
+        #     h.update({'c': ('b', 'c')})
+        # with pytest.raises(TypeError):
+        #     h.update({'1': 1})
 
     def test_len(self):
-        h = Hierarchy('*top*')
+        h = MH('*top*')
         assert len(h) == 0
-        h['a'] = '*top*'
+        h.update({'a': '*top*'})
         assert len(h) == 1
-        h['b'] = '*top*'
-        h['c'] = 'a'
+        h.update({'b': '*top*'})
+        h.update({'c': 'a'})
         assert len(h) == 3
 
     def test_iter(self):
-        h = Hierarchy('*top*')
+        h = MH('*top*')
         assert list(h) == []
-        h['a'] = '*top*'
+        h.update({'a': '*top*'})
         assert list(h) == ['a']
 
     def test_items(self):
-        h = Hierarchy('*top*')
+        h = MH('*top*')
         assert h.items() == []
-        h['a'] = '*top*'
-        h['b'] = '*top*'
+        h.update({'a': '*top*'})
+        h.update({'b': '*top*'})
         assert len(h.items()) == 2

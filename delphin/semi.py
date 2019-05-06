@@ -22,7 +22,7 @@ from operator import itemgetter
 import warnings
 
 from delphin.predicate import normalize as normalize_predicate
-from delphin import tfs
+from delphin import hierarchy
 from delphin.exceptions import (
     PyDelphinException,
     PyDelphinSyntaxError,
@@ -356,16 +356,12 @@ class SemI(object):
         roles: a mapping of (role, {'value': ...})
         predicates: a mapping of (pred, {'parents': [...], 'synopses': [...]})
     Attributes:
-        variables: a :class:`~delphin.tfs.TypeHierarchy` of variables;
-            the `data` attribute of the
-            :class:`~delphin.tfs.TypeHierarchyNode` contains its
-            property list
-        properties: a :class:`~delphin.tfs.TypeHierarchy` of properties
+        variables: a :class:`~delphin.hierarchy.MultiHierarchy` of variables;
+            node data contains the property lists
+        properties: a :class:`~delphin.hierarchy.MultiHierarchy` of properties
         roles: mapping of role names to allowed variable types
-        predicates: a :class:`~delphin.tfs.TypeHierarchy` of predicates;
-            the `data` attribute of the
-            :class:`~delphin.tfs.TypeHierarchyNode` contains a list of
-            synopses
+        predicates: a :class:`~delphin.hierarchy.MultiHierarchy` of predicates;
+            node data contains lists of synopses
     """
 
     def __init__(self,
@@ -373,10 +369,10 @@ class SemI(object):
                  properties=None,
                  roles=None,
                  predicates=None):
-        self.properties = tfs.TypeHierarchy(TOP_TYPE)
-        self.variables = tfs.TypeHierarchy(TOP_TYPE)
+        self.properties = _new_hierarchy()
+        self.variables = _new_hierarchy()
         self.roles = {}
-        self.predicates = tfs.TypeHierarchy(TOP_TYPE)
+        self.predicates = _new_hierarchy()
         # validate and normalize inputs
         if properties:
             self._init_properties(properties)
@@ -388,26 +384,22 @@ class SemI(object):
             self._init_predicates(predicates)
 
     def _init_properties(self, properties):
-        subhier = {}
-        for prop, data in properties.items():
-            prop = prop.lower()
-            parents = data.get('parents')
-            _add_to_subhierarchy(subhier, prop, parents, None)
-        self.properties.update(subhier)
+        subhier = {prop: data.get('parents') or TOP_TYPE
+                   for prop, data in properties.items()}
+        self.properties.update(subhierarchy=subhier)
 
     def _init_variables(self, variables):
-        subhier = {}
-        for var, data in variables.items():
-            var = var.lower()
-            parents = data.get('parents')
+        subhier, data = {}, {}
+        for var, var_data in variables.items():
             properties = []
-            for k, v in data.get('properties', []):
+            for k, v in var_data.get('properties', []):
                 k, v = k.upper(), v.lower()
                 if v not in self.properties:
                     raise SemIError('undefined property value: {}'.format(v))
                 properties.append((k, v))
-            _add_to_subhierarchy(subhier, var, parents, properties)
-        self.variables.update(subhier)
+            subhier[var] = var_data.get('parents') or TOP_TYPE
+            data[var] = properties
+        self.variables.update(subhierarchy=subhier, data=data)
 
     def _init_roles(self, roles):
         for role, data in roles.items():
@@ -418,17 +410,17 @@ class SemI(object):
             self.roles[role] = var
 
     def _init_predicates(self, predicates):
-        subhier = {}
-        propcache = {v: dict(node.data) for v, node in self.variables.items()}
-        for pred, data in predicates.items():
-            pred = pred.lower()
-            parents = data.get('parents')
+        subhier, data = {}, {}
+        propcache = {v: dict(props or [])
+                     for v, props in self.variables.items()}
+        for pred, pred_data in predicates.items():
             synopses = []
-            for synopsis_data in data.get('synopses', []):
+            for synopsis_data in pred_data.get('synopses', []):
                 synopses.append(
                     self._init_synopsis(pred, synopsis_data, propcache))
-            _add_to_subhierarchy(subhier, pred, parents, synopses)
-        self.predicates.update(subhier)
+            subhier[pred] = pred_data.get('parents') or TOP_TYPE
+            data[pred] = synopses
+        self.predicates.update(subhierarchy=subhier, data=data)
 
     def _init_synopsis(self, pred, synopsis_data, propcache):
         synopsis = Synopsis.from_dict(synopsis_data)
@@ -467,37 +459,35 @@ class SemI(object):
     @classmethod
     def from_dict(cls, d):
         """Instantiate a SemI from a dictionary representation."""
-
         return cls(**d)
 
     def to_dict(self):
         """Return a dictionary representation of the SemI."""
 
-        def add_parents(d, node):
-            ps = node.parents
-            if ps and ps != [TOP_TYPE]:
-                d['parents'] = ps
+        def add_parents(d, ps):
+            if ps and list(ps) != [TOP_TYPE]:
+                d['parents'] = list(ps)
 
         variables = {}
-        for var, node in self.variables.items():
+        for var, data in self.variables.items():
             variables[var] = d = {}
-            add_parents(d, node)
-            if node.data:
-                d['properties'] = [[k, v] for k, v in node.data]
+            add_parents(d, self.variables.parents(var))
+            if data:
+                d['properties'] = list(map(list, data))
 
         properties = {}
-        for prop, node in self.properties.items():
+        for prop in self.properties:
             properties[prop] = d = {}
-            add_parents(d, node)
+            add_parents(d, self.properties.parents(prop))
 
         roles = {role: {'value': value} for role, value in self.roles.items()}
 
         predicates = {}
-        for pred, node in self.predicates.items():
+        for pred, data in self.predicates.items():
             predicates[pred] = d = {}
-            add_parents(d, node)
-            if node.data:
-                d['synopses'] = [synopsis.to_dict() for synopsis in node.data]
+            add_parents(d, self.predicates.parents(pred))
+            if data:
+                d['synopses'] = [synopsis.to_dict() for synopsis in data]
 
         return {'variables': variables,
                 'properties': properties,
@@ -542,7 +532,7 @@ class SemI(object):
         if variables is not None:
             variables = [var.lower() for var in variables]
         found = False
-        for synopsis in self.predicates[predicate].data:
+        for synopsis in self.predicates[predicate]:
             if roles is not None and roles != set(d.name for d in synopsis):
                 continue
             if (variables is not None and (
@@ -558,9 +548,5 @@ class SemI(object):
         return found
 
 
-def _add_to_subhierarchy(subhier, typename, parents, data):
-    if parents:
-        parents = [parent.lower() for parent in parents]
-    else:
-        parents = [TOP_TYPE]
-    subhier[typename] = tfs.TypeHierarchyNode(parents, data=data)
+def _new_hierarchy():
+    return hierarchy.MultiHierarchy(TOP_TYPE, normalize_identifier=str.lower)

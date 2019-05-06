@@ -275,7 +275,7 @@ def _match_properties(variables, semi):
     for var, propvals in variables.items():
         if not propvals:
             continue
-        semiprops = semi.variables[variable.type(var)].data
+        semiprops = semi.variables[variable.type(var)]
         assert len(semiprops) == len(propvals)
         assert all(semi.properties.subsumes(sp[1], pv)
                    for sp, pv in zip(semiprops, propvals))
@@ -344,7 +344,7 @@ def _prepare_variable_properties(m, semi):
         if varprops:
             proplists[var] = [
                 varprops.get(key, val).upper()
-                for key, val in semi.variables[variable.type(var)].data]
+                for key, val in semi.variables[variable.type(var)]]
     return proplists
 
 

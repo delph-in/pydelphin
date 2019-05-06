@@ -13,14 +13,7 @@ compatibility.
 
 """
 
-from delphin.hierarchy import (
-    MultiHierarchyNode,
-    MultiHierarchy,
-    HierarchyError)
-
-
-class TypeHierarchyError(HierarchyError):
-    """Raised for invalid operations on type hierarchies."""
+from delphin.hierarchy import MultiHierarchy
 
 
 class FeatureStructure(object):
@@ -184,30 +177,6 @@ class TypedFeatureStructure(FeatureStructure):
         self._type = value
 
 
-class TypeHierarchyNode(MultiHierarchyNode):
-    """
-    A node in a TypeHierarchy.
-
-    When the node is inserted into a :class:`TypeHierarchy` and other
-    nodes are inserted which specify this node as its parent, the
-    :attr:`children` attribute will be updated to reflect those
-    subtypes. The :attr:`children` list is not meant to be set
-    manually.
-
-    Args:
-        parents: an iterable of the type's parents
-        data: arbitrary data associated with the type
-    Attributes:
-        parents: the parents of the type (immediate supertypes)
-        children: the children of the type (immediate subtypes)
-        data: data associated with the type, or `None`
-    """
-
-    @staticmethod
-    def normalize_identifier(typename):
-        return typename.lower()
-
-
 class TypeHierarchy(MultiHierarchy):
     """
     A Type Hierarchy.
@@ -265,10 +234,11 @@ class TypeHierarchy(MultiHierarchy):
         top: the hierarchy's top type
     """
 
-    _nodecls = TypeHierarchyNode
-    _errcls  = TypeHierarchyError
-
-    def __init__(self, top, hierarchy=None, normalize_identifier=None):
+    def __init__(self, top, hierarchy=None, data=None,
+                 normalize_identifier=None):
         if not normalize_identifier:
             normalize_identifier = str.lower
-        super().__init__(top, hierarchy, normalize_identifier)
+        super().__init__(top,
+                         hierarchy=hierarchy,
+                         data=data,
+                         normalize_identifier=normalize_identifier)

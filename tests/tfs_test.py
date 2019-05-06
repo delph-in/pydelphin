@@ -1,6 +1,7 @@
 
 import pytest
 
+from delphin import hierarchy
 from delphin import tfs
 
 
@@ -49,77 +50,51 @@ def test_TypedFeatureStructure():
     assert fs != tfs.TypedFeatureStructure('typename', [('A', 1), ('B', 3)])
 
 
-def test_TypeHierarchyNode():
-    N = tfs.TypeHierarchyNode
-    with pytest.raises(TypeError):
-        N()
-    with pytest.raises(ValueError):
-        N([])
-    n = N(None)
-    assert n.parents == []
-    n = N(['*top*'])
-    assert n.parents == ['*top*']
-    assert n.children == []
-    assert n.data is None
-    n.data = 1
-    assert n.data == 1
-    n = N(['a', 'b'], data=2)
-    assert n.parents == ['a', 'b']
-    assert n.data == 2
-    # case normalization
-    n = N(['A', 'b'])
-    assert n.parents == ['a', 'b']
-
-
 class TestTypeHierarchy(object):
     def test_init(self):
         with pytest.raises(TypeError):
             tfs.TypeHierarchy()
-        with pytest.raises(tfs.TypeHierarchyError):
+        with pytest.raises(hierarchy.HierarchyError):
             tfs.TypeHierarchy('*top*', {'a': ['b']})
         th = tfs.TypeHierarchy('*top*')
         assert th is not None
 
     def test_get_set(self):
-        th = tfs.TypeHierarchy('*top*')
-        th['a'] = '*top*'
-        assert th['a'].parents == ['*top*']
-        assert th['A'].parents == ['*top*']  # case insensitive
-        assert th['*top*'].children == ['a']
-        th['b'] = '*top*'
-        th['c'] = ('a', 'b')
-        assert th['c'].parents == ['a', 'b']
-        th['d'] = tfs.TypeHierarchyNode(['c'])
-        assert th['d'].parents == ['c']
+        th = tfs.TypeHierarchy('*top*', {'a': '*top*'})
+        assert th.parents('a') == ('*top*',)
+        assert th.parents('A') == ('*top*',)  # case insensitive
+        assert th.children('*top*') == {'a'}
+        th.update({'b': '*top*', 'c': 'a b'})
+        assert th.parents('c') == ('a', 'b')
         # exists
-        with pytest.raises(tfs.TypeHierarchyError):
-            th['a'] = '*top*'
+        with pytest.raises(hierarchy.HierarchyError):
+            th.update({'a': '*top*'})
         # parent doesn't exist
-        with pytest.raises(tfs.TypeHierarchyError):
-            th['e'] = 'f'
+        with pytest.raises(hierarchy.HierarchyError):
+            th.update({'e': 'f'})
         # invalid parent data type
         with pytest.raises(TypeError):
-            th['1'] = 1
+            th.update({'1': 1})
 
     def test_update(self):
         th = tfs.TypeHierarchy('*top*')
         th.update({'a': '*top*', 'b': '*top*'})
-        assert th['a'].parents == ['*top*']
+        assert th.parents('a') == ('*top*',)
         th.update({'c': ('a', 'b')})
-        assert th['c'].parents == ['a', 'b']
-        th.update({'d': tfs.TypeHierarchyNode(['a'])})
-        assert th['d'].parents == ['a']
+        assert th.parents('c') == ('a', 'b')
+        th.update({'d': 'a b'})
+        assert th.parents('d') == ('a', 'b')
         # exists
-        with pytest.raises(tfs.TypeHierarchyError):
+        with pytest.raises(hierarchy.HierarchyError):
             th.update({'a': '*top*'})
         # parent doesn't exist
-        with pytest.raises(tfs.TypeHierarchyError):
+        with pytest.raises(hierarchy.HierarchyError):
             th.update({'a': 'f'})
         # invalid parent data type
         with pytest.raises(TypeError):
             th.update({'1': 1})
         # cycle
-        with pytest.raises(tfs.TypeHierarchyError):
+        with pytest.raises(hierarchy.HierarchyError):
             th.update({'e': ('a', 'f'), 'f': ('a', 'e')})
 
     def test_subsumes(self):
@@ -128,10 +103,10 @@ class TestTypeHierarchy(object):
         th = tfs.TypeHierarchy('*top*', {'a': ['*top*']})
         assert th.subsumes('*top*', 'a') is True
         assert th.subsumes('a', '*top*') is False
-        th['b'] = ['*top*']
+        th.update({'b': '*top*'})
         assert th.subsumes('a', 'b') is False
         assert th.subsumes('b', 'a') is False
-        th['c'] = ['a', 'b']
+        th.update({'c': ['a', 'b']})
         assert th.subsumes('a', 'b') is False
         assert th.subsumes('b', 'a') is False
         assert th.subsumes('a', 'c') is True
@@ -145,43 +120,43 @@ class TestTypeHierarchy(object):
         assert th.compatible('*top*', '*top*') is True
         th = tfs.TypeHierarchy('*top*', {'a': ['*top*']})
         assert th.compatible('*top*', 'a') is True
-        th['b'] = ['*top*']
+        th.update({'b': '*top*'})
         assert th.compatible('a', 'b') is False
-        th['c'] = ['a', 'b']
+        th.update({'c': 'a b'})
         assert th.compatible('a', 'b') is True
 
     def test_len(self):
         th = tfs.TypeHierarchy('*top*')
         assert len(th) == 0
-        th['a'] = '*top*'
+        th.update({'a': '*top*'})
         assert len(th) == 1
-        th['b'] = '*top*'
-        th['c'] = ('a', 'b')
+        th.update({'b': '*top*'})
+        th.update({'c': ('a', 'b')})
         assert len(th) == 3
 
     def test_iter(self):
         th = tfs.TypeHierarchy('*top*')
         assert list(th) == []
-        th['a'] = '*top*'
+        th.update({'a': '*top*'})
         assert list(th) == ['a']
 
     def test_items(self):
         th = tfs.TypeHierarchy('*top*')
         assert th.items() == []
-        th['a'] = '*top*'
-        th['b'] = '*top*'
+        th.update({'a': '*top*'})
+        th.update({'b': '*top*'})
         assert len(th.items()) == 2
 
     def test_integrity(self):
         # trivial cycle
-        with pytest.raises(tfs.TypeHierarchyError):
+        with pytest.raises(hierarchy.HierarchyError):
             tfs.TypeHierarchy('*top*', {'a': ['*top*', 'a']})
         # mutual cycle
-        with pytest.raises(tfs.TypeHierarchyError):
+        with pytest.raises(hierarchy.HierarchyError):
             tfs.TypeHierarchy('*top*', {'a': ['*top*', 'b'],
                                         'b': ['*top*', 'a']})
         # redundant parent
-        with pytest.raises(tfs.TypeHierarchyError):
+        with pytest.raises(hierarchy.HierarchyError):
             tfs.TypeHierarchy('*top*', {'a': ['*top*'],
                                         'b': ['*top*', 'a']})
         # awaiting issue #94

@@ -2,15 +2,13 @@
 """
 Basic support for hierarchies.
 
-The :class:`Hierarchy` and :class:`HierarchyNode` classes implement a
-single-parented hierarchy, i.e., a tree. While it can be used as-is,
+The :class:`MultiHierarchy` class implements a
+multiply-parented hierarchy. While it can be used as-is,
 it mainly serves as a base class for other hierarchies, such as
 :class:`delphin.tfs.TypeHierarchy`, which extends it to allow for
 multiple parents, case-insensitive identifiers, subsumption tests,
 etc.
 """
-
-from collections.abc import Iterable
 
 from delphin.exceptions import PyDelphinException
 
@@ -20,63 +18,17 @@ class HierarchyError(PyDelphinException):
 
 
 def _norm_id(id):
+    """Default id normalizer does nothing."""
     return id
 
 
-class HierarchyNode(object):
+class MultiHierarchy(object):
     """
-    A node in a Hierarchy.
-
-    When the node is inserted into a :class:`Hierarchy` and other
-    nodes are inserted which specify this node as its parent, the
-    :attr:`children` attribute will be updated to reflect those
-    subtypes. The :attr:`children` list is not meant to be set
-    manually.
-
-    Args:
-        parent: the node's parent
-        data: arbitrary data associated with the node
-    Attributes:
-        parent: the parent of the node
-        children: the children of the node
-        data: data associated with the node, or `None`
-    """
-
-    __slots__ = ('_parent', '_children', 'data')
-
-    def __init__(self, parent, data=None):
-        self._parent = parent
-        self._children = set()
-        self.data = data
-
-    @property
-    def parent(self):
-        return self._parent
-
-    @property
-    def children(self):
-        return list(self._children)
-
-    def __eq__(self, other):
-        if not isinstance(other, HierarchyNode):
-            return NotImplemented
-        return (self.parent == other.parent
-                and self.children == other.children
-                and self.data == other.data)
-
-    def __ne__(self, other):
-        if not isinstance(other, HierarchyNode):
-            return NotImplemented
-        return not (self == other)
-
-
-class Hierarchy(object):
-    """
-    A Hierarchy.
+    A Multiply-Inheriting Hierarchy.
 
     Hierarchies may be constructed when instantiating the class or
     via the :meth:`update` method using a dictionary mapping identifiers
-    to node values, or one-by-one using dictionary-like access.
+    to parents, or one-by-one using dictionary-like access.
     In both cases, the node values may be an individual parent name,
     an iterable of parent names, or a :class:`HierarchyNode`
     object. Retrieving a node via dictionary access on the identifier
@@ -111,18 +63,15 @@ class Hierarchy(object):
     <HierarchyNode ... >
 
     Args:
-        top (str): unique top identifier
-        hierarchy (dict): mapping of `{identifier: node}` (see
-            description above concerning the `node` values)
+        top (str): unique top type
+        hierarchy (dict): mapping of `{child: node}` (see description
+            above concerning the `node` values)
     Attributes:
-        top: the hierarchy's top identifier
+        top: the hierarchy's top type
     """
 
-    # _nodecls = HierarchyNode
-    _nodecls = HierarchyNode
-    _errcls = HierarchyError
-
-    def __init__(self, top, hierarchy=None, normalize_identifier=None):
+    def __init__(self, top, hierarchy=None, data=None,
+                 normalize_identifier=None):
         if not normalize_identifier:
             self._norm = _norm_id
         elif not callable(normalize_identifier):
@@ -131,53 +80,36 @@ class Hierarchy(object):
             self._norm = normalize_identifier
         top = self._norm(top)
         self._top = top
-        self._hier = {top: self._nodecls(None)}
+        self._hier = {top: ()}
+        self._loer = {top: set()}
+        self._data = {}
         if hierarchy is not None:
-            self.update(hierarchy)
+            self.update(hierarchy, data)
 
     @property
     def top(self):
         return self._top
 
     def __eq__(self, other):
-        if not isinstance(other, Hierarchy):
+        if not isinstance(other, self.__class__):
             return NotImplemented
-        return self._top == other._top and self._hier == other._hier
+        return (self._top == other._top
+                and self._hier == other._hier
+                and self._data == other._data)
 
     def __ne__(self, other):
-        if not isinstance(other, Hierarchy):
+        if not isinstance(other, self.__class__):
             return NotImplemented
         return not self.__eq__(other)
 
-    def __setitem__(self, identifier, node):
-        node = self._ensure_node(identifier, node)
-        self._insert(identifier, node)
-
-    def _ensure_node(self, identifier, node):
-        if isinstance(node, str):
-            node = HierarchyNode(node)
-        elif not isinstance(node, HierarchyNode):
-            raise TypeError("cannot set '{}' to object of type {}"
-                            .format(identifier, node.__class__.__name__))
-        return node
-
-    def _insert(self, identifier, node):
-        identifier = self._norm(identifier)
-        if identifier in self._hier:
-            raise self._errcls('already in hierarchy: ' + identifier)
-        self._check_node_integrity(node)
-        self._hier[identifier] = node
-        self._update_children(identifier, node)
-
-    def _update_children(self, identifier, node):
-        self._hier[node.parent]._children.add(identifier)
-
-    def _check_node_integrity(self, node):
-        if node.parent not in self._hier:
-            raise self._errcls('parent not in hierarchy: ' + str(node.parent))
-
     def __getitem__(self, identifier):
-        return self._hier[self._norm(identifier)]
+        identifier = self._norm(identifier)
+        return self._data[identifier]
+
+    def __setitem__(self, identifier, data):
+        identifier = self._norm(identifier)
+        self._hier[identifier]  # check for KeyError
+        self._data[identifier] = data
 
     def __iter__(self):
         return iter(identifier for identifier in self._hier
@@ -189,169 +121,184 @@ class Hierarchy(object):
     def __len__(self):
         return len(self._hier) - 1  # ignore top
 
+    def get(self, identifier, default=None):
+        """Return the data associated with *identifier*."""
+        identifier = self._norm(identifier)
+        return self._data.get(identifier, default)
+
     def items(self):
         """
-        Return the (identifier, node) pairs excluding the top node.
+        Return the (identifier, data) pairs excluding the top node.
         """
-        hier = self._hier
-        return [(identifier, hier[identifier]) for identifier in self]
+        value = self._data.get
+        return [(identifier, value(identifier)) for identifier in self]
 
-    def update(self, subhierarchy):
+    def update(self, subhierarchy=None, data=None):
         """
-        Incorporate *subhierarchy* into the hierarchy.
+        Incorporate *subhierarchy* and *data* into the hierarchy.
 
-        This is nearly the same as the following:
-
-        >>> for identifier, node in subhierarchy.items():
-        ...     hierarchy[identifier] = node
-        ...
-
-        However the `update()` method ensures that the nodes are
-        inserted in an order that does not result in an intermediate
-        state being disconnected or cyclic, and raises an error if
-        it cannot avoid such a state due to *subhierarchy* being
-        invalid when inserted into the main hierarchy.
+        This method ensures that nodes are inserted in an order that
+        does not result in an intermediate state being disconnected or
+        cyclic, and raises an error if it cannot avoid such a state
+        due to *subhierarchy* being invalid when inserted into the
+        main hierarchy.
 
         Args:
-            subhierarchy (dict): hierarchy to incorporate
+            subhierarchy: mapping of node identifiers to parents
+            data: mapping of node identifiers to data objects
         Raises:
-            HierarchyError: when inserting *subhierarchy* leads to
-                a disconnected or cyclic hierarchy.
+            HierarchyError: when *subhierarchy* or *data* cannot be
+                incorporated into the hierarchy
         """
-        hierarchy = self._hier
-        subhier = {self._norm(t): self._ensure_node(t, n)
-                   for t, n in subhierarchy.items()}
-        while subhier:
-            eligible = [identifier for identifier, node in subhier.items()
-                        if self._node_is_eligible(node)]
-            if not eligible:
-                raise self._errcls(
-                    'disconnected or cyclic hierarchy; remaining: {}'
-                    .format(', '.join(subhier)))
-            for identifier in eligible:
-                self._insert(identifier, subhier[identifier])
-                del subhier[identifier]
+        subhierarchy, data = self.validate_update(subhierarchy, data)
 
-    def _node_is_eligible(self, node):
-        return node.parent in self._hier
+        # modify these locally in case of errors
+        hier = dict(self._hier)
+        loer = dict(self._loer)
+
+        while subhierarchy:
+            eligible = _get_eligible(hier, subhierarchy)
+
+            for identifier in eligible:
+                parents = subhierarchy.pop(identifier)
+                _validate_parentage(identifier, parents, hier)
+                hier[identifier] = parents
+                loer[identifier] = set()
+                for parent in parents:
+                    loer[parent].add(identifier)
+
+        # assign to self if all tests have passed
+        self._hier = hier
+        self._loer = loer
+        self._data.update(data)
+
+    def parents(self, identifier):
+        """Return the immediate parents of *identifier*."""
+        identifier = self._norm(identifier)
+        return self._hier[identifier]
+
+    def children(self, identifier):
+        """Return the immediate children of *identifier*."""
+        identifier = self._norm(identifier)
+        return self._loer[identifier]
 
     def ancestors(self, identifier):
-        """Return the ancestor node identifiers of *identifier*."""
-        parent = self._hier[identifier].parent
-        if parent is not None:
-            xs = [parent] + self.ancestors(parent)
-        else:
-            xs = []
-        return xs
+        """Return the ancestors of *identifier*."""
+        identifier = self._norm(identifier)
+        return _ancestors(identifier, self._hier)
 
     def descendants(self, identifier):
-        """Return the descendant node identifiers of *identifier*."""
-        xs = []
-        for child in self._hier[identifier].children:
-            xs.append(child)
-            xs.extend(self.descendants(child))
-        return xs
-
-
-class MultiHierarchyNode(HierarchyNode):
-    """
-    A node in a MultiHierarchy.
-
-    When the node is inserted into a :class:`MultiHierarchy` and other
-    nodes are inserted which specify this node as its parent, the
-    :attr:`children` attribute will be updated to reflect those
-    subtypes. The :attr:`children` list is not meant to be set
-    manually.
-
-    Args:
-        parents: an iterable of the type's parents
-        data: arbitrary data associated with the type
-    Attributes:
-        parents: the parents of the type (immediate supertypes)
-        children: the children of the type (immediate subtypes)
-        data: data associated with the type, or `None`
-    """
-
-    def __init__(self, parents, data=None):
-        if parents is None:  # top node, probably
-            parent = parents
-        elif not parents:  # empty iterable, probably
-            raise ValueError('no parents specified')
-        else:
-            parent = tuple(map(self.normalize_identifier, parents))
-        super().__init__(parent, data=data)
-
-    @staticmethod
-    def normalize_identifier(typename):
-        return typename.lower()
-
-    @property
-    def parents(self):
-        if self._parent is None:
-            return []
-        else:
-            return list(self._parent)
-
-
-class MultiHierarchy(Hierarchy):
-    """
-    A Multiply-Inheriting Hierarchy.
-
-    Args:
-        top (str): unique top type
-        hierarchy (dict): mapping of `{child: node}` (see description
-            above concerning the `node` values)
-    Attributes:
-        top: the hierarchy's top type
-    """
-
-    _nodecls = MultiHierarchyNode
-
-    def _update_children(self, typename, node):
-        for parent in node.parents:
-            self._hier[parent]._children.add(typename)
-
-    def _check_node_integrity(self, node):
-        ancestors = set()
-        for parent in node.parents:
-            if parent not in self._hier:
-                raise self._errcls('parent not in hierarchy: ' + parent)
-            ancestors.update(self.ancestors(parent))
-        redundant = ancestors.intersection(node.parents)
-        if redundant:
-            raise self._errcls('redundant parents: {}'
-                               .format(', '.join(sorted(redundant))))
-
-    def _node_is_eligible(self, node):
-        hierarchy = self._hier
-        return all(parent in hierarchy for parent in node.parents)
-
-    def _ensure_node(self, typename, node):
-        if isinstance(node, str):
-            node = MultiHierarchyNode([node])
-        elif isinstance(node, Iterable):
-            node = MultiHierarchyNode(node)
-        elif not isinstance(node, MultiHierarchyNode):
-            raise TypeError("cannot set '{}' to object of type {}"
-                            .format(typename, node.__class__.__name__))
-        return node
-
-    def ancestors(self, typename):
-        """Return the ancestor types of *typename*."""
-        xs = []
-        for parent in self._hier[typename].parents:
-            xs.append(parent)
-            xs.extend(self.ancestors(parent))
+        """Return the descendants of *identifier*."""
+        identifier = self._norm(identifier)
+        xs = set()
+        for child in self._loer[identifier]:
+            xs.add(child)
+            xs.update(self.descendants(child))
         return xs
 
     def subsumes(self, a, b):
-        """Return `True` if type *a* subsumes type *b*."""
+        """Return `True` if node *a* subsumes node *b*."""
         norm = self._norm
         a, b = norm(a), norm(b)
         return a == b or b in self.descendants(a)
 
     def compatible(self, a, b):
-        """Return `True` if type *a* is compatible with type *b*."""
-        a, b = a.lower(), b.lower()
-        return len(set([a] + self.descendants(a))
-                   .intersection([b] + self.descendants(b))) > 0
+        """Return `True` if node *a* is compatible with node *b*."""
+        norm = self._norm
+        a, b = norm(a), norm(b)
+        a_lineage = self.descendants(a).union([a])
+        b_lineage = self.descendants(b).union([b])
+        return len(a_lineage.intersection(b_lineage)) > 0
+
+    def validate_update(self, subhierarchy, data):
+        """
+        Check if the update can apply to the current hierarchy.
+
+        This method returns (*subhierarchy*, *data*) with normalized
+        identifiers if the update is valid, otherwise it will raise a
+        :exc:`HierarchyError`.
+
+        Raises:
+            HierarchyError: when the update is invalid
+        """
+        subhierarchy, data = _normalize_update(self._norm, subhierarchy, data)
+        ids = set(self._hier).intersection(subhierarchy)
+        if ids:
+            raise HierarchyError(
+                'already in hierarchy: {}'.format(', '.join(ids)))
+
+        ids = set(data).difference(set(self._hier).union(subhierarchy))
+        if ids:
+            raise HierarchyError(
+                'cannot update data; not in hierarchy: {}'
+                .format(', '.join(ids)))
+        return subhierarchy, data
+
+
+def _ancestors(id, hier):
+    xs = set()
+    for parent in hier[id]:
+        xs.add(parent)
+        xs.update(_ancestors(parent, hier))
+    return xs
+
+
+def _normalize_update(norm, subhierarchy, data):
+    sub = {}
+    if subhierarchy:
+        for id, parents in subhierarchy.items():
+            if isinstance(parents, str):
+                parents = parents.split()
+            id = norm(id)
+            parents = tuple(map(norm, parents))
+            sub[id] = parents
+    dat = {}
+    if data:
+        dat = {norm(id): obj for id, obj in data.items()}
+    return sub, dat
+
+
+def _get_eligible(hier, sub):
+    eligible = [id for id, parents in sub.items()
+                if all(parent in hier for parent in parents)]
+    if not eligible:
+        raise HierarchyError(
+            'disconnected or cyclic hierarchy; remaining: {}'
+            .format(', '.join(sub)))
+    return eligible
+
+
+def _validate_parentage(id, parents, hier):
+    ancestors = set()
+    for parent in parents:
+        ancestors.update(_ancestors(parent, hier))
+    redundant = ancestors.intersection(parents)
+    if redundant:
+        raise HierarchyError(
+            '{} has redundant parents: {}'
+            .format(id, ', '.join(sorted(redundant))))
+
+
+# single-parented hierarchy might be something like this:
+# class Hierarchy(MultiHierarchy):
+#     def parent(self, identifier):
+#         identifier = self._norm(identifier)
+#         parents = self._hier[identifier]
+#         if parents:
+#             parents = parents[0]
+#         return parents
+
+#     def validate_update(self, subhierarchy, data):
+#         """
+#         Check if the update can apply to the current hierarchy.
+
+#         Raises:
+#             HierarchyError: when the update is invalid
+#         """
+#         subhierarchy, data = super().validate_update(subhierarchy, data)
+#         for id, parents in subhierarchy.items():
+#             if len(parents) != 1:
+#                 raise HierarchyError(
+#                     '{} has more than one parent: {}'
+#                     .format(id, ', '.join(parents)))
+#         return subhierarchy, data
