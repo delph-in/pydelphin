@@ -58,6 +58,7 @@ class TestTypeHierarchy(object):
             th.update({'1': 1})
 
     def test_integrity(self):
+        pass
         # awaiting issue #94
         # # non-unique glb
         # with pytest.raises(tfs.TypeHierarchyError):

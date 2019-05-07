@@ -1,6 +1,21 @@
 
 """
 Basic support for hierarchies.
+
+This module defines the :class:`MultiHierarchy` class for
+multiply-inheriting hierarchies. This class manages the insertion of
+new nodes into the hierarchy via the class constructor or the
+:meth:`MultiHierarchy.update` method, normalizing node identifiers (if
+a suitable normalization function is provided at instantiation), and
+inserting nodes in the appropriate order. It checks for some kinds of
+ill-formed hierarchies, such as cycles and redundant parentage and
+provides methods for testing for node compatibility and
+subsumption. For convenience, arbitrary data may be associated with
+node identifiers.
+
+While the class may be used directly, it is mainly used to support the
+:class:`~delphin.tfs.TypeHierarchy` class and the predicate, property,
+and variable hierarchies of :class:`~delphin.semi.SemI` instances.
 """
 
 from delphin.exceptions import PyDelphinException
@@ -17,7 +32,7 @@ def _norm_id(id):
 
 class MultiHierarchy(object):
     """
-    A Multiply-Inheriting Hierarchy.
+    A Multiply-inheriting Hierarchy.
 
     Hierarchies may be constructed when instantiating the class or via
     the :meth:`update` method using a dictionary mapping identifiers
@@ -28,13 +43,15 @@ class MultiHierarchy(object):
     data. Data for identifiers may be get and set individually with
     dictionary key-access.
 
-    >>> h = Hierarchy('*top*', {'food': '*top*', 'utensil': '*top*'})
+    >>> h = MultiHierarchy('*top*', {'food': '*top*',
+    ...                              'utensil': '*top*'})
     >>> th.update({'fruit': 'food', 'apple': 'fruit'})
-    >>> th['apple'] = 'about apples'
-    >>> th.update({'knife': 'utensil'}, data={'knife': 'about knives'})
+    >>> th['apple'] = 'info about apples'
+    >>> th.update({'knife': 'utensil'},
+    ...           data={'knife': 'info about knives'})
     >>> th.update({'vegetable': 'food', 'tomato': 'fruit vegetable'})
 
-    In some ways the Hierarchy behaves like a dictionary, but it
+    In some ways the MultiHierarchy behaves like a dictionary, but it
     is not a subclass of :py:class:`dict` and does not implement all
     its methods. Also note that some methods ignore the top node,
     which make certain actions easier:
@@ -58,11 +75,14 @@ class MultiHierarchy(object):
     {'a'}
 
     Args:
-        top (str): unique top type
-        hierarchy (dict): mapping of `{child: node}` (see description
-            above concerning the `node` values)
+        top: the unique top identifier
+        hierarchy: a mapping of node identifiers to parents (see
+            description above concerning the possible parent values)
+        data: a mapping of node identifiers to arbitrary data
+        normalize_identifier: a unary function used to normalize
+            identifiers (e.g., case normalization)
     Attributes:
-        top: the hierarchy's top type
+        top: the hierarchy's top node identifier
     """
 
     def __init__(self, top, hierarchy=None, data=None,
@@ -139,7 +159,9 @@ class MultiHierarchy(object):
         does not result in an intermediate state being disconnected or
         cyclic, and raises an error if it cannot avoid such a state
         due to *subhierarchy* being invalid when inserted into the
-        main hierarchy.
+        main hierarchy. Updates are atomic, so *subhierarchy* and
+        *data* will not be partially applied if there is an error in
+        the middle of the operation.
 
         Args:
             subhierarchy: mapping of node identifiers to parents
@@ -147,6 +169,13 @@ class MultiHierarchy(object):
         Raises:
             HierarchyError: when *subhierarchy* or *data* cannot be
                 incorporated into the hierarchy
+        Examples:
+            >>> h = MultiHierarchy('*top*')
+            >>> h.update({'a': '*top*'})
+            >>> h.update({'b': '*top*'}, data={'b': 5})
+            >>> h.update(data={'a': 3})
+            >>> h['b'] - h['a']
+            2
         """
         subhierarchy, data = self.validate_update(subhierarchy, data)
 
@@ -195,13 +224,56 @@ class MultiHierarchy(object):
         return xs
 
     def subsumes(self, a, b):
-        """Return `True` if node *a* subsumes node *b*."""
+        """
+        Return `True` if node *a* subsumes node *b*.
+
+        A node is subsumed by the other if it is a descendant of the
+        other node or if it is the other node. It is not a commutative
+        operation, so `subsumes(a, b) != subsumes(b, a)`, except for
+        the case where `a == b`.
+
+        Args:
+            a: a node identifier
+            b: a node identifier
+        Examples:
+            >>> h = MultiHierarchy('*top*', {'a': '*top*',
+            ...                              'b': '*top*',
+            ...                              'c': 'b'})
+            >>> all(h.subsumes(h.top, x) for x in h)
+            True
+            >>> h.subsumes('a', h.top)
+            False
+            >>> h.subsumes('a', 'b')
+            False
+            >>> h.subsumes('b', 'c')
+            True
+        """
         norm = self._norm
         a, b = norm(a), norm(b)
         return a == b or b in self.descendants(a)
 
     def compatible(self, a, b):
-        """Return `True` if node *a* is compatible with node *b*."""
+        """
+        Return `True` if node *a* is compatible with node *b*.
+
+        In a multiply-inheriting hierarchy, node compatibility means
+        that two nodes share a common descendant. It is a commutative
+        operation, so `compatible(a, b) == compatible(b, a)`. Note
+        that in a singly-inheriting hierarchy, two nodes are never
+        compatible by this metric.
+
+        Args:
+            a: a node identifier
+            b: a node identifier
+        Examples:
+            >>> h = MultiHierarchy('*top*', {'a': '*top*',
+            ...                              'b': '*top*'})
+            >>> h.compatible('a', 'b')
+            False
+            >>> h.update({'c': 'a b'})
+            >>> h.compatible('a', 'b')
+            True
+        """
         norm = self._norm
         a, b = norm(a), norm(b)
         a_lineage = self.descendants(a).union([a])

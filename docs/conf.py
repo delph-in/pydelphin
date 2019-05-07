@@ -190,12 +190,15 @@ intersphinx_mapping = {
 
 napoleon_use_rtype = False
 
+
 # -- Options for Sphinx-Autodoc-Typehints extension --------------------------
 
-## see https://github.com/agronholm/sphinx-autodoc-typehints/pull/78
+# see https://github.com/agronholm/sphinx-autodoc-typehints/pull/78
 # drop_type_annotations = True
 
 import sphinx_autodoc_typehints
+
 def dummy_process_docstring(app, what, name, obj, options, lines):
     pass
+
 sphinx_autodoc_typehints.process_docstring = dummy_process_docstring

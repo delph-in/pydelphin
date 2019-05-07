@@ -18,14 +18,3 @@ delphin.tfs
       :show-inheritance:
       :members:
       :inherited-members:
-
-   .. autoclass:: TypeHierarchyNode
-      :show-inheritance:
-      :members:
-      :inherited-members:
-
-   Exceptions
-   ----------
-
-   .. autoexception:: TypeHierarchyError
-      :show-inheritance:
