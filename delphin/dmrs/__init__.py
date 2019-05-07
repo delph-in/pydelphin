@@ -1,10 +1,16 @@
 
 """
-Dependency Minimal Recursion Semantics
+Dependency Minimal Recursion Semantics ([DMRS]_)
+
+.. [DMRS] Copestake, Ann. Slacker Semantics: Why superficiality,
+  dependency and avoidance of commitment can be the right way to go.
+  In Proceedings of the 12th Conference of the European Chapter of
+  the Association for Computational Linguistics, pages 1–9.
+  Association for Computational Linguistics, 2009.
 """
 
-from ._exceptions import DMRSSyntaxError
-from ._dmrs import (
+from delphin.dmrs._exceptions import DMRSError, DMRSSyntaxError
+from delphin.dmrs._dmrs import (
     DMRS,
     Node,
     Link,
@@ -15,3 +21,20 @@ from ._dmrs import (
     NEQ_POST,
     H_POST,
     CVARSORT)
+from delphin.dmrs._operations import from_mrs
+
+__all__ = [
+    'FIRST_NODE_ID',
+    'RESTRICTION_ROLE',
+    'EQ_POST',
+    'HEQ_POST',
+    'NEQ_POST',
+    'H_POST',
+    'CVARSORT',
+    'DMRS',
+    'Node',
+    'Link',
+    'from_mrs',
+    'DMRSError',
+    'DMRSSyntaxError',
+]

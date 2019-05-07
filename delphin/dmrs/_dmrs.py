@@ -8,7 +8,7 @@ from delphin import scope
 
 TOP_NODE_ID      = 0
 FIRST_NODE_ID    = 10000
-RESTRICTION_ROLE = 'RSTR' # DMRS establishes that quantifiers have a RSTR link
+RESTRICTION_ROLE = 'RSTR'  # DMRS establishes that quantifiers have a RSTR link
 EQ_POST          = 'EQ'
 HEQ_POST         = 'HEQ'
 NEQ_POST         = 'NEQ'

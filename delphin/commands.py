@@ -230,9 +230,12 @@ def _get_codec(codec, load=True):
 def _get_converter(source_fmt, target_fmt):
     src = _FORMAT_MAP[source_fmt]
     tgt = _FORMAT_MAP[target_fmt]
+    converter = None
     if (src, tgt) == ('mrs', 'dmrs'):
-        return semops.mrs_to_dmrs
-    return None
+        from delphin.dmrs import from_mrs as converter
+    elif (src, tgt) == ('dmrs', 'mrs'):
+        from delphin.mrs import from_dmrs as converter
+    return converter
 
 
 def _get_output_details(codec):
