@@ -1,5 +1,5 @@
 
-from typing import Mapping, Tuple, Union, Iterable
+from typing import Mapping, Tuple, Dict, Union, Iterable
 
 from delphin.lnk import Lnk, LnkMixin
 
@@ -188,6 +188,12 @@ class SemanticStructure(LnkMixin):
         """Return `True` if *id* represents a quantifier."""
         raise NotImplementedError()
 
-    def get_quantifier(self, id: Identifier) -> Predication:
-        """Return the quantifier predication that quantifies *id*."""
+    def quantifier_map(self) -> Dict[Identifier, Identifier]:
+        """
+        Return a mapping of predication ids to quantifier ids.
+
+        The id of every non-quantifier predication will appear as a
+        key in the mapping and its value will the id of its quantifier
+        if it has one, otherwise the value will be `None`.
+        """
         raise NotImplementedError()

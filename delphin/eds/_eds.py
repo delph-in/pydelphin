@@ -144,10 +144,10 @@ class EDS(SemanticStructure):
         """
         return BOUND_VARIABLE_ROLE in self[id].edges
 
-    def get_quantifier(self, id):
-        """
-        Return the quantifier node that quantifies *id*.
-        """
-        return next((node for node in self.nodes
-                     if node.edges.get(BOUND_VARIABLE_ROLE) == id),
-                    None)
+    def quantifier_map(self):
+        qmap = {node.id: None for node in self.nodes}
+        for src, roleargs in self.arguments().items():
+            for role, tgt in roleargs.items():
+                if role == BOUND_VARIABLE_ROLE:
+                    qmap[tgt] = src
+        return qmap

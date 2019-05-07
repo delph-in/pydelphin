@@ -63,11 +63,10 @@ class EP(Predication):
         if args is None:
             args = {}
         # EPs formally do not have identifiers but they are very useful
-        iv = args.get(INTRINSIC_ROLE)
+        # note that the ARG0 may be unspecified, so use a default
+        id = args.get(INTRINSIC_ROLE, '_0')
         if RESTRICTION_ROLE in args:
-            id = _make_q_id(iv)
-        else:
-            id = iv  # note: iv (and hence, id) are possibly None
+            id = _QUANTIFIER_TYPE + variable.split(id)[1]
         super().__init__(id, predicate, lnk, surface, base)
         self.label = label
         self.args = args
@@ -196,6 +195,8 @@ class MRS(scope.ScopingSemanticStructure):
                  surface=None,
                  identifier=None):
 
+        _uniquify_ids(rels)
+
         super().__init__(top, index, rels, lnk, surface, identifier)
 
         if hcons is None:
@@ -235,11 +236,33 @@ class MRS(scope.ScopingSemanticStructure):
         """Return `True` if *var* is the bound variable of a quantifier."""
         return RESTRICTION_ROLE in self[id].args
 
-    def get_quantifier(self, id):
-        qid = _make_q_id(id)
-        if qid in self:
-            return self[qid]
-        return None
+    def quantifier_map(self):
+        """
+        Return a mapping of predication ids to quantifier ids.
+
+        The id of every non-quantifier predication will appear as a
+        key in the mapping and its value will the id of its quantifier
+        if it has one, otherwise the value will be `None`.
+
+        This method only considers the bound variables of quantifiers
+        and does not check that quantified EPs are in the scope of
+        their quantifiers' restrictions. For well-formed MRSs this
+        will not be a problem.
+        """
+        qs = []
+        iv_to_id = {}
+        qmap = {}
+        for ep in self.rels:
+            if ep.is_quantifier():
+                qs.append(ep)
+            else:
+                iv_to_id[ep.iv] = ep.id
+                qmap[ep.id] = None
+        for ep in qs:
+            id = iv_to_id.get(ep.iv)
+            if id is not None:
+                qmap[id] = ep.id
+        return qmap
 
     # ScopingSemanticStructure methods
 
@@ -297,8 +320,15 @@ class MRS(scope.ScopingSemanticStructure):
 
 # Helper functions
 
-def _make_q_id(iv):
-    return _QUANTIFIER_TYPE + variable.split(iv)[1]
+def _uniquify_ids(rels):
+    nextvid = max((variable.id(ep.iv) for ep in rels if ep.iv),
+                  default=0)
+    ids = set()
+    for ep in rels:
+        if ep.id in ids:
+            ep.id = '_{}'.format(nextvid)
+            nextvid += 1
+        ids.add(ep.id)
 
 
 def _fill_variables(vars, top, index, rels, hcons, icons):

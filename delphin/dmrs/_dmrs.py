@@ -228,6 +228,13 @@ class DMRS(scope.ScopingSemanticStructure):
         return any(link.role == RESTRICTION_ROLE
                    for link in self.links if link.start == id)
 
+    def quantifier_map(self):
+        qmap = {node.id: None for node in self.nodes}
+        for link in self.links:
+            if link.role == RESTRICTION_ROLE:
+                qmap[link.end] = link.start
+        return qmap
+
     # ScopingSemanticStructure methods
 
     def scopes(self):
