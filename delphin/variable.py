@@ -184,4 +184,4 @@ class VariableFactory(object):
             properties = []
         self.store[varstring] = properties
         self.vid = vid + 1
-        return (varstring, properties)
+        return varstring

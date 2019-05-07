@@ -191,7 +191,7 @@ def from_dmrs(d):
     qeq = mrs.HCons.qeq
     vfac = variable.VariableFactory(starting_vid=0)
 
-    top = vfac.new(variable.HANDLE)[0]
+    top = vfac.new(variable.HANDLE)
     index = None
     id_to_lbl, id_to_iv = _dmrs_build_maps(d, vfac)
 
@@ -238,7 +238,7 @@ def _dmrs_build_maps(d, vfac):
     for label, nodes in scopes.items():
         id_to_lbl.update((node.id, label) for node in nodes)
 
-    id_to_iv = {node.id: vfac.new(node.type, node.properties)[0]
+    id_to_iv = {node.id: vfac.new(node.type, node.properties)
                 for node in d.nodes if not d.is_quantifier(node.id)}
     for p, q in d.quantifier_map().items():
         id_to_iv[q] = id_to_iv[p]
