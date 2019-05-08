@@ -50,11 +50,11 @@ setup(
     keywords='nlp semantics hpsg delph-in linguistics',
     packages=[
         'delphin',
-        'delphin.lib',
         'delphin.interfaces',
         'delphin.mrs',
+        'delphin.eds',
+        'delphin.dmrs',
         'delphin.extra',
-        'delphin.codecs'
     ],
     install_requires=[
         'penman >=0.6.1',
