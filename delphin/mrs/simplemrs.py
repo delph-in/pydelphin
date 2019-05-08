@@ -130,17 +130,19 @@ def encode(m, properties=True, indent=False):
 
 SimpleMRSLexer = Lexer(
     tokens=[
-        (r'\[',                                'LBRACK:['),
-        (r'\]',                                'RBRACK:]'),
-        (r'<(?:-?\d+[:#]-?\d+|@\d+|\d+(?: +\d+)*)>',
-                                               'LNK:a lnk value'),
-        (r'"([^"\\]*(?:\\.[^"\\]*)*)"',        'DQSTRING:a string'),
-        (r"'([^ \n:<>\[\]])",                  'SQSYMBOL:a quoted symbol'),
-        (r'<',                                 'LANGLE:<'),
-        (r'>',                                 'RANGLE:>'),
-        (r'([^\s:<>\[\]]+):',                  'FEATURE:a feature'),
-        (r'(?:[^ \n\]<]+|<(?![-0-9:#@ ]*>))+', 'SYMBOL:a symbol'),
-        (r'[^\s]',                             'UNEXPECTED'),
+        (r'\[',                         'LBRACK:['),
+        (r'\]',                         'RBRACK:]'),
+        (r'<(?:-?\d+[:#]-?\d+'
+         r'|@\d+'
+         r'|\d+(?: +\d+)*)>',           'LNK:a lnk value'),
+        (r'"([^"\\]*(?:\\.[^"\\]*)*)"', 'DQSTRING:a string'),
+        (r"'([^ \n:<>\[\]])",           'SQSYMBOL:a quoted symbol'),
+        (r'<',                          'LANGLE:<'),
+        (r'>',                          'RANGLE:>'),
+        (r'([^\s:<>\[\]]+):',           'FEATURE:a feature'),
+        (r'(?:[^ \n\]<]+'
+         r'|<(?![-0-9:#@ ]*>\s))+',     'SYMBOL:a symbol'),
+        (r'[^\s]',                      'UNEXPECTED'),
     ],
     error_class=MRSSyntaxError)
 
