@@ -207,17 +207,6 @@ class DMRS(scope.ScopingSemanticStructure):
 
     # SemanticStructure methods
 
-    def arguments(self, types=None):
-        args = {node.id: {} for node in self.nodes}
-        if types is not None:
-            ntypes = {node.id: node.type for node in self.nodes}
-        else:
-            ntypes = {}
-        for link in self.links:
-            if types is None or ntypes.get(link.end) in types:
-                args[link.start][link.role] = link.end
-        return args
-
     def properties(self, id):
         return self[id].properties
 
@@ -237,13 +226,43 @@ class DMRS(scope.ScopingSemanticStructure):
 
     # ScopingSemanticStructure methods
 
+    def arguments(self, types=None, scopal=None):
+        args = {node.id: {} for node in self.nodes}
+        if types is not None:
+            ntypes = {node.id: node.type for node in self.nodes}
+        else:
+            ntypes = {}
+        for link in self.links:
+            if (types is None or ntypes.get(link.end) in types
+                and (scopal is None
+                     or scopal == (link.post in (H_POST, HEQ_POST)))):
+                args[link.start][link.role] = link.end
+        return args
+
     def scopes(self):
-        vfac, h = variable.VariableFactory(), variable.HANDLE
+        vfac, h = variable.VariableFactory(starting_vid=1), variable.HANDLE
         prescopes = {vfac.new(h): [node.id] for node in self.nodes}
         labelmap = {nodes[0].id: label for label, nodes in prescopes.items()}
         leqs = [(labelmap[link.start], labelmap[link.end])
                 for link in self.links if link.post == EQ_POST]
         return scope.conjoin(prescopes, leqs)
+
+    def scope_constraints(self, scopes=None):
+        if scopes is None:
+            scopes = self.scopes()
+        id_to_lbl = {}
+        for label, ids in scopes.items():
+            for id in ids:
+                id_to_lbl[id] = label
+        cons = [('h0', scope.QEQ, id_to_lbl[self.top])]
+        for link in self.links:
+            hi = id_to_lbl[link.start]
+            lo = id_to_lbl[link.end]
+            if link.post == HEQ_POST:
+                cons.append((hi, scope.LHEQ, lo))
+            elif link.post == H_POST:
+                cons.append((hi, scope.QEQ, lo))
+        return cons
 
 
 def _normalize_top_and_links(top, links):

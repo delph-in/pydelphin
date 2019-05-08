@@ -18,7 +18,6 @@ import warnings
 from delphin import itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
-from delphin import semops
 from delphin.util import safe_int, SExpr
 from delphin.exceptions import PyDelphinException
 
@@ -647,8 +646,8 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
              "gold": number_of_unique_results_in_gold}
 
     """
+    from delphin import mrs
     from delphin.mrs import simplemrs
-    from delphin.semops import isomorphism
 
     if not isinstance(testsuite, itsdb.TestSuite):
         testsuite = itsdb.TestSuite(testsuite)
@@ -669,7 +668,7 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
         0)
 
     for (key, testrows, goldrows) in matched_rows:
-        (test_unique, shared, gold_unique) = semops.compare_bags(
+        (test_unique, shared, gold_unique) = mrs.compare_bags(
             [simplemrs.decode(row[2]) for row in testrows],
             [simplemrs.decode(row[2]) for row in goldrows])
         yield {'id': key,

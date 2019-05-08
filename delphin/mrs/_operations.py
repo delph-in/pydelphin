@@ -193,24 +193,29 @@ def from_dmrs(d):
 
     top = vfac.new(variable.HANDLE)
     index = None
-    id_to_lbl, id_to_iv = _dmrs_build_maps(d, vfac)
+    id_to_lbl, id_to_iv, id_to_link = _dmrs_build_maps(d, vfac)
 
     hcons = [qeq(top, id_to_lbl[d.top])]
     icons = None
-    arguments = d.arguments()
+
     rels = []
     for node in d.nodes:
         label = id_to_lbl[node.id]
         args = {mrs.INTRINSIC_ROLE: id_to_iv[node.id]}
-        for role, tgt in arguments.get(node.id, {}).items():
-            end, role, post = l
-        arguments.get(node.id, {})
-        if d.is_quantifier(node.id):
-            pass
-        else:
-            pass
-            if node.carg is not None:
-                args[mrs.CONSTANT_ROLE] = node.carg
+        for link in id_to_link[node.id]:
+            post = link.post.upper()
+            if post in ('EQ', 'NEQ'):
+                arg = id_to_iv[link.end]
+            elif post == 'HEQ':
+                arg = id_to_lbl[link.end]
+            elif post == 'H':
+                arg = vfac.new(variable.HANDLE)
+                hcons.append(qeq(arg, id_to_lbl[link.end]))
+            else:
+                continue  # ignore unknown post values?
+            args[link.role] = arg
+        if node.carg is not None:
+            args[mrs.CONSTANT_ROLE] = node.carg
         rels.append(
             mrs.EP(node.predicate,
                    label,
@@ -235,23 +240,19 @@ def _dmrs_build_maps(d, vfac):
     scopes = d.scopes()
     vfac.index.update(scopes.index)  # prevent labels from being reused
     id_to_lbl = {}
-    for label, nodes in scopes.items():
-        id_to_lbl.update((node.id, label) for node in nodes)
+    for label, ids in scopes.items():
+        id_to_lbl.update((id, label) for id in ids)
 
-    id_to_iv = {node.id: vfac.new(node.type, node.properties)
-                for node in d.nodes if not d.is_quantifier(node.id)}
+    id_to_iv = {}
     for p, q in d.quantifier_map().items():
-        id_to_iv[q] = id_to_iv[p]
+        node = d[p]
+        iv = vfac.new(node.type, node.properties)
+        id_to_iv[p] = iv
+        if q is not None:
+            id_to_iv[q] = iv
 
-    return id_to_lbl, id_to_iv
+    id_to_link = {node.id: [] for node in d.nodes}
+    for link in d.links:
+        id_to_link[link.start].append(link)
 
-
-def _dmrs_to_arguments(d, vfac):
-    args = d.arguments()
-    for src, roleargs in args.items():
-        src_node = d[src]
-        type = src_node.type or variable.UNKNOWN
-        iv = vfac.new(type, src_node.properties)
-        roleargs[mrs.INTRINSIC_ROLE] = iv
-        for role, tgt in roleargs.items():
-            roleargs[role]
+    return id_to_lbl, id_to_iv, id_to_link
