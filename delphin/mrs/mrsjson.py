@@ -40,7 +40,8 @@ def loads(s):
     return [from_dict(d) for d in data]
 
 
-def dump(ms, destination, properties=True, indent=False, encoding='utf-8'):
+def dump(ms, destination, properties=True, lnk=True,
+         indent=False, encoding='utf-8'):
     """
     Serialize MRS objects to a MRS-JSON file.
 
@@ -49,6 +50,7 @@ def dump(ms, destination, properties=True, indent=False, encoding='utf-8'):
             serialize
         destination: filename or file object
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
             per level
@@ -59,7 +61,7 @@ def dump(ms, destination, properties=True, indent=False, encoding='utf-8'):
         indent = None
     elif indent is True:
         indent = 2
-    data = [to_dict(m, properties=True) for m in ms]
+    data = [to_dict(m, properties=properties, lnk=lnk) for m in ms]
     if hasattr(destination, 'write'):
         json.dump(data, destination, indent=indent)
     else:
@@ -67,7 +69,7 @@ def dump(ms, destination, properties=True, indent=False, encoding='utf-8'):
             json.dump(data, fh)
 
 
-def dumps(ms, properties=True, indent=False):
+def dumps(ms, properties=True, lnk=True, indent=False):
     """
     Serialize MRS objects to a MRS-JSON string.
 
@@ -75,6 +77,7 @@ def dumps(ms, properties=True, indent=False):
         ms: iterator of :class:`~delphin.mrs.MRS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
             per level
@@ -85,7 +88,7 @@ def dumps(ms, properties=True, indent=False):
         indent = None
     elif indent is True:
         indent = 2
-    data = [to_dict(m, properties=properties) for m in ms]
+    data = [to_dict(m, properties=properties, lnk=lnk) for m in ms]
     return json.dumps(data, indent=indent)
 
 
@@ -96,13 +99,14 @@ def decode(s):
     return from_dict(json.loads(s))
 
 
-def encode(m, properties=True, indent=False):
+def encode(m, properties=True, lnk=True, indent=False):
     """
     Serialize a MRS object to a MRS-JSON string.
 
     Args:
         m: a MRS object
         properties (bool): if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
@@ -112,10 +116,11 @@ def encode(m, properties=True, indent=False):
         indent = None
     elif indent is True:
         indent = 2
-    return json.dumps(to_dict(m, properties=properties), indent=indent)
+    return json.dumps(to_dict(m, properties=properties, lnk=lnk),
+                      indent=indent)
 
 
-def to_dict(mrs, properties=True):
+def to_dict(mrs, properties=True, lnk=True):
     """
     Encode the MRS as a dictionary suitable for JSON serialization.
     """
@@ -124,19 +129,20 @@ def to_dict(mrs, properties=True):
         d = {'label': ep.label,
              'predicate': ep.predicate,
              'arguments': ep.args}
-        if ep.lnk:
-            d['lnk'] = {'from': ep.cfrom, 'to': ep.cto}
-        if ep.surface:
-            d['surface'] = ep.surface
-        if ep.base:
-            d['base'] = ep.base
+        if lnk:
+            if ep.lnk:
+                d['lnk'] = {'from': ep.cfrom, 'to': ep.cto}
+            if ep.surface:
+                d['surface'] = ep.surface
+            if ep.base:
+                d['base'] = ep.base
         return d
 
     def _hcons(hc):
-        return {'relation':hc.relation, 'high':hc.hi, 'low':hc.lo}
+        return {'relation': hc.relation, 'high': hc.hi, 'low': hc.lo}
 
     def _icons(ic):
-        return {'relation':ic.relation, 'left':ic.left, 'right':ic.right}
+        return {'relation': ic.relation, 'left': ic.left, 'right': ic.right}
 
     def _var(v):
         d = {'type': variable.type(v)}

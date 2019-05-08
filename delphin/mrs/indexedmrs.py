@@ -3,8 +3,6 @@
 Serialization for the Indexed MRS format.
 """
 
-import re
-
 from delphin.lnk import Lnk
 from delphin.mrs import (
     MRS,
@@ -13,9 +11,8 @@ from delphin.mrs import (
     ICons,
     CONSTANT_ROLE)
 from delphin import variable
-from delphin.semi import SemI, load as load_semi
-from delphin.util import safe_int, Lexer
 from delphin.mrs import MRSSyntaxError
+from delphin.util import Lexer
 
 
 ##############################################################################
@@ -56,7 +53,8 @@ def loads(s, semi, single=False, encoding='utf-8'):
     return ms
 
 
-def dump(ms, destination, semi, properties=True, indent=False, encoding='utf-8'):
+def dump(ms, destination, semi, properties=True, lnk=True,
+         indent=False, encoding='utf-8'):
     """
     Serialize MRS objects to Indexed MRS and write to a file
 
@@ -66,12 +64,13 @@ def dump(ms, destination, semi, properties=True, indent=False, encoding='utf-8')
         semi (:class:`SemI`): the semantic interface for the grammar
             that produced the MRS
         properties: if `False`, suppress morphosemantic properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
         encoding (str): if *destination* is a filename, write to the
             file with the given encoding; otherwise it is ignored
     """
-    text = dumps(ms, semi, properties=properties, indent=indent)
+    text = dumps(ms, semi, properties=properties, lnk=lnk, indent=indent)
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
@@ -79,7 +78,7 @@ def dump(ms, destination, semi, properties=True, indent=False, encoding='utf-8')
             print(text, file=fh)
 
 
-def dumps(ms, semi, properties=True, indent=False):
+def dumps(ms, semi, properties=True, lnk=True, indent=False):
     """
     Serialize MRS objects to an Indexed MRS representation
 
@@ -88,12 +87,13 @@ def dumps(ms, semi, properties=True, indent=False):
         semi (:class:`SemI`): the semantic interface for the grammar
             that produced the MRS
         properties: if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
         an Indexed MRS string representation of a corpus of MRS objects
     """
-    return _encode(ms, semi, properties=properties, indent=indent)
+    return _encode(ms, semi, properties, lnk, indent)
 
 
 def decode(s, semi):
@@ -109,7 +109,7 @@ def decode(s, semi):
     return _decode_indexed(lexer, semi)
 
 
-def encode(d, semi, properties=True, indent=False):
+def encode(d, semi, properties=True, lnk=True, indent=False):
     """
     Serialize a MRS object to an Indexed MRS string.
 
@@ -118,12 +118,13 @@ def encode(d, semi, properties=True, indent=False):
         semi (:class:`SemI`): the semantic interface for the grammar
             that produced the MRS
         properties (bool): if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
         an Indexed MRS-serialization of the MRS object
     """
-    return _encode_indexed(d, semi, properties=properties, indent=indent)
+    return _encode_indexed(d, semi, properties, lnk, indent)
 
 
 ##############################################################################
@@ -287,17 +288,17 @@ def _match_properties(variables, semi):
 # Encoding
 
 
-def _encode(ms, semi, properties, indent):
+def _encode(ms, semi, properties, lnk, indent):
     if indent is None or indent is False:
         delim = ' '
     else:
         delim = '\n'
     return delim.join(
-        _encode_indexed(m, semi, properties, indent)
+        _encode_indexed(m, semi, properties, lnk, indent)
         for m in ms)
 
 
-def _encode_indexed(m, semi, properties, indent):
+def _encode_indexed(m, semi, properties, lnk, indent):
     # attempt to convert if necessary
     # if not isinstance(m, MRS):
     #     m = MRS.from_xmrs(m)
@@ -325,7 +326,7 @@ def _encode_indexed(m, semi, properties, indent):
 
     body = [
         hook.format(m.top, _encode_variable(m.index, varprops)),
-        i1.format(i2.join(_encode_rel(ep, semi, varprops, i3)
+        i1.format(i2.join(_encode_rel(ep, semi, varprops, lnk, i3)
                           for ep in m.rels)),
         i1.format(i2.join(_encode_hcons(hc)
                           for hc in m.hcons))
@@ -357,7 +358,7 @@ def _encode_variable(var, varprops):
     return var + props
 
 
-def _encode_rel(ep, semi, varprops, delim):
+def _encode_rel(ep, semi, varprops, lnk, delim):
     roles = [role for role in ep.args if role != CONSTANT_ROLE]
     synopsis = semi.find_synopsis(ep.predicate, roles=roles)
     args = [_encode_variable(ep.args[d[0]], varprops)
@@ -367,7 +368,7 @@ def _encode_rel(ep, semi, varprops, delim):
     return '{label}:{pred}{lnk}({args})'.format(
         label=ep.label,
         pred=ep.predicate,
-        lnk=str(ep.lnk),
+        lnk=str(ep.lnk) if lnk else '',
         args=delim.join(args))
 
 

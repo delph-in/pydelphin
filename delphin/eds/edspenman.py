@@ -38,7 +38,8 @@ def loads(s):
     return xs
 
 
-def dump(es, destination, properties=True, indent=False, encoding='utf-8'):
+def dump(es, destination, properties=True, lnk=True,
+         indent=False, encoding='utf-8'):
     """
     Serialize EDS objects to a EDS-PENMAN file.
 
@@ -47,13 +48,14 @@ def dump(es, destination, properties=True, indent=False, encoding='utf-8'):
         es: iterator of :class:`~delphin.eds.EDS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
             per level
         encoding (str): if *destination* is a filename, write to the
             file with the given encoding; otherwise it is ignored
     """
-    text = dumps(es, properties=properties, indent=indent)
+    text = dumps(es, properties=properties, lnk=lnk, indent=indent)
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
@@ -61,7 +63,7 @@ def dump(es, destination, properties=True, indent=False, encoding='utf-8'):
             print(text, file=fh)
 
 
-def dumps(es, properties=True, indent=False):
+def dumps(es, properties=True, lnk=True, indent=False):
     """
     Serialize EDS objects to a EDS-PENMAN string.
 
@@ -69,6 +71,7 @@ def dumps(es, properties=True, indent=False):
         es: iterator of :class:`~delphin.eds.EDS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
             per level
@@ -77,7 +80,7 @@ def dumps(es, properties=True, indent=False):
     """
     codec = penman.PENMANCodec()
     to_graph = codec.triples_to_graph
-    graphs = [to_graph(to_triples(e, properties=properties))
+    graphs = [to_graph(to_triples(e, properties=properties, lnk=lnk))
               for e in es]
     return penman.dumps(graphs, indent=indent)
 
@@ -89,24 +92,25 @@ def decode(s):
     return from_triples(penman.decode(s).triples())
 
 
-def encode(eds, properties=True, indent=False):
+def encode(eds, properties=True, lnk=True, indent=False):
     """
     Serialize a EDS object to a EDS-PENMAN string.
 
     Args:
         e: a EDS object
         properties (bool): if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
         a EDS-PENMAN-serialization of the EDS object
     """
-    triples = to_triples(eds, properties=properties)
+    triples = to_triples(eds, properties=properties, lnk=lnk)
     g = penman.PENMANCodec().triples_to_graph(triples)
     return penman.encode(g, indent=indent)
 
 
-def to_triples(e, properties=True):
+def to_triples(e, properties=True, lnk=True):
     """
     Encode the Eds as triples suitable for PENMAN serialization.
     """
@@ -120,7 +124,7 @@ def to_triples(e, properties=True):
     for node in nodes:
         nid = node.id
         triples.append((nid, 'instance', node.predicate))
-        if node.lnk:
+        if lnk and node.lnk:
             triples.append((nid, 'lnk', '"{}"'.format(str(node.lnk))))
         if node.carg:
             triples.append((nid, 'carg', '"{}"'.format(node.carg)))

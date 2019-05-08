@@ -74,7 +74,7 @@ class Predication(LnkMixin):
     identifiers and, if specified, different surface alignments.
     """
 
-    __slots__ = ('id', 'predicate', 'lnk', 'surface', 'base')
+    __slots__ = ('id', 'predicate', 'base')
 
     def __init__(self,
                  id: Identifier,

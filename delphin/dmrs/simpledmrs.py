@@ -56,7 +56,8 @@ def loads(s, encoding='utf-8'):
     return ds
 
 
-def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
+def dump(ds, destination, properties=True, lnk=True,
+         indent=False, encoding='utf-8'):
     """
     Serialize DMRS objects to SimpleDMRS and write to a file
 
@@ -64,12 +65,13 @@ def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
         ds: an iterator of DMRS objects to serialize
         destination: filename or file object where data will be written
         properties: if `False`, suppress morphosemantic properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
         encoding (str): if *destination* is a filename, write to the
             file with the given encoding; otherwise it is ignored
     """
-    text = dumps(ds, properties=properties, indent=indent)
+    text = dumps(ds, properties=properties, lnk=lnk, indent=indent)
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
@@ -77,19 +79,20 @@ def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
             print(text, file=fh)
 
 
-def dumps(ds, properties=True, indent=False):
+def dumps(ds, properties=True, lnk=True, indent=False):
     """
     Serialize DMRS objects to a SimpleDMRS representation
 
     Args:
         ds: an iterator of DMRS objects to serialize
         properties: if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
         a SimpleDMRS string representation of a corpus of DMRS objects
     """
-    return _encode(ds, properties=properties, indent=indent)
+    return _encode(ds, properties, lnk, indent)
 
 
 def decode(s):
@@ -100,19 +103,20 @@ def decode(s):
     return _decode_dmrs(lexer)
 
 
-def encode(d, properties=True, indent=False):
+def encode(d, properties=True, lnk=True, indent=False):
     """
     Serialize a DMRS object to a SimpleDMRS string.
 
     Args:
         d: a DMRS object
         properties (bool): if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
         a SimpleDMRS-serialization of the DMRS object
     """
-    return _encode([d], properties=properties, indent=indent)
+    return _encode([d], properties, lnk, indent)
 
 
 ##############################################################################
@@ -235,7 +239,7 @@ _node = '{nodeid} [{pred}{lnk}{carg}{sortinfo}];'
 _link = '{start}:{pre}/{post} {arrow} {end};'
 
 
-def _encode(ds, properties=True, encoding='unicode', indent=2):
+def _encode(ds, properties, lnk, indent):
     if indent is None or indent is False:
         indent = None  # normalize False to None
         delim = ' '
@@ -243,10 +247,11 @@ def _encode(ds, properties=True, encoding='unicode', indent=2):
         if indent is True:
             indent = 2
         delim = '\n'
-    return delim.join(_encode_dmrs(d, properties, indent=indent) for d in ds)
+    return delim.join(_encode_dmrs(d, properties, lnk, indent)
+                      for d in ds)
 
 
-def _encode_dmrs(d, properties, indent):
+def _encode_dmrs(d, properties, lnk, indent):
     # attempt to convert if necessary
     # if not isinstance(d, DMRS):
     #     d = DMRS.from_xmrs(d)
@@ -261,19 +266,20 @@ def _encode_dmrs(d, properties, indent):
         start = 'dmrs {'
     else:
         start = 'dmrs {} {{'.format(d.identifier)
-    attrs = _encode_attrs(d)
-    nodes = [_encode_node(node, properties) for node in d.nodes]
+    attrs = _encode_attrs(d, lnk)
+    nodes = [_encode_node(node, properties, lnk) for node in d.nodes]
     links = [_encode_link(link) for link in d.links]
     return delim.join([start] + attrs + nodes + links) + end
 
 
-def _encode_attrs(d):
+def _encode_attrs(d, lnk):
     attrs = []
-    if d.lnk:
-        attrs.append(str(d.lnk))
-    if d.surface is not None:
-        # join without space to lnk, if any
-        attrs = [''.join(attrs + ['("{}")'.format(d.surface)])]
+    if lnk:
+        if d.lnk:
+            attrs.append(str(d.lnk))
+        if d.surface is not None:
+            # join without space to lnk, if any
+            attrs = [''.join(attrs + ['("{}")'.format(d.surface)])]
     if d.top is not None:
         attrs.append('top={}'.format(d.top))
     if d.index is not None:
@@ -283,11 +289,11 @@ def _encode_attrs(d):
     return attrs
 
 
-def _encode_node(node, properties):
+def _encode_node(node, properties, lnk):
     return _node.format(
         nodeid=node.id,
         pred=node.predicate,
-        lnk=str(node.lnk),
+        lnk=str(node.lnk) if lnk else '',
         carg='' if node.carg is None else '("{}")'.format(node.carg),
         sortinfo=_encode_sortinfo(node, properties))
 

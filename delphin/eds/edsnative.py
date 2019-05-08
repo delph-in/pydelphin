@@ -40,7 +40,7 @@ def loads(s):
     return data
 
 
-def dump(es, destination, properties=True, show_status=False,
+def dump(es, destination, properties=True, lnk=True, show_status=False,
          indent=False, encoding='utf-8'):
     """
     Serialize EDS objects to an EDS file.
@@ -50,6 +50,7 @@ def dump(es, destination, properties=True, show_status=False,
         es: iterator of :class:`~delphin.eds.EDS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         show_status (bool): if `True`, indicate disconnected components
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
@@ -57,7 +58,8 @@ def dump(es, destination, properties=True, show_status=False,
         encoding (str): if *destination* is a filename, write to the
             file with the given encoding; otherwise it is ignored
     """
-    string = dumps(es, properties, show_status, indent)
+    string = dumps(es, properties=properties, lnk=lnk,
+                   show_status=show_status, indent=indent)
     if hasattr(destination, 'write'):
         print(string, file=destination)
     else:
@@ -65,7 +67,7 @@ def dump(es, destination, properties=True, show_status=False,
             print(string, file=fh)
 
 
-def dumps(es, properties=True, show_status=False, indent=False):
+def dumps(es, properties=True, lnk=True, show_status=False, indent=False):
     """
     Serialize EDS objects to an EDS string.
 
@@ -73,6 +75,7 @@ def dumps(es, properties=True, show_status=False, indent=False):
         es: iterator of :class:`~delphin.eds.EDS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         show_status (bool): if `True`, indicate disconnected components
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
@@ -85,7 +88,8 @@ def dumps(es, properties=True, show_status=False, indent=False):
     else:
         delim = '\n'
     return delim.join(
-        encode(e, properties, show_status, indent)
+        encode(e, properties=properties, lnk=lnk,
+               show_status=show_status, indent=indent)
         for e in es)
 
 
@@ -97,13 +101,14 @@ def decode(s):
     return _decode_eds(lexer)
 
 
-def encode(e, properties=True, show_status=False, indent=False):
+def encode(e, properties=True, lnk=True, show_status=False, indent=False):
     """
     Serialize an EDS object to an EDS string.
 
     Args:
         e: an EDS object
         properties (bool): if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         show_status (bool): if `True`, indicate disconnected components
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
@@ -114,7 +119,7 @@ def encode(e, properties=True, show_status=False, indent=False):
         indent = False
     else:
         indent = True
-    return _encode_eds(e, properties, show_status, indent)
+    return _encode_eds(e, properties, lnk, show_status, indent)
 
 
 ##############################################################################
@@ -165,7 +170,6 @@ def _decode_eds(lexer):
     _, top, _ = lexer.expect_type(LBRACE, SYMBOL, COLON)
     lexer.accept_type(GRAPHSTATUS)
     nodes = []
-    edges = []
     while lexer.peek()[0] != RBRACE:
         lexer.accept_type(NODESTATUS)
         start, _ = lexer.expect_type(SYMBOL, COLON)
@@ -215,7 +219,7 @@ def _decode_edges(start, lexer):
 ##############################################################################
 # Encoding
 
-def _encode_eds(e, properties, show_status, indent):
+def _encode_eds(e, properties, lnk, show_status, indent):
     # attempt to convert if necessary
     # if not isinstance(e, EDS):
     #     e = EDS.from_xmrs(e, predicate_modifiers=predicate_modifiers)
@@ -242,7 +246,7 @@ def _encode_eds(e, properties, show_status, indent):
     ed_list = []
     for node in e.nodes:
         membership = connected if node.id in nidgrp else disconnected
-        ed_list.append(membership + _encode_node(node, properties))
+        ed_list.append(membership + _encode_node(node, properties, lnk))
 
     return '{{{top}{status}{delim}{ed_list}{enddelim}}}'.format(
         top=e.top + ':' if e.top is not None else ':',
@@ -253,10 +257,10 @@ def _encode_eds(e, properties, show_status, indent):
     )
 
 
-def _encode_node(node, properties):
+def _encode_node(node, properties, lnk):
     parts = [node.id, ':', node.predicate]
 
-    if node.lnk:
+    if lnk and node.lnk:
         parts.append(str(node.lnk))
 
     if node.carg is not None:

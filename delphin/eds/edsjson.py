@@ -39,7 +39,8 @@ def loads(s):
     return [from_dict(d) for d in data]
 
 
-def dump(es, destination, properties=True, indent=False, encoding='utf-8'):
+def dump(es, destination, properties=True, lnk=True,
+         indent=False, encoding='utf-8'):
     """
     Serialize EDS objects to a EDS-JSON file.
 
@@ -48,6 +49,7 @@ def dump(es, destination, properties=True, indent=False, encoding='utf-8'):
         es: iterator of :class:`~delphin.eds.EDS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
             per level
@@ -58,7 +60,7 @@ def dump(es, destination, properties=True, indent=False, encoding='utf-8'):
         indent = None
     elif indent is True:
         indent = 2
-    data = [to_dict(e, properties=properties)
+    data = [to_dict(e, properties=properties, lnk=lnk)
             for e in es]
     if hasattr(destination, 'write'):
         json.dump(data, destination, indent=indent)
@@ -67,7 +69,7 @@ def dump(es, destination, properties=True, indent=False, encoding='utf-8'):
             json.dump(data, fh)
 
 
-def dumps(es, properties=True, indent=False):
+def dumps(es, properties=True, lnk=True, indent=False):
     """
     Serialize EDS objects to a EDS-JSON string.
 
@@ -75,6 +77,7 @@ def dumps(es, properties=True, indent=False):
         es: iterator of :class:`~delphin.eds.EDS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
             per level
@@ -85,7 +88,7 @@ def dumps(es, properties=True, indent=False):
         indent = None
     elif indent is True:
         indent = 2
-    data = [to_dict(e, properties=properties)
+    data = [to_dict(e, properties=properties, lnk=lnk)
             for e in es]
     return json.dumps(data, indent=indent)
 
@@ -97,13 +100,14 @@ def decode(s):
     return from_dict(json.loads(s))
 
 
-def encode(eds, properties=True, indent=False):
+def encode(eds, properties=True, lnk=True, indent=False):
     """
     Serialize a EDS object to a EDS-JSON string.
 
     Args:
         e: a EDS object
         properties (bool): if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
@@ -113,11 +117,11 @@ def encode(eds, properties=True, indent=False):
         indent = None
     elif indent is True:
         indent = 2
-    d = to_dict(eds, properties=properties)
+    d = to_dict(eds, properties=properties, lnk=lnk)
     return json.dumps(d, indent=indent)
 
 
-def to_dict(eds, properties=True):
+def to_dict(eds, properties=True, lnk=True):
     """
     Encode the EDS as a dictionary suitable for JSON serialization.
     """
@@ -131,7 +135,7 @@ def to_dict(eds, properties=True):
             'label': node.predicate,
             'edges': node.edges
         }
-        if node.lnk is not None:
+        if lnk and node.lnk is not None:
             nd['lnk'] = {'from': node.cfrom, 'to': node.cto}
         if node.type is not None:
             nd['type'] = node.type
@@ -150,7 +154,7 @@ def from_dict(d):
     Decode a dictionary, as from :meth:`to_dict`, into an EDS object.
     """
     top = d.get('top')
-    nodes, edges = [], []
+    nodes = []
     for nodeid, node in d.get('nodes', {}).items():
         props = node.get('properties', None)
         nodetype = node.get('type')

@@ -28,7 +28,7 @@ _FORMAT_MAP = {
     'ace': 'mrs',
     'mrx': 'mrs',
     'mrs-json': 'mrs',
-    'indexed-mrs': 'mrs',
+    'indexedmrs': 'mrs',
     'mrs-prolog': 'mrs',
     'dmrx': 'dmrs',
     'dmrs-json': 'dmrs',
@@ -42,7 +42,7 @@ _FORMAT_MAP = {
 
 
 def convert(path, source_fmt, target_fmt, select='result:mrs',
-            properties=True, color=False, indent=None,
+            properties=True, lnk=True, color=False, indent=None,
             show_status=False, predicate_modifiers=False,
             semi=None):
     """
@@ -57,6 +57,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
             is not a testsuite directory; default: `"result:mrs"`)
         properties (bool): include morphosemantic properties if `True`
             (default: `True`)
+        lnk (bool): include lnk surface alignments and surface strings
+            if `True` (default: `True`)
         color (bool): apply syntax highlighting if `True` and
             *target_fmt* is `"simplemrs"` (default: `False`)
         indent (int, optional): specifies an explicit number of spaces
@@ -124,6 +126,7 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     if target_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
     kwargs['properties'] = properties
+    kwargs['lnk'] = lnk
 
     # this is not a great way to improve robustness when converting
     # many representations, but it'll do until v1.0.0. Also, it only

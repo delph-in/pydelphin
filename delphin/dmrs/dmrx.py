@@ -41,7 +41,8 @@ def loads(s):
     return list(ds)
 
 
-def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
+def dump(ds, destination, properties=True, lnk=True,
+         indent=False, encoding='utf-8'):
     """
     Serialize DMRS objects to DMRX and write to a file
 
@@ -49,6 +50,7 @@ def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
         ds: an iterator of DMRS objects to serialize
         destination: filename or file object where data will be written
         properties: if `False`, suppress morphosemantic properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
         encoding (str): if *destination* is a filename, write to the
@@ -56,6 +58,7 @@ def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
     """
     text = dumps(ds,
                  properties=properties,
+                 lnk=lnk,
                  indent=indent)
 
     if hasattr(destination, 'write'):
@@ -65,19 +68,20 @@ def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
             print(text, file=fh)
 
 
-def dumps(ds, properties=True, indent=False):
+def dumps(ds, properties=True, lnk=True, indent=False):
     """
     Serialize DMRS objects to a DMRX representation
 
     Args:
         ds: an iterator of DMRS objects to serialize
         properties: if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
         a DMRX string representation of a corpus of DMRS objects
     """
-    return _encode(ds, properties=properties, indent=indent)
+    return _encode(ds, properties, lnk, indent)
 
 
 def decode(s):
@@ -91,7 +95,7 @@ def decode(s):
     return _decode_dmrs(elem)
 
 
-def encode(d, properties=True, indent=False):
+def encode(d, properties=True, lnk=True, indent=False):
     """
     Serialize a DMRS object to a DMRX string.
 
@@ -103,12 +107,13 @@ def encode(d, properties=True, indent=False):
     Args:
         d: a DMRS object
         properties (bool): if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
         a DMRX-serialization of the DMRS object
     """
-    elem = _encode_dmrs(d, properties=properties)
+    elem = _encode_dmrs(d, properties, lnk)
 
     if indent is True or indent in ('LKB', 'Lkb', 'lkb'):
         _indent(elem, indent=0, maxdepth=2, level=0)
@@ -227,50 +232,53 @@ def _decode_lnk(elem):
 # Encoding
 
 
-def _encode(ds, properties=True, encoding='unicode', indent=False):
+def _encode(ds, properties, lnk, indent):
     e = etree.Element('dmrs-list')
     for d in ds:
-        e.append(_encode_dmrs(d, properties))
+        e.append(_encode_dmrs(d, properties, lnk))
 
     if indent is True or indent in ('LKB', 'Lkb', 'lkb'):
         _indent(e, indent=0, maxdepth=3, level=0)
     elif indent is not False and indent is not None:
         _indent(e, indent, maxdepth=4, level=0)
 
-    return etree.tostring(e, encoding=encoding).rstrip()
+    return etree.tostring(e, encoding='unicode').rstrip()
 
 
-def _encode_dmrs(d, properties):
+def _encode_dmrs(d, properties, lnk):
     # attempt to convert if necessary
     # if not isinstance(d, DMRS):
     #     d = DMRS.from_xmrs(d)
 
-    attributes = dict([('cfrom', str(d.cfrom)),
-                       ('cto', str(d.cto))])
+    attributes = {}
+    if lnk:
+        attributes['cfrom'] = str(d.cfrom)
+        attributes['cto'] = str(d.cto)
     if d.top is not None:
         attributes['top'] = str(d.top)
     if d.index is not None:
         attributes['index'] = str(d.index)
-    if d.surface is not None:
+    if lnk and d.surface is not None:
         attributes['surface'] = d.surface
     if d.identifier is not None:
         attributes['ident'] = d.identifier
     e = etree.Element('dmrs', attrib=attributes)
     for node in d.nodes:
-        e.append(_encode_node(node, properties))
+        e.append(_encode_node(node, properties, lnk))
     for link in d.links:
         e.append(_encode_link(link))
     return e
 
 
-def _encode_node(node, properties):
-    attributes = dict([('nodeid', str(node.id)),
-                       ('cfrom', str(node.cfrom)),
-                       ('cto', str(node.cto))])
-    if node.surface is not None:
-        attributes['surface'] = node.surface
-    if node.base is not None:
-        attributes['base'] = node.base
+def _encode_node(node, properties, lnk):
+    attributes = {'nodeid': str(node.id)}
+    if lnk:
+        attributes['cfrom'] = str(node.cfrom)
+        attributes['cto'] = str(node.cto)
+        if node.surface is not None:
+            attributes['surface'] = node.surface
+        if node.base is not None:
+            attributes['base'] = node.base
     if node.carg is not None:
         attributes['carg'] = node.carg
     e = etree.Element('node', attrib=attributes)

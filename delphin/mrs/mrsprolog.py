@@ -27,7 +27,8 @@ from delphin.sembase import role_priority
 from delphin.mrs import CONSTANT_ROLE
 
 
-def dump(ms, destination, properties=True, indent=False, encoding='utf-8'):
+def dump(ms, destination, properties=True, lnk=True,
+         indent=False, encoding='utf-8'):
     """
     Serialize MRS objects to the Prolog representation and write to a file.
 
@@ -35,12 +36,13 @@ def dump(ms, destination, properties=True, indent=False, encoding='utf-8'):
         ms: an iterator of MRS objects to serialize
         destination: filename or file object where data will be written
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
         encoding (str): if *destination* is a filename, write to the
             file with the given encoding; otherwise it is ignored
     """
-    text = dumps(ms, properties=properties, indent=indent)
+    text = dumps(ms, properties=properties, lnk=lnk, indent=indent)
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
@@ -48,45 +50,47 @@ def dump(ms, destination, properties=True, indent=False, encoding='utf-8'):
             print(text, file=fh)
 
 
-def dumps(ms, properties=True, indent=False):
+def dumps(ms, properties=True, lnk=True, indent=False):
     """
     Serialize MRS objects to the Prolog representation
 
     Args:
         ms: an iterator of MRS objects to serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
         the Prolog string representation of a corpus of MRSs
     """
-    return _encode(ms, properties=properties, indent=indent)
+    return _encode(ms, properties=properties, lnk=lnk, indent=indent)
 
 
-def encode(m, properties=True, indent=False):
+def encode(m, properties=True, lnk=True, indent=False):
     """
     Serialize a MRS object to a Prolog string.
 
     Args:
         m: an MRS object
         properties (bool): if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
         a Prolog-serialization of the MRS object
     """
-    return _encode_mrs(m, properties, indent)
+    return _encode_mrs(m, properties, lnk, indent)
 
 
-def _encode(ms, properties, indent):
+def _encode(ms, properties, lnk, indent):
     if indent is not None and indent is not False:
         delim = '\n'
     else:
         delim = ' '
-    return delim.join(_encode_mrs(m, properties, indent) for m in ms)
+    return delim.join(_encode_mrs(m, properties, lnk, indent) for m in ms)
 
 
-def _encode_mrs(m, properties, indent):
+def _encode_mrs(m, properties, lnk, indent):
     pl = 'psoa({topvars},{_}[{rels}],{_}hcons([{hcons}]){icons})'
     plvc = '{reln}({left},{right})'
     # pre-compute the various indent levels
@@ -100,9 +104,9 @@ def _encode_mrs(m, properties, indent):
         ___ = _ + (' ' * len('[rel('))
         ____ = __ + (' ' * len('rel(['))
 
-    mvars = set(m.variables)
     topvars = [str(m.top)]
-    if m.index is not None: topvars.append(str(m.index))
+    if m.index is not None:
+        topvars.append(str(m.index))
     rels = [_encode_rel(rel, ___, ____) for rel in m.rels]
     icons = ''
     if m.icons:

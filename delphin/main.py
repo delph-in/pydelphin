@@ -8,7 +8,7 @@ import textwrap
 import shlex
 
 from delphin.__about__ import __version__
-from delphin.exceptions import PyDelphinException, PyDelphinWarning
+from delphin.exceptions import PyDelphinWarning
 from delphin import itsdb
 
 from delphin.commands import (
@@ -50,10 +50,11 @@ def call_convert(args):
         vars(args)['from'],  # vars() to avoid syntax error
         args.to,
         properties=(not args.no_properties),
+        lnk=(not args.no_lnk),
         color=color,
         indent=args.indent,
         select=args.select,
-        ## below are format-specific kwargs
+        # below are format-specific kwargs
         show_status=args.show_status,
         predicate_modifiers=args.predicate_modifiers,
         semi=args.semi))
@@ -116,7 +117,7 @@ def call_repp(args):
         trace_level=(args.trace and args.verbosity) or 0)
 
 
-## Helper definitions
+# Helper definitions
 
 def _make_itsdb_actions(items):
     actions = []
@@ -187,6 +188,10 @@ convert_parser.add_argument(
     '--no-properties',
     action='store_true',
     help='suppress morphosemantic properties')
+convert_parser.add_argument(
+    '--no-lnk',
+    action='store_true',
+    help='suppress lnk surface alignments and surface strings')
 convert_parser.add_argument(
     '--indent',
     metavar='N',

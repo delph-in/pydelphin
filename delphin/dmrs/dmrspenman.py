@@ -20,7 +20,7 @@ def load(source):
     Returns:
         a list of DMRS objects
     """
-    graphs = penman.load(fh)
+    graphs = penman.load(source)
     xs = [from_triples(g.triples()) for g in graphs]
     return xs
 
@@ -39,7 +39,8 @@ def loads(s):
     return xs
 
 
-def dump(ds, destination, properties=False, indent=False, encoding='utf-8'):
+def dump(ds, destination, properties=False, lnk=True,
+         indent=False, encoding='utf-8'):
     """
     Serialize DMRS objects to a PENMAN file.
 
@@ -48,13 +49,14 @@ def dump(ds, destination, properties=False, indent=False, encoding='utf-8'):
         ds: iterator of :class:`~delphin.mrs.dmrs.DMRS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
             per level
         encoding (str): if *destination* is a filename, write to the
             file with the given encoding; otherwise it is ignored
     """
-    text = dumps(ds, properties=properties, indent=indent)
+    text = dumps(ds, properties=properties, lnk=lnk, indent=indent)
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
@@ -62,7 +64,7 @@ def dump(ds, destination, properties=False, indent=False, encoding='utf-8'):
             print(text, file=fh)
 
 
-def dumps(ds, properties=False, indent=False):
+def dumps(ds, properties=False, lnk=True, indent=False):
     """
     Serialize DMRS objects to a PENMAN string.
 
@@ -70,6 +72,7 @@ def dumps(ds, properties=False, indent=False):
         ds: iterator of :class:`~delphin.mrs.dmrs.DMRS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
             per level
@@ -78,7 +81,8 @@ def dumps(ds, properties=False, indent=False):
     """
     codec = penman.PENMANCodec()
     to_graph = codec.triples_to_graph
-    graphs = [to_graph(to_triples(d, properties=properties)) for d in ds]
+    graphs = [to_graph(to_triples(d, properties=properties, lnk=lnk))
+              for d in ds]
     return penman.dumps(graphs, indent=indent)
 
 
@@ -89,24 +93,25 @@ def decode(s):
     return from_triples(penman.decode(s).triples())
 
 
-def encode(d, properties=True, indent=False):
+def encode(d, properties=True, lnk=True, indent=False):
     """
     Serialize a DMRS object to a PENMAN string.
 
     Args:
         d: a DMRS object
         properties (bool): if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
         a PENMAN-serialization of the DMRS object
     """
-    triples = to_triples(d, properties=properties)
+    triples = to_triples(d, properties=properties, lnk=lnk)
     g = penman.PENMANCodec().triples_to_graph(triples)
     return penman.encode(g, indent=indent)
 
 
-def to_triples(dmrs, properties=True):
+def to_triples(dmrs, properties=True, lnk=True):
     """
     Encode *dmrs* as triples suitable for PENMAN serialization.
     """
@@ -128,7 +133,7 @@ def to_triples(dmrs, properties=True):
     for node in nodes:
         _id = idmap[node.id]
         triples.append((_id, 'instance', node.predicate))
-        if node.lnk is not None:
+        if lnk and node.lnk is not None:
             triples.append((_id, 'lnk', '"{}"'.format(str(node.lnk))))
         if node.carg is not None:
             triples.append((_id, 'carg', '"{}"'.format(node.carg)))

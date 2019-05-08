@@ -6,7 +6,7 @@ DMRS-JSON serialization and deserialization.
 import json
 
 from delphin.lnk import Lnk
-from delphin.dmrs import(
+from delphin.dmrs import (
     DMRS,
     Node,
     Link,
@@ -44,7 +44,8 @@ def loads(s):
     return [from_dict(d) for d in data]
 
 
-def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
+def dump(ds, destination, properties=True, lnk=True,
+         indent=False, encoding='utf-8'):
     """
     Serialize DMRS objects to a DMRS-JSON file.
 
@@ -53,6 +54,7 @@ def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
         ds: iterator of :class:`~delphin.dmrs.DMRS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
             per level
@@ -63,7 +65,7 @@ def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
         indent = None
     elif indent is True:
         indent = 2
-    data = [to_dict(d, properties=True) for d in ds]
+    data = [to_dict(d, properties=properties, lnk=lnk) for d in ds]
     if hasattr(destination, 'write'):
         json.dump(data, destination, indent=indent)
     else:
@@ -71,7 +73,7 @@ def dump(ds, destination, properties=True, indent=False, encoding='utf-8'):
             json.dump(data, fh)
 
 
-def dumps(ds, properties=True, indent=False):
+def dumps(ds, properties=True, lnk=True, indent=False):
     """
     Serialize DMRS objects to a DMRS-JSON string.
 
@@ -79,6 +81,7 @@ def dumps(ds, properties=True, indent=False):
         ds: iterator of :class:`~delphin.dmrs.DMRS` objects to
             serialize
         properties: if `True`, encode variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent: if `True`, adaptively indent; if `False` or `None`,
             don't indent; if a non-negative integer N, indent N spaces
             per level
@@ -89,7 +92,7 @@ def dumps(ds, properties=True, indent=False):
         indent = None
     elif indent is True:
         indent = 2
-    data = [to_dict(d, properties=properties) for d in ds]
+    data = [to_dict(d, properties=properties, lnk=lnk) for d in ds]
     return json.dumps(data, indent=indent)
 
 
@@ -100,13 +103,14 @@ def decode(s):
     return from_dict(json.loads(s))
 
 
-def encode(d, properties=True, indent=False):
+def encode(d, properties=True, lnk=True, indent=False):
     """
     Serialize a DMRS object to a DMRS-JSON string.
 
     Args:
         d: a DMRS object
         properties (bool): if `False`, suppress variable properties
+        lnk: if `False`, suppress surface alignments and strings
         indent (bool, int): if `True` or an integer value, add
             newlines and indentation
     Returns:
@@ -116,10 +120,11 @@ def encode(d, properties=True, indent=False):
         indent = None
     elif indent is True:
         indent = 2
-    return json.dumps(to_dict(d, properties=properties), indent=indent)
+    return json.dumps(to_dict(d, properties=properties, lnk=lnk),
+                      indent=indent)
 
 
-def to_dict(dmrs, properties=True):
+def to_dict(dmrs, properties=True, lnk=True):
     """
     Encode *dmrs* as a dictionary suitable for JSON serialization.
     """
@@ -127,7 +132,7 @@ def to_dict(dmrs, properties=True):
     # if not isinstance(dmrs, DMRS):
     #     dmrs = DMRS.from_xmrs(dmrs)
 
-    nodes=[]
+    nodes = []
     for node in dmrs.nodes:
         n = dict(nodeid=node.id,
                  predicate=node.predicate)
@@ -135,26 +140,32 @@ def to_dict(dmrs, properties=True):
             n['sortinfo'] = node.sortinfo
         if node.carg is not None:
             n['carg'] = node.carg
-        if node.lnk:
-            n['lnk'] = {'from': node.cfrom, 'to': node.cto}
-        if node.surface is not None:
-            n['surface'] = node.surface
-        if node.base is not None:
-            n['base'] = node.base
+        if lnk:
+            if node.lnk:
+                n['lnk'] = {'from': node.cfrom, 'to': node.cto}
+            if node.surface:
+                n['surface'] = node.surface
+            if node.base:
+                n['base'] = node.base
         nodes.append(n)
-    links=[]
+    links = []
     for link in dmrs.links:
         links.append({
             'from': link.start, 'to': link.end,
             'rargname': link.role, 'post': link.post
         })
     d = dict(nodes=nodes, links=links)
-    if dmrs.lnk:
-        d['lnk'] = {'from': dmrs.cfrom, 'to': dmrs.cto}
-    for attr in ('top', 'index', 'surface', 'identifier'):
-        val = getattr(dmrs, attr, None)
-        if val is not None:
-            d[attr] = val
+    if dmrs.top is not None:  # could be 0
+        d['top'] = dmrs.top
+    if dmrs.index:
+        d['index'] = dmrs.index
+    if lnk:
+        if dmrs.lnk:
+            d['lnk'] = {'from': dmrs.cfrom, 'to': dmrs.cto}
+        if dmrs.surface:
+            d['surface'] = dmrs.surface
+    if dmrs.identifier is not None:
+        d['identifier'] = dmrs.identifier
     return d
 
 
