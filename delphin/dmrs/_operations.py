@@ -23,11 +23,18 @@ def from_mrs(m):
     Raises:
         DMRSError when conversion fails.
     """
+    hcmap = {hc.hi: hc for hc in m.hcons}
+    reps = scope.representatives(m)
     # EP id to node id map; create now to keep ids consistent
     id_to_nid = {ep.id: i for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)}
-    nodes, iv_to_nid = _mrs_to_nodes(m, id_to_nid)
-    links, top = _mrs_to_links(m, id_to_nid, iv_to_nid)
+    iv_to_nid = {ep.iv: id_to_nid[ep.id]
+                 for ep in m.rels if not ep.is_quantifier()}
+
+    top = _mrs_get_top(m.top, hcmap, reps, id_to_nid)
     index = iv_to_nid[m.index] if m.index else None
+    nodes = _mrs_to_nodes(m, id_to_nid)
+    links = _mrs_to_links(m, hcmap, reps, iv_to_nid, id_to_nid)
+
     return dmrs.DMRS(
         top=top,
         index=index,
@@ -38,63 +45,68 @@ def from_mrs(m):
         identifier=m.identifier)
 
 
+def _mrs_get_top(top, hcmap, reps, id_to_nid):
+    if top in hcmap:
+        lbl = hcmap[top].lo
+        rep = reps[lbl][0]
+        top = id_to_nid[rep]
+    elif top in reps:
+        rep = reps[top][0]
+        top = id_to_nid[rep]
+    return top
+
+
 def _mrs_to_nodes(m, id_to_nid):
     nodes = []
-    iv_to_nid = {}
     for ep in m.rels:
         node_id = id_to_nid[ep.id]
         iv = ep.iv
+        properties = None if ep.is_quantifier() else m.properties(ep.iv)
         nodes.append(
             dmrs.Node(node_id,
                       ep.predicate,
                       variable.type(iv),
-                      m.properties(iv),
+                      properties,
                       ep.carg,
                       ep.lnk,
                       ep.surface,
                       ep.base))
-        if not ep.is_quantifier():
-            iv_to_nid[iv] = node_id
-    return nodes, iv_to_nid
+    return nodes
 
 
-def _mrs_to_links(m, id_to_nid, iv_to_nid):
+def _mrs_to_links(m, hcmap, reps, iv_to_nid, id_to_nid):
     links = []
-    hcmap = {hc.hi: hc for hc in m.hcons}
-    reps = scope.representatives(m)
-
-    top = None
-    if m.top in hcmap:
-        lbl = hcmap[m.top].lo
-        rep = reps[lbl][0]
-        top = id_to_nid[rep]
-    elif m.top in reps:
-        rep = reps[top][0]
-        top = id_to_nid[rep]
-
+    # links from arguments
     for src, roleargs in m.arguments().items():
         start = id_to_nid[src]
         for role, tgt in roleargs.items():
-
+            # non-scopal arguments
             if tgt in iv_to_nid:
+                end = iv_to_nid[tgt]
                 if m[src].label == m[tgt].label:
                     post = dmrs.EQ_POST
                 else:
                     post = dmrs.NEQ_POST
-
+            # scopal arguments
             elif tgt in reps and len(reps[tgt]) > 0:
                 tgt = reps[tgt][0]
+                end = id_to_nid[tgt]
                 post = dmrs.HEQ_POST
-
             elif tgt in hcmap:
                 lo = hcmap[tgt].lo
                 tgt = reps[lo][0]
+                end = id_to_nid[tgt]
                 post = dmrs.H_POST
-
+            # other (e.g., BODY, dropped arguments, etc.)
             else:
-                continue  # e.g., BODY, dropped arguments, etc.
-
-            end = iv_to_nid[tgt]
+                continue
             links.append(dmrs.Link(start, end, role, post))
-
-    return links, top
+    # MOD/EQ links for shared labels without argumentation
+    for label, ids in reps.items():
+        if len(ids) > 1:
+            end = id_to_nid[ids[0]]
+            for src in ids[1:]:
+                start = id_to_nid[src]
+                links.append(
+                    dmrs.Link(start, end, dmrs.BARE_EQ_ROLE, dmrs.EQ_POST))
+    return links

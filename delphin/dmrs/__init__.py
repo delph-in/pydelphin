@@ -16,6 +16,7 @@ from delphin.dmrs._dmrs import (
     Link,
     FIRST_NODE_ID,
     RESTRICTION_ROLE,
+    BARE_EQ_ROLE,
     EQ_POST,
     HEQ_POST,
     NEQ_POST,
@@ -26,6 +27,7 @@ from delphin.dmrs._operations import from_mrs
 __all__ = [
     'FIRST_NODE_ID',
     'RESTRICTION_ROLE',
+    'BARE_EQ_ROLE',
     'EQ_POST',
     'HEQ_POST',
     'NEQ_POST',

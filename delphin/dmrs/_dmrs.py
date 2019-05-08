@@ -9,13 +9,13 @@ from delphin import scope
 TOP_NODE_ID      = 0
 FIRST_NODE_ID    = 10000
 RESTRICTION_ROLE = 'RSTR'  # DMRS establishes that quantifiers have a RSTR link
+BARE_EQ_ROLE     = 'MOD'
 EQ_POST          = 'EQ'
 HEQ_POST         = 'HEQ'
 NEQ_POST         = 'NEQ'
 H_POST           = 'H'
 NIL_POST         = 'NIL'
 CVARSORT         = 'cvarsort'
-BARE_EQ_ROLE     = 'MOD'
 
 
 class Node(Predication):
