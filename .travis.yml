@@ -1,16 +1,10 @@
 dist: xenial
 sudo: false
 language: python
-matrix:
-  include:
-    - python: "3.5"
-      env: TOXENV=py35
-    - python: "3.6"
-      env: TOXENV=py36
-    - python: "3.7"
-      env: TOXENV=py37
-install:
-  - pip install -q 'setuptools>=36.0.1' 'pytest>=3.6.0' 'tox>=3.3.0'
-  - python setup.py -q install
-script: tox
+python:
+  - "3.5"
+  - "3.6"
+  - "3.7"
+install: "python setup.py -q install"
+script: py.test
 
