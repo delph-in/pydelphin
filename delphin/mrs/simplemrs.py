@@ -3,14 +3,18 @@
 Serialization functions for the SimpleMRS format.
 """
 
-import re
-
 from delphin.util import Lexer
 from delphin import predicate
 from delphin.lnk import Lnk
 from delphin.sembase import (role_priority, property_priority)
 from delphin import variable
-from delphin.mrs import (EP, HCons, ICons, MRS, MRSSyntaxError)
+from delphin.mrs import (
+    EP,
+    HCons,
+    ICons,
+    MRS,
+    MRSSyntaxError,
+    CONSTANT_ROLE)
 
 TOP_FEATURE = 'TOP'
 
@@ -162,7 +166,7 @@ def _decode(lineiter):
 
 
 def _decode_mrs(lexer):
-    top = index = xarg = lnk = surface = identifier = None
+    top = index = lnk = surface = identifier = None
     rels = []
     hcons = []
     icons = []
@@ -339,14 +343,19 @@ def _encode_rels(rels, varprops, indent):
         if rel.surface is not None:
             reltoks.append('"{}"'.format(rel.surface))
         reltoks.extend(('LBL:', rel.label))
-        for arg in sorted(rel.args, key=role_priority):
-            val = rel.args[arg]
-            reltoks.extend((arg + ':', _encode_variable(val, varprops)))
+        for role in sorted(rel.args, key=role_priority):
+            arg = rel.args[role]
+            if role == CONSTANT_ROLE:
+                arg = '"{}"'.format(arg)
+            else:
+                arg = _encode_variable(arg, varprops)
+            reltoks.extend((role + ':', arg))
         reltoks.append(']')
         tokens.append(' '.join(reltoks))
     if tokens:
         tokens = ['RELS: <'] + [delim.join(tokens)] + ['>']
     return tokens
+
 
 def _encode_hcons(hcons):
     tokens = ['{} {} {}'.format(hc.hi, hc.relation, hc.lo)
