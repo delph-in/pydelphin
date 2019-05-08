@@ -10,8 +10,6 @@ within Python.
 
 import sys
 import os
-import json
-from functools import partial
 import logging
 import warnings
 
@@ -23,7 +21,7 @@ from delphin.exceptions import PyDelphinException
 
 
 ###############################################################################
-### CONVERT ###################################################################
+# CONVERT #####################################################################
 
 _FORMAT_MAP = {
     'simplemrs': 'mrs',
@@ -93,7 +91,7 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
 
     loads = _get_codec(source_fmt)
     dumps = _get_codec(target_fmt, load=False)
-    converter = _get_converter(source_fmt, target_fmt)
+    converter = _get_converter(source_fmt, target_fmt, predicate_modifiers)
 
     # read
     kwargs = {}
@@ -117,7 +115,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
 
     # write
     kwargs = {}
-    if indent: kwargs['indent'] = indent
+    if indent:
+        kwargs['indent'] = indent
     if target_fmt == 'eds':
         kwargs['show_status'] = show_status
     # if target_fmt.startswith('eds'):
@@ -135,12 +134,14 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     parts = []
     if indent is not None:
         joiner = joiner.strip() + '\n'
+
     def _trim(s):
         if head and s.startswith(head):
             s = s[len(head):].lstrip('\n')
         if tail and s.endswith(tail):
             s = s[:-len(tail)].rstrip('\n')
         return s
+
     for x in xs:
         try:
             s = dumps([x], **kwargs)
@@ -226,14 +227,23 @@ def _get_codec(codec, load=True):
         raise ValueError('invalid target format: ' + codec)
 
 
-def _get_converter(source_fmt, target_fmt):
+def _get_converter(source_fmt, target_fmt, predicate_modifiers):
     src = _FORMAT_MAP[source_fmt]
     tgt = _FORMAT_MAP[target_fmt]
     converter = None
+
     if (src, tgt) == ('mrs', 'dmrs'):
         from delphin.dmrs import from_mrs as converter
+
     elif (src, tgt) == ('dmrs', 'mrs'):
         from delphin.mrs import from_dmrs as converter
+
+    elif (src, tgt) == ('mrs', 'eds'):
+        from delphin.eds import from_mrs
+
+        def converter(m):
+            return from_mrs(m, predicate_modifiers=predicate_modifiers)
+
     return converter
 
 
@@ -298,7 +308,7 @@ def _colorize(text):
 
 
 ###############################################################################
-### SELECT ####################################################################
+# SELECT ######################################################################
 
 def select(dataspec, testsuite, mode='list', cast=True):
     """
@@ -322,7 +332,7 @@ def select(dataspec, testsuite, mode='list', cast=True):
 
 
 ###############################################################################
-### MKPROF ####################################################################
+# MKPROF ######################################################################
 
 def mkprof(destination, source=None, relations=None, where=None,
            in_place=False, skeleton=False, full=False, gzip=False):
@@ -446,7 +456,7 @@ def _lines_to_rows(lines, relations):
 
 
 ###############################################################################
-### PROCESS ###################################################################
+# PROCESS #####################################################################
 
 def process(grammar, testsuite, source=None, select=None,
             generate=False, transfer=False, options=None,
@@ -541,7 +551,7 @@ def _interpret_selection(select, source):
 
 
 ###############################################################################
-### REPP ######################################################################
+# REPP ########################################################################
 
 
 def repp(file, config=None, module=None, active=None,
@@ -623,7 +633,7 @@ def _repp(r, line, format, trace_level):
 
 
 ###############################################################################
-### COMPARE ###################################################################
+# COMPARE #####################################################################
 
 def compare(testsuite, gold, select='i-id i-input mrs'):
     """
