@@ -28,8 +28,18 @@ delphin.eds
       :show-inheritance:
       :members:
 
+   Module Functions
+   ----------------
+
+   .. autofunction:: from_mrs
+   .. autofunction:: find_predicate_modifiers
+   .. autofunction:: make_ids_unique
+
    Exceptions
    ----------
+
+   .. autoexception:: EDSError
+      :show-inheritance:
 
    .. autoexception:: EDSSyntaxError
       :show-inheritance:

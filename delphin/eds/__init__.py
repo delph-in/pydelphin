@@ -12,17 +12,27 @@ Elementary Dependency Structures ([EDS]_)
 
 """
 
-from delphin.eds._exceptions import EDSSyntaxError
+from delphin.eds._exceptions import EDSError, EDSSyntaxError
 from delphin.eds._eds import (
+    BOUND_VARIABLE_ROLE,
+    PREDICATE_MODIFIER_ROLE,
     EDS,
     Node,
-    BOUND_VARIABLE_ROLE,
-    PREDICATE_MODIFIER_ROLE)
+)
+from delphin.eds._operations import (
+    from_mrs,
+    find_predicate_modifiers,
+    make_ids_unique
+)
 
 __all__ = [
     'BOUND_VARIABLE_ROLE',
     'PREDICATE_MODIFIER_ROLE',
     'EDS',
     'Node',
+    'from_mrs',
+    'find_predicate_modifiers',
+    'make_ids_unique',
+    'EDSError',
     'EDSSyntaxError',
 ]

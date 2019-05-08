@@ -252,6 +252,7 @@ def _encode_eds(e, properties, show_status, indent):
         enddelim='\n' if indent else ''
     )
 
+
 def _encode_node(node, properties):
     parts = [node.id, ':', node.predicate]
 
