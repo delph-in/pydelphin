@@ -130,7 +130,6 @@ def test_convert(dir_with_mrs, mini_testsuite, ace_output, ace_tsdb_stdout,
         convert(None, 'ace', 'simplemrs')
     convert(ex, 'simplemrs', 'simplemrs', properties=False)
     convert(ex, 'simplemrs', 'simplemrs', color=True)
-    convert(ex, 'simplemrs', 'simplemrs', pretty_print=True)
     convert(ex, 'simplemrs', 'simplemrs', indent=4)
     convert(ex, 'simplemrs', 'eds', show_status=True)
     convert(ex, 'simplemrs', 'eds', predicate_modifiers=True)
