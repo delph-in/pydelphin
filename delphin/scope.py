@@ -21,7 +21,7 @@ conjunction as a whole.
 
 """
 
-from typing import Mapping, Iterable, Tuple, Collection
+from typing import Mapping, Iterable, Tuple, Container
 from operator import itemgetter
 
 from delphin.lnk import Lnk
@@ -93,7 +93,7 @@ class UnderspecifiedScope(tuple):
     __slots__ = ()
 
     def __new__(cls,
-                ids: Collection[Identifier],
+                ids: Container[Identifier],
                 lheqs: UnderspecifiedFragments = None,
                 qeqs: UnderspecifiedFragments = None):
         if lheqs is None:
