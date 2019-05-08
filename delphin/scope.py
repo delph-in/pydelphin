@@ -312,7 +312,8 @@ def make_representative_priority(x: ScopingSemanticStructure):
     """
     qs = set()
     for p, q in x.quantifier_map().items():
-        qs.update((p, q))
+        if q:
+            qs.update((p, q))
     index = {p.id: i for i, p in enumerate(x.predications, 1)}
 
     def representative_priority(id: Identifier):
