@@ -13,7 +13,8 @@ def from_mrs(m):
     Create a DMRS by converting from MRS *m*.
 
     In order for MRS to DMRS conversion to work, the MRS must satisfy
-    the **intrinsic variable property**.
+    the intrinsic variable property (see
+    :func:`delphin.mrs.has_intrinsic_variable_property`).
 
     Args:
         m: the input MRS

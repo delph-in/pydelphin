@@ -8,6 +8,7 @@ from typing import Iterable
 from delphin import variable
 from delphin import predicate
 from delphin import sembase
+from delphin import scope
 from delphin import mrs
 from delphin import util
 
@@ -191,31 +192,42 @@ def from_dmrs(d):
     qeq = mrs.HCons.qeq
     vfac = variable.VariableFactory(starting_vid=0)
 
-    top = vfac.new(variable.HANDLE)
-    index = None
-    id_to_lbl, id_to_iv, id_to_link = _dmrs_build_maps(d, vfac)
+    top, scopes, id_to_lbl, id_to_iv = _dmrs_build_maps(d, vfac)
+    index = None if not d.index else id_to_iv[d.index]
+    ns_args = d.arguments(scopal=False)
+    sc_args = d.arguments(scopal=True)
+    sc_cons = {(c[0], c[2]): c[1] for c in d.scope_constraints(scopes)}
 
     hcons = [qeq(top, id_to_lbl[d.top])]
     icons = None
 
     rels = []
     for node in d.nodes:
-        label = id_to_lbl[node.id]
-        args = {mrs.INTRINSIC_ROLE: id_to_iv[node.id]}
-        for link in id_to_link[node.id]:
-            post = link.post.upper()
-            if post in ('EQ', 'NEQ'):
-                arg = id_to_iv[link.end]
-            elif post == 'HEQ':
-                arg = id_to_lbl[link.end]
-            elif post == 'H':
-                arg = vfac.new(variable.HANDLE)
-                hcons.append(qeq(arg, id_to_lbl[link.end]))
+        id = node.id
+        label = id_to_lbl[id]
+        args = {mrs.INTRINSIC_ROLE: id_to_iv[id]}
+
+        for role, tgt in ns_args[id].items():
+            args[role] = id_to_iv[tgt]
+
+        for role, tgt in sc_args[id].items():
+            tgt_label = id_to_lbl[tgt]
+            sc_rel = sc_cons.get((label, tgt_label))
+            if sc_rel == scope.LHEQ:
+                args[role] = tgt_label
+            elif sc_rel == scope.QEQ:
+                hole = vfac.new(variable.HANDLE)
+                args[role] = hole
+                hcons.append(qeq(hole, tgt_label))
             else:
-                continue  # ignore unknown post values?
-            args[link.role] = arg
+                raise mrs.MRSError('DMRS-to-MRS: invalid scope constraint')
+
         if node.carg is not None:
             args[mrs.CONSTANT_ROLE] = node.carg
+
+        if d.is_quantifier(id) and mrs.BODY_ROLE not in args:
+            args[mrs.BODY_ROLE] = vfac.new(variable.HANDLE)
+
         rels.append(
             mrs.EP(node.predicate,
                    label,
@@ -237,10 +249,13 @@ def from_dmrs(d):
 
 
 def _dmrs_build_maps(d, vfac):
+    top = None
     scopes = d.scopes()
-    vfac.index.update(scopes.index)  # prevent labels from being reused
     id_to_lbl = {}
     for label, ids in scopes.items():
+        if not ids:
+            top = label  # top never has nodes
+        vfac.index[variable.id(label)] = label  # prevent vid reuse
         id_to_lbl.update((id, label) for id in ids)
 
     id_to_iv = {}
@@ -251,8 +266,4 @@ def _dmrs_build_maps(d, vfac):
         if q is not None:
             id_to_iv[q] = iv
 
-    id_to_link = {node.id: [] for node in d.nodes}
-    for link in d.links:
-        id_to_link[link.start].append(link)
-
-    return id_to_lbl, id_to_iv, id_to_link
+    return top, scopes, id_to_lbl, id_to_iv

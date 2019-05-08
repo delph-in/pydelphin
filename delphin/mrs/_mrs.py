@@ -313,6 +313,8 @@ class MRS(scope.ScopingSemanticStructure):
     def scopes(self):
         """Return a mapping of scope labels to EPs sharing that scope."""
         scopes = {}
+        if self.top:
+            scopes[self.top] = []  # top never has nodes
         for ep in self.rels:
             scopes.setdefault(ep.label, []).append(ep.id)
         return scopes

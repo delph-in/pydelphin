@@ -227,34 +227,49 @@ class DMRS(scope.ScopingSemanticStructure):
     # ScopingSemanticStructure methods
 
     def arguments(self, types=None, scopal=None):
-        args = {node.id: {} for node in self.nodes}
-        if types is not None:
-            ntypes = {node.id: node.type for node in self.nodes}
-        else:
-            ntypes = {}
+        args = {}
+        id_to_type = {}
+        for node in self.nodes:
+            args[node.id] = {}
+            id_to_type[node.id] = node.type
+        _scposts = (H_POST, HEQ_POST)
+
         for link in self.links:
-            if (types is None or ntypes.get(link.end) in types
-                and (scopal is None
-                     or scopal == (link.post in (H_POST, HEQ_POST)))):
-                args[link.start][link.role] = link.end
+            if link.role == BARE_EQ_ROLE:  # not an argument
+                continue
+            if types and id_to_type.get(link.end) not in types:
+                continue
+            if scopal is not None and scopal != (link.post in _scposts):
+                continue
+            # all tests passed
+            args[link.start][link.role] = link.end
+
         return args
 
     def scopes(self):
-        vfac, h = variable.VariableFactory(starting_vid=1), variable.HANDLE
-        prescopes = {vfac.new(h): [node.id] for node in self.nodes}
-        labelmap = {nodes[0].id: label for label, nodes in prescopes.items()}
-        leqs = [(labelmap[link.start], labelmap[link.end])
+        vfac, h = variable.VariableFactory(starting_vid=0), variable.HANDLE
+        prescopes = {vfac.new(h): []}  # implicit top; top never has nodes
+        id_to_lbl = {node.id: vfac.new(h) for node in self.nodes}
+        prescopes.update((label, [id]) for id, label in id_to_lbl.items())
+        leqs = [(id_to_lbl[link.start], id_to_lbl[link.end])
                 for link in self.links if link.post == EQ_POST]
         return scope.conjoin(prescopes, leqs)
 
     def scope_constraints(self, scopes=None):
         if scopes is None:
             scopes = self.scopes()
+
         id_to_lbl = {}
+        top = None
         for label, ids in scopes.items():
-            for id in ids:
-                id_to_lbl[id] = label
-        cons = [('h0', scope.QEQ, id_to_lbl[self.top])]
+            if not ids:
+                top = label  # top is the only scope with no nodes
+            else:
+                for id in ids:
+                    id_to_lbl[id] = label
+
+        if top:
+            cons = [(top, scope.QEQ, id_to_lbl[self.top])]
         for link in self.links:
             hi = id_to_lbl[link.start]
             lo = id_to_lbl[link.end]
@@ -262,6 +277,7 @@ class DMRS(scope.ScopingSemanticStructure):
                 cons.append((hi, scope.LHEQ, lo))
             elif link.post == H_POST:
                 cons.append((hi, scope.QEQ, lo))
+
         return cons
 
 

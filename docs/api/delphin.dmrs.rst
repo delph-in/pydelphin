@@ -61,6 +61,11 @@ delphin.dmrs
       :show-inheritance:
       :members:
 
+   Module Functions
+   ----------------
+
+   .. autofunction:: from_mrs
+
    Exceptions
    ----------
 
