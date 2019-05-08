@@ -6,12 +6,14 @@ Pygments-based highlighting lexers for DELPH-IN formats.
 import re
 from pygments.lexer import RegexLexer, include, bygroups
 from pygments.token import (
-    Token, Whitespace, Text, Number, String,
+    Token, Text, Number, String,
     Keyword, Name, Operator, Punctuation,
     Comment, Error
 )
 
+
 _tdl_break_characters = re.escape(r'<>!=:.#&,[];$()^/')
+
 
 class TDLLexer(RegexLexer):
     """
@@ -116,27 +118,27 @@ class TDLLexer(RegexLexer):
 mrs_colorscheme = {
     Token:              ('',            ''),
 
-    #Whitespace:         ('lightgray',   'darkgray'),
-    #Comment:            ('lightgray',   'darkgray'),
-    #Comment.Preproc:    ('teal',        'turquoise'),
-    #Keyword:            ('darkblue',    'blue'),
-    #Keyword.Type:       ('teal',        'turquoise'),
-    Operator.Word:      ('__',          '__'),  # HCONS or ICONS relations
+    # Whitespace:         ('lightgray',   'darkgray'),
+    # Comment:            ('lightgray',   'darkgray'),
+    # Comment.Preproc:    ('teal',        'turquoise'),
+    # Keyword:            ('darkblue',    'blue'),
+    # Keyword.Type:       ('teal',        'turquoise'),
+    Operator.Word:      ('',            ''),  # HCONS or ICONS relations
     Name.Builtin:       ('**',          '**'),  # LTOP, RELS, etc
     # used for variables
-    Name.Label:         ('brown',       '*yellow*'),  # handles
+    Name.Label:         ('brown',       'brown'),  # handles
     Name.Function:      ('*purple*',    '*fuchsia*'),  # events
     Name.Variable:      ('*darkblue*',  '*blue*'),  # ref-inds (x)
-    Name.Other:         ('*teal*',      '*turquoise*'),  # underspecified (i, p, u)
+    Name.Other:         ('*teal*',      '*turquoise*'),  # (i, p, u)
     # role arguments
     Name.Namespace:     ('__',          '__'),  # LBL
-    Name.Class:         ('__',          '__'),  # ARG0
-    Name.Constant:      ('darkred',     'red'),  # CARG
-    Name.Tag:           ('__',          '__'),  # others
-    #Name.Exception:     ('teal',        'turquoise'),
-    #Name.Decorator:     ('darkgray',    'lightgray'),
+    Name.Class:         ('',            ''),  # ARG0
+    Name.Constant:      ('__',          '__'),  # CARG
+    Name.Tag:           ('',            ''),  # others
+    # Name.Exception:     ('teal',        'turquoise'),
+    # Name.Decorator:     ('darkgray',    'lightgray'),
     Name.Attribute:     ('darkgray',    'darkgray'),  # variable properties
-    String:             ('brown',       'brown'),
+    String:             ('red',         'red'),
     String.Symbol:      ('darkgreen',   'green'),
     String.Other:       ('green',       'darkgreen'),
     Number:             ('lightgray',   'lightgray'),  # lnk
@@ -162,7 +164,7 @@ class SimpleMrsLexer(RegexLexer):
     tokens = {
         'root': [
             (r'\s+', Text),
-            (r'\[|\]', Punctuation, 'mrs')
+            (r'\[', Punctuation, 'mrs')
         ],
         'mrs': [
             (r'\s+', Text),
@@ -230,13 +232,16 @@ class SimpleMrsLexer(RegexLexer):
             (r'\s+', Text),
             (r'"[^"_\\]*(?:\\.[^"\\]*)*"', String.Symbol, '#pop'),
             (r"'[^ _\\]*(?:\\.[^ \\]*?)*", String.Symbol, '#pop'),
-            (r'[^ <]+', String.Symbol, '#pop')
+            (r'([^ \\]*(?:\\.[^ \\]*)*)(<[-0-9:#@ ]*>)',
+             bygroups(String.Symbol, Number),
+             '#pop'),
+            (r'([^ \\]*(?:\\.[^ \\]*)*)\s', String.Symbol, '#pop'),
         ]
     }
 
     def get_tokens_unprocessed(self, text):
-        for index, token, value in RegexLexer.get_tokens_unprocessed(self, text):
-            if token is String.Symbol and '_q_' in value:
-                yield index, String.Other, value
+        for idx, tok, val in RegexLexer.get_tokens_unprocessed(self, text):
+            if tok is String.Symbol and '_q_' in val or val.endswith('_q'):
+                yield idx, String.Other, val
             else:
-                yield index, token, value
+                yield idx, tok, val
