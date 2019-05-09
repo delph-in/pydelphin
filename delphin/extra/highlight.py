@@ -241,7 +241,7 @@ class SimpleMrsLexer(RegexLexer):
 
     def get_tokens_unprocessed(self, text):
         for idx, tok, val in RegexLexer.get_tokens_unprocessed(self, text):
-            if tok is String.Symbol and '_q_' in val or val.endswith('_q'):
+            if tok is String.Symbol and ('_q_' in val or val.endswith('_q')):
                 yield idx, String.Other, val
             else:
                 yield idx, tok, val

@@ -14,6 +14,11 @@ from delphin.dmrs import (
 )
 
 
+HEADER = '['
+JOINER = ','
+FOOTER = ']'
+
+
 def load(source):
     """
     Deserialize a DMRS-JSON file (handle or filename) to DMRS objects

@@ -3,22 +3,9 @@ delphin.extra
 =============
 
 .. automodule:: delphin.extra
- :members:
+   :members:
 
-MRS and TDL Syntax Highlighting
--------------------------------
+.. toctree::
 
-.. automodule:: delphin.extra.highlight
- :members:
-
-.. seealso::
-  - Pygments: http://pygments.org/
-
-LaTeX Serialization
--------------------
-
-.. automodule:: delphin.extra.latex
- :members:
-
-.. seealso::
-  - `tikz-dependency` package for LaTeX: https://ctan.org/pkg/tikz-dependency
+   delphin.extra.highlight
+   delphin.extra.dmrstikz_codec

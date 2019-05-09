@@ -125,8 +125,9 @@ def _encode_mrs(m, properties, lnk, indent):
             for hc in m.hcons
         ),
         icons=icons,
-            _=_, ___=___
-        )
+        _=_,
+        ___=___
+    )
 
 
 def _encode_rel(ep, ___, ____):

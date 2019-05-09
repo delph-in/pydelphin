@@ -10,36 +10,55 @@ within Python.
 
 import sys
 import os
+import importlib
 import logging
 import warnings
+from collections import namedtuple
 
 from delphin import itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
 from delphin.util import safe_int, SExpr
-from delphin.exceptions import PyDelphinException
+from delphin.exceptions import PyDelphinException, PyDelphinWarning
 
 
 ###############################################################################
 # CONVERT #####################################################################
 
-_FORMAT_MAP = {
-    'simplemrs': 'mrs',
-    'ace': 'mrs',
-    'mrx': 'mrs',
-    'mrs-json': 'mrs',
-    'indexedmrs': 'mrs',
-    'mrs-prolog': 'mrs',
-    'dmrx': 'dmrs',
-    'dmrs-json': 'dmrs',
-    'dmrs-penman': 'dmrs',
-    'simpledmrs': 'dmrs',
-    'dmrs-tikz': 'dmrs',
-    'eds': 'eds',
-    'eds-json': 'eds',
-    'eds-penman': 'eds'
+# Codec Registry
+
+_CODEC_REGISTRY = {
+    # codec-name : (representation, module)
+    'simplemrs':   ('mrs',  'delphin.mrs.simplemrs'),
+    'simple-mrs':  ('mrs',  'delphin.mrs.simplemrs'),
+    'ace':         ('mrs',  'delphin.interfaces.ace'),
+    'mrx':         ('mrs',  'delphin.mrs.mrx'),
+    'mrsjson':     ('mrs',  'delphin.mrs.mrsjson'),
+    'mrs-json':    ('mrs',  'delphin.mrs.mrsjson'),
+    'indexedmrs':  ('mrs',  'delphin.mrs.indexedmrs'),
+    'indexed-mrs': ('mrs',  'delphin.mrs.indexedmrs'),
+    'mrsprolog':   ('mrs',  'delphin.mrs.mrsprolog'),
+    'mrs-prolog':  ('mrs',  'delphin.mrs.mrsprolog'),
+    'simpledmrs':  ('dmrs', 'delphin.dmrs.simpledmrs'),
+    'simple-dmrs': ('dmrs', 'delphin.dmrs.simpledmrs'),
+    'dmrx':        ('dmrs', 'delphin.dmrs.dmrx'),
+    'dmrsjson':    ('dmrs', 'delphin.dmrs.dmrsjson'),
+    'dmrs-json':   ('dmrs', 'delphin.dmrs.dmrsjson'),
+    'dmrspenman':  ('dmrs', 'delphin.dmrs.dmrspenman'),
+    'dmrs-penman': ('dmrs', 'delphin.dmrs.dmrspenman'),
+    'dmrstikz':    ('dmrs', 'delphin.extra.dmrstikz_codec'),
+    'dmrs-tikz':   ('dmrs', 'delphin.extra.dmrstikz_codec'),
+    'eds':         ('eds',  'delphin.eds.edsnative'),
+    'edsnative':   ('eds',  'delphin.eds.edsnative'),
+    'eds-native':  ('eds',  'delphin.eds.edsnative'),
+    'edsjson':     ('eds',  'delphin.eds.edsjson'),
+    'eds-json':    ('eds',  'delphin.eds.edsjson'),
+    'edspenman':   ('eds',  'delphin.eds.edspenman'),
+    'eds-penman':  ('eds',  'delphin.eds.edspenman'),
 }
 
+
+# Convert command
 
 def convert(path, source_fmt, target_fmt, select='result:mrs',
             properties=True, lnk=True, color=False, indent=None,
@@ -73,6 +92,10 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     Returns:
         str: the converted representation
     """
+    # normalize codec names
+    source_fmt = source_fmt.lower()
+    target_fmt = target_fmt.lower()
+
     if source_fmt.startswith('eds') and not target_fmt.startswith('eds'):
         raise ValueError(
             'Conversion from EDS to non-EDS currently not supported.')
@@ -91,8 +114,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
             warnings.simplefilter('ignore')
             semi = load_semi(semi)
 
-    loads = _get_codec(source_fmt)
-    dumps = _get_codec(target_fmt, load=False)
+    source_codec = _get_codec(source_fmt)
+    target_codec = _get_codec(target_fmt)
     converter = _get_converter(source_fmt, target_fmt, predicate_modifiers)
 
     # read
@@ -100,17 +123,17 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     if source_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
     if path is None:
-        xs = loads(sys.stdin.read(), **kwargs)
+        xs = source_codec.loads(sys.stdin.read(), **kwargs)
     elif hasattr(path, 'read'):
-        xs = loads(path.read(), **kwargs)
+        xs = source_codec.loads(path.read(), **kwargs)
     elif os.path.isdir(path):
         ts = itsdb.TestSuite(path)
         xs = [
-            next(iter(loads(r[0], **kwargs)), None)
+            next(iter(source_codec.loads(r[0], **kwargs)), None)
             for r in tsql.select(select, ts)
         ]
     else:
-        xs = loads(open(path, 'r').read(), **kwargs)
+        xs = source_codec.loads(open(path, 'r').read(), **kwargs)
 
     if converter:
         xs = map(converter, xs)
@@ -128,111 +151,48 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     kwargs['properties'] = properties
     kwargs['lnk'] = lnk
 
-    # this is not a great way to improve robustness when converting
-    # many representations, but it'll do until v1.0.0. Also, it only
-    # improves robustness on the output, not the input.
-    # Note that all the code below is to replace the following:
-    #     return dumps(xs, **kwargs)
-    head, joiner, tail = _get_output_details(target_fmt)
-    parts = []
+    # Manually dealing with headers, joiners, and footers is to
+    # accommodate streaming output. Otherwise it is the same as
+    # calling the following:
+    #     target_codec.dumps(xs, **kwargs)
+    header = getattr(target_codec, 'HEADER', '')
+    joiner = getattr(target_codec, 'JOINER', ' ')
+    footer = getattr(target_codec, 'FOOTER', '')
     if indent is not None:
+        if header:
+            header += '\n'
         joiner = joiner.strip() + '\n'
+        if footer:
+            footer = '\n' + footer
 
-    def _trim(s):
-        if head and s.startswith(head):
-            s = s[len(head):].lstrip('\n')
-        if tail and s.endswith(tail):
-            s = s[:-len(tail)].rstrip('\n')
-        return s
-
+    parts = []
     for x in xs:
         try:
-            s = dumps([x], **kwargs)
+            s = target_codec.encode(x, **kwargs)
         except (PyDelphinException, KeyError, IndexError):
             logging.exception('could not convert representation')
         else:
-            s = _trim(s)
             parts.append(s)
-    # set these after so head and tail are used correctly in _trim
-    if indent is not None:
-        if head:
-            head += '\n'
-        if tail:
-            tail = '\n' + tail
 
-    output = head + joiner.join(parts) + tail
+    output = header + joiner.join(parts) + footer
 
-    if color and target_fmt == 'simplemrs':
+    if color and target_fmt in ('simplemrs', 'simple-mrs'):
         output = _colorize(output)
 
     return output
 
 
-def _get_codec(codec, load=True):
-    if codec == 'simplemrs':
-        from delphin.mrs import simplemrs
-        return simplemrs.loads if load else simplemrs.dumps
-
-    elif codec == 'ace' and load:
-        return _read_ace_parse
-
-    elif codec == 'mrx':
-        from delphin.mrs import mrx
-        return mrx.loads if load else mrx.dumps
-
-    elif codec == 'mrs-json':
-        from delphin.mrs import mrsjson
-        return mrsjson.loads if load else mrsjson.dumps
-
-    elif codec == 'indexedmrs':
-        from delphin.mrs import indexedmrs
-        return indexedmrs.loads if load else indexedmrs.dumps
-
-    elif codec == 'mrs-prolog' and not load:
-        from delphin.mrs import mrsprolog
-        return mrsprolog.dumps
-
-    elif codec == 'dmrx':
-        from delphin.dmrs import dmrx
-        return dmrx.loads if load else dmrx.dumps
-
-    elif codec == 'dmrs-json':
-        from delphin.dmrs import dmrsjson
-        return dmrsjson.loads if load else dmrsjson.dumps
-
-    elif codec == 'dmrs-penman':
-        from delphin.dmrs import dmrspenman
-        return dmrspenman.loads if load else dmrspenman.dumps
-
-    elif codec == 'simpledmrs':
-        from delphin.dmrs import simpledmrs
-        return simpledmrs.loads if load else simpledmrs.dumps
-
-    elif codec == 'dmrs-tikz' and not load:
-        from delphin.extra import latex
-        return latex.dmrs_tikz_dependency
-
-    elif codec == 'eds-json':
-        from delphin.eds import edsjson
-        return edsjson.loads if load else edsjson.dumps
-
-    elif codec == 'eds-penman':
-        from delphin.eds import edspenman
-        return edspenman.loads if load else edspenman.dumps
-
-    elif codec == 'eds':
-        from delphin.eds import edsnative
-        return edsnative.loads if load else edsnative.dumps
-
-    elif load:
-        raise ValueError('invalid source format: ' + codec)
-    else:
-        raise ValueError('invalid target format: ' + codec)
+def _get_codec(name):
+    if name not in _CODEC_REGISTRY:
+        raise ValueError('invalid codec: {}'.format(name))
+    _, modulename = _CODEC_REGISTRY[name]
+    codec = importlib.import_module(modulename)
+    return codec
 
 
 def _get_converter(source_fmt, target_fmt, predicate_modifiers):
-    src = _FORMAT_MAP[source_fmt]
-    tgt = _FORMAT_MAP[target_fmt]
+    src, _ = _CODEC_REGISTRY[source_fmt]
+    tgt, _ = _CODEC_REGISTRY[target_fmt]
     converter = None
 
     if (src, tgt) == ('mrs', 'dmrs'):
@@ -248,57 +208,6 @@ def _get_converter(source_fmt, target_fmt, predicate_modifiers):
             return from_mrs(m, predicate_modifiers=predicate_modifiers)
 
     return converter
-
-
-def _get_output_details(codec):
-    if codec == 'mrx':
-        return ('<mrs-list', '', '</mrs-list>')
-
-    elif codec == 'dmrx':
-        return ('<dmrs-list>', '', '</dmrs-list>')
-
-    elif codec in ('mrs-json', 'dmrs-json', 'eds-json'):
-        return ('[', ',', ']')
-
-    else:
-        return ('', ' ', '')
-
-
-# read simplemrs from ACE output
-
-def _read_ace_parse(s):
-    from delphin.mrs import simplemrs
-    if hasattr(s, 'decode'):
-        s = s.decode('utf-8')
-    surface = None
-    newline = False
-    for line in s.splitlines():
-        if line.startswith('SENT: '):
-            surface = line[6:]
-        # regular ACE output
-        elif line.startswith('['):
-            m = line.partition(' ;  ')[0].strip()
-            m = simplemrs.decode(m)
-            m.surface = surface
-            yield m
-        # with --tsdb-stdout
-        elif line.startswith('('):
-            while line:
-                data, remainder = SExpr.parse(line)
-                line = remainder.lstrip()
-                if len(data) == 2 and data[0] == ':results':
-                    for result in data[1]:
-                        for key, val in result:
-                            if key == ':mrs':
-                                yield simplemrs.decode(val)
-        elif line == '\n':
-            if newline:
-                surface = None
-                newline = False
-            else:
-                newline = True
-        else:
-            pass
 
 
 def _colorize(text):

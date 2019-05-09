@@ -171,18 +171,37 @@ convert_parser.add_argument(
     '--from',
     metavar='FMT',
     default='simplemrs',
-    choices=('simplemrs ace mrx mrs-json indexedmrs '
-             'simpledmrs dmrx dmrs-json dmrs-penman '
-             'eds eds-json eds-penman'.split()),
+    choices=(('simplemrs simple-mrs '
+              'ace '  # import-only
+              'mrx '
+              'mrsjson mrs-json '
+              'indexedmrs indexed-mrs '
+              'simpledmrs simple-dmrs '
+              'dmrx '
+              'dmrsjson dmrs-json '
+              'dmrspenman dmrs-penman '
+              'eds '
+              'edsjson eds-json '
+              'edspenman eds-penman').split()),
     help='original representation (default: simplemrs)')
 convert_parser.add_argument(
     '-t',
     '--to',
     metavar='FMT',
     default='simplemrs',
-    choices=('simplemrs mrx mrs-json indexedmrs mrs-prolog '
-             'simpledmrs dmrx dmrs-json dmrs-penman dmrs-tikz '
-             'eds eds-json eds-penman'.split()),
+    choices=(('simplemrs simple-mrs '
+              'mrx '
+              'mrsjson mrs-json '
+              'indexedmrs indexed-mrs '
+              'mrsprolog mrs-prolog '  # export-only
+              'simpledmrs simple-dmrs '
+              'dmrx '
+              'dmrsjson dmrs-json '
+              'dmrspenman dmrs-penman '
+              'dmrstikz dmrs-tikz '  # export-only
+              'eds edsnative eds-native '
+              'edsjson eds-json '
+              'edspenman eds-penman').split()),
     help='target representation (default: simplemrs)')
 convert_parser.add_argument(
     '--no-properties',
@@ -362,14 +381,14 @@ subparser.add_parser(
         Convert between various DELPH-IN Semantics representations.
 
         Available bidirectional codecs:
-            simplemrs, mrx, mrs-json
-            dmrx, dmrs-penman, dmrs-json,
-            eds, eds-penman, eds-json
+            simplemrs, mrx, mrs-json, indexed-mrs,
+            simpledmrs, dmrx, dmrs-json, dmrs-penman,
+            eds, eds-json, eds-penman
 
         NOTE: imported EDSs can only be exported to other EDS representations
 
         Available export-only codec:
-            mrs-prolog, simpledmrs, dmrs-tikz
+            mrs-prolog, dmrs-tikz
 
         Additionally one can use --from=ace to read the simplemrs format
         output by ACE while filtering out other outputs.

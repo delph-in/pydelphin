@@ -9,6 +9,12 @@ from delphin import predicate
 from delphin.dmrs import (DMRS, Node, Link, CVARSORT)
 from delphin.lnk import Lnk
 
+
+HEADER = '<dmrs-list>'
+JOINER = ''
+FOOTER = '</dmrs-list>'
+
+
 ##############################################################################
 ##############################################################################
 # Pickle-API methods

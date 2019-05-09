@@ -14,6 +14,11 @@ from delphin import variable
 from delphin.sembase import role_priority, property_priority
 
 
+HEADER = '<mrs-list>'
+JOINER = ''
+FOOTER = '</mrs-list>'
+
+
 ##############################################################################
 ##############################################################################
 # Pickle-API methods

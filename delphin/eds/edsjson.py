@@ -9,6 +9,11 @@ from delphin.lnk import Lnk
 from delphin.eds import EDS, Node
 
 
+HEADER = '['
+JOINER = ','
+FOOTER = ']'
+
+
 def load(source):
     """
     Deserialize a EDS-JSON file (handle or filename) to EDS objects

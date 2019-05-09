@@ -24,7 +24,7 @@ PyDelphin
   tutorials/ace.rst
   tutorials/commands.rst
   tutorials/itsdb.rst
-
+  tutorials/codecs.rst
 
 .. toctree::
   :maxdepth: 1

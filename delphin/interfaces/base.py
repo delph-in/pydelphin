@@ -131,6 +131,7 @@ class ParseResult(dict):
                 dmrs = dmrsjson.from_dict(dmrs)
         return dmrs
 
+
 class ParseResponse(dict):
     """
     A wrapper around the response dictionary for more convenient
@@ -146,7 +147,7 @@ class ParseResponse(dict):
         return [self._result_factory(r) for r in self.get('results', [])]
 
     def result(self, i):
-        """Return a ParseResult object for the *i*\ th result."""
+        """Return a ParseResult object for the result *i*."""
         return self._result_factory(self.get('results', [])[i])
 
     def tokens(self, tokenset='internal'):

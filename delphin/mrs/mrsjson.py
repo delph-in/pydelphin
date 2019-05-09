@@ -10,6 +10,11 @@ from delphin import variable
 from delphin.mrs import (MRS, EP, HCons, ICons)
 
 
+HEADER = '['
+JOINER = ','
+FOOTER = ']'
+
+
 def load(source):
     """
     Deserialize a MRS-JSON file (handle or filename) to MRS objects
