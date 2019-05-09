@@ -56,7 +56,7 @@ way of working with the data. Capabilities include:
 * Processing data with ACE (results are stored in memory)
 
     >>> from delphin.interfaces import ace
-    >>> with ace.AceParser('jacy.dat') as cpu:
+    >>> with ace.ACEParser('jacy.dat') as cpu:
     ...     ts.process(cpu)
     ...
     NOTE: parsed 126 / 135 sentences, avg 3167k, time 1.87536s
@@ -1231,7 +1231,7 @@ class TestSuite(object):
         Args:
             cpu (:class:`~delphin.interfaces.base.Processor`):
                 processor interface (e.g.,
-                :class:`~delphin.interfaces.ace.AceParser`)
+                :class:`~delphin.interfaces.ace.ACEParser`)
             selector (str): data specifier to select a single table and
                 column as processor input (e.g., `"item:i-input"`)
             source (:class:`TestSuite`, :class:`Table`): testsuite or

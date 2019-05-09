@@ -150,17 +150,17 @@ PyDelphin has the ability to process testsuites using `ACE
 `art <http://sweaglesw.org/linguistics/libtsdb/art>`_ utility and
 `[incr tsdb()] <http://www.delph-in.net/itsdb/>`_ itself. The simplest
 method is to pass in a running
-:class:`~delphin.interfaces.ace.AceProcess` instance to
+:class:`~delphin.interfaces.ace.ACEProcess` instance to
 :meth:`TestSuite.process <delphin.itsdb.TestSuite.process>`---the
 testsuite class will determine if the processor is for parsing,
 transfer, or generation (using the
-:attr:`AceProcessor.task <delphin.interfaces.ace.AceProcessor.task>`
+:attr:`ACEProcessor.task <delphin.interfaces.ace.ACEProcessor.task>`
 attribute) and select the appropriate inputs from the testsuite.
 
 >>> from delphin import itsdb
 >>> from delphin.interfaces import ace
 >>> ts = itsdb.TestSuite('tsdb/skeletons/matrix')
->>> with ace.AceParser('indra.dat') as cpu:
+>>> with ace.ACEParser('indra.dat') as cpu:
 ...     ts.process(cpu)
 ... 
 NOTE: parsed 2 / 3 sentences, avg 887k, time 0.04736s
@@ -192,7 +192,7 @@ testsuite than the one where results will be stored:
 >>> from delphin import itsdb
 >>> src_ts = itsdb.TestSuite('tsdb/current/mrs')
 >>> tgt_ts = itsdb.TestSuite('tsdb/current/mrs-gen')
->>> with ace.AceGenerator('jacy-0.9.27.dat') as cpu:
+>>> with ace.ACEGenerator('jacy-0.9.27.dat') as cpu:
 ...     tgt_ts.process(cpu, source=src_ts)
 ... 
 NOTE: 75 passive, 361 active edges in final generation chart; built 89 passives total. [1 results]

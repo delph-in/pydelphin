@@ -15,7 +15,7 @@ class Processor(object):
     Base class for processors.
 
     This class defines the basic interface for all PyDelphin processors,
-    such as :class:`~delphin.interfaces.ace.AceProcess` and
+    such as :class:`~delphin.interfaces.ace.ACEProcess` and
     :class:`~delphin.interfaces.rest.DelphinRestClient`. It can also be
     used to define preprocessor wrappers of other processors such that
     it has the same interface, allowing it to be used, e.g., with

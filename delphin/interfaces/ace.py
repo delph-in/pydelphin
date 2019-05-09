@@ -14,17 +14,17 @@ Note:
   For installation instructions, see:
   http://moin.delph-in.net/AceInstall
 
-The :class:`AceParser`, :class:`AceTransferer`, and
-:class:`AceGenerator` classes are used for parsing, transferring, and
-generating with ACE. All are subclasses of :class:`AceProcess`, which
+The :class:`ACEParser`, :class:`ACETransferer`, and
+:class:`ACEGenerator` classes are used for parsing, transferring, and
+generating with ACE. All are subclasses of :class:`ACEProcess`, which
 connects to ACE in the background, sends it data via its stdin, and
 receives responses via its stdout. Responses from ACE are interpreted
 so the data is more accessible in Python.
 
 Warning:
-  Instantiating :class:`AceParser`, :class:`AceTransferer`, or
-  :class:`AceGenerator` opens ACE in a subprocess, so take care to
-  close the process (:meth:`AceProcess.close`) when finished or,
+  Instantiating :class:`ACEParser`, :class:`ACETransferer`, or
+  :class:`ACEGenerator` opens ACE in a subprocess, so take care to
+  close the process (:meth:`ACEProcess.close`) when finished or,
   alternatively, instantiate the class in a context manager.
 
 Interpreted responses are stored in a dictionary-like
@@ -35,9 +35,9 @@ The response objects may contain a number of
 :class:`~delphin.interfaces.ParseResult` objects. These objects
 similarly provide raw-string access via dictionary keys and
 PyDelphin-model access via methods. Here is an example of parsing a
-sentence with :class:`AceParser`:
+sentence with :class:`ACEParser`:
 
-    >>> with AceParser('erg-1214-x86-64-0.9.24.dat') as parser:
+    >>> with ACEParser('erg-1214-x86-64-0.9.24.dat') as parser:
     ...     response = parser.interact('Cats sleep.')
     ...     print(response.result(0)['mrs'])
     ...     print(response.result(0).mrs())
@@ -47,15 +47,15 @@ sentence with :class:`AceParser`:
 
 Functions exist for non-interactive communication with ACE:
 :func:`parse` and :func:`parse_from_iterable` open and close an
-:class:`AceParser` instance; :func:`transfer` and
-:func:`transfer_from_iterable` open and close an :class:`AceTransferer`
+:class:`ACEParser` instance; :func:`transfer` and
+:func:`transfer_from_iterable` open and close an :class:`ACETransferer`
 instance; and :func:`generate` and :func:`generate_from_iterable` open
-and close an :class:`AceGenerator` instance. Note that these functions
+and close an :class:`ACEGenerator` instance. Note that these functions
 open a new ACE subprocess every time they are called, so if you have
 many items to process, it is more efficient to use
 :func:`parse_from_iterable`, :func:`transfer_from_iterable`, or
 :func:`generate_from_iterable` than the single-item versions, or to
-interact with the :class:`AceProcess` subclass instances directly.
+interact with the :class:`ACEProcess` subclass instances directly.
 
 """
 
@@ -74,20 +74,23 @@ from platform import platform   # portable system information
 from getpass import getuser     # portable way to get username
 from socket import gethostname  # portable way to get host name
 from datetime import datetime
-import locale; locale.setlocale(locale.LC_ALL, '')
-encoding = locale.getpreferredencoding(False)
+import locale
 
 from delphin.interfaces.base import ParseResponse, Processor
 from delphin.util import SExpr
 from delphin.__about__ import __version__ as pydelphin_version
 from delphin.exceptions import PyDelphinException
 
+# do this right away to avoid some encoding issues
+locale.setlocale(locale.LC_ALL, '')
+encoding = locale.getpreferredencoding(False)
+
 
 class ACEProcessError(PyDelphinException):
     """Raised when the ACE process has crashed and cannot be recovered."""
 
 
-class AceProcess(Processor):
+class ACEProcess(Processor):
     """
     The base class for interfacing ACE.
 
@@ -113,7 +116,7 @@ class AceProcess(Processor):
     #: The name of the task performed by the processor (`'parse'`,
     #: `'transfer'`, or `'generate'`). This is useful when a function,
     #: such as :meth:`delphin.itsdb.TestSuite.process`, accepts any
-    #: :class:`AceProcess` instance.
+    #: :class:`ACEProcess` instance.
     task = None
     _cmdargs = []
     _termini = []
@@ -191,7 +194,7 @@ class AceProcess(Processor):
         lines = []
         while i < end:
             s = next_line()
-            if s == '' and poll() != None:
+            if s == '' and poll() is not None:
                 logging.info(
                     'Process closed unexpectedly; attempting to reopen'
                 )
@@ -296,7 +299,7 @@ class AceProcess(Processor):
 
         The *keys* parameter can be used to track item identifiers
         through an ACE interaction. If the `task` member is set on
-        the AceProcess instance (or one of its subclasses), it is
+        the ACEProcess instance (or one of its subclasses), it is
         kept in the response as well.
         Args:
             datum (str): the input sentence or MRS
@@ -326,11 +329,11 @@ class AceProcess(Processor):
         return retval
 
 
-class AceParser(AceProcess):
+class ACEParser(ACEProcess):
     """
     A class for managing parse requests with ACE.
 
-    See :class:`AceProcess` for initialization parameters.
+    See :class:`ACEProcess` for initialization parameters.
     """
 
     task = 'parse'
@@ -351,7 +354,7 @@ class AceParser(AceProcess):
         return response
 
 
-class AceTransferer(AceProcess):
+class ACETransferer(ACEProcess):
     """
     A class for managing transfer requests with ACE.
 
@@ -359,7 +362,7 @@ class AceTransferer(AceProcess):
     as ACE is not yet able to provide detailed information for
     transfer results.
 
-    See :class:`AceProcess` for initialization parameters.
+    See :class:`ACEProcess` for initialization parameters.
     """
 
     task = 'transfer'
@@ -368,13 +371,13 @@ class AceTransferer(AceProcess):
     def __init__(self, grm, cmdargs=None, executable=None, env=None,
                  tsdbinfo=False, **kwargs):
         # disallow --tsdb-stdout
-        if tsdbinfo == True:
+        if tsdbinfo:
             raise ValueError(
-                'tsdbinfo=True is not available for AceTransferer'
+                'tsdbinfo=True is not available for ACETransferer'
             )
         if '--tsdb-stdout' in (cmdargs or []):
             cmdargs.remove('--tsdb-stdout')
-        AceProcess.__init__(
+        ACEProcess.__init__(
             self, grm, cmdargs=cmdargs, executable=executable, env=env,
             tsdbinfo=False, **kwargs
         )
@@ -389,11 +392,11 @@ class AceTransferer(AceProcess):
         return response
 
 
-class AceGenerator(AceProcess):
+class ACEGenerator(ACEProcess):
     """
     A class for managing realization requests with ACE.
 
-    See :class:`AceProcess` for initialization parameters.
+    See :class:`ACEProcess` for initialization parameters.
     """
 
     task = 'generate'
@@ -470,7 +473,7 @@ def parse_from_iterable(grm, data, **kwargs):
     Args:
         grm (str): path to a compiled grammar image
         data (iterable): the sentences to parse
-        **kwargs: additional keyword arguments to pass to the AceParser
+        **kwargs: additional keyword arguments to pass to the ACEParser
     Yields:
         :class:`~delphin.interfaces.ParseResponse`
     Example:
@@ -478,7 +481,7 @@ def parse_from_iterable(grm, data, **kwargs):
         >>> responses = list(ace.parse_from_iterable('erg.dat', sentences))
         NOTE: parsed 2 / 2 sentences, avg 723k, time 0.01026s
     """
-    with AceParser(grm, **kwargs) as parser:
+    with ACEParser(grm, **kwargs) as parser:
         for datum in data:
             yield parser.interact(datum)
 
@@ -490,7 +493,7 @@ def parse(grm, datum, **kwargs):
     Args:
         grm (str): path to a compiled grammar image
         datum (str): the sentence to parse
-        **kwargs: additional keyword arguments to pass to the AceParser
+        **kwargs: additional keyword arguments to pass to the ACEParser
     Returns:
         :class:`~delphin.interfaces.ParseResponse`
     Example:
@@ -508,11 +511,11 @@ def transfer_from_iterable(grm, data, **kwargs):
         grm (str): path to a compiled grammar image
         data (iterable): source MRSs as SimpleMRS strings
         **kwargs: additional keyword arguments to pass to the
-            AceTransferer
+            ACETransferer
     Yields:
         :class:`~delphin.interfaces.ParseResponse`
     """
-    with AceTransferer(grm, **kwargs) as transferer:
+    with ACETransferer(grm, **kwargs) as transferer:
         for datum in data:
             yield transferer.interact(datum)
 
@@ -525,7 +528,7 @@ def transfer(grm, datum, **kwargs):
         grm (str): path to a compiled grammar image
         datum: source MRS as a SimpleMRS string
         **kwargs: additional keyword arguments to pass to the
-            AceTransferer
+            ACETransferer
     Returns:
         :class:`~delphin.interfaces.ParseResponse`
     """
@@ -540,11 +543,11 @@ def generate_from_iterable(grm, data, **kwargs):
         grm (str): path to a compiled grammar image
         data (iterable): MRSs as SimpleMRS strings
         **kwargs: additional keyword arguments to pass to the
-            AceGenerator
+            ACEGenerator
     Yields:
         :class:`~delphin.interfaces.ParseResponse`
     """
-    with AceGenerator(grm, **kwargs) as generator:
+    with ACEGenerator(grm, **kwargs) as generator:
         for datum in data:
             yield generator.interact(datum)
 
@@ -557,7 +560,7 @@ def generate(grm, datum, **kwargs):
         grm (str): path to a compiled grammar image
         datum: the SimpleMRS string to generate from
         **kwargs: additional keyword arguments to pass to the
-            AceGenerator
+            ACEGenerator
     Returns:
         :class:`~delphin.interfaces.ParseResponse`
     """
@@ -565,13 +568,14 @@ def generate(grm, datum, **kwargs):
 
 
 # The following defines the command-line options available for users to
-# specify in AceProcess tasks. For a description of these options, see:
+# specify in ACEProcess tasks. For a description of these options, see:
 #     http://moin.delph-in.net/AceOptions
 
 # thanks: https://stackoverflow.com/a/14728477/1441112
 class _ACEArgumentParser(argparse.ArgumentParser):
     def error(self, message):
         raise ValueError(message)
+
 
 _ace_argparser = _ACEArgumentParser()
 _ace_argparser.add_argument('-n', type=int)

@@ -79,12 +79,12 @@ yielding a sequence of results, using
 
 Both :func:`~delphin.interfaces.ace.parse` and
 :func:`~delphin.interfaces.ace.parse_from_iterable` use the
-:class:`~delphin.interfaces.ace.AceParser` class for interacting with
+:class:`~delphin.interfaces.ace.ACEParser` class for interacting with
 ACE. This class can also be instantiated directly and interacted with
 as long as the process is open, but don't forget to close the process
 when done.
 
->>> parser = ace.AceParser('zhs.dat')
+>>> parser = ace.ACEParser('zhs.dat')
 >>> len(parser.interact('狗 叫 了').results())
 8
 >>> parser.close()
@@ -93,19 +93,19 @@ when done.
 The class can also be used as a context manager, which removes the need
 to explicitly close the ACE process.
 
->>> with ace.AceParser('zhs.dat') as parser:
+>>> with ace.ACEParser('zhs.dat') as parser:
 ...     print(len(parser.interact('狗 叫 了').results()))
 ...
 8
 
-The :class:`~delphin.interfaces.ace.AceParser` class and
+The :class:`~delphin.interfaces.ace.ACEParser` class and
 :func:`~delphin.interfaces.ace.parse` and
 :func:`~delphin.interfaces.ace.parse_from_iterable` functions all take
 additional arguments for affecting how ACE is accessed, e.g., for
 selecting the location of the ACE binary, setting command-line options,
 and changing the environment variables of the subprocess:
 
->>> with ace.AceParser('zhs-0.9.26.dat',
+>>> with ace.ACEParser('zhs-0.9.26.dat',
 ...                    executable='/opt/ace-0.9.26/ace',
 ...                    cmdargs=['-n', '3', '--timeout', '5']) as parser:
 ...     print(len(parser.interact('狗 叫 了').results()))
@@ -114,7 +114,7 @@ and changing the environment variables of the subprocess:
 
 See the :mod:`delphin.interfaces.ace` module documentation for more
 information about options for
-:class:`~delphin.interfaces.ace.AceParser`.
+:class:`~delphin.interfaces.ace.ACEParser`.
 
 
 Generation
@@ -142,9 +142,9 @@ from a list of MRSs with
 2
 
 Or instantiate a generation process with
-:class:`~delphin.interfaces.ace.AceGenerator`:
+:class:`~delphin.interfaces.ace.ACEGenerator`:
 
->>> with ace.AceGenerator('erg.dat') as generator:
+>>> with ace.ACEGenerator('erg.dat') as generator:
 ...     print(generator.iteract(m).result(0)['surface'])
 ...
 It rains.
@@ -156,7 +156,7 @@ Transfer
 ACE also implements most of the `LOGON transfer formalism
 <http://moin.delph-in.net/LogonTransfer>`_, and this functionality is
 available in PyDelphin via the
-:class:`~delphin.interfaces.ace.AceTransferer` class and related
+:class:`~delphin.interfaces.ace.ACETransferer` class and related
 functions. In the current version of ACE, transfer does not return as
 much information as with parsing and generation, but the response
 object in PyDelphin is the same as with the other tasks.
@@ -183,7 +183,7 @@ configurations with Python and PyDelphin, but the resulting pipeline
 may not be compatible with other interfaces, such as
 :meth:`TestSuite.process() <delphin.itsdb.TestSuite.process>`. By using
 the :class:`delphin.interfaces.base.Process` class to wrap an
-:class:`~delphin.interfaces.ace.AceProcess` instance, these pre-, co-,
+:class:`~delphin.interfaces.ace.ACEProcess` instance, these pre-, co-,
 and post-processors can be implemented in a more useful way. See
 :ref:`preprocessor-example` for an example of using
 :class:`~delphin.interfaces.base.Process` as a preprocessor.

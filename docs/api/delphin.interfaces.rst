@@ -27,7 +27,7 @@ Wrapping a Processor for Preprocessing
 The :class:`~delphin.interfaces.base.Processor` class can be used to
 implement a preprocessor that maintains the same interface as the
 underlying processor. The following example wraps an
-:class:`~delphin.interfaces.ace.AceParser` instance of the
+:class:`~delphin.interfaces.ace.ACEParser` instance of the
 `English Resource Grammar <http://www.delph-in.net/erg/>`_ with a
 :class:`~delphin.repp.REPP` instance.
 
@@ -46,7 +46,7 @@ underlying processor. The following example wraps an
 >>> # The preprocessor can be used like a normal Processor:
 >>> rpp = repp.REPP.from_config('../../grammars/erg/pet/repp.set')
 >>> grm = '../../grammars/erg-1214-x86-64-0.9.27.dat'
->>> with ace.AceParser(grm, cmdargs=['-y']) as _cpu:
+>>> with ace.ACEParser(grm, cmdargs=['-y']) as _cpu:
 ...     cpu = REPPWrapper(_cpu, rpp)
 ...     response = cpu.process_item('Abrams hired Browne.')
 ...     for result in response.results():

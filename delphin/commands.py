@@ -510,13 +510,13 @@ def process(grammar, testsuite, source=None, select=None,
     if select is None:
         select = 'result:mrs' if (generate or transfer) else 'item:i-input'
     if generate:
-        processor = ace.AceGenerator
+        processor = ace.ACEGenerator
     elif transfer:
-        processor = ace.AceTransferer
+        processor = ace.ACETransferer
     else:
         if not all_items:
             select += ' where i-wf != 2'
-        processor = ace.AceParser
+        processor = ace.ACEParser
     if result_id is not None:
         select += ' where result-id == {}'.format(result_id)
 

@@ -13,7 +13,7 @@ delphin.interfaces.ace
 
   The following module funtions are the simplest way to interact with
   ACE, although for larger or more interactive jobs it is suggested to
-  use an :class:`AceProcess` subclass instance.
+  use an :class:`ACEProcess` subclass instance.
 
   .. autofunction:: compile
   .. autofunction:: parse
@@ -30,26 +30,26 @@ delphin.interfaces.ace
   The functions described in `Basic Usage`_ are useful for small jobs
   as they handle the input and then close the ACE process, but for more
   complicated or interactive jobs, directly interacting with an
-  instance of an :class:`AceProcess` sublass is recommended or required
+  instance of an :class:`ACEProcess` sublass is recommended or required
   (e.g., in the case of `[incr tsdb()] testsuite processing <Processing
-  Testsuites with ACE>`_). The :class:`AceProcess` class is where most
-  methods are defined, but in practice the :class:`AceParser`,
-  :class:`AceTransferer`, or :class:`AceGenerator` subclasses are
+  Testsuites with ACE>`_). The :class:`ACEProcess` class is where most
+  methods are defined, but in practice the :class:`ACEParser`,
+  :class:`ACETransferer`, or :class:`ACEGenerator` subclasses are
   directly used.
 
-  .. autoclass:: AceProcess
+  .. autoclass:: ACEProcess
     :show-inheritance:
     :members:
 
-  .. autoclass:: AceParser
+  .. autoclass:: ACEParser
     :show-inheritance:
     :members:
 
-  .. autoclass:: AceTransferer
+  .. autoclass:: ACETransferer
     :show-inheritance:
     :members:
 
-  .. autoclass:: AceGenerator
+  .. autoclass:: ACEGenerator
     :show-inheritance:
     :members:
 
