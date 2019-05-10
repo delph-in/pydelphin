@@ -2,10 +2,10 @@
 Serialization Codecs for Semantic Representations
 =================================================
 
-PyDelphin has a standard API (similar to Python's :py:mod:`pickle` and
+PyDelphin has a common API (similar to Python's :py:mod:`pickle` and
 :py:mod:`json` modules) for serialization codecs for semantic
 representations such as MRS, DMRS, and EDS. This guide serves as the
-common documentation for all of the following:
+documentation for all of the following:
 
 MRS Codecs:
 
@@ -31,6 +31,7 @@ EDS Codecs:
 - :mod:`delphin.eds.edsjson`
 - :mod:`delphin.eds.edspenman`
 
+
 Module Constants
 ----------------
 
@@ -42,6 +43,7 @@ provide a streaming serialization rather than dumping the entire file
 at once. If the values are not defined in the codec module, default
 values will be used.
 
+.. _codec-HEADER:
 .. data:: HEADER
 
    The string to output before any of semantic representations are
@@ -50,6 +52,7 @@ values will be used.
    :mod:`delphin.extra.dmrstikz_codec` it is an entire LaTeX preamble
    followed by `\begin{document}`.
 
+.. _codec-JOINER:
 .. data:: JOINER
 
    The string used to join multiple serialized semantic
@@ -58,6 +61,7 @@ values will be used.
    empty string, a space, or a newline, depending on the conventions
    for the format and if the `indent` argument is set.
 
+.. _codec-FOOTER:
 .. data:: FOOTER
 
    The string to output after all semantic representations have been
@@ -79,6 +83,11 @@ structure objects. The :func:`decode` function expects single
 representations (without headers and footers) and returns a single
 semantic structure object.
 
+.. _codec-load:
+
+Reading from a file or stream
+`````````````````````````````
+
 .. function:: load(source)
 
    Deserialize and return semantic representations from *source*.
@@ -88,6 +97,11 @@ semantic structure object.
 
    :rtype: list
 
+.. _codec-loads:
+
+Reading from a string
+`````````````````````
+
 .. function:: loads(s)
 
    Deserialize and return semantic representations from string *s*.
@@ -95,6 +109,12 @@ semantic structure object.
    :param s: string containing serialized semantic representations
 
    :rtype: list
+
+.. _codec-decode:
+
+
+Decoding from a string
+``````````````````````
 
 .. function:: decode(s)
 
@@ -121,6 +141,11 @@ are not desired (e.g., if you want the :mod:`~delphin.dmrs.dmrx`
 representation of a DMRS without `<dmrs-list>` and `</dmrs-list>`
 surrounding it).
 
+.. _codec-dump:
+
+Writing to a file or stream
+```````````````````````````
+
 .. function:: dump(xs, destination, properties=True, lnk=True, indent=False, encoding='utf-8')
 
    Serialize semantic representations in *xs* to *destination*.
@@ -141,6 +166,11 @@ surrounding it).
                         file with the given encoding; otherwise it is
                         ignored
 
+.. _codec-dumps:
+
+Writing to a string
+```````````````````
+
 .. function:: dumps(xs, properties=True, lnk=True, indent=False)
 
    Serialize semantic representations in *xs* and return the string.
@@ -148,6 +178,11 @@ surrounding it).
    The arguments are interpreted as in :func:`dump`.
 
    :rtype: str
+
+.. _codec-encode:
+
+Encoding to a string
+````````````````````
 
 .. function:: encode(x, properties=True, lnk=True, indent=False)
 

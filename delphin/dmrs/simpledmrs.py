@@ -1,13 +1,42 @@
+# -*- coding: utf-8 -*-
 
 """
 Serialization for the SimpleDMRS format.
 
-Note that this format is provided by PyDelphin and not defined
-anywhere, so it should only be used for user's convenience and not
-used as an interchange format or for other practical purposes. It was
-created with human legibility in mind (e.g., for investigating DMRSs
-at the command line, because XML (DMRX) is not easy to read).
-Deserialization is not provided.
+Example:
+
+* *The new chef whose soup accidentally spilled quit and left.*
+
+::
+
+  dmrs {
+    [("The new chef whose soup accidentally spilled quit and left.") top=10008 index=10009]
+    10000 [_the_q<0:3> x];
+    10001 [_new_a_1<4:7> e PROG=bool MOOD=indicative TENSE=untensed PERF=- SF=prop];
+    10002 [_chef_n_1<8:12> x PERS=3 IND=+ NUM=sg];
+    10003 [def_explicit_q<13:18> x];
+    10004 [poss<13:18> e PROG=- MOOD=indicative TENSE=untensed PERF=- SF=prop];
+    10005 [_soup_n_1<19:23> x PERS=3 NUM=sg];
+    10006 [_accidental_a_1<24:36> e PROG=- MOOD=indicative TENSE=untensed PERF=- SF=prop];
+    10007 [_spill_v_1<37:44> e PROG=- MOOD=indicative TENSE=past PERF=- SF=prop];
+    10008 [_quit_v_1<45:49> e PROG=- MOOD=indicative TENSE=past PERF=- SF=prop];
+    10009 [_and_c<50:53> e PROG=- MOOD=indicative TENSE=past PERF=- SF=prop];
+    10010 [_leave_v_1<54:59> e PROG=- MOOD=indicative TENSE=past PERF=- SF=prop];
+    10004:ARG2/NEQ -> 10002;
+    10004:ARG1/EQ -> 10005;
+    10000:RSTR/H -> 10002;
+    10003:RSTR/H -> 10005;
+    10010:ARG1/NEQ -> 10002;
+    10007:ARG1/NEQ -> 10005;
+    10008:ARG1/NEQ -> 10002;
+    10006:ARG1/EQ -> 10007;
+    10001:ARG1/EQ -> 10002;
+    10009:ARG2/EQ -> 10010;
+    10009:ARG1/EQ -> 10008;
+    10010:MOD/EQ -> 10008;
+    10007:MOD/EQ -> 10002;
+  }
+
 """
 
 from delphin.lnk import Lnk

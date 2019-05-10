@@ -78,8 +78,10 @@ exclude_patterns = ['env', u'_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 
 from sphinx.highlighting import lexers
-from delphin.extra.highlight import TDLLexer
+from delphin.extra.highlight import TDLLexer, SimpleMRSLexer
+
 lexers['tdl'] = TDLLexer(startinline=True)
+lexers['simplemrs'] = SimpleMRSLexer(startinline=True)
 
 # Global definitions
 rst_prolog = """

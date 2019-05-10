@@ -1,6 +1,206 @@
+# -*- coding: utf-8 -*-
 
 """
 EDS-JSON serialization and deserialization.
+
+Example:
+
+* *The new chef whose soup accidentally spilled quit and left.*
+
+::
+
+  {
+    "nodes": {
+      "_2": {
+        "label": "def_explicit_q",
+        "lnk": {
+          "from": 13,
+          "to": 18
+        },
+        "edges": {
+          "BV": "x10"
+        },
+        "type": "x",
+        "properties": {
+          "NUM": "sg",
+          "PERS": "3"
+        }
+      },
+      "e16": {
+        "label": "_spill_v_1",
+        "lnk": {
+          "from": 37,
+          "to": 44
+        },
+        "edges": {
+          "ARG1": "x10"
+        },
+        "type": "e",
+        "properties": {
+          "PERF": "-",
+          "SF": "prop",
+          "TENSE": "past",
+          "PROG": "-",
+          "MOOD": "indicative"
+        }
+      },
+      "e14": {
+        "label": "poss",
+        "lnk": {
+          "from": 13,
+          "to": 18
+        },
+        "edges": {
+          "ARG2": "x3",
+          "ARG1": "x10"
+        },
+        "type": "e",
+        "properties": {
+          "PERF": "-",
+          "SF": "prop",
+          "TENSE": "untensed",
+          "PROG": "-",
+          "MOOD": "indicative"
+        }
+      },
+      "e18": {
+        "label": "_quit_v_1",
+        "lnk": {
+          "from": 45,
+          "to": 49
+        },
+        "edges": {
+          "ARG1": "x3"
+        },
+        "type": "e",
+        "properties": {
+          "PERF": "-",
+          "SF": "prop",
+          "TENSE": "past",
+          "PROG": "-",
+          "MOOD": "indicative"
+        }
+      },
+      "x3": {
+        "label": "_chef_n_1",
+        "lnk": {
+          "from": 8,
+          "to": 12
+        },
+        "edges": {},
+        "type": "x",
+        "properties": {
+          "IND": "+",
+          "NUM": "sg",
+          "PERS": "3"
+        }
+      },
+      "e2": {
+        "label": "_and_c",
+        "lnk": {
+          "from": 50,
+          "to": 53
+        },
+        "edges": {
+          "ARG2": "e20",
+          "ARG1": "e18"
+        },
+        "type": "e",
+        "properties": {
+          "PERF": "-",
+          "SF": "prop",
+          "TENSE": "past",
+          "PROG": "-",
+          "MOOD": "indicative"
+        }
+      },
+      "e8": {
+        "label": "_new_a_1",
+        "lnk": {
+          "from": 4,
+          "to": 7
+        },
+        "edges": {
+          "ARG1": "x3"
+        },
+        "type": "e",
+        "properties": {
+          "PERF": "-",
+          "SF": "prop",
+          "TENSE": "untensed",
+          "PROG": "bool",
+          "MOOD": "indicative"
+        }
+      },
+      "e20": {
+        "label": "_leave_v_1",
+        "lnk": {
+          "from": 54,
+          "to": 59
+        },
+        "edges": {
+          "ARG1": "x3"
+        },
+        "type": "e",
+        "properties": {
+          "PERF": "-",
+          "SF": "prop",
+          "TENSE": "past",
+          "PROG": "-",
+          "MOOD": "indicative"
+        }
+      },
+      "x10": {
+        "label": "_soup_n_1",
+        "lnk": {
+          "from": 19,
+          "to": 23
+        },
+        "edges": {},
+        "type": "x",
+        "properties": {
+          "NUM": "sg",
+          "PERS": "3"
+        }
+      },
+      "_1": {
+        "label": "_the_q",
+        "lnk": {
+          "from": 0,
+          "to": 3
+        },
+        "edges": {
+          "BV": "x3"
+        },
+        "type": "x",
+        "properties": {
+          "IND": "+",
+          "NUM": "sg",
+          "PERS": "3"
+        }
+      },
+      "e15": {
+        "label": "_accidental_a_1",
+        "lnk": {
+          "from": 24,
+          "to": 36
+        },
+        "edges": {
+          "ARG1": "e16"
+        },
+        "type": "e",
+        "properties": {
+          "PERF": "-",
+          "SF": "prop",
+          "TENSE": "untensed",
+          "PROG": "-",
+          "MOOD": "indicative"
+        }
+      }
+    },
+    "top": "e18"
+  }
+
 """
 
 import json

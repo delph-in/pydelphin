@@ -4,6 +4,17 @@ delphin.dmrs
 
 .. automodule:: delphin.dmrs
 
+   Serialization Formats
+   ---------------------
+
+   .. toctree::
+      :maxdepth: 1
+
+      delphin.dmrs.dmrsjson.rst
+      delphin.dmrs.dmrspenman.rst
+      delphin.dmrs.dmrx.rst
+      delphin.dmrs.simpledmrs.rst
+
    Module Constants
    ----------------
 
@@ -71,13 +82,3 @@ delphin.dmrs
 
    .. autoexception:: DMRSSyntaxError
       :show-inheritance:
-
-   Serialization Formats
-   ---------------------
-
-   .. toctree::
-
-      delphin.dmrs.dmrsjson.rst
-      delphin.dmrs.dmrspenman.rst
-      delphin.dmrs.dmrx.rst
-      delphin.dmrs.simpledmrs.rst

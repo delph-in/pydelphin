@@ -4,6 +4,16 @@ delphin.eds
 
 .. automodule:: delphin.eds
 
+   Serialization Formats
+   ---------------------
+
+   .. toctree::
+      :maxdepth: 1
+
+      delphin.eds.edsjson.rst
+      delphin.eds.edsnative.rst
+      delphin.eds.edspenman.rst
+
    Module Constants
    ----------------
 
@@ -43,12 +53,3 @@ delphin.eds
 
    .. autoexception:: EDSSyntaxError
       :show-inheritance:
-
-   Serialization Formats
-   ---------------------
-
-   .. toctree::
-
-      delphin.eds.edsjson.rst
-      delphin.eds.edsnative.rst
-      delphin.eds.edspenman.rst

@@ -4,6 +4,18 @@ delphin.mrs
 
 .. automodule:: delphin.mrs
 
+   Serialization Formats
+   ---------------------
+
+   .. toctree::
+      :maxdepth: 1
+
+      delphin.mrs.indexedmrs.rst
+      delphin.mrs.mrsjson.rst
+      delphin.mrs.mrsprolog.rst
+      delphin.mrs.mrx.rst
+      delphin.mrs.simplemrs.rst
+
    Module Constants
    ----------------
 
@@ -63,14 +75,3 @@ delphin.mrs
 
    .. autoexception:: MRSSyntaxError
       :show-inheritance:
-
-   Serialization Formats
-   ---------------------
-
-   .. toctree::
-
-      delphin.mrs.indexedmrs.rst
-      delphin.mrs.mrsjson.rst
-      delphin.mrs.mrsprolog.rst
-      delphin.mrs.mrx.rst
-      delphin.mrs.simplemrs.rst
