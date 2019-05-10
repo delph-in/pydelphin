@@ -20,6 +20,8 @@ import re
 from os.path import dirname, join as pjoin
 from operator import itemgetter
 import warnings
+from collections import Sequence, Mapping
+from itertools import zip_longest
 
 from delphin.predicate import normalize as normalize_predicate
 from delphin import hierarchy
@@ -341,6 +343,62 @@ class Synopsis(tuple):
 
         return {'roles': [role._to_dict() for role in self]}
 
+    def subsumes(self, args, variables=None):
+        """
+        Return `True` if the Synopsis subsumes *args*.
+
+        The *args* argument is a description of MRS arguments. It may
+        take two different forms:
+
+        - a sequence (e.g., string or list) of variable types, e.g.,
+          `"exh"`, which must be subsumed by the role values of the
+          synopsis in order
+
+        - a mapping (e.g., a dict) of roles to variable types which
+          must match roles in the synopsis; the variable type may be
+          `None` which matches any role value
+
+        In both cases, the sequence or mapping must be a subset of the
+        roles of the synopsis, and any missing must be optional roles,
+        otherwise the synopsis does not subsume *args*.
+
+        The *variables* argument is a variable hierarchy. If it is
+        `None`, variables will be checked for strict equality.
+        """
+        if len(args) > len(self):
+            return False  # some arg won't be in the synopsis
+        # normalize input
+        if isinstance(args, Sequence):
+            vartypes = (v.lower() if v else None for v in args)
+            roleargs = list(zip_longest([], vartypes, self))
+        elif isinstance(args, Mapping):
+            name_to_roles = {d.name: d for d in self}
+            roleargs = []
+            for role in set(args).union(name_to_roles):
+                role = role.upper()
+                v = args.get(role, '')
+                v = v.lower() if v else None
+                roleargs.append((role, v, name_to_roles.get(role)))
+        else:
+            raise TypeError(args.__class__.__name__)
+
+        # per-role checks
+        for role, arg, synrole in roleargs:
+            if synrole is None:
+                return False  # unmatched role in args
+            elif role is None and arg is None and not synrole.optional:
+                return False  # unmatched synopsis role
+            # elif role is not None and role != synrole.name:
+            #     return False  # invalid role in sequence
+            elif arg is not None:
+                if variables is not None:
+                    if not variables.subsumes(synrole.value, arg):
+                        return False
+                elif synrole.value != arg:
+                    return False
+        # all tests passed
+        return True
+
 
 class SemI(object):
     """
@@ -494,24 +552,23 @@ class SemI(object):
                 'roles': roles,
                 'predicates': predicates}
 
-    def find_synopsis(self, predicate, roles=None, variables=None):
+    def find_synopsis(self, predicate, args=None):
         """
         Return the first matching synopsis for *predicate*.
 
         *predicate* will be normalized before lookup.
 
-        Synopses can be matched by a set of roles or an ordered list
-        of variable types. If no condition is given, the first synopsis
-        is returned.
+        Synopses can be matched by a description of arguments which is
+        tested with :meth:`Synopsis.subsumes`. If no condition is
+        given, the first synopsis is returned.
 
         Args:
             predicate: predicate symbol whose synopsis will be returned
-            roles: roles that all must be used in the synopsis
-            variables: list of variable types (in order) that all must
-                be used by roles in the synopsis
+            args: description of arguments that must be subsumable by
+                the synopsis
         Returns:
-            matching synopsis as a `(role, value, properties, optional)`
-            tuple
+            matching synopsis as a list of `(role, value, properties,
+            optional)` role tuples
         Raises:
             :class:`SemIError`: if *predicate* is undefined or if no
                 matching synopsis can be found
@@ -519,7 +576,7 @@ class SemI(object):
             >>> smi.find_synopsis('_write_v_to')
             [('ARG0', 'e', [], False), ('ARG1', 'i', [], False),
              ('ARG2', 'p', [], True), ('ARG3', 'h', [], True)]
-            >>> smi.find_synopsis('_write_v_to', variables='eii')
+            >>> smi.find_synopsis('_write_v_to', args='eii')
             [('ARG0', 'e', [], False), ('ARG1', 'i', [], False),
              ('ARG2', 'i', [], False)]
         """
@@ -527,21 +584,11 @@ class SemI(object):
         predicate = normalize_predicate(predicate)
         if predicate not in self.predicates:
             raise SemIError('undefined predicate: {}'.format(predicate))
-        if roles is not None:
-            roles = set(role.upper() for role in roles)
-        if variables is not None:
-            variables = [var.lower() for var in variables]
         found = False
         for synopsis in self.predicates[predicate]:
-            if roles is not None and roles != set(d.name for d in synopsis):
-                continue
-            if (variables is not None and (
-                    len(synopsis) != len(variables) or
-                    not all(self.variables.subsumes(d.value, t)
-                            for d, t in zip(synopsis, variables)))):
-                continue
-            found = synopsis
-            break
+            if not args or synopsis.subsumes(args, self.variables):
+                found = synopsis
+                break
         if found is False:
             raise SemIError('no valid synopsis for {}({})'
                             .format(predicate, ', '.join(variables or [])))

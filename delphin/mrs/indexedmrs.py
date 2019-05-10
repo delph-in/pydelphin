@@ -220,7 +220,7 @@ def _decode_rel(lexer, variables, semi):
     lnk = _decode_lnk(lexer)
     arglist, carg = _decode_arglist(lexer, variables)
     argtypes = [variable.type(arg) for arg in arglist]
-    synopsis = semi.find_synopsis(pred, variables=argtypes)
+    synopsis = semi.find_synopsis(pred, argtypes)
     args = {d[0]: v for d, v in zip(synopsis, arglist)}
     if carg:
         args[CONSTANT_ROLE] = carg
@@ -359,10 +359,11 @@ def _encode_variable(var, varprops):
 
 
 def _encode_rel(ep, semi, varprops, lnk, delim):
-    roles = [role for role in ep.args if role != CONSTANT_ROLE]
-    synopsis = semi.find_synopsis(ep.predicate, roles=roles)
-    args = [_encode_variable(ep.args[d[0]], varprops)
-            for d in synopsis]
+    roles = {role: None for role in ep.args if role != CONSTANT_ROLE}
+    synopsis = semi.find_synopsis(ep.predicate, roles)
+    args = [_encode_variable(ep.args[d.name], varprops)
+            for d in synopsis
+            if d.name in ep.args]
     if ep.carg is not None:
         args.append('"{}"'.format(ep.carg))
     return '{label}:{pred}{lnk}({args})'.format(
