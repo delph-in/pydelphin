@@ -857,8 +857,7 @@ class Table(object):
     def _enum_lines(self):
         """Enumerate lines from the attached file."""
         with _open_table(self.path, self.encoding) as lines:
-            for i, line in enumerate(lines):
-                yield i, line
+            yield from enumerate(lines)
 
     def _enum_attached_rows(self, indices):
         """Enumerate on-disk and in-memory records."""
@@ -878,8 +877,7 @@ class Table(object):
                     yield (j, records[j])
 
     def __iter__(self):
-        for record in self._iterslice(slice(None)):
-            yield record
+        yield from self._iterslice(slice(None))
 
     def __getitem__(self, index):
         if isinstance(index, slice):
