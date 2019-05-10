@@ -213,8 +213,8 @@ def _get_converter(source_fmt, target_fmt, predicate_modifiers):
 def _colorize(text):
     from pygments import highlight as hl
     from pygments.formatters import TerminalFormatter
-    from delphin.extra.highlight import SimpleMrsLexer, mrs_colorscheme
-    lexer = SimpleMrsLexer()
+    from delphin.extra.highlight import SimpleMRSLexer, mrs_colorscheme
+    lexer = SimpleMRSLexer()
     formatter = TerminalFormatter(bg='dark', colorscheme=mrs_colorscheme)
     return hl(text, lexer, formatter)
 

@@ -4,13 +4,13 @@ Pygments-based highlighting lexers for DELPH-IN formats.
 """
 
 import re
+
 from pygments.lexer import RegexLexer, include, bygroups
 from pygments.token import (
     Token, Text, Number, String,
     Keyword, Name, Operator, Punctuation,
     Comment, Error
 )
-
 
 _tdl_break_characters = re.escape(r'<>!=:.#&,[];$()^/')
 
@@ -126,7 +126,7 @@ mrs_colorscheme = {
     Operator.Word:      ('',            ''),  # HCONS or ICONS relations
     Name.Builtin:       ('**',          '**'),  # LTOP, RELS, etc
     # used for variables
-    Name.Label:         ('brown',       'brown'),  # handles
+    Name.Label:         ('yellow',      'yellow'),  # handles
     Name.Function:      ('*purple*',    '*fuchsia*'),  # events
     Name.Variable:      ('*darkblue*',  '*blue*'),  # ref-inds (x)
     Name.Other:         ('*teal*',      '*turquoise*'),  # (i, p, u)
@@ -153,7 +153,7 @@ mrs_colorscheme = {
 }
 
 
-class SimpleMrsLexer(RegexLexer):
+class SimpleMRSLexer(RegexLexer):
     """
     A Pygments-based Lexer for the SimpleMRS serialization format.
     """

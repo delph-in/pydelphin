@@ -330,7 +330,7 @@ class LookaheadLexer(LookaheadIterator):
     def expect(self, *args, skip=None):
         vals = []
         for (ttype, tform) in args:
-            gid, token, lineno = self.next(skip=skip)
+            gid, token, lineno, offset, pos = self.next(skip=skip)
             err = None
             if ttype is not None and gid != ttype:
                 err = str(ttype)
@@ -338,7 +338,9 @@ class LookaheadLexer(LookaheadIterator):
                 err = repr(tform)
             if err is not None:
                 raise self._errcls('expected: ' + err,
-                                   lineno=lineno, text=token)
+                                   lineno=lineno,
+                                   offset=offset,
+                                   text=token)
             vals.append(token)
         if len(args) == 1:
             return vals[0]
@@ -347,7 +349,7 @@ class LookaheadLexer(LookaheadIterator):
 
     def accept(self, arg, skip=None, drop=False):
         ttype, tform = arg
-        gid, token, lineno = self.peek(skip=skip, drop=drop)
+        gid, token, lineno, offset, pos = self.peek(skip=skip, drop=drop)
         if ((ttype is None or gid == ttype)
                 and (tform is None or token == tform)):
             self.next(skip=skip)
@@ -355,7 +357,7 @@ class LookaheadLexer(LookaheadIterator):
         return None
 
     def choice(self, *args, skip=None):
-        gid, token, lineno = self.next(skip=skip)
+        gid, token, lineno, offset, pos = self.next(skip=skip)
         for (ttype, tform) in args:
             if ((ttype is None or gid == ttype)
                     and (tform is None or token == tform)):
@@ -428,27 +430,31 @@ class Lexer(object):
         Lex the input string
 
         Yields:
-            (gid, token, line_number)
+            (gid, token, line_number, offset, pos) where offset is the
+            character position within the line and pos is the
+            character position in the full input
         """
         # loop optimizations
         finditer = self._re.finditer
         UNEXPECTED = self.tokentypes.UNEXPECTED
 
         lines = enumerate(lineiter, 1)
-        lineno = pos = 0
+        lineno = line_pos = 0
         try:
             for lineno, line in lines:
                 matches = finditer(line)
                 for m in matches:
                     gid = m.lastindex
+                    offset = m.start()
                     if gid == UNEXPECTED:
                         raise self._errcls(
                             'unexpected input',
                             lineno=lineno,
-                            offset=pos,
+                            offset=offset,
                             text=line)
                     token = m.group(gid)
-                    yield (gid, token, lineno)
+                    yield (gid, token, lineno, offset, line_pos + offset)
+                line_pos += len(line) + 1  # +1 for newline character
         except StopIteration:
             pass
 
