@@ -17,20 +17,21 @@ its source files.
 Requirements
 ------------
 
-PyDelphin works with Python versions 2.7 and 3.4+, regardless of the
+PyDelphin works with Python 3.5 and higher, regardless of the
 platform. Certain features, however, may require additional
 dependencies or may be platform specific, as shown in the table below:
 
-==============================  ==================  ==================
-Module                          Dependencies        Notes
-==============================  ==================  ==================
-:mod:`delphin.extra.highlight`  Pygments_
-:mod:`delphin.extra.latex`      `tikz-dependency`_  LaTeX package
-:mod:`delphin.interfaces.ace`   ACE_                Linux and Mac only
-:mod:`delphin.interfaces.rest`  requests_
-:mod:`delphin.mrs.compare`      NetworkX_
-:mod:`delphin.mrs.penman`       Penman_
-==============================  ==================  ==================
+===================================  ==================  ==================
+Module                               Dependencies        Notes
+===================================  ==================  ==================
+:mod:`delphin.extra.highlight`       Pygments_
+:mod:`delphin.extra.dmrstikz_codec`  `tikz-dependency`_  LaTeX package
+:mod:`delphin.interfaces.ace`        ACE_                Linux and Mac only
+:mod:`delphin.interfaces.rest`       requests_
+:func:`delphin.mrs.is_isomorphic`    NetworkX_
+:mod:`delphin.dmrs.dmrspenman`       Penman_
+:mod:`delphin.eds.edspenman`         Penman_
+===================================  ==================  ==================
 
 .. _Pygments: http://pygments.org/
 .. _tikz-dependency: https://ctan.org/pkg/tikz-dependency
@@ -88,6 +89,20 @@ dependencies::
 
   $ pip install ~/path/to/pydelphin/
 
+There are some extra dependencies that can be activated with certain
+install parameters. You only need to install with one of the following
+commands, depending on your needs::
+
+  $ pip install ~/path/to/pydelphin[test]  # unit testing
+  $ pip install ~/path/to/pydelphin[doc]   # building documentation
+  $ pip install ~/path/to/pydelphin[dev]   # both of the above
+
+For development, you may also want to use :command:`pip`\ 's `-e`
+option to install PyDelphin as "editable", meaning it installs the
+dependencies but uses the local source files for PyDelphin's code,
+otherwise changes you make to PyDelphin won't be reflected in your
+(virtual) environment unless you reinstall PyDelphin.
+
 .. warning::
 
    The PyDelphin source code can be installed simply by running
@@ -100,28 +115,22 @@ Running Unit Tests
 
 PyDelphin's unit tests are not distributed on PyPI, so if you wish to
 run the unit tests you'll need to get the source code. The tests are
-written for pytest_, so one way to run them is
-by installing :command:`pytest` (for both Python 2 and 3), and
-running::
+written for pytest_, which is installed if you used the `test` or
+`dev` install parameters described above. Once :command:`pytest` is
+installed (note: it may also be called :command:`py.test`), run it to
+perform the unit tests:
 
-  $ pytest --doctest-glob=tests/\*.md
+  $ pytest
 
-A better way to run the tests is using tox_::
+This will detect and run any unit tests it finds. It is best to run
+the :command:`pytest` in a virtual environment with a clean install of
+PyDelphin to ensure that the local Python environment is not
+conflicting with PyDelphin's dependencies and also to ensure that
+PyDelphin specifies all its dependencies.
 
-  $ tox
-
-The :command:`tox` utility manages the building of virtual
-environments for testing, and it uses a configuration file (included
-in PyDelphin's sources) that specify how :command:`pytest` should be
-called. It can also run the tests for several different Python
-versions. Note that simply running :command:`tox` without any options
-will attempt to test PyDelphin with every supported version of Python,
-and it is likely that some of those versions are not installed on your
-system. The ``-e`` option to :command:`tox` can specify the Python
-version; e.g., the following runs the tests for Python versions 2.7
-and 3.6::
-
-  $ tox -e py27,py36
+If you find it inconvenient to activate several virtual environments
+to test the supported Python versions, you may find :command:`tox`
+useful. See tox_\ 's website for more information.
 
 .. _pytest: http://pytest.org/
 .. _tox: https://tox.readthedocs.io/en/latest/
