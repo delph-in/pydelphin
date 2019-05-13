@@ -215,10 +215,10 @@ def _get_converter(source_fmt, target_fmt, predicate_modifiers):
 
 def _colorize(text):
     from pygments import highlight as hl
-    from pygments.formatters import TerminalFormatter
-    from delphin.extra.highlight import SimpleMRSLexer, mrs_colorscheme
+    from pygments.formatters import Terminal256Formatter as Formatter
+    from delphin.extra.highlight import SimpleMRSLexer, MRSStyle
     lexer = SimpleMRSLexer()
-    formatter = TerminalFormatter(bg='dark', colorscheme=mrs_colorscheme)
+    formatter = Formatter(style=MRSStyle)
     return hl(text, lexer, formatter)
 
 

@@ -6,6 +6,7 @@ Pygments-based highlighting lexers for DELPH-IN formats.
 import re
 
 from pygments.lexer import RegexLexer, include, bygroups
+from pygments.style import Style
 from pygments.token import (
     Token, Text, Number, String,
     Keyword, Name, Operator, Punctuation,
@@ -115,42 +116,20 @@ class TDLLexer(RegexLexer):
     }
 
 
-mrs_colorscheme = {
-    Token:              ('',            ''),
-
-    # Whitespace:         ('lightgray',   'darkgray'),
-    # Comment:            ('lightgray',   'darkgray'),
-    # Comment.Preproc:    ('teal',        'turquoise'),
-    # Keyword:            ('darkblue',    'blue'),
-    # Keyword.Type:       ('teal',        'turquoise'),
-    Operator.Word:      ('',            ''),  # HCONS or ICONS relations
-    Name.Builtin:       ('**',          '**'),  # LTOP, RELS, etc
-    # used for variables
-    Name.Label:         ('yellow',      'yellow'),  # handles
-    Name.Function:      ('*purple*',    '*fuchsia*'),  # events
-    Name.Variable:      ('*darkblue*',  '*blue*'),  # ref-inds (x)
-    Name.Other:         ('*teal*',      '*turquoise*'),  # (i, p, u)
-    # role arguments
-    Name.Namespace:     ('__',          '__'),  # LBL
-    Name.Class:         ('',            ''),  # ARG0
-    Name.Constant:      ('__',          '__'),  # CARG
-    Name.Tag:           ('',            ''),  # others
-    # Name.Exception:     ('teal',        'turquoise'),
-    # Name.Decorator:     ('darkgray',    'lightgray'),
-    Name.Attribute:     ('darkgray',    'darkgray'),  # variable properties
-    String:             ('red',         'red'),
-    String.Symbol:      ('darkgreen',   'green'),
-    String.Other:       ('green',       'darkgreen'),
-    Number:             ('lightgray',   'lightgray'),  # lnk
-
-    # Generic.Deleted:    ('red',        'red'),
-    # Generic.Inserted:   ('darkgreen',  'green'),
-    # Generic.Heading:    ('**',         '**'),
-    # Generic.Subheading: ('*purple*',   '*fuchsia*'),
-    # Generic.Error:      ('red',        'red'),
-
-    Error:              ('_red_',       '_red_'),
-}
+class MRSStyle(Style):
+    styles = {
+        Name.Attribute: '#757575',
+        Name.Builtin:   'bold',
+        Name.Variable:  '#00B2CA bold',
+        Name.Label:     '#E8BE5D bold',
+        Name.Function:  '#EF476F bold',
+        Name.Other:     '#00B2CA',
+        String:         '',
+        String.Symbol:  '#06D6A0 bold',
+        String.Other:   '#05C095',
+        Number:         '#757575',
+        Error:          '#FF0000 underline',
+    }
 
 
 class SimpleMRSLexer(RegexLexer):

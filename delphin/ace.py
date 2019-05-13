@@ -626,7 +626,7 @@ def _decode(lines):
     newline = False
     for line in lines:
         if line.startswith('SENT: '):
-            surface = line[6:]
+            surface = line[6:].rstrip()
         # regular ACE output
         elif line.startswith('['):
             m = line.partition(' ;  ')[0].strip()
