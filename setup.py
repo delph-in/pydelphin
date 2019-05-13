@@ -50,7 +50,6 @@ setup(
     keywords='nlp semantics hpsg delph-in linguistics',
     packages=[
         'delphin',
-        'delphin.interfaces',
         'delphin.mrs',
         'delphin.eds',
         'delphin.dmrs',
