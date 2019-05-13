@@ -19,16 +19,16 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
-import delphin
+import delphin.__about__
 
-project = delphin.__title__
+project = delphin.__about__.__title__
 copyright = u'2019, Michael Wayne Goodman'
-author = delphin.__author__
+author = delphin.__about__.__author__
 
 # The short X.Y version
-version = delphin.__version__
+version = delphin.__about__.__version__
 # The full version, including alpha/beta/rc tags
-release = delphin.__version__
+release = delphin.__about__.__version__
 
 
 # -- General configuration ---------------------------------------------------
