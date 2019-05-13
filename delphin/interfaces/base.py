@@ -3,7 +3,7 @@ from collections import Sequence
 from datetime import datetime
 
 from delphin.derivation import Derivation
-from delphin.tokens import YyTokenLattice
+from delphin.tokens import YYTokenLattice
 from delphin.mrs import mrsjson, simplemrs
 from delphin.dmrs import dmrsjson
 from delphin.eds import edsjson, edsnative
@@ -152,7 +152,7 @@ class ParseResponse(dict):
 
     def tokens(self, tokenset='internal'):
         """
-        Deserialize and return a YyTokenLattice object for the
+        Deserialize and return a YYTokenLattice object for the
         initial or internal token set, if provided, from the YY
         format or the JSON-formatted data; otherwise return the
         original string.
@@ -161,14 +161,14 @@ class ParseResponse(dict):
             tokenset (str): return `'initial'` or `'internal'` tokens
                 (default: `'internal'`)
         Returns:
-            :class:`YyTokenLattice`
+            :class:`YYTokenLattice`
         """
         toks = self.get('tokens', {}).get(tokenset)
         if toks is not None:
             if isinstance(toks, str):
-                toks = YyTokenLattice.from_string(toks)
+                toks = YYTokenLattice.from_string(toks)
             elif isinstance(toks, Sequence):
-                toks = YyTokenLattice.from_list(toks)
+                toks = YYTokenLattice.from_list(toks)
         return toks
 
 

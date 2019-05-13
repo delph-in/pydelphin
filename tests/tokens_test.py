@@ -1,7 +1,7 @@
 
 import pytest
 
-from delphin.tokens import YyTokenLattice as YY, YyToken
+from delphin.tokens import YYTokenLattice as YY, YYToken
 from delphin.lnk import Lnk
 
 token_v1_basic = '(1, 0, 1, 1, "dog", 0, "null")'
@@ -43,29 +43,29 @@ def check_token(t, id, start, end, lnk, paths, form, surf, ipos, lrules, pos):
 class TestYYToken(object):
     def test_init(self):
         with pytest.raises(TypeError):
-            YyToken()
-            YyToken(1)
-            YyToken(1, 0)
-            YyToken(1, 0, 1)
-            YyToken(1, 0, 1, Lnk.charspan(0, 1))
-            YyToken(1, 0, 1, Lnk.charspan(0, 1), [1])
-            YyToken(1, 0, 1, Lnk.charspan(0, 1), [1], surface=".")
-            YyToken(1, 0, 1, Lnk.charspan(0, 1), [1], surface=".", ipos=0)
-            YyToken(1, 0, 1, Lnk.charspan(0, 1), [1], surface=".",
+            YYToken()
+            YYToken(1)
+            YYToken(1, 0)
+            YYToken(1, 0, 1)
+            YYToken(1, 0, 1, Lnk.charspan(0, 1))
+            YYToken(1, 0, 1, Lnk.charspan(0, 1), [1])
+            YYToken(1, 0, 1, Lnk.charspan(0, 1), [1], surface=".")
+            YYToken(1, 0, 1, Lnk.charspan(0, 1), [1], surface=".", ipos=0)
+            YYToken(1, 0, 1, Lnk.charspan(0, 1), [1], surface=".",
                     ipos=0, lrules=["null"])
-            YyToken(1, 0, 1, Lnk.charspan(0, 1), [1], surface=".",
+            YYToken(1, 0, 1, Lnk.charspan(0, 1), [1], surface=".",
                     ipos=0, lrules=["null"], pos=[(".", 1.0)])
-        t = YyToken(1, 0, 1, form="dog")
+        t = YYToken(1, 0, 1, form="dog")
         check_token(t, 1, 0, 1, None, [1], "dog", None, 0, ["null"], [])
-        t = YyToken(1, 0, 1, Lnk.charspan(0, 1), [1], "dog", "Dog",
+        t = YYToken(1, 0, 1, Lnk.charspan(0, 1), [1], "dog", "Dog",
                     ipos=0, lrules=["null"], pos=[("NN", 1.0)])
         check_token(t, 1, 0, 1, Lnk.charspan(0, 1), [1], "dog", "Dog",
                     0, ["null"], [("NN", 1.0)])
 
     def test_from_dict(self):
-        t = YyToken.from_dict({'id': 1, 'start': 0, 'end': 1, 'form': "dog"})
+        t = YYToken.from_dict({'id': 1, 'start': 0, 'end': 1, 'form': "dog"})
         check_token(t, 1, 0, 1, None, [1], "dog", None, 0, ["null"], [])
-        t = YyToken.from_dict({
+        t = YYToken.from_dict({
             'id': 1, 'start': 0, 'end': 1, 'from': 0, 'to': 1,
             # 'paths': [1],
             'form': "dog", 'surface': "Dog",
@@ -76,9 +76,9 @@ class TestYYToken(object):
                     0, ["null"], [("NN", 1.0)])
 
     def test_to_dict(self):
-        t = YyToken(1, 0, 1, form="dog")
+        t = YYToken(1, 0, 1, form="dog")
         assert t.to_dict() == {'id': 1, 'start': 0, 'end': 1, 'form': "dog"}
-        t = YyToken(1, 0, 1, Lnk.charspan(0, 1), [1], "dog", "Dog",
+        t = YYToken(1, 0, 1, Lnk.charspan(0, 1), [1], "dog", "Dog",
                     ipos=0, lrules=["null"], pos=[("NN", 1.0)])
         assert t.to_dict() == {
             'id': 1, 'start': 0, 'end': 1, 'from': 0, 'to': 1,
@@ -161,7 +161,7 @@ class TestYYTokenLattice(object):
         tl = YY.from_list(
             [{'id': 1, 'start': 0, 'end': 1, 'form': "dog"}]
         )
-        assert tl.tokens == [YyToken(1, 0, 1, form="dog")]
+        assert tl.tokens == [YYToken(1, 0, 1, form="dog")]
 
         tl = YY.from_list(
             [
@@ -178,20 +178,20 @@ class TestYYTokenLattice(object):
             ]
         )
         assert tl.tokens == [
-            YyToken(1, 0, 1, Lnk.charspan(0, 4), [1], "dogs", "Dogs",
+            YYToken(1, 0, 1, Lnk.charspan(0, 4), [1], "dogs", "Dogs",
                     ipos=0, lrules=["null"], pos=[("NN", 1.0)]),
-            YyToken(1, 0, 1, Lnk.charspan(5, 9), [1], "bark",
+            YYToken(1, 0, 1, Lnk.charspan(5, 9), [1], "bark",
                     ipos=0, lrules=["null"], pos=[("VBZ", 1.0)])
         ]
 
     def test_to_list(self):
-        tl = YY([YyToken(1, 0, 1, form="dog")])
+        tl = YY([YYToken(1, 0, 1, form="dog")])
         assert tl.to_list() == [{'id': 1, 'start': 0, 'end': 1, 'form': "dog"}]
 
         tl = YY([
-            YyToken(1, 0, 1, Lnk.charspan(0, 4), [1], "dogs", "Dogs",
+            YYToken(1, 0, 1, Lnk.charspan(0, 4), [1], "dogs", "Dogs",
                     ipos=0, lrules=["null"], pos=[("NN", 1.0)]),
-            YyToken(2, 1, 2, Lnk.charspan(5, 9), [1], "bark",
+            YYToken(2, 1, 2, Lnk.charspan(5, 9), [1], "bark",
                     ipos=0, lrules=["null"], pos=[("VBZ", 1.0)])
         ])
         assert tl.to_list() == [

@@ -5,7 +5,7 @@ from collections import namedtuple
 from delphin.lnk import Lnk
 
 _yy_token = namedtuple(
-    'YyToken',
+    'YYToken',
     (
         'id',       # token identifier
         'start',    # start vertex
@@ -21,7 +21,7 @@ _yy_token = namedtuple(
 )
 
 
-class YyToken(_yy_token):
+class YYToken(_yy_token):
     """
     A tuple of token data in the YY format.
 
@@ -44,7 +44,7 @@ class YyToken(_yy_token):
             raise TypeError('Missing required keyword argument \'form\'.')
         if lnk is None:
             lnk = Lnk.default()
-        return super(YyToken, cls).__new__(
+        return super(YYToken, cls).__new__(
             cls, id, start, end, lnk, list(paths), form, surface,
             ipos, list(lrules), list(pos)
         )
@@ -135,12 +135,12 @@ _yy_re = re.compile(
 )
 
 
-class YyTokenLattice(object):
+class YYTokenLattice(object):
     """
     A lattice of YY Tokens.
 
     Args:
-        tokens: a list of YyToken objects
+        tokens: a list of YYToken objects
     """
     def __init__(self, tokens):
         self.tokens = tokens
@@ -162,7 +162,7 @@ class YyTokenLattice(object):
                 ps = d['pos'].strip().split()
                 pos = list(zip(map(_qstrip, ps[::2]), map(float, ps[1::2])))
             tokens.append(
-                YyToken(
+                YYToken(
                     int(d['id']),
                     int(d['start']),
                     int(d['end']),
@@ -182,7 +182,7 @@ class YyTokenLattice(object):
         """
         Decode from a list as from :meth:`to_list`.
         """
-        return cls(list(map(YyToken.from_dict, toks)))
+        return cls(list(map(YYToken.from_dict, toks)))
 
     def to_list(self):
         """
@@ -194,7 +194,7 @@ class YyTokenLattice(object):
         return ' '.join(map(str, self.tokens))
 
     def __eq__(self, other):
-        if not isinstance(other, YyTokenLattice):
+        if not isinstance(other, YYTokenLattice):
             return NotImplemented
         if (len(self.tokens) == len(other.tokens) and
                 all(t1 == t2 for t1, t2 in zip(self.tokens, other.tokens))):

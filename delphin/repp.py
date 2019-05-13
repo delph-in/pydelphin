@@ -23,7 +23,7 @@ from sre_parse import parse_template
 from array import array
 from collections import namedtuple
 
-from delphin.tokens import YyToken, YyTokenLattice
+from delphin.tokens import YYToken, YYTokenLattice
 from delphin.lnk import Lnk
 from delphin.exceptions import PyDelphinException
 
@@ -93,12 +93,12 @@ class _REPPOperation(object):
     def tokenize(self, s, pattern=r'[ \t]+', active=None):
         res = self.apply(s, active=active)
         tokens = [
-            YyToken(id=i, start=i, end=i+1,
+            YYToken(id=i, start=i, end=i+1,
                     lnk=Lnk.charspan(tok[0], tok[1]),
                     form=tok[2])
             for i, tok in enumerate(_tokenize(res, pattern))
         ]
-        return YyTokenLattice(tokens)
+        return YYTokenLattice(tokens)
 
 
 class _REPPRule(_REPPOperation):
@@ -451,7 +451,7 @@ class REPP(object):
             active (optional): a collection of external module names
                 that may be applied if called
         Returns:
-            a :class:`~delphin.tokens.YyTokenLattice` containing the
+            a :class:`~delphin.tokens.YYTokenLattice` containing the
             tokens and their characterization information
         """
         if pattern is None:

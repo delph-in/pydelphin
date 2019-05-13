@@ -6,7 +6,7 @@ from delphin.eds import edsjson
 from delphin.mrs import simplemrs
 from delphin.dmrs import dmrsjson
 from delphin.derivation import Derivation
-from delphin.tokens import YyTokenLattice
+from delphin.tokens import YYTokenLattice
 
 def test_ParseResult():
     r = ParseResult()
@@ -153,7 +153,7 @@ def test_ParseResponse():
     toks_d = [
         {'id': 1, 'start': 0, 'end': 1, 'from': 0, 'to': 4, "form": "Dogs"}
     ]
-    toks = YyTokenLattice.from_list(toks_d)
+    toks = YYTokenLattice.from_list(toks_d)
 
     r = ParseResponse(tokens={'initial': toks_s})
     assert r['tokens']['initial'] == toks_s

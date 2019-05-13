@@ -285,7 +285,7 @@ Tokens and Token Lattices
 You can inspect the tokens as analyzed by the processor:
 
 >>> response.tokens('initial')
-<delphin.tokens.YyTokenLattice object at 0x7f3c55abdd30>
+<delphin.tokens.YYTokenLattice object at 0x7f3c55abdd30>
 >>> print('\n'.join(map(str,response.tokens('initial').tokens)))
 (1, 0, 1, <0:6>, 1, "Abrams", 0, "null", "NNP" 1.0000)
 (2, 1, 2, <7:13>, 1, "chased", 0, "null", "NNP" 1.0000)
