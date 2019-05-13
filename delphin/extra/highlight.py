@@ -118,13 +118,18 @@ class TDLLexer(RegexLexer):
 
 class MRSStyle(Style):
     styles = {
+        Text:           '',
+        Punctuation:    '',
         Name.Attribute: '#757575',
         Name.Builtin:   'bold',
         Name.Variable:  '#00B2CA bold',
         Name.Label:     '#E8BE5D bold',
         Name.Function:  '#EF476F bold',
-        Name.Other:     '#00B2CA',
+        Name.Other:     '#7E56D6 bold',
+        Operator.Word:  '',
         String:         '',
+        String.Single:  '',
+        String.Double:  '',
         String.Symbol:  '#06D6A0 bold',
         String.Other:   '#05C095',
         Number:         '#757575',
@@ -176,9 +181,10 @@ class SimpleMRSLexer(RegexLexer):
             (r'\s+', Text),
             (r'([^:\s]+)(\s*)(:)(\s*)([^\s]+)',
              bygroups(Name.Attribute, Text, Punctuation, Text, Text)),
+            (r'e|event', Name.Function),
+            (r'x|ref-ind', Name.Variable),
+            (r'\w+', Name.Other),
             (r'\]', Punctuation, '#pop'),
-            (r'e|event|x|ref-ind', Name.Variable),
-            (r'\w+', Name.Other)
         ],
         'lnk': [
             (r'\s+', Text),
