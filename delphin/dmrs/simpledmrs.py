@@ -161,8 +161,10 @@ _SimpleDMRSLexer = Lexer(
         (r'\}', 'RBRACE:}'),
         (r'\[', 'LBRACKET:['),
         (r'\]', 'RBRACKET:]'),
+        (r'\(', 'LPAREN:('),
+        (r'\)', 'RPAREN:)'),
         (r'<(?:-?\d+[:#]-?\d+|@\d+|\d+(?: +\d+)*)>', 'LNK:a lnk value'),
-        (r'\("([^"\\]*(?:\\.[^"\\]*)*)"\)', 'DQSTRING:a string'),
+        (r'"([^"\\]*(?:\\.[^"\\]*)*)"', 'DQSTRING:a string'),
         (r':', 'COLON::'),
         (r'\/', 'SLASH:/'),
         (r'=', 'EQUALS:='),
@@ -177,6 +179,8 @@ LBRACE    = _SimpleDMRSLexer.tokentypes.LBRACE
 RBRACE    = _SimpleDMRSLexer.tokentypes.RBRACE
 LBRACKET  = _SimpleDMRSLexer.tokentypes.LBRACKET
 RBRACKET  = _SimpleDMRSLexer.tokentypes.RBRACKET
+LPAREN    = _SimpleDMRSLexer.tokentypes.LPAREN
+RPAREN    = _SimpleDMRSLexer.tokentypes.RPAREN
 LNK       = _SimpleDMRSLexer.tokentypes.LNK
 DQSTRING  = _SimpleDMRSLexer.tokentypes.DQSTRING
 COLON     = _SimpleDMRSLexer.tokentypes.COLON
@@ -247,7 +251,9 @@ def _decode_properties(lexer):
 def _decode_node(nodeid, lexer):
     predicate = lexer.expect_type(SYMBOL)
     lnk = _decode_lnk(lexer)
-    carg = lexer.accept_type(DQSTRING)
+    carg = None
+    if lexer.accept_type(LPAREN):
+        carg, _ = lexer.expect_type(DQSTRING, RPAREN)
     nodetype = lexer.accept_type(SYMBOL)
     properties = dict(_decode_properties(lexer))
     lexer.expect_type(SEMICOLON)
@@ -310,8 +316,7 @@ def _encode_attrs(d, lnk):
         if d.lnk:
             attrs.append(str(d.lnk))
         if d.surface is not None:
-            # join without space to lnk, if any
-            attrs = [''.join(attrs + ['("{}")'.format(d.surface)])]
+            attrs.append('"{}"'.format(d.surface))
     if d.top is not None:
         attrs.append('top={}'.format(d.top))
     if d.index is not None:

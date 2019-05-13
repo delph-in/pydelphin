@@ -62,7 +62,7 @@ def test_encode(it_rains_heavily_dmrs, abrams_barked_dmrs):
 
     assert simpledmrs.encode(abrams_barked_dmrs) == (
         'dmrs 1000380 {'
-        ' [<0:14>("Abrams barked.") top=30 index=30]'
+        ' [<0:14> "Abrams barked." top=30 index=30]'
         ' 10 [udef_q];'
         ' 20 [named<0:6>("Abrams") x];'
         ' 30 [_bark_v_1<7:13> e TENSE=past];'
@@ -85,7 +85,7 @@ def test_decode(it_rains_heavily_dmrs):
 
     d = simpledmrs.decode(
         'dmrs 1000380 {'
-        ' [<0:14>("Abrams barked.") top=30 index=30]'
+        ' [<0:14> "Abrams barked." top=30 index=30]'
         ' 10 [udef_q];'
         ' 20 [named<0:6>("Abrams") x];'
         ' 30 [_bark_v_1<7:13> e TENSE=past];'
@@ -104,7 +104,7 @@ def test_decode(it_rains_heavily_dmrs):
 def test_loads(it_rains_heavily_dmrs):
     ds = simpledmrs.loads(
         'dmrs {\n'
-        ' [<0:18>("It rained heavily.") top=20 index=10]\n'
+        ' [<0:18> "It rained heavily." top=20 index=10]\n'
         ' 10 [_rain_v_1<3:9> e TENSE=past];\n'
         ' 20 [_heavy_a_1<10:17> e];\n'
         ' 20:ARG1/EQ -> 10;\n'
