@@ -110,6 +110,7 @@ Example:
 
 """
 
+from pathlib import Path
 import xml.etree.ElementTree as etree
 
 from delphin import predicate
@@ -136,6 +137,8 @@ def load(source):
     Returns:
         a list of DMRS objects
     """
+    if not hasattr(source, 'read'):
+        source = str(Path(source).expanduser())
     ms = _decode(source)
     return list(ms)
 
@@ -177,7 +180,8 @@ def dump(ds, destination, properties=True, lnk=True,
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             print(text, file=fh)
 
 
@@ -250,6 +254,7 @@ def _decode(fh):
         if elem.tag == 'dmrs':
             yield _decode_dmrs(elem)
             elem.clear()
+
 
 def _decode_dmrs(elem):
     # <!ELEMENT dmrs (node|link)*>

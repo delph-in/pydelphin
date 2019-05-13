@@ -51,6 +51,8 @@ Example:
     hcons([qeq(h0,h1),qeq(h5,h7),qeq(h11,h13)]))
 """
 
+from pathlib import Path
+
 from delphin.sembase import role_priority
 from delphin.mrs import CONSTANT_ROLE
 
@@ -74,7 +76,8 @@ def dump(ms, destination, properties=True, lnk=True,
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             print(text, file=fh)
 
 

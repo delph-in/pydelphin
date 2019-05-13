@@ -92,8 +92,10 @@ Reading from a file or stream
 
    Deserialize and return semantic representations from *source*.
 
-   :param source: filename or file handle of a source containing
-                  serialized semantic representations
+   :param source: `path-like object
+      <https://docs.python.org/3/glossary.html#term-path-like-object>`_
+      or file handle of a source containing serialized semantic
+      representations
 
    :rtype: list
 
@@ -152,8 +154,9 @@ Writing to a file or stream
 
    :param xs: iterable of :class:`~delphin.sembase.SemanticStructure`
 	      objects to serialize
-   :param destination: filename or file object where data will be
-                       written to
+   :param destination: `path-like object
+      <https://docs.python.org/3/glossary.html#term-path-like-object>`_
+      or file object where data will be written to
    :param bool properties: if `False`, suppress morphosemantic
                            properties
    :param bool lnk: if `False`, suppress surface alignments and

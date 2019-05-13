@@ -88,6 +88,8 @@ Example:
 
 """
 
+from pathlib import Path
+
 import penman
 
 from delphin.lnk import Lnk
@@ -105,6 +107,8 @@ def load(source):
     Returns:
         a list of DMRS objects
     """
+    if not hasattr(source, 'read'):
+        source = str(Path(source).expanduser())
     graphs = penman.load(source)
     xs = [from_triples(g.triples()) for g in graphs]
     return xs
@@ -145,7 +149,8 @@ def dump(ds, destination, properties=False, lnk=True,
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             print(text, file=fh)
 
 

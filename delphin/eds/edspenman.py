@@ -91,6 +91,8 @@ Example:
 
 """
 
+from pathlib import Path
+
 import penman
 
 from delphin.lnk import Lnk
@@ -107,6 +109,8 @@ def load(source):
     Returns:
         a list of EDS objects
     """
+    if not hasattr(source, 'read'):
+        source = str(Path(source).expanduser())
     graphs = penman.load(source)
     xs = [from_triples(g.triples()) for g in graphs]
     return xs
@@ -147,7 +151,8 @@ def dump(es, destination, properties=True, lnk=True,
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             print(text, file=fh)
 
 
@@ -230,7 +235,7 @@ def from_triples(triples):
     """
     Decode triples, as from :func:`to_triples`, into an EDS object.
     """
-    nids, nd, edges = [], {}, []
+    nids, nd = [], {}
     for src, rel, tgt in triples:
         if src not in nd:
             nids.append(src)

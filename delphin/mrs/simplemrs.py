@@ -28,6 +28,8 @@ Example:
     HCONS: < h0 qeq h1 h5 qeq h7 h11 qeq h13 > ]
 """  # noqa: E501
 
+from pathlib import Path
+
 from delphin.util import Lexer
 from delphin import predicate
 from delphin.lnk import Lnk
@@ -41,18 +43,9 @@ from delphin.mrs import (
     MRSSyntaxError,
     CONSTANT_ROLE)
 
+
 TOP_FEATURE = 'TOP'
 
-# versions are:
-#  * 1.0 long running standard
-#  * 1.1 added support for MRS-level lnk, surface and EP-level surface
-_default_version = 1.1
-_latest_version = 1.1
-
-_valid_hcons = ['qeq', 'lheq', 'outscopes']
-
-# pretty-print options
-_default_mrs_delim = '\n'
 
 ##############################################################################
 ##############################################################################
@@ -71,7 +64,8 @@ def load(source):
     if hasattr(source, 'read'):
         ms = list(_decode(source))
     else:
-        with open(source) as fh:
+        source = Path(source).expanduser()
+        with source.open() as fh:
             ms = list(_decode(fh))
     return ms
 
@@ -108,7 +102,8 @@ def dump(ms, destination, properties=True, lnk=True,
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             print(text, file=fh)
 
 

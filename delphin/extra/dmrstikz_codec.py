@@ -2,6 +2,8 @@
 Serialize DMRS objects into LaTeX code for visualization.
 """
 
+from pathlib import Path
+
 from delphin import predicate
 from delphin import dmrs
 
@@ -92,7 +94,8 @@ def dump(ds, destination, properties=True, lnk=True,
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             print(text, file=fh)
 
 

@@ -24,6 +24,8 @@ Example:
   }
 """
 
+from pathlib import Path
+
 from delphin import variable
 from delphin.lnk import Lnk
 from delphin.sembase import (role_priority, property_priority)
@@ -43,7 +45,8 @@ def load(source):
     if hasattr(source, 'read'):
         data = list(_decode(source))
     else:
-        with open(source) as fh:
+        source = Path(source).expanduser()
+        with source.open() as fh:
             data = list(_decode(fh))
     return data
 
@@ -84,7 +87,8 @@ def dump(es, destination, properties=True, lnk=True, show_status=False,
     if hasattr(destination, 'write'):
         print(string, file=destination)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             print(string, file=fh)
 
 

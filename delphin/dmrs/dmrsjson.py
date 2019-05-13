@@ -10,255 +10,96 @@ Example:
 ::
 
   {
+    "top": 10008,
+    "index": 10009,
     "nodes": [
       {
-        "sortinfo": {
-          "cvarsort": "x"
-        },
-        "lnk": {
-          "from": 0,
-          "to": 3
-        },
+        "sortinfo": {"cvarsort": "x"},
+        "lnk": {"from": 0, "to": 3},
         "nodeid": 10000,
         "predicate": "_the_q"
       },
       {
-        "sortinfo": {
-          "cvarsort": "e",
-          "PERF": "-",
-          "MOOD": "indicative",
-          "PROG": "bool",
-          "SF": "prop",
-          "TENSE": "untensed"
-        },
-        "lnk": {
-          "from": 4,
-          "to": 7
-        },
+        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "bool", "SF": "prop", "TENSE": "untensed"},
+        "lnk": {"from": 4, "to": 7},
         "nodeid": 10001,
         "predicate": "_new_a_1"
       },
       {
-        "sortinfo": {
-          "cvarsort": "x",
-          "IND": "+",
-          "NUM": "sg",
-          "PERS": "3"
-        },
-        "lnk": {
-          "from": 8,
-          "to": 12
-        },
+        "sortinfo": {"cvarsort": "x", "IND": "+", "NUM": "sg", "PERS": "3"},
+        "lnk": {"from": 8, "to": 12},
         "nodeid": 10002,
         "predicate": "_chef_n_1"
       },
       {
-        "sortinfo": {
-          "cvarsort": "x"
-        },
-        "lnk": {
-          "from": 13,
-          "to": 18
-        },
+        "sortinfo": {"cvarsort": "x"},
+        "lnk": {"from": 13, "to": 18},
         "nodeid": 10003,
         "predicate": "def_explicit_q"
       },
       {
-        "sortinfo": {
-          "cvarsort": "e",
-          "PERF": "-",
-          "MOOD": "indicative",
-          "PROG": "-",
-          "SF": "prop",
-          "TENSE": "untensed"
-        },
-        "lnk": {
-          "from": 13,
-          "to": 18
-        },
+        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "untensed"},
+        "lnk": {"from": 13, "to": 18},
         "nodeid": 10004,
         "predicate": "poss"
       },
       {
-        "sortinfo": {
-          "cvarsort": "x",
-          "NUM": "sg",
-          "PERS": "3"
-        },
-        "lnk": {
-          "from": 19,
-          "to": 23
-        },
+        "sortinfo": {"cvarsort": "x", "NUM": "sg", "PERS": "3"},
+        "lnk": {"from": 19, "to": 23},
         "nodeid": 10005,
         "predicate": "_soup_n_1"
       },
       {
-        "sortinfo": {
-          "cvarsort": "e",
-          "PERF": "-",
-          "MOOD": "indicative",
-          "PROG": "-",
-          "SF": "prop",
-          "TENSE": "untensed"
-        },
-        "lnk": {
-          "from": 24,
-          "to": 36
-        },
+        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "untensed"},
+        "lnk": {"from": 24, "to": 36},
         "nodeid": 10006,
         "predicate": "_accidental_a_1"
       },
       {
-        "sortinfo": {
-          "cvarsort": "e",
-          "PERF": "-",
-          "MOOD": "indicative",
-          "PROG": "-",
-          "SF": "prop",
-          "TENSE": "past"
-        },
-        "lnk": {
-          "from": 37,
-          "to": 44
-        },
+        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "past"},
+        "lnk": {"from": 37, "to": 44},
         "nodeid": 10007,
         "predicate": "_spill_v_1"
       },
       {
-        "sortinfo": {
-          "cvarsort": "e",
-          "PERF": "-",
-          "MOOD": "indicative",
-          "PROG": "-",
-          "SF": "prop",
-          "TENSE": "past"
-        },
-        "lnk": {
-          "from": 45,
-          "to": 49
-        },
+        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "past"},
+        "lnk": {"from": 45, "to": 49},
         "nodeid": 10008,
         "predicate": "_quit_v_1"
       },
       {
-        "sortinfo": {
-          "cvarsort": "e",
-          "PERF": "-",
-          "MOOD": "indicative",
-          "PROG": "-",
-          "SF": "prop",
-          "TENSE": "past"
-        },
-        "lnk": {
-          "from": 50,
-          "to": 53
-        },
+        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "past"},
+        "lnk": {"from": 50, "to": 53},
         "nodeid": 10009,
         "predicate": "_and_c"
       },
       {
-        "sortinfo": {
-          "cvarsort": "e",
-          "PERF": "-",
-          "MOOD": "indicative",
-          "PROG": "-",
-          "SF": "prop",
-          "TENSE": "past"
-        },
-        "lnk": {
-          "from": 54,
-          "to": 59
-        },
+        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "past"},
+        "lnk": {"from": 54, "to": 59},
         "nodeid": 10010,
         "predicate": "_leave_v_1"
       }
     ],
     "links": [
-      {
-        "from": 10007,
-        "to": 10005,
-        "post": "NEQ",
-        "rargname": "ARG1"
-      },
-      {
-        "from": 10000,
-        "to": 10002,
-        "post": "H",
-        "rargname": "RSTR"
-      },
-      {
-        "from": 10003,
-        "to": 10005,
-        "post": "H",
-        "rargname": "RSTR"
-      },
-      {
-        "from": 10008,
-        "to": 10002,
-        "post": "NEQ",
-        "rargname": "ARG1"
-      },
-      {
-        "from": 10009,
-        "to": 10008,
-        "post": "EQ",
-        "rargname": "ARG1"
-      },
-      {
-        "from": 10009,
-        "to": 10010,
-        "post": "EQ",
-        "rargname": "ARG2"
-      },
-      {
-        "from": 10010,
-        "to": 10002,
-        "post": "NEQ",
-        "rargname": "ARG1"
-      },
-      {
-        "from": 10004,
-        "to": 10005,
-        "post": "EQ",
-        "rargname": "ARG1"
-      },
-      {
-        "from": 10004,
-        "to": 10002,
-        "post": "NEQ",
-        "rargname": "ARG2"
-      },
-      {
-        "from": 10006,
-        "to": 10007,
-        "post": "EQ",
-        "rargname": "ARG1"
-      },
-      {
-        "from": 10001,
-        "to": 10002,
-        "post": "EQ",
-        "rargname": "ARG1"
-      },
-      {
-        "from": 10010,
-        "to": 10008,
-        "post": "EQ",
-        "rargname": "MOD"
-      },
-      {
-        "from": 10007,
-        "to": 10002,
-        "post": "EQ",
-        "rargname": "MOD"
-      }
-    ],
-    "index": 10009,
-    "top": 10008
+      {"from": 10007, "to": 10005, "post": "NEQ", "rargname": "ARG1"},
+      {"from": 10000, "to": 10002, "post": "H", "rargname": "RSTR"},
+      {"from": 10003, "to": 10005, "post": "H", "rargname": "RSTR"},
+      {"from": 10008, "to": 10002, "post": "NEQ", "rargname": "ARG1"},
+      {"from": 10009, "to": 10008, "post": "EQ", "rargname": "ARG1"},
+      {"from": 10009, "to": 10010, "post": "EQ", "rargname": "ARG2"},
+      {"from": 10010, "to": 10002, "post": "NEQ", "rargname": "ARG1"},
+      {"from": 10004, "to": 10005, "post": "EQ", "rargname": "ARG1"},
+      {"from": 10004, "to": 10002, "post": "NEQ", "rargname": "ARG2"},
+      {"from": 10006, "to": 10007, "post": "EQ", "rargname": "ARG1"},
+      {"from": 10001, "to": 10002, "post": "EQ", "rargname": "ARG1"},
+      {"from": 10010, "to": 10008, "post": "EQ", "rargname": "MOD"},
+      {"from": 10007, "to": 10002, "post": "EQ", "rargname": "MOD"}
+    ]
   }
 
 """
 
+from pathlib import Path
 import json
 
 from delphin.lnk import Lnk
@@ -287,7 +128,8 @@ def load(source):
     if hasattr(source, 'read'):
         data = json.load(source)
     else:
-        with open(source) as fh:
+        source = Path(source).expanduser()
+        with source.open() as fh:
             data = json.load(fh)
     return [from_dict(d) for d in data]
 
@@ -330,7 +172,8 @@ def dump(ds, destination, properties=True, lnk=True,
     if hasattr(destination, 'write'):
         json.dump(data, destination, indent=indent)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             json.dump(data, fh)
 
 

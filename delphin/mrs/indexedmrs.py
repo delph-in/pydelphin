@@ -30,6 +30,8 @@ Example:
       h11 qeq h13 } >
 """  # noqa: E501
 
+from pathlib import Path
+
 from delphin.lnk import Lnk
 from delphin.mrs import (
     MRS,
@@ -60,7 +62,8 @@ def load(source, semi):
     if hasattr(source, 'read'):
         ms = list(_decode(source, semi))
     else:
-        with open(source) as fh:
+        source = Path(source).expanduser()
+        with source.open() as fh:
             ms = list(_decode(fh, semi))
     return ms
 
@@ -101,7 +104,8 @@ def dump(ms, destination, semi, properties=True, lnk=True,
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             print(text, file=fh)
 
 

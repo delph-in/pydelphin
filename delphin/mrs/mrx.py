@@ -98,6 +98,7 @@ Example:
 
 import io
 import re
+from pathlib import Path
 import xml.etree.ElementTree as etree
 
 from delphin.mrs import MRS, EP, HCons, ICons, CONSTANT_ROLE
@@ -128,7 +129,8 @@ def load(source):
     if hasattr(source, 'read'):
         ms = list(_decode(source))
     else:
-        with open(source) as fh:
+        source = Path(source).expanduser()
+        with source.open() as fh:
             ms = list(_decode(fh))
     return ms
 
@@ -165,7 +167,8 @@ def dump(ms, destination, properties=True, lnk=True,
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             print(text, file=fh)
 
 

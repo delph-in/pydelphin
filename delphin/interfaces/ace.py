@@ -61,6 +61,7 @@ interact with the :class:`ACEProcess` subclass instances directly.
 
 import logging
 import os
+from pathlib import Path
 import argparse
 import re
 from subprocess import (
@@ -583,7 +584,8 @@ def load(source):
     if hasattr(source, 'read'):
         ms = list(_decode(source))
     else:
-        with open(source) as fh:
+        source = Path(source).expanduser()
+        with source.open() as fh:
             ms = list(_decode(fh))
     return ms
 

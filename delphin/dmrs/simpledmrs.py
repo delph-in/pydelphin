@@ -10,7 +10,7 @@ Example:
 ::
 
   dmrs {
-    [("The new chef whose soup accidentally spilled quit and left.") top=10008 index=10009]
+    [top=10008 index=10009]
     10000 [_the_q<0:3> x];
     10001 [_new_a_1<4:7> e PROG=bool MOOD=indicative TENSE=untensed PERF=- SF=prop];
     10002 [_chef_n_1<8:12> x PERS=3 IND=+ NUM=sg];
@@ -39,8 +39,9 @@ Example:
 
 """
 
-from delphin.lnk import Lnk
+from pathlib import Path
 
+from delphin.lnk import Lnk
 from delphin.dmrs import (
     DMRS,
     Node,
@@ -67,7 +68,8 @@ def load(source):
     if hasattr(source, 'read'):
         ds = list(_decode(source))
     else:
-        with open(source) as fh:
+        source = Path(source).expanduser()
+        with source.open() as fh:
             ds = list(_decode(fh))
     return ds
 
@@ -104,7 +106,8 @@ def dump(ds, destination, properties=True, lnk=True,
     if hasattr(destination, 'write'):
         print(text, file=destination)
     else:
-        with open(destination, 'w', encoding=encoding) as fh:
+        destination = Path(destination).expanduser()
+        with destination.open('w', encoding=encoding) as fh:
             print(text, file=fh)
 
 
