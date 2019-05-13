@@ -3,13 +3,13 @@ import pytest
 
 from delphin.derivation import (
     Derivation as D,
-    UdfNode as N,
-    UdfTerminal as T,
-    UdfToken as Tk
+    UDFNode as N,
+    UDFTerminal as T,
+    UDFToken as Tk
 )
 
 
-class TestUdfNode():
+class TestUDFNode():
     def test_init(self):
         n = N(1, 'entity')
         assert n.id == 1

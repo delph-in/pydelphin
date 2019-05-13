@@ -32,7 +32,7 @@ delphin.derivation
 
   There are three different node Types
   
-  .. autoclass:: UdfNode
+  .. autoclass:: UDFNode
     :members:
 
     .. py:attribute:: id
@@ -68,7 +68,7 @@ delphin.derivation
     .. automethod:: to_udx
     .. automethod:: to_dict
 
-  .. autoclass:: UdfTerminal
+  .. autoclass:: UDFTerminal
     :members:
 
     .. py:attribute:: form
@@ -84,7 +84,7 @@ delphin.derivation
     .. automethod:: to_udx
     .. automethod:: to_dict
 
-  .. autoclass:: UdfToken
+  .. autoclass:: UDFToken
     :members:
 
     .. py:attribute:: id

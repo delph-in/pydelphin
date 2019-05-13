@@ -306,11 +306,11 @@ specific grammar version) are fully modeled:
 >>> d.derivation().entity
 'sb-hd_mc_c'
 >>> d.derivation().daughters
-[<UdfNode object (900, hdn_bnp-pn_c, 0.093057, 0, 1) at 139897048235816>, <UdfNode object (904, hd-cmp_u_c, -0.846099, 1, 3) at 139897041227960>]
+[<UDFNode object (900, hdn_bnp-pn_c, 0.093057, 0, 1) at 139897048235816>, <UDFNode object (904, hd-cmp_u_c, -0.846099, 1, 3) at 139897041227960>]
 >>> d.derivation().terminals()
-[<UdfTerminal object (abrams) at 139897041154360>, <UdfTerminal object (chased) at 139897041154520>, <UdfTerminal object (browne) at 139897041154680>]
+[<UDFTerminal object (abrams) at 139897041154360>, <UDFTerminal object (chased) at 139897041154520>, <UDFTerminal object (browne) at 139897041154680>]
 >>> d.derivation().preterminals()
-[<UdfNode object (71, abrams, 0.0, 0, 1) at 139897041214040>, <UdfNode object (52, chase_v1, 0.0, 1, 2) at 139897041214376>, <UdfNode object (70, browne, 0.0, 2, 3) at 139897041214712>]
+[<UDFNode object (71, abrams, 0.0, 0, 1) at 139897041214040>, <UDFNode object (52, chase_v1, 0.0, 1, 2) at 139897041214376>, <UDFNode object (70, browne, 0.0, 2, 3) at 139897041214712>]
 
 .. seealso::
   - Wiki about derivations: http://moin.delph-in.net/ItsdbDerivations

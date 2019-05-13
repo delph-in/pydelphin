@@ -70,13 +70,13 @@ Derivation trees have 3 types of nodes:
   * terminal/left/lexical nodes, which contain the input tokens
     processed by that subtree
 
-This module uses the :class:`UdfNode` class for capturing root and
-normal nodes. Root nodes are expressed as a :class:`UdfNode` whose
+This module uses the :class:`UDFNode` class for capturing root and
+normal nodes. Root nodes are expressed as a :class:`UDFNode` whose
 `id` is `None`. For root nodes, all fields except `entity` and
 the list of daughters are expected to be `None`. Leaf nodes are
 simply an iterable of token information.
 
-The :class:`Derivation` class---itself a :class:`UdfNode`---, has some
+The :class:`Derivation` class---itself a :class:`UDFNode`---, has some
 tree-level operations defined, in particular the
 :meth:`Derivation.from_string` method, which is used to read the
 serialized derivation into a Python object.
@@ -96,9 +96,9 @@ _all_fields = tuple(
     .union(_udx_fields)
 )
 
-class _UdfNodeBase(object):
+class _UDFNodeBase(object):
     """
-    Base class for :class:`UdfNode` and :class:`UdfTerminal`.
+    Base class for :class:`UDFNode` and :class:`UDFTerminal`.
     """
     def __str__(self):
         return self.to_udf(indent=None)
@@ -162,7 +162,7 @@ class _UdfNodeBase(object):
 
 def _to_udf(obj, indent, level, udx=False):
     delim = ' ' if indent is None else '\n' + ' ' * indent * level
-    if isinstance(obj, UdfNode):
+    if isinstance(obj, UDFNode):
         entity = obj.entity
         if udx:
             if obj._head:
@@ -183,7 +183,7 @@ def _to_udf(obj, indent, level, udx=False):
                 obj.end,
                 dtrs
             )
-    elif isinstance(obj, UdfTerminal):
+    elif isinstance(obj, UDFTerminal):
         form = '"{}"'.format(obj.form)
         tokens = ['{} "{}"'.format(t.id, t.tfs) for t in obj.tokens]
         return '({})'.format(delim.join([form] + tokens))
@@ -209,7 +209,7 @@ def _map_labels(drv, labels):
 
 def _to_dict(obj, fields, labels):
     d = {}
-    if isinstance(obj, UdfNode):
+    if isinstance(obj, UDFNode):
         if 'entity' in fields: d['entity'] = obj.entity
         if obj.id is not None:
             if 'id' in fields: d['id'] = obj.id
@@ -221,7 +221,7 @@ def _to_dict(obj, fields, labels):
         dtrs = obj.daughters
         if dtrs:
             # terminals should always be single daughters
-            if len(dtrs) == 1 and isinstance(dtrs[0], UdfTerminal):
+            if len(dtrs) == 1 and isinstance(dtrs[0], UDFTerminal):
                 # merge terminal daughter info into current node
                 d.update(_to_dict(dtrs[0], fields, labels))
             else:
@@ -229,7 +229,7 @@ def _to_dict(obj, fields, labels):
                     _to_dict(dtr, fields, labels) for dtr in dtrs
                 ]
         if obj.id in labels: d['label'] = labels[obj.id]
-    elif isinstance(obj, UdfTerminal):
+    elif isinstance(obj, UDFTerminal):
         d['form'] = obj.form
         # d['from'] = min(t.tfs['+FROM'] for t in obj.tokens)
         # d['to'] = max(t.tfs['+TO'] for t in obj.tokens)
@@ -247,12 +247,12 @@ def _to_dict(obj, fields, labels):
     return d
 
 
-class UdfToken(namedtuple('UdfToken', _token_fields)):
+class UDFToken(namedtuple('UDFToken', _token_fields)):
     """
     A token represenatation in derivations.
 
     Token data are not formally nodes, but do have an `id`. Most
-    :class:`UdfTerminal` nodes will only have one UdfToken, but
+    :class:`UDFTerminal` nodes will only have one UDFToken, but
     multi-word entities (e.g. "ad hoc") will have more than one.
 
     Args:
@@ -262,10 +262,10 @@ class UdfToken(namedtuple('UdfToken', _token_fields)):
     def __new__(cls, id, tfs):
         if id is not None:
             id = int(id)
-        return super(UdfToken, cls).__new__(cls, id, tfs)
+        return super(UDFToken, cls).__new__(cls, id, tfs)
 
     def __repr__(self):
-        return '<UdfToken object ({} {!r}) at {}>'.format(
+        return '<UDFToken object ({} {!r}) at {}>'.format(
             self.id, self.tfs, id(self)
         )
 
@@ -273,12 +273,12 @@ class UdfToken(namedtuple('UdfToken', _token_fields)):
         """
         Token data are the same if they have the same feature structure.
         """
-        if not isinstance(other, UdfToken):
+        if not isinstance(other, UDFToken):
             return NotImplemented
         return self.tfs == other.tfs
 
 
-class UdfTerminal(_UdfNodeBase, namedtuple('UdfTerminal', _terminal_fields)):
+class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', _terminal_fields)):
     """
     Terminal nodes in the Unified Derivation Format.
 
@@ -289,26 +289,26 @@ class UdfTerminal(_UdfNodeBase, namedtuple('UdfTerminal', _terminal_fields)):
     Args:
         form (str): surface form of the terminal
         tokens (list, optional): iterable of tokens
-        parent (UdfNode, optional): parent node in derivation
+        parent (UDFNode, optional): parent node in derivation
     """
 
     def __new__(cls, form, tokens=None, parent=None):
         if tokens is None:
             tokens = []
-        t = super(UdfTerminal, cls).__new__(cls, form, tokens)
+        t = super(UDFTerminal, cls).__new__(cls, form, tokens)
         # internal bookkeeping
         t._parent = parent
         return t
 
     def __repr__(self):
-        return '<UdfTerminal object ({}) at {}>'.format(self.form, id(self))
+        return '<UDFTerminal object ({}) at {}>'.format(self.form, id(self))
 
     def __eq__(self, other):
         """
         Terminal nodes are the same if they have the same form and
         token data.
         """
-        if not isinstance(other, UdfTerminal):
+        if not isinstance(other, UDFTerminal):
             return NotImplemented
         if self.form != other.form:
             return False
@@ -318,23 +318,23 @@ class UdfTerminal(_UdfNodeBase, namedtuple('UdfTerminal', _terminal_fields)):
 
     def is_root(self):
         """
-        Return `False` (as a `UdfTerminal` is never a root).
+        Return `False` (as a `UDFTerminal` is never a root).
 
         This function is provided for convenience, so one does not need
-        to check if `isinstance(n, UdfNode)` before testing if the node
+        to check if `isinstance(n, UDFNode)` before testing if the node
         is a root.
         """
         return False
 
 
-class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
+class UDFNode(_UDFNodeBase, namedtuple('UDFNode', _nonterminal_fields)):
     """
     Normal (non-leaf) nodes in the Unified Derivation Format.
 
-    Root nodes are just UdfNodes whose `id`, by convention, is
-    `None`. The `daughters` list can composed of either UdfNodes or
+    Root nodes are just UDFNodes whose `id`, by convention, is
+    `None`. The `daughters` list can composed of either UDFNodes or
     other objects (generally it should be uniformly one or the other).
-    In the latter case, the `UdfNode` is a preterminal, and the
+    In the latter case, the `UDFNode` is a preterminal, and the
     daughters are terminal nodes.
 
     Args:
@@ -349,7 +349,7 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
         head (bool, optional): `True` if the node is a syntactic head
             node
         type (str, optional): grammar type name
-        parent (UdfNode, optional): parent node in derivation
+        parent (UDFNode, optional): parent node in derivation
     """
 
     def __new__(cls, id, entity,
@@ -366,7 +366,7 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
         # make sure daughters are not roots (is this check unnecessary?)
         if any(dtr.is_root() for dtr in daughters):
             raise ValueError('Daughter nodes cannot be roots.')
-        node = super(UdfNode, cls).__new__(
+        node = super(UDFNode, cls).__new__(
             cls, id, entity, score, start, end, daughters
         )
         # internal bookkeeping
@@ -376,7 +376,7 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
         return node
 
     def __repr__(self):
-        return '<UdfNode object ({}, {}, {}, {}, {}) at {}>'.format(
+        return '<UDFNode object ({}, {}, {}, {}, {}) at {}>'.format(
             self.id, self.entity, self.score, self.start, self.end, id(self)
         )
 
@@ -385,7 +385,7 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
         Two derivations are equal if their entities, tokenization, and
         daughters are the same. IDs and scores are irrelevant.
         """
-        if not isinstance(other, UdfNode):
+        if not isinstance(other, UDFNode):
             return NotImplemented
         # Check attributes
         if self.entity.lower() != other.entity.lower():
@@ -441,7 +441,7 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
         """
         nodes = []
         for dtr in self.daughters:
-            if isinstance(dtr, UdfTerminal):
+            if isinstance(dtr, UDFTerminal):
                 nodes.append(self)
             else:
                 nodes.extend(dtr.preterminals())
@@ -453,20 +453,20 @@ class UdfNode(_UdfNodeBase, namedtuple('UdfNode', _nonterminal_fields)):
         """
         nodes = []
         for dtr in self.daughters:
-            if isinstance(dtr, UdfTerminal):
+            if isinstance(dtr, UDFTerminal):
                 nodes.append(dtr)
             else:
                 nodes.extend(dtr.terminals())
         return nodes
 
-class Derivation(UdfNode):
+class Derivation(UDFNode):
     """
     A [incr tsdb()] derivation.
 
     This class exists to facilitate the reading of UDF string
     serializations and dictionary representations (e.g., decoded from
     JSON). The resulting structure is otherwise equivalent to a
-    :class:`UdfNode`, and inherits all its methods.
+    :class:`UDFNode`, and inherits all its methods.
     """
 
     # note that this regex doesn't have the initial open-parenthesis
@@ -497,10 +497,10 @@ class Derivation(UdfNode):
     def __init__(self, id, entity,
                  score=None, start=None, end=None, daughters=None,
                  head=None, type=None, parent=None):
-        # Note: Attribute assignment is done in UdfNode.__new__(), so
+        # Note: Attribute assignment is done in UDFNode.__new__(), so
         #       this only checks the arguments.
         # If id is None, it is a root, and score, start, and end must
-        # all be None, and daughters must be a list with one UdfNode
+        # all be None, and daughters must be a list with one UDFNode
         if id is None:
             if score is not None or start is not None or end is not None:
                 raise TypeError(
@@ -508,7 +508,7 @@ class Derivation(UdfNode):
                     'must have *score*, *start*, and *end* set to None.'
                 )
             if (daughters is None or len(daughters) != 1
-                    or not isinstance(daughters[0], UdfNode)):
+                    or not isinstance(daughters[0], UDFNode)):
                 raise ValueError(
                     'Root nodes (with id=None) of Derivation objects '
                     'must have a single daughter node.'
@@ -522,7 +522,7 @@ class Derivation(UdfNode):
         The UDF/UDX representations are as output by a processor like the
         `LKB <http://moin.delph-in.net/LkbTop>`_ or
         `ACE <http://sweaglesw.org/linguistics/ace/>`_, or from the
-        :meth:`UdfNode.to_udf` or :meth:`UdfNode.to_udx` methods.
+        :meth:`UDFNode.to_udf` or :meth:`UDFNode.to_udx` methods.
 
         Args:
             s (str): UDF or UDX serialization
@@ -549,7 +549,7 @@ class Derivation(UdfNode):
                         raise ValueError('Possible leaf node with no parent.')
                     gd = match.groupdict()
                     # ignore LKB-style start/end data if it exists on gd
-                    term = UdfTerminal(
+                    term = UDFTerminal(
                         _unquote(gd['form']),
                         tokens=_udf_tokens(gd.get('tokens')),
                         parent=stack[-1] if stack else None
@@ -564,13 +564,13 @@ class Derivation(UdfNode):
                         head = True
                     if type == '':
                         type = None
-                    udf = UdfNode(gd['id'], entity, gd['score'],
+                    udf = UDFNode(gd['id'], entity, gd['score'],
                                   gd['start'], gd['end'],
                                   head=head, type=type,
                                   parent=stack[-1] if stack else None)
                     stack.append(udf)
                 elif match.group('root'):
-                    udf = UdfNode(None, match.group('root'))
+                    udf = UDFNode(None, match.group('root'))
                     stack.append(udf)
         except (ValueError, AttributeError):
             raise ValueError('Invalid derivation: %s' % s)
@@ -586,7 +586,7 @@ class Derivation(UdfNode):
 
         The dictionary representation may come from the HTTP interface
         (see the `ErgApi <http://moin.delph-in.net/ErgApi>`_ wiki) or
-        from the :meth:`UdfNode.to_dict` method. Note that in the
+        from the :meth:`UDFNode.to_dict` method. Note that in the
         former case, the JSON response should have already been decoded
         into a Python dictionary.
 
@@ -609,12 +609,12 @@ def _udf_tokens(tokenstring):
             tokenstring
         )
         for tid, tfs in toks:
-            tokens.append(UdfToken(tid, _unquote(tfs)))
+            tokens.append(UDFToken(tid, _unquote(tfs)))
     return tokens
 
 def _from_dict(d, parent=None):
     if 'daughters' in d:
-        n = UdfNode(
+        n = UDFNode(
             d.get('id'),
             d['entity'],
             score=d.get('score'),
@@ -629,7 +629,7 @@ def _from_dict(d, parent=None):
         )
         return n
     elif 'form' in d:
-        n = UdfNode(
+        n = UDFNode(
             d.get('id'),
             d['entity'],
             score=d.get('score'),
@@ -640,9 +640,9 @@ def _from_dict(d, parent=None):
             parent=parent
         )
         n.daughters.append(
-            UdfTerminal(
+            UDFTerminal(
                 form=d['form'],
-                tokens=[UdfToken(t['id'], t['tfs'])
+                tokens=[UDFToken(t['id'], t['tfs'])
                         for t in d.get('tokens', [])],
                 parent=n
             )
