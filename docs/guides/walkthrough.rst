@@ -2,8 +2,7 @@
 Walkthrough of PyDelphin Features
 =================================
 
-This tutorial provides a tour of the main features offered by
-PyDelphin.
+This guide provides a tour of the main features offered by PyDelphin.
 
 
 ACE and HTTP Interfaces
@@ -48,7 +47,7 @@ NOTE: parsed 1 / 1 sentences, avg 2135k, time 0.01316s
 .. seealso::
   - ACE: http://sweaglesw.org/linguistics/ace/
   - :mod:`delphin.interfaces.ace` module
-  - :doc:`ace` tutorial
+  - :doc:`ace`
 
 I will use the `response` object from ACE to illustrate some other
 features below.
@@ -334,7 +333,7 @@ testsuites:
 .. seealso::
   - [incr tsdb()] wiki: http://moin.delph-in.net/ItsdbTop
   - :mod:`delphin.itsdb` module
-  - :doc:`itsdb` tutorial
+  - :doc:`itsdb`
 
 
 TSQL Queries

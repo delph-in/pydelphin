@@ -4,7 +4,7 @@ delphin.itsdb
 
 .. seealso::
 
-  See :doc:`../tutorials/itsdb` for a more user-friendly introduction
+  See :doc:`../guides/itsdb` for a more user-friendly introduction
 
 
 .. automodule:: delphin.itsdb

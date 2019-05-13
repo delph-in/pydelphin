@@ -19,12 +19,12 @@ PyDelphin
   :maxdepth: 1
   :caption: Guides:
 
-  tutorials/setup.rst
-  tutorials/walkthrough.rst
-  tutorials/ace.rst
-  tutorials/commands.rst
-  tutorials/itsdb.rst
-  tutorials/codecs.rst
+  guides/setup.rst
+  guides/walkthrough.rst
+  guides/ace.rst
+  guides/commands.rst
+  guides/itsdb.rst
+  guides/codecs.rst
 
 .. toctree::
   :maxdepth: 1

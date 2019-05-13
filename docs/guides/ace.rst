@@ -9,7 +9,7 @@ Python with the :mod:`delphin.interfaces.ace` module, which provides
 functions and classes for compiling grammars, parsing, transfer, and
 generation.
 
-In this tutorial, `delphin.interfaces.ace` is assumed to be imported as
+In this guide, `delphin.interfaces.ace` is assumed to be imported as
 `ace`, as in the following:
 
 >>> from delphin.interfaces import ace

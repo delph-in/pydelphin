@@ -28,8 +28,8 @@ There are several words in use to describe testsuites:
   a general term for both skeletons and profiles
 
 
-For this tutorial, it is assumed you've imported the
-:mod:`delphin.itsdb` module as follows:
+For this guide, it is assumed you've imported the :mod:`delphin.itsdb`
+module as follows:
 
 >>> from delphin import itsdb
 

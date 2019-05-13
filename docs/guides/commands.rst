@@ -13,8 +13,8 @@ you installed PyDelphin:
   `pip`, it is available system-wide as `delphin`
   (without the `.sh`)
 
-For this tutorial, it is assumed you've installed PyDelphin via
-`pip` and thus use the second form.
+For this guide, it is assumed you've installed PyDelphin via `pip` and
+thus use the second form.
 
 The `delphin` command has several subcommands, described
 below.

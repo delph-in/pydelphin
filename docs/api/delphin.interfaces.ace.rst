@@ -4,7 +4,7 @@ delphin.interfaces.ace
 
 .. seealso::
 
-   See :doc:`../tutorials/ace` for a more user-friendly introduction.
+   See :doc:`../guides/ace` for a more user-friendly introduction.
 
 .. automodule:: delphin.interfaces.ace
 
@@ -58,7 +58,8 @@ delphin.interfaces.ace
 
    .. seealso::
 
-      :doc:`../tutorials/codecs` for a description of the API.
+      :doc:`../guides/codecs` for a description of the API.
+
 
    .. function:: load(source)
    .. function:: loads(s)
