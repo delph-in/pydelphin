@@ -13,6 +13,7 @@ variable properties (e.g. `PNG: 1pl` might map to `PERS: 1` and
 """
 
 import re
+from pathlib import Path
 
 from delphin.exceptions import PyDelphinSyntaxError
 from delphin import variable
@@ -43,7 +44,8 @@ def load(source, semi=None):
     if hasattr(source, 'read'):
         return _load(source, semi)
     else:
-        with open(source, 'r') as fh:
+        source = Path(source).expanduser()
+        with source.open('r') as fh:
             return _load(fh, semi)
 
 def _load(fh, semi):

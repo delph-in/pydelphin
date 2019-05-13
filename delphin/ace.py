@@ -124,13 +124,16 @@ class ACEProcess(interface.Processor):
 
     def __init__(self, grm, cmdargs=None, executable=None, env=None,
                  tsdbinfo=True, **kwargs):
-        self.grm = grm
+        self.grm = str(Path(grm).expanduser())
 
         self.cmdargs = cmdargs or []
         # validate the arguments
         _ace_argparser.parse_args(self.cmdargs)
 
-        self.executable = executable or 'ace'
+        self.executable = 'ace'
+        if executable:
+            self.executable = str(Path(executable).expanduser())
+
         ace_version = self.ace_version
         if ace_version >= (0, 9, 14):
             self.cmdargs.append('--tsdb-notes')
@@ -453,6 +456,8 @@ def compile(cfg_path, out_path, executable=None, env=None, log=None):
         log (file, optional): if given, the file, opened for writing,
             or stream to write ACE's stdout and stderr compile messages
     """
+    cfg_path = str(Path(cfg_path).expanduser())
+    out_path = str(Path(out_path).expanduser())
     try:
         check_call(
             [(executable or 'ace'), '-g', cfg_path, '-G', out_path],

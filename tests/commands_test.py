@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import io
+from pathlib import Path
 
 import pytest
 
@@ -60,7 +61,7 @@ def mini_testsuite(tmpdir):
                  '[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
                  '  RELS: < [ _snow_v_1<3:9> LBL: h1 ARG0: e2 ] >'
                  '  HCONS: < h0 qeq h1 > ]\n')
-    return ts
+    return str(ts)
 
 
 @pytest.fixture
@@ -137,16 +138,15 @@ def test_convert(dir_with_mrs, mini_testsuite, ace_output, ace_tsdb_stdout,
 def _bidi_convert(d, srcfmt, tgtfmt):
     src = d.join('ex.mrs')
     tgt = d.join('ex.out')
-    tgt.write(convert(src, srcfmt, tgtfmt))
+    tgt.write(convert(str(src), srcfmt, tgtfmt))
     # below I intend to convert tgtfmt -> tgtfmt
     # because EDS -> non-EDS doesn't work
-    convert(tgt, tgtfmt, tgtfmt)
+    convert(str(tgt), tgtfmt, tgtfmt)
 
 
 def test_mkprof(mini_testsuite, sentence_file, tmpdir, monkeypatch):
-    # cast to str for Python2
     ts1 = str(tmpdir.mkdir('ts1'))
-    ts0 = str(mini_testsuite)
+    ts0 = mini_testsuite
     sentence_file = str(sentence_file)
     with pytest.raises(ValueError):
         mkprof(ts1, source=ts0, skeleton=True, full=True)
@@ -159,7 +159,7 @@ def test_mkprof(mini_testsuite, sentence_file, tmpdir, monkeypatch):
     with pytest.raises(ValueError):
         mkprof(ts1, source=sentence_file)
 
-    relations = str(mini_testsuite.join('relations'))
+    relations = str(Path(mini_testsuite).joinpath('relations'))
 
     mkprof(ts1, source=ts0)
     mkprof(ts1, source=None, in_place=True)
@@ -185,7 +185,7 @@ def test_process(mini_testsuite):
 
 
 def test_select(mini_testsuite):
-    ts0 = str(mini_testsuite)
+    ts0 = mini_testsuite
     with pytest.raises(TypeError):
         select('result:mrs')
     with pytest.raises(TypeError):
@@ -198,7 +198,7 @@ def test_select(mini_testsuite):
 
 
 def test_compare(mini_testsuite):
-    ts0 = str(mini_testsuite)
+    ts0 = mini_testsuite
     with pytest.raises(TypeError):
         compare(ts0)
     with pytest.raises(TypeError):

@@ -34,6 +34,7 @@ expressions.
 """
 
 import re
+from pathlib import Path
 import textwrap
 import warnings
 
@@ -1069,7 +1070,8 @@ def iterparse(source, encoding='utf-8'):
     if hasattr(source, 'read'):
         yield from _parse(source)
     else:
-        with open(source, encoding=encoding) as fh:
+        source = Path(source).expanduser()
+        with source.open(encoding=encoding) as fh:
             yield from _parse(fh)
 
 

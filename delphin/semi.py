@@ -17,7 +17,7 @@ representations.
 """
 
 import re
-from os.path import dirname, join as pjoin
+from pathlib import Path
 from operator import itemgetter
 import warnings
 from collections import Sequence, Mapping
@@ -93,23 +93,23 @@ class SemIWarning(PyDelphinWarning):
     """Warning class for questionable SEM-Is."""
 
 
-def load(fn, encoding='utf-8'):
+def load(source, encoding='utf-8'):
     """
-    Read the SEM-I beginning at the filename *fn* and return the SemI.
+    Interpret and return the SEM-I defined at path *source*.
 
     Args:
-        fn: the filename of the top file for the SEM-I. Note: this must
-            be a filename and not a file-like object.
+        source: the path of the top file for the SEM-I. Note: this
+            must be a path and not an open file.
         encoding (str): the character encoding of the file
     Returns:
-        The SemI defined by *fn*
+        The SemI defined by *source*
     """
-
-    data = _read_file(fn, dirname(fn), encoding)
+    path = Path(source)
+    data = _read_file(path, path.parent, encoding)
     return SemI(**data)
 
 
-def _read_file(fn, basedir, encoding):
+def _read_file(path, basedir, encoding):
     data = {
         'variables': {},
         'properties': {},
@@ -118,7 +118,7 @@ def _read_file(fn, basedir, encoding):
     }
     section = None
 
-    for lineno, line in enumerate(open(fn, 'r', encoding=encoding), 1):
+    for lineno, line in enumerate(path.open(encoding=encoding), 1):
         line = line.lstrip()
 
         if not line or line.startswith(';'):
@@ -130,22 +130,22 @@ def _read_file(fn, basedir, encoding):
             if name not in _SEMI_SECTIONS:
                 raise SemISyntaxError(
                     'invalid SEM-I section',
-                    filename=fn, lineno=lineno, text=line)
+                    filename=str(path), lineno=lineno, text=line)
             else:
                 section = name
             continue
 
         match = re.match(r'include:\s*(?P<filename>.+)$', line, flags=re.U)
         if match is not None:
-            include_fn = pjoin(basedir, match.group('filename').rstrip())
+            include = basedir.joinpath(match.group('filename').rstrip())
             include_data = _read_file(
-                include_fn, dirname(include_fn), encoding)
+                include, include.parent, encoding)
             for key, val in include_data['variables'].items():
-                _incorporate(data['variables'], key, val, include_fn)
+                _incorporate(data['variables'], key, val, include)
             for key, val in include_data['properties'].items():
-                _incorporate(data['properties'], key, val, include_fn)
+                _incorporate(data['properties'], key, val, include)
             for key, val in include_data['roles'].items():
-                _incorporate(data['roles'], key, val, include_fn)
+                _incorporate(data['roles'], key, val, include)
             for pred, d in include_data['predicates'].items():
                 if pred not in data['predicates']:
                     data['predicates'][pred] = {
@@ -171,11 +171,11 @@ def _read_file(fn, basedir, encoding):
                     properties = [pair.split() for pair in pairs]
                 v = {'parents': supertypes, 'properties': properties}
                 # v = type(identifier, supertypes, d)
-                _incorporate(data['variables'], identifier, v, fn)
+                _incorporate(data['variables'], identifier, v, path)
             else:
                 raise SemISyntaxError(
                     'invalid variable',
-                    filename=fn, lineno=lineno, text=line)
+                    filename=str(path), lineno=lineno, text=line)
 
         elif section == 'properties':
             # e.g. + < bool.
@@ -186,22 +186,22 @@ def _read_file(fn, basedir, encoding):
                 if supertypes:
                     supertypes = supertypes.split(' & ')
                 _incorporate(
-                    data['properties'], _type, {'parents': supertypes}, fn)
+                    data['properties'], _type, {'parents': supertypes}, path)
             else:
                 raise SemISyntaxError(
                     'invalid property',
-                    filename=fn, lineno=lineno, text=line)
+                    filename=str(path), lineno=lineno, text=line)
 
         elif section == 'roles':
             # e.g. + < bool.
             match = _role_entry_re.match(line)
             if match is not None:
                 role, value = match.group('role'), match.group('value')
-                _incorporate(data['roles'], role, {'value': value}, fn)
+                _incorporate(data['roles'], role, {'value': value}, path)
             else:
                 raise SemISyntaxError(
                     'invalid role',
-                    filename=fn, lineno=lineno, text=line)
+                    filename=str(path), lineno=lineno, text=line)
 
         elif section == 'predicates':
             # e.g. _predicate_n_1 : ARG0 x { IND + }.
@@ -233,9 +233,11 @@ def _read_file(fn, basedir, encoding):
     return data
 
 
-def _incorporate(d, key, val, fn):
+def _incorporate(d, key, val, path):
     if key in d:
-        warnings.warn("'{}' redefined in {}".format(key, fn), SemIWarning)
+        warnings.warn("'{}' redefined in {}"
+                      .format(key, str(path)),
+                      SemIWarning)
     d[key] = val
 
 

@@ -9,7 +9,7 @@ within Python.
 """
 
 import sys
-import os
+from pathlib import Path
 import importlib
 import logging
 import warnings
@@ -91,6 +91,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     Returns:
         str: the converted representation
     """
+    if path is None:
+        path = sys.stdin
     # normalize codec names
     source_fmt = source_fmt.lower()
     target_fmt = target_fmt.lower()
@@ -107,8 +109,8 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
                          '(e.g., result:mrs)')
 
     if semi is not None and not isinstance(semi, SemI):
-        assert os.path.isfile(semi)
-        # lets ignore the SEM-I warnings until the questions are resolved
+        # lets ignore the SEM-I warnings until questions regarding
+        # valid SEM-Is are resolved
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             semi = load_semi(semi)
@@ -121,19 +123,21 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     kwargs = {}
     if source_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
-    if path is None:
-        xs = source_codec.loads(sys.stdin.read(), **kwargs)
-    elif hasattr(path, 'read'):
-        xs = source_codec.loads(path.read(), **kwargs)
-    elif os.path.isdir(path):
-        ts = itsdb.TestSuite(path)
-        xs = [
-            next(iter(source_codec.loads(r[0], **kwargs)), None)
-            for r in tsql.select(select, ts)
-        ]
-    else:
-        xs = source_codec.loads(open(path, 'r').read(), **kwargs)
 
+    if hasattr(path, 'read'):
+        xs = list(source_codec.load(path, **kwargs))
+    else:
+        path = Path(path).expanduser()
+        if path.is_dir():
+            ts = itsdb.TestSuite(path)
+            xs = [
+                next(iter(source_codec.loads(r[0], **kwargs)), None)
+                for r in tsql.select(select, ts)
+            ]
+        elif path.is_file():
+            xs = list(source_codec.load(path, **kwargs))
+
+    # convert if source representation != target representation
     if converter:
         xs = map(converter, xs)
 
@@ -238,7 +242,8 @@ def select(dataspec, testsuite, mode='list', cast=True):
         a generator that yields selected data
     """
     if not isinstance(testsuite, itsdb.TestSuite):
-        testsuite = itsdb.TestSuite(testsuite)
+        source = Path(testsuite).expanduser()
+        testsuite = itsdb.TestSuite(source)
     return tsql.select(dataspec, testsuite, mode=mode, cast=cast)
 
 
@@ -280,6 +285,7 @@ def mkprof(destination, source=None, relations=None, where=None,
         gzip (bool): if `True`, non-empty tables will be compressed
             with gzip
     """
+    destination = Path(destination).expanduser()
     # basic validation
     if skeleton and full:
         raise ValueError("'skeleton' is incompatible with 'full'")
@@ -289,27 +295,31 @@ def mkprof(destination, source=None, relations=None, where=None,
         raise ValueError("'in_place' is incompatible with 'source'")
     if in_place:
         source = destination
-    if full and (source is None or not os.path.isdir(source)):
+    elif source is not None:
+        source = Path(source)
+    if full and (source is None or not source.is_dir()):
         raise ValueError("'full' must be used with a source testsuite")
-    if relations is None and source is not None and os.path.isdir(source):
-        relations = os.path.join(source, 'relations')
-    elif relations is None or not os.path.isfile(relations):
+    if relations is not None:
+        relations = Path(relations).expanduser()
+    if relations is None and source is not None and source.is_dir():
+        relations = source.joinpath('relations')
+    if relations is None or not relations.is_file():
         raise ValueError('invalid or missing relations file: {}'
                          .format(relations))
     # setup destination testsuite
-    os.makedirs(destination, exist_ok=True)
+    destination.mkdir(parents=True, exist_ok=True)
     dts = itsdb.TestSuite(path=destination, relations=relations)
     # input is sentences on stdin
     if source is None:
         dts.write({'item': _lines_to_rows(sys.stdin, dts.relations)},
                   gzip=gzip)
     # input is sentence file
-    elif os.path.isfile(source):
-        with open(source) as fh:
+    elif source.is_file():
+        with source.open() as fh:
             dts.write({'item': _lines_to_rows(fh, dts.relations)},
                       gzip=gzip)
     # input is source testsuite
-    elif os.path.isdir(source):
+    elif source.is_dir():
         sts = itsdb.TestSuite(source)
         tables = dts.relations.tables if full else itsdb.TSDB_CORE_FILES
         where = '' if where is None else 'where ' + where
@@ -337,12 +347,12 @@ def mkprof(destination, source=None, relations=None, where=None,
         _red = lambda s: s
     fmt = '{:>8} bytes\t{}'
     for filename in ['relations'] + list(dts.relations.tables):
-        path = os.path.join(destination, filename)
-        if os.path.isfile(path):
-            stat = os.stat(path)
+        path = destination.joinpath(filename)
+        if path.is_file():
+            stat = path.stat()
             print(fmt.format(stat.st_size, filename))
-        elif os.path.isfile(path + '.gz'):
-            stat = os.stat(path + '.gz')
+        elif path.with_suffix('.gz').is_file():
+            stat = path.with_suffix('.gz').stat()
             print(fmt.format(stat.st_size, _red(filename + '.gz')))
 
 
@@ -411,6 +421,9 @@ def process(grammar, testsuite, source=None, select=None,
     """
     from delphin import ace
 
+    grammar = Path(grammar).expanduser()
+    testsuite = Path(testsuite).expanduser()
+
     if generate and transfer:
         raise ValueError("'generate' is incompatible with 'transfer'")
     if source is None:
@@ -466,7 +479,7 @@ def _interpret_selection(select, source):
 # REPP ########################################################################
 
 
-def repp(file, config=None, module=None, active=None,
+def repp(source, config=None, module=None, active=None,
          format=None, trace_level=0):
     """
     Tokenize with a Regular Expression PreProcessor (REPP).
@@ -476,7 +489,7 @@ def repp(file, config=None, module=None, active=None,
     similar interface.
 
     Args:
-        file (str, file): filename, open file, or stream of sentence
+        source (str, file): filename, open file, or stream of sentence
             inputs
         config (str): path to a PET REPP configuration (.set) file
         module (str): path to a top-level REPP module; other modules
@@ -503,11 +516,12 @@ def repp(file, config=None, module=None, active=None,
     else:
         r = REPP()  # just tokenize
 
-    if hasattr(file, 'read'):
-        for line in file:
+    if hasattr(source, 'read'):
+        for line in source:
             _repp(r, line, format, trace_level)
     else:
-        with open(file, encoding='utf-8') as fh:
+        source = Path(source).expanduser()
+        with source.open(encoding='utf-8') as fh:
             for line in fh:
                 _repp(r, line, format, trace_level)
 
@@ -572,9 +586,11 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
     from delphin.mrs import simplemrs
 
     if not isinstance(testsuite, itsdb.TestSuite):
-        testsuite = itsdb.TestSuite(testsuite)
+        source = Path(testsuite).expanduser()
+        testsuite = itsdb.TestSuite(source)
     if not isinstance(gold, itsdb.TestSuite):
-        gold = itsdb.TestSuite(gold)
+        source = Path(gold).expanduser()
+        gold = itsdb.TestSuite(source)
 
     queryobj = tsql.inspect_query('select ' + select)
     if len(queryobj['projection']) != 3:

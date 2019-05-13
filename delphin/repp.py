@@ -17,9 +17,9 @@ retaining character indices from the original input string.
 
 """
 
-from os.path import exists, dirname, basename, join as joinpath
 import re
 from sre_parse import parse_template
+from pathlib import Path
 from array import array
 from collections import namedtuple
 
@@ -290,12 +290,13 @@ class REPP(object):
             directory (str, optional): the directory in which to search
                 for submodules
         """
-        if not exists(path):
-            raise REPPError('REPP config file not found: {}'.format(path))
-        confdir = dirname(path)
+        path = Path(path).expanduser()
+        if not path.is_file():
+            raise REPPError('REPP config file not found: {!s}'.format(path))
+        confdir = path.parent
 
         # TODO: can TDL parsing be repurposed for this variant?
-        conf = open(path, encoding='utf-8').read()
+        conf = path.read_text(encoding='utf-8')
         conf = re.sub(r';.*', '', conf).replace('\n',' ')
         m = re.search(
             r'repp-modules\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.', conf)
@@ -321,18 +322,18 @@ class REPP(object):
         if directory is None:
             if d is not None:
                 directory = d.group(1).strip(' "')
-            elif exists(joinpath(confdir, tok + '.rpp')):
+            elif confdir.joinpath(tok + '.rpp').is_file():
                 directory = confdir
-            elif exists(joinpath(confdir, 'rpp', tok + '.rpp')):
-                directory = joinpath(confdir, 'rpp')
-            elif exists(joinpath(confdir, '../rpp', tok + '.rpp')):
-                directory = joinpath(confdir, '../rpp')
+            elif confdir.joinpath('rpp', tok + '.rpp').is_file():
+                directory = confdir.joinpath('rpp')
+            elif confdir.joinpath('../rpp', tok + '.rpp').is_file():
+                directory = confdir.joinpath('../rpp')
             else:
                 raise REPPError('Could not find a suitable REPP directory.')
 
         # ignore repp-modules and format?
         return REPP.from_file(
-            joinpath(directory, tok + '.rpp'),
+            directory.joinpath(tok + '.rpp'),
             directory=directory,
             active=active
         )
@@ -364,11 +365,13 @@ class REPP(object):
             active (iterable, optional): an iterable of default module
                 activations
         """
-        name = basename(path)
-        if name.endswith('.rpp'):
-            name = name[:-4]
+        path = Path(path).expanduser()
+        if directory is not None:
+            directory = Path(directory).expanduser()
+        else:
+            directory = path.parent
+        name = path.with_suffix('').name
         lines = _repp_lines(path)
-        directory = dirname(path) if directory is None else directory
         r = cls(name=name, modules=modules, active=active)
         _parse_repp(lines, r, directory)
         return r
@@ -510,9 +513,9 @@ def _tokenize(result, pattern):
     return toks
 
 def _repp_lines(path):
-    if not exists(path):
-        raise REPPError('REPP file not found: {}'.format(path))
-    return open(path, encoding='utf-8').read().splitlines()
+    if not path.is_file():
+        raise REPPError('REPP file not found: {!s}'.format(path))
+    return path.read_text(encoding='utf-8').splitlines()
 
 def _parse_repp(lines, r, directory):
     ops = list(_parse_repp_group(lines, r, directory))
@@ -533,7 +536,7 @@ def _parse_repp_group(lines, r, directory):
                 raise REPPError('Invalid rewrite rule: {}'.format(line))
             yield _REPPRule(match.group(1), match.group(2))
         elif line[0] == '<':
-            fn = joinpath(directory, line[1:].rstrip())
+            fn = directory.joinpath(line[1:].rstrip())
             lines = _repp_lines(fn) + lines
         elif line[0] == '>':
             modname = line[1:].rstrip()
@@ -550,7 +553,7 @@ def _parse_repp_group(lines, r, directory):
                         raise REPPError('Cannot implicitly load modules if '
                                         'a directory is not given.')
                     mod = REPP.from_file(
-                        joinpath(directory, modname + '.rpp'),
+                        directory.joinpath(modname + '.rpp'),
                         directory=directory,
                         modules=r.modules
                     )
