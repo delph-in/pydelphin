@@ -13,13 +13,12 @@ import os
 import importlib
 import logging
 import warnings
-from collections import namedtuple
 
 from delphin import itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
-from delphin.util import safe_int, SExpr
-from delphin.exceptions import PyDelphinException, PyDelphinWarning
+from delphin.util import safe_int
+from delphin.exceptions import PyDelphinException
 
 
 ###############################################################################
@@ -312,7 +311,7 @@ def mkprof(destination, source=None, relations=None, where=None,
     # input is source testsuite
     elif os.path.isdir(source):
         sts = itsdb.TestSuite(source)
-        tables = dts.relations.tables if full else itsdb.tsdb_core_files
+        tables = dts.relations.tables if full else itsdb.TSDB_CORE_FILES
         where = '' if where is None else 'where ' + where
         for table in tables:
             if sts.size(table) > 0:
@@ -441,6 +440,7 @@ def process(grammar, testsuite, source=None, select=None,
 
     with processor(grammar, cmdargs=options) as cpu:
         target.process(cpu, ':' + column, source=table, gzip=gzip)
+
 
 def _interpret_selection(select, source):
     queryobj = tsql.inspect_query('select ' + select)

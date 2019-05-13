@@ -80,7 +80,7 @@ method, for which a new :class:`~delphin.interfaces.base.FieldMapper`
 class must be defined.
 """
 
-import os
+from pathlib import Path
 import re
 from gzip import open as gzopen
 import tempfile
@@ -100,12 +100,12 @@ from delphin.interfaces.base import FieldMapper
 ##############################################################################
 # Module variables
 
-_relations_filename = 'relations'
-_field_delimiter = '@'
-_default_datatype_values = {
+RELATIONS_FILENAME = 'relations'
+FIELD_DELIMITER = '@'
+DEFAULT_DATATYPE_VALUES = {
     ':integer': '-1'
 }
-tsdb_coded_attributes = {
+TSDB_CODED_ATTRIBUTES = {
     'i-wf': 1,
     'i-difficulty': 1,
     'polarity': -1
@@ -120,7 +120,7 @@ _primary_keys = [
     ["e-id", "edge"],
     ["f-id", "fold"]
 ]
-tsdb_core_files = [
+TSDB_CORE_FILES = [
     "item",
     "analysis",
     "phenomenon",
@@ -179,8 +179,8 @@ class Field(
 
     def default_value(self):
         """Get the default value of the field."""
-        if self.name in tsdb_coded_attributes:
-            return tsdb_coded_attributes[self.name]
+        if self.name in TSDB_CODED_ATTRIBUTES:
+            return TSDB_CODED_ATTRIBUTES[self.name]
         elif self.datatype == ':integer':
             return -1
         else:
@@ -286,7 +286,7 @@ def _prefixed_relation_fields(fields, on, drop):
     already_joined = isinstance(fields, _RelationJoin)
     for f in fields:
         table, _, fieldname = f[0].rpartition(':')
-        if already_joined :
+        if already_joined:
             prefix = table + ':' if table else ''
         else:
             prefix = fields.name + ':'
@@ -323,8 +323,8 @@ class Relations(object):
         if hasattr(source, 'read'):
             relations = cls.from_string(source.read())
         else:
-            with open(source) as f:
-                relations = cls.from_string(f.read())
+            relations_text = Path(source).expanduser().read_text()
+            relations = cls.from_string(relations_text)
         return relations
 
     @classmethod
@@ -632,8 +632,8 @@ class Table(object):
     Attributes:
         name (str): table name
         fields (:class:`Relation`): table schema
-        path (str): if attached, the path to the file containing the
-            table data; if detached it is `None`
+        path: if attached, the path to the file containing the table
+            data; if detached it is `None`
         encoding (str): the character encoding of the attached table
             file; if detached it is `None`
     """
@@ -668,7 +668,8 @@ class Table(object):
                 relations file in the same directory if not given)
             encoding: the character encoding of the file at *path*
         """
-        path = _table_filename(path)  # do early in case file not found
+        path = Path(path).expanduser()
+        path = _table_path(path)  # do early in case file not found
         if fields is None:
             fields = _get_relation_from_table_path(path)
 
@@ -706,24 +707,27 @@ class Table(object):
                 raise ITSDBError('no path given for detached table')
             else:
                 path = self.path
-        path = _normalize_table_path(path)
-        dirpath, name = os.path.split(path)
+        else:
+            path = Path(path).expanduser()
+        path = path.with_suffix('')
         if fields is None:
             fields = self.fields
         if records is None:
             records = iter(self)
         _write_table(
-            dirpath,
-            name,
+            path.parent,
+            path.name,
             records,
             fields,
             append=append,
             gzip=gzip,
             encoding=self.encoding)
 
-        if self.is_attached() and path == _normalize_table_path(self.path):
-            self.path = _table_filename(path)
-            self._sync_with_file()
+        if self.is_attached():
+            original_path = self.path.with_suffix('')
+            if path == original_path:
+                self.path = _table_path(path)
+                self._sync_with_file()
 
     def commit(self):
         """
@@ -770,18 +774,19 @@ class Table(object):
             encoding: the character encoding of the files in the testsuite
         """
         if self.is_attached():
-            raise ITSDBError('already attached at {}'.format(self.path))
+            raise ITSDBError('already attached at {!s}'.format(self.path))
 
+        path = Path(path).expanduser()
         try:
-            path = _table_filename(path)
+            path = _table_path(path)
         except ITSDBError:
             # neither path nor path.gz exist; create new empty file
             # (note: if the file were non-empty this would be destructive)
-            path = _normalize_table_path(path)
-            open(path, 'w').close()
+            path = path.with_suffix('')
+            path.write_text('')
         else:
             # path or path.gz exists; check if merging would be a problem
-            if os.stat(path).st_size > 0 and len(self._records) > 0:
+            if path.stat().st_size > 0 and len(self._records) > 0:
                 raise ITSDBError(
                     'cannot attach non-empty table to non-empty file')
 
@@ -977,21 +982,15 @@ class Table(object):
         return select_rows(cols, self, mode=mode)
 
 
-def _normalize_table_path(path):
-    if path[-3:].lower() == '.gz':
-        path = path[:-3]
-    return path
-
-
 def _get_relation_from_table_path(path):
-    rpath = os.path.join(os.path.dirname(path), _relations_filename)
-    if not os.path.exists(rpath):
+    rpath = path.parent.joinpath(RELATIONS_FILENAME)
+    if not rpath.is_file():
         raise ITSDBError(
             'No relation is specified and a relations file could '
             'not be found.'
         )
     rels = Relations.from_file(rpath)
-    name = os.path.basename(_normalize_table_path(path))
+    name = path.with_suffix('').name
     if name not in rels:
         raise ITSDBError(
             'Table \'{}\' not found in the relations.'.format(name)
@@ -1026,21 +1025,24 @@ class TestSuite(object):
     __slots__ = ('_path', 'relations', '_data', 'encoding')
 
     def __init__(self, path=None, relations=None, encoding='utf-8'):
+        if path is not None:
+            path = Path(path).expanduser()
         self._path = path
         self.encoding = encoding
 
         if isinstance(relations, Relations):
             self.relations = relations
         elif relations is None and path is not None:
-            relations = os.path.join(self._path, _relations_filename)
-            self.relations = Relations.from_file(relations)
-        elif relations is not None and os.path.isfile(relations):
+            relations = self._path.joinpath(RELATIONS_FILENAME)
             self.relations = Relations.from_file(relations)
         else:
-            raise ITSDBError(
-                'Either the relations parameter must be provided or '
-                '*path* must point to a directory with a relations file.'
-            )
+            relations = Path(relations).expanduser()
+            if not relations.is_file():
+                raise ITSDBError(
+                    'Either the relations parameter must be provided or '
+                    '*path* must point to a directory with a relations file.'
+                )
+            self.relations = Relations.from_file(relations)
 
         self._data = dict((t, None) for t in self.relations)
 
@@ -1068,13 +1070,12 @@ class TestSuite(object):
     def _reload_table(self, tablename):
         # assumes self.path is not None
         fields = self.relations[tablename]
-        path = os.path.join(self._path, tablename)
+        path = self._path.joinpath(tablename)
         try:
-            path = _table_filename(path)
+            path = _table_path(path)
         except ITSDBError:
             # path doesn't exist
-            path = _normalize_table_path(path)
-            open(path, 'w').close()  # create empty file
+            path.with_suffix('').write_text('')  # create empty file
         table = Table.from_file(path,
                                 fields=fields,
                                 encoding=self.encoding)
@@ -1131,6 +1132,8 @@ class TestSuite(object):
         """
         if path is None:
             path = self._path
+        else:
+            path = Path(path).expanduser()
         if tables is None:
             tables = self._data
         elif isinstance(tables, str):
@@ -1145,11 +1148,9 @@ class TestSuite(object):
             relations = Relations.from_file(relations)
 
         # prepare destination
-        if not os.path.exists(path):
-            os.makedirs(path)
         # raise error if path != self._path?
-        with open(os.path.join(path, _relations_filename), 'w') as fh:
-            print(str(relations), file=fh)
+        path.mkdir(parents=True, exist_ok=True)
+        path.joinpath(RELATIONS_FILENAME).write_text(str(relations) + '\n')
 
         for tablename, fields in relations.items():
             if tablename in tables:
@@ -1180,13 +1181,13 @@ class TestSuite(object):
         above conditions, the table exists as a file (even if
         empty). Otherwise it returns False.
         """
-        if self._path is None or not os.path.isdir(self._path):
+        if self._path is None or not self._path.is_dir():
             return False
-        if not os.path.isfile(os.path.join(self._path, _relations_filename)):
+        if not self._path.joinpath(RELATIONS_FILENAME).is_file():
             return False
         if table is not None:
             try:
-                _table_filename(os.path.join(self._path, table))
+                _table_path(self._path.joinpath(table))
             except ITSDBError:
                 return False
         return True
@@ -1209,8 +1210,8 @@ class TestSuite(object):
                 size += self.size(table)
         else:
             try:
-                fn = _table_filename(os.path.join(self._path, table))
-                size += os.stat(fn).st_size
+                path = _table_path(self._path.joinpath(table))
+                size += path.stat().st_size
             except ITSDBError:
                 pass
         return size
@@ -1354,6 +1355,7 @@ def _split_cols(colstring):
     colstring = colstring.lstrip(':')
     return [col.strip() for col in colstring.split('@')]
 
+
 def decode_row(line, fields=None):
     """
     Decode a raw line from a profile into a list of column values.
@@ -1369,7 +1371,7 @@ def decode_row(line, fields=None):
     Returns:
         A list of column values.
     """
-    cols = line.rstrip('\n').split(_field_delimiter)
+    cols = line.rstrip('\n').split(FIELD_DELIMITER)
     cols = list(map(unescape, cols))
     if fields is not None:
         if len(cols) != len(fields):
@@ -1426,7 +1428,7 @@ def encode_row(fields):
     """
     str_fields = [str(f) for f in fields]
     escaped_fields = map(escape, str_fields)
-    return _field_delimiter.join(escaped_fields)
+    return FIELD_DELIMITER.join(escaped_fields)
 
 
 def escape(string):
@@ -1449,7 +1451,7 @@ def escape(string):
     return (string
             .replace('\\', '\\\\')  # must be done first
             .replace('\n', '\\n')
-            .replace(_field_delimiter, '\\s'))
+            .replace(FIELD_DELIMITER, '\\s'))
 
 
 def unescape(string):
@@ -1466,10 +1468,10 @@ def unescape(string):
     return (string
             .replace('\\\\','\\')  # must be done first
             .replace('\\n','\n')
-            .replace('\\s', _field_delimiter))
+            .replace('\\s', FIELD_DELIMITER))
 
 
-def _table_filename(tbl_filename):
+def _table_path(tbl_path):
     """
     Determine if the table path should end in .gz or not and return it.
 
@@ -1480,45 +1482,44 @@ def _table_filename(tbl_filename):
         :class:`delphin.exceptions.ITSDBError`: when neither the .gz
             nor text file exist.
     """
-    tbl_filename = str(tbl_filename)  # convert any Path objects
+    tx_path = tbl_path.with_suffix('')
+    gz_path = tbl_path.with_suffix('.gz')
 
-    txfn = _normalize_table_path(tbl_filename)
-    gzfn = txfn + '.gz'
-
-    if os.path.exists(txfn):
-        if (os.path.exists(gzfn) and
-                os.stat(gzfn).st_mtime > os.stat(txfn).st_mtime):
-            tbl_filename = gzfn
+    if tx_path.is_file():
+        if (gz_path.is_file()
+                and gz_path.stat().st_mtime > tx_path.stat().st_mtime):
+            tbl_path = gz_path
         else:
-            tbl_filename = txfn
-    elif os.path.exists(gzfn):
-        tbl_filename = gzfn
+            tbl_path = tx_path
+    elif gz_path.is_file():
+        tbl_path = gz_path
     else:
         raise ITSDBError(
-            'Table does not exist at {}(.gz)'
-            .format(tbl_filename)
+            'Table does not exist at {!s}(.gz)'
+            .format(tbl_path)
         )
 
-    return tbl_filename
+    return tbl_path
 
 
 @contextmanager
-def _open_table(tbl_filename, encoding):
+def _open_table(tbl_path, encoding):
     """
     Transparently open the compressed or text table file.
 
     Can be used as a context manager in a 'with' statement.
     """
-    path = _table_filename(tbl_filename)
-    if path.endswith('.gz'):
-        with gzopen(path, mode='rt', encoding=encoding) as f:
+    path = _table_path(tbl_path)
+    # open and gzip.open don't accept pathlib.Path objects until Python 3.6
+    if path.suffix.lower() == '.gz':
+        with gzopen(str(path), mode='rt', encoding=encoding) as f:
             yield f
     else:
-        with open(path, encoding=encoding) as f:
+        with path.open(encoding=encoding) as f:
             yield f
 
 
-def _write_table(profile_dir, table_name, rows, fields,
+def _write_table(testsuite_dir, table_name, rows, fields,
                  append=False, gzip=False, encoding='utf-8'):
     # don't gzip if empty
     rows = iter(rows)
@@ -1535,33 +1536,33 @@ def _write_table(profile_dir, table_name, rows, fields,
         logging.warning('Appending to a gzip file may result in '
                         'inefficient compression.')
 
-    if not os.path.isdir(profile_dir):
+    if not testsuite_dir.is_dir():
         raise ITSDBError('Profile directory does not exist: {}'
-                         .format(profile_dir))
+                         .format(testsuite_dir))
 
     with tempfile.NamedTemporaryFile(
             mode='w+b', suffix='.tmp',
-            prefix=table_name, dir=profile_dir) as f_tmp:
+            prefix=table_name, dir=str(testsuite_dir)) as f_tmp:
 
         for row in rows:
             f_tmp.write((make_row(row, fields) + '\n').encode(encoding))
         f_tmp.seek(0)
 
-        txfn = os.path.join(profile_dir, table_name)
-        gzfn = txfn + '.gz'
+        tx_path = testsuite_dir.joinpath(table_name)
+        gz_path = tx_path.with_suffix('.gz')
         mode = 'ab' if append else 'wb'
 
         if gzip:
             # clean up non-gzip files, if any
-            if os.path.isfile(txfn):
-                os.remove(txfn)
-            with gzopen(gzfn, mode) as f_out:
+            if tx_path.is_file():
+                tx_path.unlink()
+            with gzopen(str(gz_path), mode) as f_out:
                 shutil.copyfileobj(f_tmp, f_out)
         else:
             # clean up gzip files, if any
-            if os.path.isfile(gzfn):
-                os.remove(gzfn)
-            with open(txfn, mode=mode) as f_out:
+            if gz_path.is_file():
+                gz_path.unlink()
+            with tx_path.open(mode=mode) as f_out:
                 shutil.copyfileobj(f_tmp, f_out)
 
 

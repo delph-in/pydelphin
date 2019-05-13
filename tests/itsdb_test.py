@@ -3,7 +3,6 @@
 from __future__ import print_function, unicode_literals
 
 import os
-import tempfile
 import datetime
 import io
 import gzip
@@ -55,6 +54,7 @@ result:
 def parser_cpu():
     class DummyParser(Processor):
         task = 'parse'
+
         def process_item(self, datum, keys=None):
             return ParseResponse(
                 NOTES=[],
@@ -113,7 +113,9 @@ def parser_cpu():
                     }
                 ]
             )
+
     return DummyParser()
+
 
 @pytest.fixture
 def empty_profile(tmpdir):
@@ -121,12 +123,14 @@ def empty_profile(tmpdir):
     ts.join('relations').write(_simple_relations)
     return str(ts)
 
+
 @pytest.fixture
 def single_item_skeleton(tmpdir):
     ts = tmpdir.mkdir('skeleton')
     ts.join('relations').write(_simple_relations)
     ts.join('item').write('0@The dog barks.')
     return str(ts)
+
 
 @pytest.fixture
 def gzipped_single_item_skeleton(tmpdir):
@@ -138,6 +142,7 @@ def gzipped_single_item_skeleton(tmpdir):
     print('0@The dog barks.', file=fh)
     fh.close()
     return str(ts)
+
 
 @pytest.fixture
 def single_item_profile(tmpdir):
@@ -154,6 +159,7 @@ def single_item_profile(tmpdir):
         'HCONS: < h0 qeq h1 h5 qeq h7 > ]')
     return str(ts)
 
+
 def test_Field():
     f = itsdb.Field('x', ':y', True, False, 'a comment')
     assert f.name == 'x'
@@ -165,6 +171,7 @@ def test_Field():
     assert f.default_value() == -1
     f = itsdb.Field('i-wf', ':integer', False, False, '')
     assert f.default_value() == 1
+
 
 def test_Relations():
     f = itsdb.Field
@@ -224,7 +231,7 @@ def test_Record():
     assert r.get('i-id', cast=False) == '0'
     assert r['i-input'] == r[1] == 'sentence'
     assert r.get('i-input') == 'sentence'
-    assert r.get('unknown') == None
+    assert r.get('unknown') is None
     assert str(r) == '0@sentence'
     # incorrect number of fields
     with pytest.raises(itsdb.ITSDBError):
@@ -279,13 +286,13 @@ class TestTable(object):
         # table attached to a file
         table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
         assert len(table) == 1
-        assert table.path == os.path.join(single_item_skeleton, 'item')
+        assert str(table.path) == os.path.join(single_item_skeleton, 'item')
         assert table.name == 'item'
         assert table.encoding == 'utf-8'
         # table attached to gzipped file given normalized filename
         table = itsdb.Table.from_file(os.path.join(gzipped_single_item_skeleton, 'item'))
         assert len(table) == 1
-        assert table.path == os.path.join(gzipped_single_item_skeleton, 'item.gz')
+        assert str(table.path) == os.path.join(gzipped_single_item_skeleton, 'item.gz')
         assert table.name == 'item'
 
     def test_write(self, tmpdir):
@@ -312,18 +319,17 @@ class TestTable(object):
         table.write(records=[(10, 'Birds chirp.')], gzip=False)
         assert path.check()
         assert not tmpdir.join('item.gz').check()
-        assert table.path == str(path)
+        assert str(table.path) == str(path)
         assert open(str(path)).read() == '10@Birds chirp.\n'
         # ensure path is updated when gzip option is used
         table.write(gzip=True)
-        assert table.path == str(path) + '.gz'
+        assert str(table.path) == str(path) + '.gz'
         table.write(gzip=False)
-        assert table.path == str(path)
+        assert str(table.path) == str(path)
 
     def test_attach(self, empty_profile):
         fields = itsdb.Relations.from_string(_simple_relations)['item']
         item_fn = os.path.join(empty_profile, 'item')
-        enc = 'utf-8'
         # attach empty table to empty file
         table = itsdb.Table(fields)
         assert not os.path.exists(item_fn)
@@ -350,13 +356,13 @@ class TestTable(object):
         table2 = itsdb.Table(fields)
         table2.attach(item_fn + '.gz')
         assert len(table2) == 1
-        assert table2.path == item_fn
+        assert str(table2.path) == item_fn
         # attaching to gzipped tables
         table.write(gzip=True)
         table2 = itsdb.Table(fields)
         table2.attach(table.path)
         assert len(table2) == 1
-        assert table2.path == item_fn + '.gz'
+        assert str(table2.path) == item_fn + '.gz'
         table.write(gzip=False)  # just reset for the next test
         # attach non-empty table to non-empty file
         table = itsdb.Table(fields, records=[(20, 'Wolves howl.')])
@@ -407,23 +413,23 @@ class TestTable(object):
     def test_is_attached(self, single_item_skeleton, gzipped_single_item_skeleton):
         fields = itsdb.Relations.from_string(_simple_relations)['item']
         table = itsdb.Table(fields)
-        assert table.is_attached() == False
+        assert not table.is_attached()
         # explicit attachment
         table.attach(os.path.join(single_item_skeleton, 'item'))
-        assert table.is_attached() == True
+        assert table.is_attached()
         # explicit detachment
         table.detach()
-        assert table.is_attached() == False
+        assert not table.is_attached()
         # from_file attachment
         table = itsdb.Table.from_file(os.path.join(single_item_skeleton, 'item'))
-        assert table.is_attached() == True
+        assert table.is_attached()
         # from_file attachment with gzipped file
         table = itsdb.Table.from_file(os.path.join(gzipped_single_item_skeleton, 'item'))
-        assert table.is_attached() == True
+        assert table.is_attached()
         # writing does not attach
         table = itsdb.Table(fields, [(10, 'Birds chirp.')])
         table.write(path=os.path.join(single_item_skeleton, 'item'))
-        assert table.is_attached() == False
+        assert not table.is_attached()
 
     def test_list_changes(self, empty_profile, single_item_skeleton):
         fields = itsdb.Relations.from_string(_simple_relations)['item']
@@ -632,6 +638,7 @@ class TestSuite(object):
         assert ts['result'][1]['parse-id'] == 0
         assert ts['result'][1]['result-id'] == 1
 
+
 def test_get_data_specifier():
     dataspec = itsdb.get_data_specifier
     assert dataspec('item') == ('item', None)
@@ -644,6 +651,7 @@ def test_get_data_specifier():
     # unicode (see #164)
     assert dataspec(u'item:i-id') == ('item', ['i-id'])
 
+
 def test_escape():
     assert itsdb.escape('') == ''
     assert itsdb.escape('abc') == 'abc'
@@ -652,6 +660,7 @@ def test_escape():
     assert itsdb.escape('a\\b') == 'a\\\\b'
     assert itsdb.escape(' a b ') == ' a b '
 
+
 def test_unescape():
     assert itsdb.unescape('') == ''
     assert itsdb.unescape('abc') == 'abc'
@@ -659,6 +668,7 @@ def test_unescape():
     assert itsdb.unescape('a\\nb') == 'a\nb'
     assert itsdb.unescape('a\\\\b') == 'a\\b'
     assert itsdb.unescape(' a b ') == ' a b '
+
 
 def test_decode_row():
     assert itsdb.decode_row('') == ['']
@@ -670,6 +680,7 @@ def test_decode_row():
     rels = itsdb.Relations.from_string(_simple_relations)
     assert itsdb.decode_row('10@one', fields=rels['item']) == [10, 'one']
 
+
 def test_encode_row():
     assert itsdb.encode_row(['']) == ''
     assert itsdb.encode_row(['one']) == 'one'
@@ -678,15 +689,18 @@ def test_encode_row():
     assert itsdb.encode_row(['one', '', 'three']) == 'one@@three'
     assert itsdb.encode_row(['one@', '\\two\nabc']) == 'one\\s@\\\\two\\nabc'
 
+
 def test_make_row(empty_profile):
     r = itsdb.Relations.from_file(os.path.join(empty_profile, 'relations'))
     assert itsdb.make_row({'i-input': 'one', 'i-id': 100}, r['item']) == '100@one'
     assert itsdb.make_row({'i-id': 100, 'mrs': '[RELS: < > HCONS: < >]'}, r['item']) == '100@'
 
+
 def test_select_rows(single_item_profile):
     p = itsdb.TestSuite(single_item_profile)
     assert list(itsdb.select_rows(['i-id', 'i-input'], p['item'])) == [[0, 'The dog barks.']]
     assert list(itsdb.select_rows(['item:i-id', 'parse:parse-id'], itsdb.join(p['item'], p['parse']))) == [[0, 0]]
+
 
 def test_match_rows():
     assert list(itsdb.match_rows(
@@ -697,6 +711,7 @@ def test_match_rows():
             ('20', [{'i-id': '20', 'i-input': 'b'}], [{'i-id': '20', 'i-input': 'c'}]),
             ('30', [], [{'i-id': '30', 'i-input': 'd'}])
         ]
+
 
 def test_join(single_item_profile):
     p = itsdb.TestSuite(single_item_profile)
