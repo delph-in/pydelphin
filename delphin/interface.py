@@ -1,3 +1,17 @@
+# -*- coding: utf-8 -*-
+
+"""
+Interfaces for external data providers.
+
+This module manages the communication between data providers, namely
+processors like `ACE <http://sweaglesw.org/linguistics/ace/>`_ or
+remote services like the `DELPH-IN Web API
+<http://moin.delph-in.net/ErgApi>`_, and user code or storage
+backends, namely [incr tsdb()] :doc:`test suites 
+<delphin.itsdb>`. An interface sends requests to a provider,
+then receives and interprets the response. The interface may also
+detect and deserialize supported DELPH-IN formats.
+"""
 
 from collections import Sequence
 from datetime import datetime
@@ -15,16 +29,17 @@ class Processor(object):
     Base class for processors.
 
     This class defines the basic interface for all PyDelphin processors,
-    such as :class:`~delphin.interfaces.ace.ACEProcess` and
-    :class:`~delphin.interfaces.rest.DelphinRestClient`. It can also be
+    such as :class:`~delphin.ace.ACEProcess` and
+    :class:`~delphin.web.Client`. It can also be
     used to define preprocessor wrappers of other processors such that
     it has the same interface, allowing it to be used, e.g., with
     :meth:`TestSuite.process() <delphin.itsdb.TestSuite.process>`.
 
     Attributes:
-        task: name of the task the processor performs (e.g. `"parse"`,
+        task: name of the task the processor performs (e.g., `"parse"`,
             `"transfer"`, or `"generate"`)
     """
+
     task = None
 
     def process_item(self, datum, keys=None):
@@ -48,15 +63,15 @@ class Processor(object):
         raise NotImplementedError()
 
 
-class ParseResult(dict):
+class Result(dict):
     """
     A wrapper around a result dictionary to automate deserialization
-    for supported formats. A ParseResult is still a dictionary, so the
+    for supported formats. A Result is still a dictionary, so the
     raw data can be obtained using dict access.
     """
 
     def __repr__(self):
-        return 'ParseResult({})'.format(dict.__repr__(self))
+        return 'Result({})'.format(dict.__repr__(self))
 
     def derivation(self):
         """
@@ -132,23 +147,23 @@ class ParseResult(dict):
         return dmrs
 
 
-class ParseResponse(dict):
+class Response(dict):
     """
     A wrapper around the response dictionary for more convenient
     access to results.
     """
-    _result_factory = ParseResult
+    _result_cls = Result
 
     def __repr__(self):
-        return 'ParseResponse({})'.format(dict.__repr__(self))
+        return 'Response({})'.format(dict.__repr__(self))
 
     def results(self):
-        """Return ParseResult objects for each result."""
-        return [self._result_factory(r) for r in self.get('results', [])]
+        """Return Result objects for each result."""
+        return [self._result_cls(r) for r in self.get('results', [])]
 
     def result(self, i):
-        """Return a ParseResult object for the result *i*."""
-        return self._result_factory(self.get('results', [])[i])
+        """Return a Result object for the result *i*."""
+        return self._result_cls(self.get('results', [])[i])
 
     def tokens(self, tokenset='internal'):
         """

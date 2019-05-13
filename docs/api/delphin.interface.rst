@@ -1,22 +1,20 @@
 
-delphin.interfaces
-==================
+delphin.interface
+=================
 
-.. automodule:: delphin.interfaces
- :members:
+.. automodule:: delphin.interface
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Modules
+   .. autoclass:: Processor
+      :members:
 
-   delphin.interfaces.ace.rst
-   delphin.interfaces.rest.rst
+   .. autoclass:: Response
+      :members:
 
-Common Classes
---------------
+   .. autoclass:: Result
+      :members:
 
-.. automodule:: delphin.interfaces.base
-  :members:
+   .. autoclass:: FieldMapper
+      :members:
 
 
 .. _preprocessor-example:
@@ -24,17 +22,18 @@ Common Classes
 Wrapping a Processor for Preprocessing
 --------------------------------------
 
-The :class:`~delphin.interfaces.base.Processor` class can be used to
+The :class:`~delphin.interface.Processor` class can be used to
 implement a preprocessor that maintains the same interface as the
 underlying processor. The following example wraps an
-:class:`~delphin.interfaces.ace.ACEParser` instance of the
+:class:`~delphin.ace.ACEParser` instance of the
 `English Resource Grammar <http://www.delph-in.net/erg/>`_ with a
 :class:`~delphin.repp.REPP` instance.
 
->>> from delphin.interfaces import ace, base
+>>> from delphin import interface
+>>> from delphin import ace
 >>> from delphin import repp
 >>> 
->>> class REPPWrapper(base.Processor):
+>>> class REPPWrapper(interface.Processor):
 ...     def __init__(self, cpu, rpp):
 ...         self.cpu = cpu
 ...         self.task = cpu.task
@@ -45,7 +44,7 @@ underlying processor. The following example wraps an
 ... 
 >>> # The preprocessor can be used like a normal Processor:
 >>> rpp = repp.REPP.from_config('../../grammars/erg/pet/repp.set')
->>> grm = '../../grammars/erg-1214-x86-64-0.9.27.dat'
+>>> grm = '../../grammars/erg-2018-x86-64-0.9.30.dat'
 >>> with ace.ACEParser(grm, cmdargs=['-y']) as _cpu:
 ...     cpu = REPPWrapper(_cpu, rpp)
 ...     response = cpu.process_item('Abrams hired Browne.')

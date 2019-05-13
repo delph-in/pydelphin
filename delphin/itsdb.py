@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Classes and functions for working with [incr tsdb()] profiles.
+Classes and functions for working with [incr tsdb()] test suites.
 
 The `itsdb` module provides classes and functions for working with
-[incr tsdb()] profiles (or, more generally, testsuites; see
+[incr tsdb()] profiles (or, more generally, test suites; see
 http://moin.delph-in.net/ItsdbTop). It handles the technical details
 of encoding and decoding records in tables, including escaping and
 unescaping reserved characters, pairing columns with their relational
@@ -12,13 +12,14 @@ descriptions, casting types (such as `:integer`, etc.), and
 transparently handling gzipped tables, so that the user has a natural
 way of working with the data. Capabilities include:
 
-* Reading and writing testsuites:
+* Reading and writing test suites:
 
     >>> from delphin import itsdb
     >>> ts = itsdb.TestSuite('jacy/tsdb/gold/mrs')
     >>> ts.write(path='mrs-copy')
 
-* Selecting data by table name, record index, and column name or index:
+* Selecting data by table name, record index, and column name or
+  index:
 
     >>> items = ts['item']           # get the items table
     >>> rec = items[0]               # get the first record
@@ -33,12 +34,12 @@ way of working with the data. Capabilities include:
 
 * Selecting data as a query (note that types are cast by default):
 
-    >>> next(ts.select('item:i-id@i-input@i-date'))  # query testsuite
+    >>> next(ts.select('item:i-id@i-input@i-date'))  # query test suite
     [11, '雨 が 降っ た ．', datetime.datetime(2006, 5, 28, 0, 0)]
     >>> next(items.select('i-id@i-input@i-date'))    # query table
     [11, '雨 が 降っ た ．', datetime.datetime(2006, 5, 28, 0, 0)]
 
-* In-memory modification of testsuite data:
+* In-memory modification of test suite data:
 
     >>> # desegment each sentence
     >>> for record in ts['item']:
@@ -55,7 +56,7 @@ way of working with the data. Capabilities include:
 
 * Processing data with ACE (results are stored in memory)
 
-    >>> from delphin.interfaces import ace
+    >>> from delphin import ace
     >>> with ace.ACEParser('jacy.dat') as cpu:
     ...     ts.process(cpu)
     ...
@@ -66,18 +67,18 @@ This module covers all aspects of [incr tsdb()] data, from
 :class:`Relations` files and :class:`Field` descriptions to
 :class:`Record`, :class:`Table`, and full :class:`TestSuite` classes.
 :class:`TestSuite` is the most user-facing interface, and it makes it
-easy to load the tables of a testsuite into memory, inspect its
+easy to load the tables of a test suite into memory, inspect its
 contents, modify or create data, and write the data to disk.
 
-By default, the `itsdb` module expects testsuites to use the standard
-[incr tsdb()] schema. Testsuites are always read and written according
-to the associated or specified relations file, but other things, such
-as default field values and the list of "core" tables, are defined for
-the standard schema. It is, however, possible to define non-standard
-schemata for particular applications, and most functions will continue
-to work. One notable exception is the :meth:`TestSuite.process`
-method, for which a new :class:`~delphin.interfaces.base.FieldMapper`
-class must be defined.
+By default, the `itsdb` module expects test suites to use the standard
+[incr tsdb()] schema. Test suites are always read and written
+according to the associated or specified relations file, but other
+things, such as default field values and the list of "core" tables,
+are defined for the standard schema. It is, however, possible to
+define non-standard schemata for particular applications, and most
+functions will continue to work. One notable exception is the
+:meth:`TestSuite.process` method, for which a new
+:class:`~delphin.interface.FieldMapper` class must be defined.
 """
 
 from pathlib import Path
@@ -95,7 +96,7 @@ import weakref
 
 from delphin.exceptions import PyDelphinException
 from delphin.util import (safe_int, parse_datetime)
-from delphin.interfaces.base import FieldMapper
+from delphin.interface import FieldMapper
 
 ##############################################################################
 # Module variables
@@ -605,25 +606,25 @@ class Table(object):
 
     Instances of this class contain a collection of rows with the data
     stored in the database. Generally a Table will be created by a
-    :class:`TestSuite` object for a database, but a Table can also be
     instantiated individually by the :meth:`Table.from_file` class
+    :class:`TestSuite` object for a database, but a Table can also be
     method, and the relations file in the same directory is used to
     get the schema. Tables can also be constructed entirely in-memory
-    and separate from a testsuite via the standard `Table()`
+    and separate from a test suite via the standard `Table()`
     constructor.
 
     Tables have two modes: **attached** and **detached**. Attached
-    tables are backed by a file on disk (whether as part of a
-    testsuite or not) and only store modified records in memory---all
+    tables are backed by a file on disk (whether as part of a test
+    suite or not) and only store modified records in memory---all
     unmodified records are retrieved from disk. Therefore, iterating
     over a table is more efficient than random-access. Attached files
     use significantly less memory than detached tables but also
     require more processing time. Detached tables are entirely stored
     in memory and are not backed by a file. They are useful for the
-    programmatic construction of testsuites (including for unit tests)
-    and other operations where high-speed random-access is required.
-    See the :meth:`attach` and :meth:`detach` methods for more
-    information. The :meth:`is_attached` method is useful for
+    programmatic construction of test suites (including for unit
+    tests) and other operations where high-speed random-access is
+    required.  See the :meth:`attach` and :meth:`detach` methods for
+    more information. The :meth:`is_attached` method is useful for
     determining the mode of a table.
 
     Args:
@@ -657,10 +658,10 @@ class Table(object):
         """
         Instantiate a Table from a database file.
 
-        This method instantiates a table attached to the file at *path*.
-        The file will be opened and traversed to determine the number of
-        records, but the contents will not be stored in memory unless
-        they are modified.
+        This method instantiates a table attached to the file at
+        *path*.  The file will be opened and traversed to determine
+        the number of records, but the contents will not be stored in
+        memory unless they are modified.
 
         Args:
             path: the path to the table file
@@ -685,8 +686,8 @@ class Table(object):
 
         The basic usage has no arguments and writes the table's data
         to the attached file. The parameters accommodate a variety of
-        use cases, such as using *fields* to refresh a table to a
-        new schema or *records* and *append* to incrementally build a
+        use cases, such as using *fields* to refresh a table to a new
+        schema or *records* and *append* to incrementally build a
         table.
 
         Args:
@@ -771,7 +772,7 @@ class Table(object):
 
         Args:
             path: the path to the table file
-            encoding: the character encoding of the files in the testsuite
+            encoding: the character encoding of the files in the test suite
         """
         if self.is_attached():
             raise ITSDBError('already attached at {!s}'.format(self.path))
@@ -1008,14 +1009,14 @@ def _cast_record_to_str_tuple(record, fields):
 
 class TestSuite(object):
     """
-    A [incr tsdb()] testsuite database.
+    A [incr tsdb()] test suite database.
 
     Args:
-        path: the path to the testsuite's directory
+        path: the path to the test suite's directory
         relations (:class:`Relations`, str): the database schema; either
             a :class:`Relations` object or a path to a relations file;
             if not given, the relations file under *path* will be used
-        encoding: the character encoding of the files in the testsuite
+        encoding: the character encoding of the files in the test suite
     Attributes:
         encoding (:py:class:`str`): character encoding used when reading and
             writing tables
@@ -1063,7 +1064,7 @@ class TestSuite(object):
     def reload(self):
         """Discard temporary changes and reload the database from disk."""
         if self._path is None:
-            raise ITSDBError('cannot reload an in-memory testsuite')
+            raise ITSDBError('cannot reload an in-memory test suite')
         for tablename in self.relations:
             self._reload_table(tablename)
 
@@ -1086,8 +1087,8 @@ class TestSuite(object):
         Select columns from each row in the table.
 
         The first parameter, *arg*, may either be a table name or a
-        data specifier. If the former, the *cols* parameter selects the
-        columns from the table. If the latter, *cols* is left
+        data specifier. If the former, the *cols* parameter selects
+        the columns from the table. If the latter, *cols* is left
         unspecified and both the table and columns are taken from the
         data specifier; e.g., `select('item:i-id@i-input')` is
         equivalent to `select('item', ('i-id', 'i-input'))`.
@@ -1112,7 +1113,7 @@ class TestSuite(object):
     def write(self, tables=None, path=None, relations=None,
               append=False, gzip=None):
         """
-        Write the testsuite to disk.
+        Write the test suite to disk.
 
         Args:
             tables: a name or iterable of names of tables to write,
@@ -1172,7 +1173,7 @@ class TestSuite(object):
 
     def exists(self, table=None):
         """
-        Return `True` if the testsuite or a table exists on disk.
+        Return `True` if the test suite or a table exists on disk.
 
         If *table* is `None`, this method returns `True` if the
         :attr:`TestSuite.path` is specified and points to an existing
@@ -1194,11 +1195,11 @@ class TestSuite(object):
 
     def size(self, table=None):
         """
-        Return the size, in bytes, of the testsuite or *table*.
+        Return the size, in bytes, of the test suite or *table*.
 
-        If *table* is `None`, return the size of the whole testsuite
-        (i.e., the sum of the table sizes). Otherwise, return the
-        size of *table*.
+        If *table* is `None`, return the size of the whole test suite
+        (i.e., the sum of the table sizes). Otherwise, return the size
+        of *table*.
 
         Notes:
             * If the file is gzipped, it returns the compressed size.
@@ -1219,29 +1220,29 @@ class TestSuite(object):
     def process(self, cpu, selector=None, source=None, fieldmapper=None,
                 gzip=None, buffer_size=1000):
         """
-        Process each item in a [incr tsdb()] testsuite
+        Process each item in a [incr tsdb()] test suite
 
-        If the testsuite is attached to files on disk, the output
+        If the test suite is attached to files on disk, the output
         records will be flushed to disk when the number of new records
-        in a table is *buffer_size*. If the testsuite is not attached
+        in a table is *buffer_size*. If the test suite is not attached
         to files or *buffer_size* is set to `None`, records are kept
         in memory and not flushed to disk.
 
         Args:
-            cpu (:class:`~delphin.interfaces.base.Processor`):
+            cpu (:class:`~delphin.interface.Processor`):
                 processor interface (e.g.,
-                :class:`~delphin.interfaces.ace.ACEParser`)
+                :class:`~delphin.ace.ACEParser`)
             selector (str): data specifier to select a single table and
                 column as processor input (e.g., `"item:i-input"`)
-            source (:class:`TestSuite`, :class:`Table`): testsuite or
+            source (:class:`TestSuite`, :class:`Table`): test suite or
                 table from which inputs are taken; if `None`, use `self`
-            fieldmapper (:class:`~delphin.interfaces.base.FieldMapper`):
+            fieldmapper (:class:`~delphin.FieldMapper`):
                 object for mapping response fields to [incr tsdb()]
                 fields; if `None`, use a default mapper for the
                 standard schema
             gzip: compress non-empty tables with gzip
             buffer_size (int): number of output records to hold in
-                memory before flushing to disk; ignored if the testsuite
+                memory before flushing to disk; ignored if the test suite
                 is all in-memory; if `None`, do not flush to disk
         Examples:
             >>> ts.process(ace_parser)

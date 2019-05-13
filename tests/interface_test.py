@@ -1,15 +1,15 @@
 
 import pytest
 
-from delphin.interfaces.base import ParseResponse, ParseResult
+from delphin.interface import Response, Result
 from delphin.eds import edsjson
 from delphin.mrs import simplemrs
 from delphin.dmrs import dmrsjson
 from delphin.derivation import Derivation
 from delphin.tokens import YYTokenLattice
 
-def test_ParseResult():
-    r = ParseResult()
+def test_Result():
+    r = Result()
     assert len(r) == 0
     assert r.mrs() is None
     assert r.dmrs() is None
@@ -32,22 +32,22 @@ def test_ParseResult():
     }
     mrs = simplemrs.decode(mrs_s)
 
-    r = ParseResult(mrs=mrs_s)
+    r = Result(mrs=mrs_s)
     assert len(r) == 1
     assert r['mrs'] == mrs_s
     assert r.mrs() == mrs
 
-    r = ParseResult(mrs=mrs_d)
+    r = Result(mrs=mrs_d)
     assert len(r) == 1
     assert r['mrs'] == mrs_d
     assert r.mrs() == mrs
 
-    r = ParseResult(mrs=mrs_d)
+    r = Result(mrs=mrs_d)
     assert len(r) == 1
     assert r['mrs'] == mrs_d
     assert r.mrs() == mrs
 
-    # r = ParseResult(mrs='nonsense')
+    # r = Result(mrs='nonsense')
     # assert r['mrs'] == 'nonsense'
     # with pytest.raises(PyDelphinSyntaxError):
     #     r.mrs()
@@ -63,12 +63,12 @@ def test_ParseResult():
     }
     dmrs = dmrsjson.from_dict(dmrs_d)
 
-    r = ParseResult(dmrs=dmrs_d)
+    r = Result(dmrs=dmrs_d)
     assert len(r) == 1
     assert r['dmrs'] == dmrs_d
     assert r.dmrs() == dmrs
 
-    # r = ParseResult(dmrs='nonsense')
+    # r = Result(dmrs='nonsense')
     # assert len(r) == 1
     # assert r['dmrs'] == 'nonsense'
     # with pytest.raises(PyDelphinSyntaxError):
@@ -87,17 +87,17 @@ def test_ParseResult():
     eds_s = '{e2: e2:_rain_v_1<3:9>[]}'
     eds = edsjson.from_dict(eds_d)
 
-    r = ParseResult(eds=eds_s)
+    r = Result(eds=eds_s)
     assert len(r) == 1
     assert r['eds'] == eds_s
     assert r.eds() == eds
 
-    r = ParseResult(eds=eds_d)
+    r = Result(eds=eds_d)
     assert len(r) == 1
     assert r['eds'] == eds_d
     assert r.eds() == eds
 
-    # r = ParseResult(eds='nonsense')
+    # r = Result(eds='nonsense')
     # assert len(r) == 1
     # assert r['eds'] == 'nonsense'
     # with pytest.raises(PyDelphinSyntaxError):
@@ -123,31 +123,31 @@ def test_ParseResult():
     }
     deriv = Derivation.from_dict(deriv_d)
 
-    r = ParseResult(derivation=deriv_s)
+    r = Result(derivation=deriv_s)
     assert len(r) == 1
     assert r['derivation'] == deriv_s
     assert r.derivation() == deriv
 
-    r = ParseResult(derivation=deriv_d)
+    r = Result(derivation=deriv_d)
     assert len(r) == 1
     assert r['derivation'] == deriv_d
     assert r.derivation() == deriv
 
-def test_ParseResponse():
-    r = ParseResponse()
+def test_Response():
+    r = Response()
     assert len(r) == 0
     assert r.results() == []
     assert r.tokens() is None
 
-    r = ParseResponse(key="val")
+    r = Response(key="val")
     assert len(r) == 1
     assert r['key'] == 'val'
 
-    r = ParseResponse(results=[{}]) 
+    r = Response(results=[{}]) 
     assert len(r) == 1
     assert r['results'] == [{}]
-    assert isinstance(r.results()[0], ParseResult)
-    assert isinstance(r.result(0), ParseResult)
+    assert isinstance(r.results()[0], Result)
+    assert isinstance(r.result(0), Result)
 
     toks_s = '(1, 0, 1, <0:4>, 1, "Dogs", 0, "null")'
     toks_d = [
@@ -155,18 +155,18 @@ def test_ParseResponse():
     ]
     toks = YYTokenLattice.from_list(toks_d)
 
-    r = ParseResponse(tokens={'initial': toks_s})
+    r = Response(tokens={'initial': toks_s})
     assert r['tokens']['initial'] == toks_s
     print(r.tokens('initial'))
     assert r.tokens('initial') == toks
     assert r.tokens('internal') == None
 
-    r = ParseResponse(tokens={'initial': toks_d})
+    r = Response(tokens={'initial': toks_d})
     assert r['tokens']['initial'] == toks_d
     assert r.tokens('initial') == toks
     assert r.tokens('internal') == None
 
-    r = ParseResponse(tokens={'internal': toks_s})
+    r = Response(tokens={'internal': toks_s})
     assert r['tokens']['internal'] == toks_s
     assert r.tokens('initial') == None
     assert r.tokens('internal') == toks

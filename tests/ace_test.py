@@ -3,7 +3,7 @@ import io
 
 import pytest
 
-from delphin.interfaces import ace
+from delphin import ace
 
 
 @pytest.fixture

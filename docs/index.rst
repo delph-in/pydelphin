@@ -30,6 +30,7 @@ PyDelphin
   :maxdepth: 1
   :caption: API Reference:
 
+  api/delphin.ace.rst
   api/delphin.commands.rst
   api/delphin.derivation.rst
   api/delphin.dmrs.rst
@@ -37,7 +38,7 @@ PyDelphin
   api/delphin.exceptions.rst
   api/delphin.extra.rst
   api/delphin.hierarchy.rst
-  api/delphin.interfaces.rst
+  api/delphin.interface.rst
   api/delphin.itsdb.rst
   api/delphin.lnk.rst
   api/delphin.predicate.rst
@@ -52,6 +53,7 @@ PyDelphin
   api/delphin.tsql.rst
   api/delphin.variable.rst
   api/delphin.vpm.rst
+  api/delphin.web.rst
 
 
 Indices and tables

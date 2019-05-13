@@ -30,7 +30,7 @@ _CODEC_REGISTRY = {
     # codec-name : (representation, module)
     'simplemrs':   ('mrs',  'delphin.mrs.simplemrs'),
     'simple-mrs':  ('mrs',  'delphin.mrs.simplemrs'),
-    'ace':         ('mrs',  'delphin.interfaces.ace'),
+    'ace':         ('mrs',  'delphin.ace'),
     'mrx':         ('mrs',  'delphin.mrs.mrx'),
     'mrsjson':     ('mrs',  'delphin.mrs.mrsjson'),
     'mrs-json':    ('mrs',  'delphin.mrs.mrsjson'),
@@ -409,7 +409,7 @@ def process(grammar, testsuite, source=None, select=None,
         gzip (bool): if `True`, non-empty tables will be compressed
             with gzip
     """
-    from delphin.interfaces import ace
+    from delphin import ace
 
     if generate and transfer:
         raise ValueError("'generate' is incompatible with 'transfer'")

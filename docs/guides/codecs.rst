@@ -1,4 +1,6 @@
 
+.. _codec-API:
+
 Serialization Codecs for Semantic Representations
 =================================================
 
@@ -14,8 +16,7 @@ MRS Codecs:
 - :mod:`delphin.mrs.indexedmrs`
 - :mod:`delphin.mrs.mrsjson`
 - :mod:`delphin.mrs.mrsprolog`
-- :mod:`delphin.interfaces.ace` (not primarily a codec but one is
-  provided for convenience)
+- :mod:`delphin.ace` (not primarily a codec but one is provided for convenience)
 
 DMRS Codecs:
 
@@ -227,5 +228,5 @@ optional. Here are some examples of variations in PyDelphin:
   are export-only codecs and do not provide :func:`load`,
   :func:`loads`, or :func:`decode` functions.
 
-* :mod:`delphin.interfaces.ace` is an import-only codec and does not
-  provide :func:`dump`, :func:`dumps`, or :func:`encode` functions.
+* :mod:`delphin.ace` is an import-only codec and does not provide
+  :func:`dump`, :func:`dumps`, or :func:`encode` functions.

@@ -9,7 +9,7 @@ import gzip
 
 import pytest
 
-from delphin.interfaces.base import Processor, ParseResponse
+from delphin.interface import Processor, Response
 from delphin import itsdb
 
 _simple_relations = '''item:
@@ -56,7 +56,7 @@ def parser_cpu():
         task = 'parse'
 
         def process_item(self, datum, keys=None):
-            return ParseResponse(
+            return Response(
                 NOTES=[],
                 WARNINGS=[],
                 ERRORS=[],

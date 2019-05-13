@@ -28,14 +28,14 @@ Warning:
   alternatively, instantiate the class in a context manager.
 
 Interpreted responses are stored in a dictionary-like
-:class:`~delphin.interfaces.base.ParseResponse` object. When queried
-as a dictionary, these objects return the raw response strings. When
-queried via its methods, the PyDelphin models of the data are returned.
-The response objects may contain a number of
-:class:`~delphin.interfaces.ParseResult` objects. These objects
-similarly provide raw-string access via dictionary keys and
-PyDelphin-model access via methods. Here is an example of parsing a
-sentence with :class:`ACEParser`:
+:class:`~delphin.interface.Response` object. When queried as a
+dictionary, these objects return the raw response strings. When
+queried via its methods, the PyDelphin models of the data are
+returned.  The response objects may contain a number of
+:class:`~delphin.interface.Result` objects. These objects similarly
+provide raw-string access via dictionary keys and PyDelphin-model
+access via methods. Here is an example of parsing a sentence with
+:class:`ACEParser`:
 
     >>> with ACEParser('erg-1214-x86-64-0.9.24.dat') as parser:
     ...     response = parser.interact('Cats sleep.')
@@ -56,7 +56,6 @@ many items to process, it is more efficient to use
 :func:`parse_from_iterable`, :func:`transfer_from_iterable`, or
 :func:`generate_from_iterable` than the single-item versions, or to
 interact with the :class:`ACEProcess` subclass instances directly.
-
 """
 
 import logging
@@ -77,7 +76,7 @@ from socket import gethostname  # portable way to get host name
 from datetime import datetime
 import locale
 
-from delphin.interfaces.base import ParseResponse, Processor
+from delphin import interface
 from delphin.util import SExpr
 from delphin.__about__ import __version__ as pydelphin_version
 from delphin.exceptions import PyDelphinException
@@ -92,7 +91,7 @@ class ACEProcessError(PyDelphinException):
     """Raised when the ACE process has crashed and cannot be recovered."""
 
 
-class ACEProcess(Processor):
+class ACEProcess(interface.Processor):
     """
     The base class for interfacing ACE.
 
@@ -280,7 +279,7 @@ class ACEProcess(Processor):
         Args:
             datum (str): the input sentence or MRS
         Returns:
-            :class:`~delphin.interfaces.ParseResponse`
+            :class:`~delphin.interface.Response`
         """
         validated = self._validate_input(datum)
         if validated:
@@ -307,7 +306,7 @@ class ACEProcess(Processor):
             datum (str): the input sentence or MRS
             keys (dict): a mapping of item identifier names and values
         Returns:
-            :class:`~delphin.interfaces.ParseResponse`
+            :class:`~delphin.interface.Response`
         """
         response = self.interact(datum)
         if keys is not None:
@@ -477,7 +476,7 @@ def parse_from_iterable(grm, data, **kwargs):
         data (iterable): the sentences to parse
         **kwargs: additional keyword arguments to pass to the ACEParser
     Yields:
-        :class:`~delphin.interfaces.ParseResponse`
+        :class:`~delphin.interface.Response`
     Example:
         >>> sentences = ['Dogs bark.', 'It rained']
         >>> responses = list(ace.parse_from_iterable('erg.dat', sentences))
@@ -497,7 +496,7 @@ def parse(grm, datum, **kwargs):
         datum (str): the sentence to parse
         **kwargs: additional keyword arguments to pass to the ACEParser
     Returns:
-        :class:`~delphin.interfaces.ParseResponse`
+        :class:`~delphin.interface.Response`
     Example:
         >>> response = ace.parse('erg.dat', 'Dogs bark.')
         NOTE: parsed 1 / 1 sentences, avg 797k, time 0.00707s
@@ -515,7 +514,7 @@ def transfer_from_iterable(grm, data, **kwargs):
         **kwargs: additional keyword arguments to pass to the
             ACETransferer
     Yields:
-        :class:`~delphin.interfaces.ParseResponse`
+        :class:`~delphin.interface.Response`
     """
     with ACETransferer(grm, **kwargs) as transferer:
         for datum in data:
@@ -532,7 +531,7 @@ def transfer(grm, datum, **kwargs):
         **kwargs: additional keyword arguments to pass to the
             ACETransferer
     Returns:
-        :class:`~delphin.interfaces.ParseResponse`
+        :class:`~delphin.interface.Response`
     """
     return next(transfer_from_iterable(grm, [datum], **kwargs))
 
@@ -547,7 +546,7 @@ def generate_from_iterable(grm, data, **kwargs):
         **kwargs: additional keyword arguments to pass to the
             ACEGenerator
     Yields:
-        :class:`~delphin.interfaces.ParseResponse`
+        :class:`~delphin.interface.Response`
     """
     with ACEGenerator(grm, **kwargs) as generator:
         for datum in data:
@@ -564,7 +563,7 @@ def generate(grm, datum, **kwargs):
         **kwargs: additional keyword arguments to pass to the
             ACEGenerator
     Returns:
-        :class:`~delphin.interfaces.ParseResponse`
+        :class:`~delphin.interface.Response`
     """
     return next(generate_from_iterable(grm, [datum], **kwargs))
 
@@ -721,7 +720,7 @@ def _possible_mrs(s):
 
 
 def _make_response(lines, run):
-    response = ParseResponse({
+    response = interface.Response({
         'NOTES': [],
         'WARNINGS': [],
         'ERRORS': [],
