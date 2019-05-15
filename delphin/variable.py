@@ -53,11 +53,11 @@ would not see `x2` and `e2` in the same structure.
 
 import re
 
-from delphin import tfs
+from delphin import hierarchy
 
 ### Default variable types
 
-hierarchy = tfs.TypeHierarchy(
+hierarchy = hierarchy.MultiHierarchy(
     '*top*',
     {'u': '*top*',
      'i': 'u',
