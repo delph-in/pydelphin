@@ -655,7 +655,7 @@ def test_get_data_specifier():
 def test_escape():
     assert itsdb.escape('') == ''
     assert itsdb.escape('abc') == 'abc'
-    assert itsdb.escape('a@bc') == 'a\sbc'
+    assert itsdb.escape('a@bc') == 'a\\sbc'
     assert itsdb.escape('a\nb') == 'a\\nb'
     assert itsdb.escape('a\\b') == 'a\\\\b'
     assert itsdb.escape(' a b ') == ' a b '
@@ -664,7 +664,7 @@ def test_escape():
 def test_unescape():
     assert itsdb.unescape('') == ''
     assert itsdb.unescape('abc') == 'abc'
-    assert itsdb.unescape('a\sbc') == 'a@bc'
+    assert itsdb.unescape('a\\sbc') == 'a@bc'
     assert itsdb.unescape('a\\nb') == 'a\nb'
     assert itsdb.unescape('a\\\\b') == 'a\\b'
     assert itsdb.unescape(' a b ') == ' a b '
