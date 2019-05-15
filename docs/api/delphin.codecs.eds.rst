@@ -1,8 +1,8 @@
 
-delphin.eds.edsnative
-=====================
+delphin.codecs.eds
+==================
 
-.. automodule:: delphin.eds.edsnative
+.. automodule:: delphin.codecs.eds
 
    Deserialization Functions
    -------------------------

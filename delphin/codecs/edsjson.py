@@ -91,7 +91,6 @@ Example:
       }
     }
   }
-
 """
 
 from pathlib import Path
@@ -101,6 +100,10 @@ import json
 from delphin.lnk import Lnk
 from delphin.eds import EDS, Node
 
+
+CODEC_INFO = {
+    'representation': 'eds',
+}
 
 HEADER = '['
 JOINER = ','

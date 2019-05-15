@@ -1,6 +1,7 @@
 
 
 import warnings
+import pkgutil
 import codecs
 import re
 from datetime import datetime
@@ -493,3 +494,9 @@ def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
         encoding = default_encoding
 
     return encoding
+
+
+def namespace_modules(ns):
+    """Return the name to fullname mapping of modules in package *ns*."""
+    return {name: '{}.{}'.format(ns.__name__, name)
+            for _, name, _ in pkgutil.iter_modules(ns.__path__)}

@@ -96,7 +96,6 @@ Example:
       {"from": 10007, "to": 10002, "post": "EQ", "rargname": "MOD"}
     ]
   }
-
 """
 
 from pathlib import Path
@@ -110,6 +109,10 @@ from delphin.dmrs import (
     CVARSORT,
 )
 
+
+CODEC_INFO = {
+    'representation': 'dmrs',
+}
 
 HEADER = '['
 JOINER = ','

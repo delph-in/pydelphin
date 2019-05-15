@@ -18,9 +18,12 @@ from datetime import datetime
 
 from delphin.derivation import Derivation
 from delphin.tokens import YYTokenLattice
-from delphin.mrs import mrsjson, simplemrs
-from delphin.dmrs import dmrsjson
-from delphin.eds import edsjson, edsnative
+from delphin.codecs import (
+    mrsjson,
+    simplemrs,
+    dmrsjson,
+    edsjson,
+    eds)
 from delphin.util import SExpr
 
 
@@ -132,7 +135,7 @@ class Result(dict):
             if isinstance(_eds, dict):
                 _eds = edsjson.from_dict(_eds)
             elif isinstance(_eds, str):
-                _eds = edsnative.decode(_eds)
+                _eds = eds.decode(_eds)
         return _eds
 
     def dmrs(self):

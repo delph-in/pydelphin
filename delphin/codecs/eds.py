@@ -33,6 +33,11 @@ from delphin.eds import (EDS, Node, EDSSyntaxError)
 from delphin.util import (_bfs, Lexer)
 
 
+CODEC_INFO = {
+    'representation': 'eds',
+}
+
+
 def load(source):
     """
     Deserialize an EDS file (handle or filename) to EDS objects

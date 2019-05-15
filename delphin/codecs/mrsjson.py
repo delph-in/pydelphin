@@ -110,7 +110,6 @@ Example:
       "i21": {"type": "i"}
     }
   }
-
 """
 
 from pathlib import Path
@@ -120,6 +119,10 @@ from delphin.lnk import Lnk
 from delphin import variable
 from delphin.mrs import (MRS, EP, HCons, ICons)
 
+
+CODEC_INFO = {
+    'representation': 'mrs',
+}
 
 HEADER = '['
 JOINER = ','

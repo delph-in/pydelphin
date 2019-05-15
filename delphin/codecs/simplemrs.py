@@ -44,6 +44,11 @@ from delphin.mrs import (
     CONSTANT_ROLE)
 
 
+CODEC_INFO = {
+    'representation': 'mrs',
+}
+
+
 TOP_FEATURE = 'TOP'
 
 

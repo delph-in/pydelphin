@@ -85,7 +85,6 @@ Example:
         :perf -
         :ARG1-NEQ x3
         :MOD-EQ e9)))
-
 """
 
 from pathlib import Path
@@ -96,6 +95,11 @@ from delphin.lnk import Lnk
 from delphin.dmrs import DMRS, Node, Link, CVARSORT
 from delphin.dmrs._dmrs import FIRST_NODE_ID
 from delphin.sembase import property_priority
+
+
+CODEC_INFO = {
+    'representation': 'dmrs',
+}
 
 
 def load(source):

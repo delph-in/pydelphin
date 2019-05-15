@@ -88,7 +88,6 @@ Example:
         :prog -
         :perf -
         :ARG1 x3)))
-
 """
 
 from pathlib import Path
@@ -98,6 +97,11 @@ import penman
 from delphin.lnk import Lnk
 from delphin.sembase import (role_priority, property_priority)
 from delphin.eds import (EDS, Node)
+
+
+CODEC_INFO = {
+    'representation': 'eds',
+}
 
 
 def load(source):

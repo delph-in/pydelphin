@@ -1,8 +1,8 @@
 
-delphin.dmrs.dmrsjson
-=====================
+delphin.codecs.edsjson
+======================
 
-.. automodule:: delphin.dmrs.dmrsjson
+.. automodule:: delphin.codecs.edsjson
 
    Module Constants
    ----------------
@@ -54,3 +54,4 @@ delphin.dmrs.dmrsjson
 
    .. autofunction:: from_dict
    .. autofunction:: to_dict
+

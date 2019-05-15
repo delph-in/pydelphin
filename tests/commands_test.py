@@ -114,7 +114,6 @@ def test_convert(dir_with_mrs, mini_testsuite, ace_output, ace_tsdb_stdout,
     convert(ex, 'simplemrs', 'mrs-prolog')
     _bidi_convert(dir_with_mrs, 'simplemrs', 'dmrx')
     convert(ex, 'simplemrs', 'simpledmrs')
-    convert(ex, 'simplemrs', 'dmrs-tikz')
     _bidi_convert(dir_with_mrs, 'simplemrs', 'dmrs-json')
     _bidi_convert(dir_with_mrs, 'simplemrs', 'dmrs-penman')
     _bidi_convert(dir_with_mrs, 'simplemrs', 'eds')

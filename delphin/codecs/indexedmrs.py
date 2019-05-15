@@ -44,6 +44,11 @@ from delphin.mrs import MRSSyntaxError
 from delphin.util import Lexer
 
 
+CODEC_INFO = {
+    'representation': 'mrs',
+}
+
+
 ##############################################################################
 ##############################################################################
 # Pickle-API methods

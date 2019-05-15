@@ -10,11 +10,11 @@ delphin.mrs
    .. toctree::
       :maxdepth: 1
 
-      delphin.mrs.indexedmrs.rst
-      delphin.mrs.mrsjson.rst
-      delphin.mrs.mrsprolog.rst
-      delphin.mrs.mrx.rst
-      delphin.mrs.simplemrs.rst
+      delphin.codecs.indexedmrs.rst
+      delphin.codecs.mrsjson.rst
+      delphin.codecs.mrsprolog.rst
+      delphin.codecs.mrx.rst
+      delphin.codecs.simplemrs.rst
 
    Module Constants
    ----------------

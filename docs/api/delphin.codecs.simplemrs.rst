@@ -1,8 +1,8 @@
 
-delphin.eds.edspenman
-=====================
+delphin.codecs.simplemrs
+========================
 
-.. automodule:: delphin.eds.edspenman
+.. automodule:: delphin.codecs.simplemrs
 
    Deserialization Functions
    -------------------------
@@ -33,9 +33,3 @@ delphin.eds.edspenman
    .. function:: encode(m, properties=True, lnk=True, indent=False, encoding='utf-8')
 
       See the :func:`encode` codec API documentation.
-
-   Complementary Functions
-   -----------------------
-
-   .. autofunction:: from_triples
-   .. autofunction:: to_triples

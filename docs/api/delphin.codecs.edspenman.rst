@@ -1,23 +1,8 @@
 
-delphin.eds.edsjson
-===================
+delphin.codecs.edspenman
+========================
 
-.. automodule:: delphin.eds.edsjson
-
-   Module Constants
-   ----------------
-
-   .. data:: HEADER
-
-      `'['`
-
-   .. data:: JOINER
-
-      `','`
-
-   .. data:: FOOTER
-
-      `']'`
+.. automodule:: delphin.codecs.edspenman
 
    Deserialization Functions
    -------------------------
@@ -52,6 +37,5 @@ delphin.eds.edsjson
    Complementary Functions
    -----------------------
 
-   .. autofunction:: from_dict
-   .. autofunction:: to_dict
-
+   .. autofunction:: from_triples
+   .. autofunction:: to_triples

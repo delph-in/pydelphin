@@ -24,13 +24,13 @@ PyDelphin
   guides/ace.rst
   guides/commands.rst
   guides/itsdb.rst
-  guides/codecs.rst
 
 .. toctree::
   :maxdepth: 1
   :caption: API Reference:
 
   api/delphin.ace.rst
+  api/delphin.codecs.rst
   api/delphin.commands.rst
   api/delphin.derivation.rst
   api/delphin.dmrs.rst

@@ -107,7 +107,6 @@ Example:
       <post>EQ</post>
     </link>
   </dmrs>
-
 """
 
 from pathlib import Path
@@ -117,6 +116,10 @@ from delphin import predicate
 from delphin.dmrs import (DMRS, Node, Link, CVARSORT)
 from delphin.lnk import Lnk
 
+
+CODEC_INFO = {
+    'representation': 'dmrs',
+}
 
 HEADER = '<dmrs-list>'
 JOINER = ''

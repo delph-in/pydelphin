@@ -10,9 +10,9 @@ delphin.eds
    .. toctree::
       :maxdepth: 1
 
-      delphin.eds.edsjson.rst
-      delphin.eds.edsnative.rst
-      delphin.eds.edspenman.rst
+      delphin.codecs.edsjson.rst
+      delphin.codecs.eds.rst
+      delphin.codecs.edspenman.rst
 
    Module Constants
    ----------------

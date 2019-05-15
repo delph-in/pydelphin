@@ -2,11 +2,13 @@
 import pytest
 
 from delphin.interface import Response, Result
-from delphin.eds import edsjson
-from delphin.mrs import simplemrs
-from delphin.dmrs import dmrsjson
+from delphin.codecs import (
+    edsjson,
+    simplemrs,
+    dmrsjson)
 from delphin.derivation import Derivation
 from delphin.tokens import YYTokenLattice
+
 
 def test_Result():
     r = Result()

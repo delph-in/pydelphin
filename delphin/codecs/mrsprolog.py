@@ -57,6 +57,11 @@ from delphin.sembase import role_priority
 from delphin.mrs import CONSTANT_ROLE
 
 
+CODEC_INFO = {
+    'representation': 'mrs',
+}
+
+
 def dump(ms, destination, properties=True, lnk=True,
          indent=False, encoding='utf-8'):
     """

@@ -1,7 +1,8 @@
 
 import pytest
 
-from delphin.mrs import MRS, EP, HCons, mrx
+from delphin.mrs import MRS, EP, HCons
+from delphin.codecs import mrx
 
 
 # @pytest.fixture

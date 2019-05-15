@@ -1,8 +1,8 @@
 
-delphin.mrs.mrx
-===============
+delphin.codecs.mrx
+==================
 
-.. automodule:: delphin.mrs.mrx
+.. automodule:: delphin.codecs.mrx
 
    Module Constants
    ----------------

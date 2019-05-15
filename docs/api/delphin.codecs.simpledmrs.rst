@@ -1,8 +1,23 @@
 
-delphin.mrs.mrsprolog
-=====================
+delphin.codecs.simpledmrs
+=========================
 
-.. automodule:: delphin.mrs.mrsprolog
+.. automodule:: delphin.codecs.simpledmrs
+
+   Deserialization Functions
+   -------------------------
+
+   .. function:: load(source)
+
+      See the :func:`load` codec API documentation.
+
+   .. function:: loads(s)
+
+      See the :func:`loads` codec API documentation.
+
+   .. function:: decode(s)
+
+      See the :func:`decode` codec API documentation.
 
    Serialization Functions
    -----------------------

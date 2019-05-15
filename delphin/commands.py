@@ -17,47 +17,16 @@ import warnings
 from delphin import itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
-from delphin.util import safe_int
+from delphin import util
 from delphin.exceptions import PyDelphinException
+import delphin.codecs
 
 
 ###############################################################################
 # CONVERT #####################################################################
 
-# Codec Registry
+_CODECS = util.namespace_modules(delphin.codecs)
 
-_CODEC_REGISTRY = {
-    # codec-name : (representation, module)
-    'simplemrs':   ('mrs',  'delphin.mrs.simplemrs'),
-    'simple-mrs':  ('mrs',  'delphin.mrs.simplemrs'),
-    'ace':         ('mrs',  'delphin.ace'),
-    'mrx':         ('mrs',  'delphin.mrs.mrx'),
-    'mrsjson':     ('mrs',  'delphin.mrs.mrsjson'),
-    'mrs-json':    ('mrs',  'delphin.mrs.mrsjson'),
-    'indexedmrs':  ('mrs',  'delphin.mrs.indexedmrs'),
-    'indexed-mrs': ('mrs',  'delphin.mrs.indexedmrs'),
-    'mrsprolog':   ('mrs',  'delphin.mrs.mrsprolog'),
-    'mrs-prolog':  ('mrs',  'delphin.mrs.mrsprolog'),
-    'simpledmrs':  ('dmrs', 'delphin.dmrs.simpledmrs'),
-    'simple-dmrs': ('dmrs', 'delphin.dmrs.simpledmrs'),
-    'dmrx':        ('dmrs', 'delphin.dmrs.dmrx'),
-    'dmrsjson':    ('dmrs', 'delphin.dmrs.dmrsjson'),
-    'dmrs-json':   ('dmrs', 'delphin.dmrs.dmrsjson'),
-    'dmrspenman':  ('dmrs', 'delphin.dmrs.dmrspenman'),
-    'dmrs-penman': ('dmrs', 'delphin.dmrs.dmrspenman'),
-    'dmrstikz':    ('dmrs', 'delphin.extra.dmrstikz_codec'),
-    'dmrs-tikz':   ('dmrs', 'delphin.extra.dmrstikz_codec'),
-    'eds':         ('eds',  'delphin.eds.edsnative'),
-    'edsnative':   ('eds',  'delphin.eds.edsnative'),
-    'eds-native':  ('eds',  'delphin.eds.edsnative'),
-    'edsjson':     ('eds',  'delphin.eds.edsjson'),
-    'eds-json':    ('eds',  'delphin.eds.edsjson'),
-    'edspenman':   ('eds',  'delphin.eds.edspenman'),
-    'eds-penman':  ('eds',  'delphin.eds.edspenman'),
-}
-
-
-# Convert command
 
 def convert(path, source_fmt, target_fmt, select='result:mrs',
             properties=True, lnk=True, color=False, indent=None,
@@ -65,6 +34,9 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
             semi=None):
     """
     Convert between various DELPH-IN Semantics representations.
+
+    The *source_fmt* and *target_fmt* arguments are downcased and
+    hyphens are removed to normalize the codec name.
 
     Args:
         path (str, file): filename, testsuite directory, open file, or
@@ -93,16 +65,17 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
     """
     if path is None:
         path = sys.stdin
-    # normalize codec names
-    source_fmt = source_fmt.lower()
-    target_fmt = target_fmt.lower()
 
-    if source_fmt.startswith('eds') and not target_fmt.startswith('eds'):
-        raise ValueError(
-            'Conversion from EDS to non-EDS currently not supported.')
+    # normalize codec names
+    source_fmt = source_fmt.replace('-', '').lower()
+    target_fmt = target_fmt.replace('-', '').lower()
+
+    source_codec = _get_codec(source_fmt)
+    target_codec = _get_codec(target_fmt)
+    converter = _get_converter(source_codec, target_codec, predicate_modifiers)
 
     if indent is not True and indent is not False and indent is not None:
-        indent = safe_int(indent)
+        indent = int(indent)
 
     if len(tsql.inspect_query('select ' + select)['projection']) != 1:
         raise ValueError('Exactly 1 column must be given in selection query: '
@@ -114,10 +87,6 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             semi = load_semi(semi)
-
-    source_codec = _get_codec(source_fmt)
-    target_codec = _get_codec(target_fmt)
-    converter = _get_converter(source_fmt, target_fmt, predicate_modifiers)
 
     # read
     kwargs = {}
@@ -186,29 +155,40 @@ def convert(path, source_fmt, target_fmt, select='result:mrs',
 
 
 def _get_codec(name):
-    if name not in _CODEC_REGISTRY:
+    if name not in _CODECS:
         raise ValueError('invalid codec: {}'.format(name))
-    _, modulename = _CODEC_REGISTRY[name]
-    codec = importlib.import_module(modulename)
+    fullname = _CODECS[name]
+    codec = importlib.import_module(fullname)
     return codec
 
 
-def _get_converter(source_fmt, target_fmt, predicate_modifiers):
-    src, _ = _CODEC_REGISTRY[source_fmt]
-    tgt, _ = _CODEC_REGISTRY[target_fmt]
-    converter = None
+def _get_converter(source_codec, target_codec, predicate_modifiers):
+    src_rep = source_codec.CODEC_INFO['representation'].lower()
+    tgt_rep = target_codec.CODEC_INFO['representation'].lower()
 
-    if (src, tgt) == ('mrs', 'dmrs'):
+    # The following could be done dynamically by inspecting if the
+    # target representation has a from_{src_rep} function, but that
+    # seems like overkill, and it's not clear what to do about
+    # EDS's predicate_modifiers argument in that case.
+
+    if (src_rep, tgt_rep) == ('mrs', 'dmrs'):
         from delphin.dmrs import from_mrs as converter
 
-    elif (src, tgt) == ('dmrs', 'mrs'):
+    elif (src_rep, tgt_rep) == ('dmrs', 'mrs'):
         from delphin.mrs import from_dmrs as converter
 
-    elif (src, tgt) == ('mrs', 'eds'):
+    elif (src_rep, tgt_rep) == ('mrs', 'eds'):
         from delphin.eds import from_mrs
 
         def converter(m):
             return from_mrs(m, predicate_modifiers=predicate_modifiers)
+
+    elif src_rep == tgt_rep:
+        converter = None
+
+    else:
+        raise ValueError('{} -> {} conversion is not supported'.format(
+            src_rep.upper(), tgt_rep.upper()))
 
     return converter
 
@@ -583,7 +563,7 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
 
     """
     from delphin import mrs
-    from delphin.mrs import simplemrs
+    from delphin.codecs import simplemrs
 
     if not isinstance(testsuite, itsdb.TestSuite):
         source = Path(testsuite).expanduser()

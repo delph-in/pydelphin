@@ -1,23 +1,8 @@
 
-delphin.dmrs.dmrx
-=================
+delphin.codecs.dmrspenman
+=========================
 
-.. automodule:: delphin.dmrs.dmrx
-
-   Module Constants
-   ----------------
-
-   .. data:: HEADER
-
-      `'<dmrs-list>'`
-
-   .. data:: JOINER
-
-      `''`
-
-   .. data:: FOOTER
-
-      `'</dmrs-list>'`
+.. automodule:: delphin.codecs.dmrspenman
 
    Deserialization Functions
    -------------------------
@@ -48,3 +33,9 @@ delphin.dmrs.dmrx
    .. function:: encode(m, properties=True, lnk=True, indent=False, encoding='utf-8')
 
       See the :func:`encode` codec API documentation.
+
+   Complementary Functions
+   -----------------------
+
+   .. autofunction:: from_triples
+   .. autofunction:: to_triples

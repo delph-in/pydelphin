@@ -1,8 +1,23 @@
 
-delphin.dmrs.dmrspenman
+delphin.codecs.dmrsjson
 =======================
 
-.. automodule:: delphin.dmrs.dmrspenman
+.. automodule:: delphin.codecs.dmrsjson
+
+   Module Constants
+   ----------------
+
+   .. data:: HEADER
+
+      `'['`
+
+   .. data:: JOINER
+
+      `','`
+
+   .. data:: FOOTER
+
+      `']'`
 
    Deserialization Functions
    -------------------------
@@ -37,5 +52,5 @@ delphin.dmrs.dmrspenman
    Complementary Functions
    -----------------------
 
-   .. autofunction:: from_triples
-   .. autofunction:: to_triples
+   .. autofunction:: from_dict
+   .. autofunction:: to_dict

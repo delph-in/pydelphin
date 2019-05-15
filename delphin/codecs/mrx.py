@@ -92,8 +92,6 @@ Example:
     <hcons hreln="qeq"><hi><var sort="h" vid="5" /></hi><lo><label vid="7" /></lo></hcons>
     <hcons hreln="qeq"><hi><var sort="h" vid="11" /></hi><lo><label vid="13" /></lo></hcons>
   </mrs>
-
-
 """
 
 import io
@@ -107,6 +105,10 @@ from delphin.lnk import Lnk
 from delphin import variable
 from delphin.sembase import role_priority, property_priority
 
+
+CODEC_INFO = {
+    'representation': 'mrs',
+}
 
 HEADER = '<mrs-list>'
 JOINER = ''

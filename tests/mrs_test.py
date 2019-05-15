@@ -11,7 +11,7 @@ from delphin.mrs import (
     is_isomorphic,
     # compare_bags
 )
-from delphin.mrs import simplemrs
+from delphin.codecs import simplemrs
 
 
 @pytest.fixture

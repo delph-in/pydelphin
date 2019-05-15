@@ -36,7 +36,6 @@ Example:
     10010:MOD/EQ -> 10008;
     10007:MOD/EQ -> 10002;
   }
-
 """
 
 from pathlib import Path
@@ -50,6 +49,11 @@ from delphin.dmrs import (
     DMRSSyntaxError,
 )
 from delphin.util import Lexer
+
+
+CODEC_INFO = {
+    'representation': 'dmrs',
+}
 
 
 ##############################################################################

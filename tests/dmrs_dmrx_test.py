@@ -1,7 +1,8 @@
 
 import pytest
 
-from delphin.dmrs import DMRS, Node, Link, dmrx
+from delphin.dmrs import DMRS, Node, Link
+from delphin.codecs import dmrx
 
 
 @pytest.fixture

@@ -1,8 +1,8 @@
 
-delphin.mrs.indexedmrs
-======================
+delphin.codecs.indexedmrs
+=========================
 
-.. automodule:: delphin.mrs.indexedmrs
+.. automodule:: delphin.codecs.indexedmrs
 
    Deserialization Functions
    -------------------------

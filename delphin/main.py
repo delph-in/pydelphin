@@ -2,18 +2,25 @@
 
 import sys
 import os
+import importlib
+from collections import defaultdict
 import argparse
 import logging
+import warnings
 import textwrap
 import shlex
 
 from delphin.__about__ import __version__
 from delphin.exceptions import PyDelphinWarning
 from delphin import itsdb
-
+from delphin import util
+import delphin.codecs
 from delphin.commands import (
     convert, select, mkprof, process, compare, repp
 )
+
+
+_CODECS = util.namespace_modules(delphin.codecs)
 
 
 def main():
@@ -34,30 +41,57 @@ def main():
 
 
 def call_convert(args):
-    color = (args.color == 'always' or
-             (args.color == 'auto' and sys.stdout.isatty()))
-    if color:
+    if args.list:
+        _list_codecs(args.verbosity > 1)
+    else:
+        color = (args.color == 'always' or
+                 (args.color == 'auto' and sys.stdout.isatty()))
+        if color:
+            try:
+                import pygments
+            except ImportError:
+                warnings.warn(
+                    'Pygments is not installed; '
+                    'output will not be highlighted.',
+                    PyDelphinWarning
+                )
+                color = False
+        print(convert(
+            args.PATH,
+            vars(args)['from'],  # vars() to avoid syntax error
+            args.to,
+            properties=(not args.no_properties),
+            lnk=(not args.no_lnk),
+            color=color,
+            indent=args.indent,
+            select=args.select,
+            # below are format-specific kwargs
+            show_status=args.show_status,
+            predicate_modifiers=args.predicate_modifiers,
+            semi=args.semi))
+
+
+def _list_codecs(verbose):
+    codecs = defaultdict(list)
+    for name, fullname in _CODECS.items():
         try:
-            import pygments
-        except ImportError:
-            warnings.warn(
-                'Pygments is not installed; output will not be highlighted.',
-                PyDelphinWarning
-            )
-            color = False
-    print(convert(
-        args.PATH,
-        vars(args)['from'],  # vars() to avoid syntax error
-        args.to,
-        properties=(not args.no_properties),
-        lnk=(not args.no_lnk),
-        color=color,
-        indent=args.indent,
-        select=args.select,
-        # below are format-specific kwargs
-        show_status=args.show_status,
-        predicate_modifiers=args.predicate_modifiers,
-        semi=args.semi))
+            mod = importlib.import_module(fullname)
+            rep = mod.CODEC_INFO['representation']
+            description = mod.CODEC_INFO.get('description', '')
+        except (ImportError, AttributeError, KeyError) as ex:
+            if verbose:
+                codecs['(error)'].append((name, None, str(ex)))
+        else:
+            codecs[rep].append((name, mod, description))
+
+    for rep, data in sorted(codecs.items()):
+        print(rep.upper())
+        for name, mod, description in sorted(data):
+            print('\t{:12s}\t{}/{}\t{}'.format(
+                name,
+                'r' if hasattr(mod, 'load') else '-',
+                'w' if hasattr(mod, 'dump') else '-',
+                description))
 
 
 def call_select(args):
@@ -167,41 +201,20 @@ convert_parser.add_argument(
           'from which result:mrs will be selected; if not given, '
           '<stdin> is read as though it were a file'))
 convert_parser.add_argument(
+    '--list',
+    action='store_true',
+    help='list the available codecs and capabilities')
+convert_parser.add_argument(
     '-f',
     '--from',
     metavar='FMT',
     default='simplemrs',
-    choices=(('simplemrs simple-mrs '
-              'ace '  # import-only
-              'mrx '
-              'mrsjson mrs-json '
-              'indexedmrs indexed-mrs '
-              'simpledmrs simple-dmrs '
-              'dmrx '
-              'dmrsjson dmrs-json '
-              'dmrspenman dmrs-penman '
-              'eds '
-              'edsjson eds-json '
-              'edspenman eds-penman').split()),
     help='original representation (default: simplemrs)')
 convert_parser.add_argument(
     '-t',
     '--to',
     metavar='FMT',
     default='simplemrs',
-    choices=(('simplemrs simple-mrs '
-              'mrx '
-              'mrsjson mrs-json '
-              'indexedmrs indexed-mrs '
-              'mrsprolog mrs-prolog '  # export-only
-              'simpledmrs simple-dmrs '
-              'dmrx '
-              'dmrsjson dmrs-json '
-              'dmrspenman dmrs-penman '
-              'dmrstikz dmrs-tikz '  # export-only
-              'eds edsnative eds-native '
-              'edsjson eds-json '
-              'edspenman eds-penman').split()),
     help='target representation (default: simplemrs)')
 convert_parser.add_argument(
     '--no-properties',
@@ -378,20 +391,9 @@ subparser.add_parser(
     parents=[common_parser, convert_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=_redent("""
-        Convert between various DELPH-IN Semantics representations.
+        Convert DELPH-IN Semantics representations and formats.
 
-        Available bidirectional codecs:
-            simplemrs, mrx, mrs-json, indexed-mrs,
-            simpledmrs, dmrx, dmrs-json, dmrs-penman,
-            eds, eds-json, eds-penman
-
-        NOTE: imported EDSs can only be exported to other EDS representations
-
-        Available export-only codec:
-            mrs-prolog, dmrs-tikz
-
-        Additionally one can use --from=ace to read the simplemrs format
-        output by ACE while filtering out other outputs.
+        Use --list to see the available codecs.
         """))
 subparser.add_parser(
     'select',

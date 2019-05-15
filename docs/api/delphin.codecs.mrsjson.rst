@@ -1,8 +1,8 @@
 
-delphin.mrs.mrsjson
-===================
+delphin.codecs.mrsjson
+======================
 
-.. automodule:: delphin.mrs.mrsjson
+.. automodule:: delphin.codecs.mrsjson
 
    Module Constants
    ----------------

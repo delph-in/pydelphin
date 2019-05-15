@@ -5,8 +5,8 @@ from delphin.lnk import Lnk
 from delphin.mrs import (
     MRS,
     EP,
-    HCons,
-    indexedmrs)
+    HCons)
+from delphin.codecs import indexedmrs
 from delphin import semi
 
 

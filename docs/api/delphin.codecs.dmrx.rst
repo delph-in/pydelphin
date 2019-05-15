@@ -1,8 +1,23 @@
 
-delphin.dmrs.simpledmrs
-=======================
+delphin.codecs.dmrx
+===================
 
-.. automodule:: delphin.dmrs.simpledmrs
+.. automodule:: delphin.codecs.dmrx
+
+   Module Constants
+   ----------------
+
+   .. data:: HEADER
+
+      `'<dmrs-list>'`
+
+   .. data:: JOINER
+
+      `''`
+
+   .. data:: FOOTER
+
+      `'</dmrs-list>'`
 
    Deserialization Functions
    -------------------------
