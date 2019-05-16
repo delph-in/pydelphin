@@ -17,6 +17,9 @@ from pathlib import Path
 
 from delphin.exceptions import PyDelphinSyntaxError
 from delphin import variable
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+
 
 _LR_OPS = set(['<>', '>>', '==', '=>'])
 _RL_OPS = set(['<>', '<<', '==', '<='])

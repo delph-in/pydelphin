@@ -26,6 +26,8 @@ from collections import namedtuple
 from delphin.tokens import YYToken, YYTokenLattice
 from delphin.lnk import Lnk
 from delphin.exceptions import PyDelphinException
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
 
 
 class REPPError(PyDelphinException):

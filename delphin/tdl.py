@@ -44,6 +44,9 @@ from delphin.exceptions import (
     PyDelphinWarning)
 from delphin.tfs import FeatureStructure
 from delphin.util import LookaheadIterator
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+
 
 # Values for list expansion
 LIST_TYPE = '*list*'        #: type of lists in TDL

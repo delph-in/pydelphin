@@ -53,7 +53,6 @@ setup(
         'delphin.mrs',
         'delphin.eds',
         'delphin.dmrs',
-        'delphin.extra',
     ],
     install_requires=[
         'penman >=0.6.1',

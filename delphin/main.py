@@ -10,7 +10,6 @@ import warnings
 import textwrap
 import shlex
 
-from delphin.__about__ import __version__
 from delphin.exceptions import PyDelphinWarning
 from delphin import itsdb
 from delphin import util
@@ -18,6 +17,8 @@ import delphin.codecs
 from delphin.commands import (
     convert, select, mkprof, process, compare, repp
 )
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__
 
 
 _CODECS = util.namespace_modules(delphin.codecs)

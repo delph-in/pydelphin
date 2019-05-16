@@ -23,6 +23,9 @@ from delphin.dmrs._dmrs import (
     H_POST,
     CVARSORT)
 from delphin.dmrs._operations import from_mrs
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+
 
 __all__ = [
     'FIRST_NODE_ID',

@@ -30,6 +30,8 @@ from delphin.exceptions import (
     PyDelphinSyntaxError,
     PyDelphinWarning
 )
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
 
 
 TOP_TYPE = '*top*'

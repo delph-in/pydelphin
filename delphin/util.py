@@ -9,6 +9,9 @@ from collections import deque, namedtuple
 from functools import wraps
 from enum import IntEnum
 
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+
 
 def deprecated(message=None, final_version=None, alternative=None):
     if message is None:

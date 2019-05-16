@@ -80,6 +80,9 @@ from delphin import interface
 from delphin.util import SExpr
 from delphin.__about__ import __version__ as pydelphin_version
 from delphin.exceptions import PyDelphinException
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+
 
 # do this right away to avoid some encoding issues
 locale.setlocale(locale.LC_ALL, '')

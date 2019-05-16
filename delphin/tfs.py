@@ -14,6 +14,8 @@ compatibility.
 """
 
 from delphin.hierarchy import MultiHierarchy
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
 
 
 class FeatureStructure(object):

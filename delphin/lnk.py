@@ -58,6 +58,8 @@ if a character span is not specified for the entity).
 """
 
 from delphin.exceptions import PyDelphinException
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
 
 
 class LnkError(PyDelphinException):

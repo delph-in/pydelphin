@@ -95,6 +95,8 @@ import re
 from delphin.exceptions import PyDelphinSyntaxError
 from delphin.util import LookaheadIterator, parse_datetime
 from delphin import itsdb
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
 
 
 # CUSTOM EXCEPTIONS ###########################################################

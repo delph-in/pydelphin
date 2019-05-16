@@ -25,6 +25,8 @@ from delphin.codecs import (
     edsjson,
     eds)
 from delphin.util import SExpr
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
 
 
 class Processor(object):

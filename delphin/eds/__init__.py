@@ -24,6 +24,9 @@ from delphin.eds._operations import (
     find_predicate_modifiers,
     make_ids_unique
 )
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+
 
 __all__ = [
     'BOUND_VARIABLE_ROLE',

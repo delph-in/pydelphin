@@ -97,6 +97,9 @@ import weakref
 from delphin.exceptions import PyDelphinException
 from delphin.util import (safe_int, parse_datetime)
 from delphin.interface import FieldMapper
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+
 
 ##############################################################################
 # Module variables

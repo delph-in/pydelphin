@@ -20,6 +20,8 @@ from delphin.semi import SemI, load as load_semi
 from delphin import util
 from delphin.exceptions import PyDelphinException
 import delphin.codecs
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
 
 
 ###############################################################################

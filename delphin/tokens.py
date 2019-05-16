@@ -3,6 +3,9 @@ import re
 from collections import namedtuple
 
 from delphin.lnk import Lnk
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+
 
 _yy_token = namedtuple(
     'YYToken',
