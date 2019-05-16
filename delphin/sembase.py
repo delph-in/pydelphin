@@ -40,7 +40,7 @@ _COMMON_PROPERTIES = (
     'PERF',      # [e] perfective (ERG, Jacy)
     'ASPECT',    # [e] other aspect (Jacy)
     'PASS',      # [e] passive (Jacy)
-    )
+)
 
 _COMMON_PROPERTY_INDEX = dict((p, i) for i, p in enumerate(_COMMON_PROPERTIES))
 

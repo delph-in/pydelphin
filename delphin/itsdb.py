@@ -1329,6 +1329,8 @@ def _add_record(table, data, buffer_size):
 # Non-class (i.e. static) functions
 
 data_specifier_re = re.compile(r'(?P<table>[^:]+)?(:(?P<cols>.+))?$')
+
+
 def get_data_specifier(string):
     """
     Return a tuple (table, col) for some [incr tsdb()] data specifier.
@@ -1467,8 +1469,8 @@ def unescape(string):
     """
     # str.replace()... is about 3-4x faster than re.sub() here
     return (string
-            .replace('\\\\','\\')  # must be done first
-            .replace('\\n','\n')
+            .replace('\\\\', '\\')  # must be done first
+            .replace('\\n', '\n')
             .replace('\\s', FIELD_DELIMITER))
 
 
@@ -1620,11 +1622,20 @@ def select_rows(cols, rows, mode='list', cast=True):
     """
     mode = mode.lower()
     if mode == 'list':
-        modecast = lambda cols, data: data
+
+        def modecast(cols, data):
+            return data
+
     elif mode == 'dict':
-        modecast = lambda cols, data: dict(zip(cols, data))
+
+        def modecast(cols, data):
+            return dict(zip(cols, data))
+
     elif mode == 'row':
-        modecast = lambda cols, data: encode_row(data)
+
+        def modecast(cols, data):
+            return encode_row(data)
+
     else:
         raise ITSDBError('Invalid mode for select operation: {}\n'
                          '  Valid options include: list, dict, row'
@@ -1704,17 +1715,22 @@ def join(table1, table2, on=None, how='inner', name=None):
     """
     if how not in ('inner', 'left'):
         ITSDBError('Only \'inner\' and \'left\' join methods are allowed.')
+
     # validate and normalize the pivot
     on = _join_pivot(on, table1, table2)
     # the fields of the joined table
     fields = _RelationJoin(table1.fields, table2.fields, on=on)
+
     # get key mappings to the right side (useful for inner and left joins)
-    get_key = lambda rec: tuple(rec.get(k) for k in on)
+    def get_key(rec):
+        return tuple(rec.get(k) for k in on)
+
     key_indices = set(table2.fields.index(k) for k in on)
     right = defaultdict(list)
     for rec in table2:
         right[get_key(rec)].append([c for i, c in enumerate(rec)
                                     if i not in key_indices])
+
     # build joined table
     rfill = [f.default_value() for f in table2.fields if f.name not in on]
     joined = []

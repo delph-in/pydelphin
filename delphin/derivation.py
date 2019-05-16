@@ -96,6 +96,7 @@ _all_fields = tuple(
     .union(_udx_fields)
 )
 
+
 class _UDFNodeBase(object):
     """
     Base class for :class:`UDFNode` and :class:`UDFTerminal`.
@@ -106,7 +107,8 @@ class _UDFNodeBase(object):
     # for some reason != is not the opposite of __eq__ by default...
     def __ne__(self, other):
         eq = self.__eq__(other)
-        if eq is NotImplemented: return eq  # pass this one along
+        if eq is NotImplemented:
+            return eq  # pass this one along
         return not eq
 
     # serialization
@@ -210,14 +212,21 @@ def _map_labels(drv, labels):
 def _to_dict(obj, fields, labels):
     d = {}
     if isinstance(obj, UDFNode):
-        if 'entity' in fields: d['entity'] = obj.entity
+        if 'entity' in fields:
+            d['entity'] = obj.entity
         if obj.id is not None:
-            if 'id' in fields: d['id'] = obj.id
-            if 'score' in fields: d['score'] = obj.score
-            if 'start' in fields: d['start'] = obj.start
-            if 'end' in fields: d['end'] = obj.end
-            if 'type' in fields and obj.type: d['type'] = obj.type
-            if 'head' in fields and obj._head: d['head'] = obj._head
+            if 'id' in fields:
+                d['id'] = obj.id
+            if 'score' in fields:
+                d['score'] = obj.score
+            if 'start' in fields:
+                d['start'] = obj.start
+            if 'end' in fields:
+                d['end'] = obj.end
+            if 'type' in fields and obj.type:
+                d['type'] = obj.type
+            if 'head' in fields and obj._head:
+                d['head'] = obj._head
         dtrs = obj.daughters
         if dtrs:
             # terminals should always be single daughters
@@ -228,7 +237,8 @@ def _to_dict(obj, fields, labels):
                 d['daughters'] = [
                     _to_dict(dtr, fields, labels) for dtr in dtrs
                 ]
-        if obj.id in labels: d['label'] = labels[obj.id]
+        if obj.id in labels:
+            d['label'] = labels[obj.id]
     elif isinstance(obj, UDFTerminal):
         d['form'] = obj.form
         # d['from'] = min(t.tfs['+FROM'] for t in obj.tokens)
@@ -362,7 +372,8 @@ class UDFNode(_UDFNodeBase, namedtuple('UDFNode', _nonterminal_fields)):
             start = -1 if start is None else int(start)
             end = -1 if end is None else int(end)
         # for convenience make sure daughters is a list if None
-        if daughters is None: daughters = []
+        if daughters is None:
+            daughters = []
         # make sure daughters are not roots (is this check unnecessary?)
         if any(dtr.is_root() for dtr in daughters):
             raise ValueError('Daughter nodes cannot be roots.')
@@ -426,8 +437,8 @@ class UDFNode(_UDFNodeBase, namedtuple('UDFNode', _nonterminal_fields)):
         returned.
 
         """
-        if (self._head or self.is_root() or
-                len(getattr(self._parent, 'daughters', [None])) == 1):
+        if (self._head or self.is_root()
+                or len(getattr(self._parent, 'daughters', [None])) == 1):
             return True
         elif any(dtr._head for dtr in self._parent.daughters):
             return False
@@ -459,6 +470,7 @@ class UDFNode(_UDFNodeBase, namedtuple('UDFNode', _nonterminal_fields)):
                 nodes.extend(dtr.terminals())
         return nodes
 
+
 class Derivation(UDFNode):
     """
     A [incr tsdb()] derivation.
@@ -472,27 +484,27 @@ class Derivation(UDFNode):
     # note that this regex doesn't have the initial open-parenthesis
     # (see from_string())
     udf_re = re.compile(
-            # regular node
-            r'\s*(?P<id>{token})\s+(?P<entity>{string}|{token})'
-            r'\s+(?P<score>{token})\s+(?P<start>{token})'
-            r'\s+(?P<end>{token})\s*\('
-            # branch end
-            r'|\s*(?P<done>\))'
-            # terminal node (lexical token info; unbound list)
-            r'|\s*(?P<form>{string})'
-            # anything after form is optional
-            r'('
-            # LKB-style start/end (e.g. ("word" 1 2) )
-            r'\s+(?P<lkb_start>\d+)\s+(?P<lkb_end>\d+)'
-            # Token TFSs (e.g. ("word" 1 "token [ ... ]" 2 "token [... ]") )
-            # usually there's only one, though
-            r'|(?P<tokens>(?:\s+{token}\s+{string})*)'
-            r')?'
-            r'\s*\)'  # end terminal node
-            # root symbol
-            r'|\s*(?P<root>{token})\s*\(?'
-            .format(token=r'[^\s()]+', string=r'"[^"\\]*(?:\\.[^"\\]*)*"')
-        )
+        # regular node
+        r'\s*(?P<id>{token})\s+(?P<entity>{string}|{token})'
+        r'\s+(?P<score>{token})\s+(?P<start>{token})'
+        r'\s+(?P<end>{token})\s*\('
+        # branch end
+        r'|\s*(?P<done>\))'
+        # terminal node (lexical token info; unbound list)
+        r'|\s*(?P<form>{string})'
+        # anything after form is optional
+        r'('
+        # LKB-style start/end (e.g. ("word" 1 2) )
+        r'\s+(?P<lkb_start>\d+)\s+(?P<lkb_end>\d+)'
+        # Token TFSs (e.g. ("word" 1 "token [ ... ]" 2 "token [... ]") )
+        # usually there's only one, though
+        r'|(?P<tokens>(?:\s+{token}\s+{string})*)'
+        r')?'
+        r'\s*\)'  # end terminal node
+        # root symbol
+        r'|\s*(?P<root>{token})\s*\(?'
+        .format(token=r'[^\s()]+', string=r'"[^"\\]*(?:\\.[^"\\]*)*"')
+    )
 
     def __init__(self, id, entity,
                  score=None, start=None, end=None, daughters=None,
@@ -595,10 +607,12 @@ class Derivation(UDFNode):
         """
         return cls(*_from_dict(d))
 
+
 def _unquote(s):
     if s is not None:
         return re.sub(r'^"(.*)"$', r'\1', s)
     return None
+
 
 def _udf_tokens(tokenstring):
     tokens = []
@@ -611,6 +625,7 @@ def _udf_tokens(tokenstring):
         for tid, tfs in toks:
             tokens.append(UDFToken(tid, _unquote(tfs)))
     return tokens
+
 
 def _from_dict(d, parent=None):
     if 'daughters' in d:

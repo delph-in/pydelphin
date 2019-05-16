@@ -59,7 +59,7 @@ _max_inline_list_items = 3  # number of list items that may appear inline
 _line_width = 79  # try not to go beyond this number of characters
 
 
-### Exceptions
+# Exceptions
 
 class TDLError(PyDelphinException):
     """Raised when there is an error in processing TDL."""
@@ -73,7 +73,7 @@ class TDLWarning(PyDelphinWarning):
     """Raised when parsing unsupported TDL features."""
 
 
-### Classes for TDL entities
+# Classes for TDL entities
 
 class Term(object):
     """
@@ -165,14 +165,14 @@ class TypeIdentifier(TypeTerm):
     """
 
     def __eq__(self, other):
-        if (isinstance(other, TypeTerm) and
-                not isinstance(other, TypeIdentifier)):
+        if (isinstance(other, TypeTerm)
+                and not isinstance(other, TypeIdentifier)):
             return NotImplemented
         return self.lower() == other.lower()
 
     def __ne__(self, other):
-        if (isinstance(other, TypeTerm) and
-                not isinstance(other, TypeIdentifier)):
+        if (isinstance(other, TypeTerm)
+                and not isinstance(other, TypeIdentifier)):
             return NotImplemented
         return self.lower() != other.lower()
 
@@ -222,7 +222,8 @@ class AVM(FeatureStructure, Term):
         Term.__init__(self, docstring=docstring)
 
     @classmethod
-    def _default(cls): return AVM()
+    def _default(cls):
+        return AVM()
 
     def __setitem__(self, key, val):
         if not (val is None or isinstance(val, (Term, Conjunction))):
@@ -889,7 +890,7 @@ _tdl_lex_re = re.compile(
     |(:include)                      #  29  file inclusion
     |([^\s])                         #  30  unexpected
     '''.format(identifier=_identifier_pattern),
-    flags=re.VERBOSE|re.UNICODE)
+    flags=re.VERBOSE | re.UNICODE)
 
 
 # Parsing helper functions
@@ -1063,7 +1064,7 @@ def iterparse(source, encoding='utf-8'):
         >>> for event, obj, lineno in tdl.iterparse('erg/lexicon.tdl'):
         ...     if event == 'TypeDefinition':
         ...         lex[obj.identifier] = obj
-        ... 
+        ...
         >>> lex['eucalyptus_n1']['SYNSEM.LKEYS.KEYREL.PRED']
         <String object (_eucalyptus_n_1_rel) at 140625748595960>
     """
@@ -1379,7 +1380,7 @@ def _parse_tdl_include(tokens):
     return FileInclude(path)
 
 
-### Serialization helpers
+# Serialization helpers
 
 def format(obj, indent=0):
     """
@@ -1442,10 +1443,20 @@ def _format_term(term, indent):
         return fmt(term, indent)
 
 
-def _format_id(term, indent): return str(term)
-def _format_string(term, indent): return '"{!s}"'.format(term)
-def _format_regex(term, indent): return '^{!s}$'.format(term)
-def _format_coref(term, indent): return '#{!s}'.format(term)
+def _format_id(term, indent):
+    return str(term)
+
+
+def _format_string(term, indent):
+    return '"{!s}"'.format(term)
+
+
+def _format_regex(term, indent):
+    return '^{!s}$'.format(term)
+
+
+def _format_coref(term, indent):
+    return '#{!s}'.format(term)
 
 
 def _format_avm(avm, indent):
@@ -1476,8 +1487,8 @@ def _format_conslist(cl, indent):
 
     if not values:  # only if no values and terminated
         return '< >'
-    elif (len(values) <= _max_inline_list_items and
-          sum(len(v) + 2 for v in values) + 2 + indent <= _line_width):
+    elif (len(values) <= _max_inline_list_items
+          and sum(len(v) + 2 for v in values) + 2 + indent <= _line_width):
         return '< {} >'.format(', '.join(values) + end)
     else:
         i = ' ' * (indent + 2)  # 2 = len('< ')
@@ -1491,8 +1502,8 @@ def _format_difflist(dl, indent):
               for val in dl.values()]
     if not values:
         return '<! !>'
-    elif (len(values) <= _max_inline_list_items and
-          sum(len(v) + 2 for v in values) + 4 + indent <= _line_width):
+    elif (len(values) <= _max_inline_list_items
+          and sum(len(v) + 2 for v in values) + 4 + indent <= _line_width):
         return '<! {} !>'.format(', '.join(values))
     else:
         # i = ' ' * (indent + 3)  # 3 == len('<! ')
@@ -1613,6 +1624,7 @@ def _format_environment(env, indent):
         contents += '\n'
     return '{0}:begin {1}{2}.\n{3}{0}:end {1}.'.format(
         ' ' * indent, envtype, status, contents)
+
 
 def _format_include(fi, indent):
     return '{}:include "{}".'.format(' ' * indent, fi.path)

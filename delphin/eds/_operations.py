@@ -31,7 +31,7 @@ def from_mrs(m, predicate_modifiers=False, unique_ids=True):
     Returns:
         EDS
     Raises:
-        EDSError when conversion fails.
+        EDSError: when conversion fails.
     """
     # EP id to node id map; create now to keep ids consistent
     hcmap = {hc.hi: hc for hc in m.hcons}

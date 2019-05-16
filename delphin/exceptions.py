@@ -35,5 +35,6 @@ class PyDelphinSyntaxError(PyDelphinException):
         elif parts:
             parts[-1] += ', character {}'.format(self.offset)
         if self.message is not None:
-            parts.append('{}: {}'.format(self.__class__.__name__, self.message))
+            parts.append('{}: {}'.format(self.__class__.__name__,
+                                         self.message))
         return '\n'.join(parts)

@@ -80,9 +80,9 @@ In PyDelphin, there are three classes for modeling this information:
 
 .. autoclass:: delphin.itsdb.Relations
   :members:
-.. autoclass:: delphin.itsdb.Relation
+.. autoclass:: delphin.itsdb.Relation(name, fields)
   :members:
-.. autoclass:: delphin.itsdb.Field
+.. autoclass:: delphin.itsdb.Field(name, datatype, key=False, partial=False, comment=None)
   :members:
 
 Utility Functions

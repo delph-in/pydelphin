@@ -39,7 +39,8 @@ class FeatureStructure(object):
             self[feat] = val
 
     @classmethod
-    def _default(cls): return cls(None)
+    def _default(cls):
+        return cls(None)
 
     def __repr__(self):
         return '<{} object at {}>'.format(self.__class__.__name__, id(self))

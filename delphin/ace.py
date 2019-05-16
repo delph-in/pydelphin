@@ -56,7 +56,7 @@ many items to process, it is more efficient to use
 :func:`parse_from_iterable`, :func:`transfer_from_iterable`, or
 :func:`generate_from_iterable` than the single-item versions, or to
 interact with the :class:`ACEProcess` subclass instances directly.
-"""
+""" # noqa
 
 import logging
 import os

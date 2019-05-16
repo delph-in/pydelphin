@@ -593,7 +593,7 @@ class SemI(object):
                 break
         if found is False:
             raise SemIError('no valid synopsis for {}({})'
-                            .format(predicate, ', '.join(variables or [])))
+                            .format(predicate, repr(args) if args else ''))
         return found
 
 

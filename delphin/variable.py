@@ -55,7 +55,7 @@ import re
 
 from delphin import hierarchy
 
-### Default variable types
+# Default variable types
 
 hierarchy = hierarchy.MultiHierarchy(
     '*top*',
@@ -66,14 +66,14 @@ hierarchy = hierarchy.MultiHierarchy(
      'e': 'i',
      'x': ('i', 'p')})
 
-UNKNOWN            = 'u' # also 'unspecific' or 'unbound'
+UNKNOWN            = 'u'  # also 'unspecific' or 'unbound'
 INDIVIDUAL         = 'i'
 INSTANCE_OR_HANDLE = 'p'
 EVENTUALITY        = 'e'
 INSTANCE           = 'x'
 HANDLE             = 'h'
 
-### Functions
+# Functions
 
 variable_re = re.compile(r'^([-\w]*[^\s\d])(\d+)$')
 

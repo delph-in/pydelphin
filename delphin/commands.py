@@ -321,10 +321,11 @@ def mkprof(destination, source=None, relations=None, where=None,
                 dts.write({table: []})
 
     # summarize what was done
-    if sys.stdout.isatty():
-        _red = lambda s: '\x1b[1;31m{}\x1b[0m'.format(s)
-    else:
-        _red = lambda s: s
+    isatty = sys.stdout.isatty()
+
+    def _red(s):
+        return '\x1b[1;31m{}\x1b[0m'.format(s) if isatty else s
+
     fmt = '{:>8} bytes\t{}'
     for filename in ['relations'] + list(dts.relations.tables):
         path = destination.joinpath(filename)
@@ -512,7 +513,7 @@ def _repp(r, line, format, trace_level):
             if not hasattr(step, 'applied'):
                 print('Done:{}'.format(step.string))
                 continue
-            if step.applied == True or trace_level > 1:
+            if step.applied or trace_level > 1:
                 print('{}:{!s}\n   In:{}\n  Out:{}'.format(
                     'Applied' if step.applied else 'Did not apply',
                     step.operation, step.input, step.output))

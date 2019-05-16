@@ -48,6 +48,7 @@ def load(source, semi=None):
         with source.open('r') as fh:
             return _load(fh, semi)
 
+
 def _load(fh, semi):
     filename = getattr(fh, 'name', '<stream>')
     typemap = []
@@ -183,12 +184,13 @@ def _valmatch(vs, ss, op, varsort, semi, section):
     """
     if op in _EQUAL_OPS or semi is None:
         return all(
-            s == v or  # value equality
-            (s == '*' and v is not None) or  # non-null wildcard
-            (
-                v is None and (  # value is null (any or with matching varsort)
-                    s == '!' or
-                    (s[0], s[-1], s[1:-1]) == ('[', ']', varsort)
+            s == v  # value equality
+            or (s == '*' and v is not None)  # non-null wildcard
+            or (
+                v is None
+                and (  # value is null (any or with matching varsort)
+                    s == '!'
+                    or (s[0], s[-1], s[1:-1]) == ('[', ']', varsort)
                 )
             )
             for v, s in zip(vs, ss)

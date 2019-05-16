@@ -11,7 +11,7 @@ delphin.scope
       :show-inheritance:
       :members:
 
-   .. autoclass:: UnderspecifiedScope
+   .. autoclass:: UnderspecifiedScope(ids, lheqs=None, qeqs=None)
       :members:
 
    Module Functions

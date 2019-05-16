@@ -58,6 +58,7 @@ class REPPResult(namedtuple(
         endmap (:py:class:`array`): integer array of end offsets
     """
 
+
 class _REPPOperation(object):
     """
     The supertype of REPP groups and rules.
@@ -182,7 +183,8 @@ class _REPPRule(_REPPOperation):
 
 class _REPPGroup(_REPPOperation):
     def __init__(self, operations=None, name=None):
-        if operations is None: operations = []
+        if operations is None:
+            operations = []
         self.operations = operations
         self.name = name
 
@@ -297,15 +299,15 @@ class REPP(object):
 
         # TODO: can TDL parsing be repurposed for this variant?
         conf = path.read_text(encoding='utf-8')
-        conf = re.sub(r';.*', '', conf).replace('\n',' ')
+        conf = re.sub(r';.*', '', conf).replace('\n', ' ')
         m = re.search(
             r'repp-modules\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.', conf)
         t = re.search(
             r'repp-tokenizer\s*:=\s*([-\w]+)\s*\.', conf)
         a = re.search(
             r'repp-calls\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.', conf)
-        f = re.search(
-            r'format\s*:=\s*(\w+)\s*\.', conf)
+        # f = re.search(
+        #     r'format\s*:=\s*(\w+)\s*\.', conf)
         d = re.search(
             r'repp-directory\s*:=\s*(.*)\.\s*$', conf)
 
@@ -314,10 +316,10 @@ class REPP(object):
         if t is None:
             raise REPPError('repp-tokenizer option must be set')
 
-        mods = m.group(1).split()
+        # mods = m.group(1).split()
         tok = t.group(1).strip()
         active = a.group(1).split() if a is not None else None
-        fmt = f.group(1).strip() if f is not None else None
+        # fmt = f.group(1).strip() if f is not None else None
 
         if directory is None:
             if d is not None:
@@ -512,10 +514,12 @@ def _tokenize(result, pattern):
                      s[pos:]))
     return toks
 
+
 def _repp_lines(path):
     if not path.is_file():
         raise REPPError('REPP file not found: {!s}'.format(path))
     return path.read_text(encoding='utf-8').splitlines()
+
 
 def _parse_repp(lines, r, directory):
     ops = list(_parse_repp_group(lines, r, directory))
@@ -523,6 +527,7 @@ def _parse_repp(lines, r, directory):
         raise REPPError('Unexpected termination; maybe the # operator '
                         'appeared without an internal group.')
     r.group.operations.extend(ops)
+
 
 def _parse_repp_group(lines, r, directory):
     igs = {}  # internal groups

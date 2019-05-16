@@ -56,10 +56,10 @@ delphin.semi
     .. automethod:: from_dict
     .. automethod:: to_dict
 
-  .. autoclass:: Synopsis
+  .. autoclass:: Synopsis(roles)
      :members:
 
-  .. autoclass:: SynopsisRole
+  .. autoclass:: SynopsisRole(name, value, properties=None, optional=False)
 
   Exceptions and Warnings
   -----------------------

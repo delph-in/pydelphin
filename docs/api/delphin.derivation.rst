@@ -31,8 +31,8 @@ delphin.derivation
   ------------------
 
   There are three different node Types
-  
-  .. autoclass:: UDFNode
+
+  .. autoclass:: UDFNode(id, entity, score=None, start=None, end=None, daughters=None, head=None, type=None, parent=None)
     :members:
 
     .. py:attribute:: id
@@ -68,7 +68,7 @@ delphin.derivation
     .. automethod:: to_udx
     .. automethod:: to_dict
 
-  .. autoclass:: UDFTerminal
+  .. autoclass:: UDFTerminal(form, tokens=None, parent=None)
     :members:
 
     .. py:attribute:: form
@@ -84,7 +84,7 @@ delphin.derivation
     .. automethod:: to_udx
     .. automethod:: to_dict
 
-  .. autoclass:: UDFToken
+  .. autoclass:: UDFToken(id, tfs)
     :members:
 
     .. py:attribute:: id

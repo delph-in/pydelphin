@@ -44,11 +44,11 @@ def call_convert(args):
     if args.list:
         _list_codecs(args.verbosity > 1)
     else:
-        color = (args.color == 'always' or
-                 (args.color == 'auto' and sys.stdout.isatty()))
+        color = (args.color == 'always'
+                 or (args.color == 'auto' and sys.stdout.isatty()))
         if color:
             try:
-                import pygments
+                import pygments  # noqa: F401
             except ImportError:
                 warnings.warn(
                     'Pygments is not installed; '

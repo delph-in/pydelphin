@@ -90,7 +90,6 @@ PyDelphin also adds some features to standard TSQL:
 """
 
 import operator
-import copy
 import re
 
 from delphin.exceptions import PyDelphinSyntaxError
@@ -98,13 +97,13 @@ from delphin.util import LookaheadIterator, parse_datetime
 from delphin import itsdb
 
 
-### CUSTOM EXCEPTIONS #########################################################
+# CUSTOM EXCEPTIONS ###########################################################
 
 class TSQLSyntaxError(PyDelphinSyntaxError):
     """Raised when encountering an invalid TSQL query."""
 
 
-### QUERY INSPECTION ##########################################################
+# QUERY INSPECTION ############################################################
 
 def inspect_query(query):
     """
@@ -122,7 +121,8 @@ def inspect_query(query):
     """
     return _parse_query(query)
 
-### QUERY PROCESSING ##########################################################
+
+# QUERY PROCESSING ############################################################
 
 def query(query, ts, **kwargs):
     """
@@ -152,8 +152,8 @@ def query(query, ts, **kwargs):
     else:
         # not really a syntax error; replace with TSQLError or something
         # when the proper exception class exists
-        raise TSQLSyntaxError(queryobj['querytype'] +
-                              ' queries are not supported')
+        raise TSQLSyntaxError(queryobj['querytype']
+                              + ' queries are not supported')
 
 
 def select(query, ts, mode='list', cast=True):
@@ -230,9 +230,11 @@ def _select_where(condition, table, ts):
         for record in filter(func, tmptable):
             idtuple = tuple(record[key] for key in keys)
             ids.add(idtuple)
+
         # check if a matching idtuple was retained
         def meta_condition(rec):
             return tuple(rec[key] for key in keys) in ids
+
         table[:] = filter(meta_condition, table)
     return table
 
@@ -257,22 +259,35 @@ def _process_condition(condition):
             fields.extend(_fields)
             conditions.append(_func)
         _func = all if op == 'and' else any
+
         def func(row):
             return _func(cond(row) for cond in conditions)
+
     elif op == 'not':
         nfunc, fields = _process_condition(body)
-        func = lambda row, nfunc=nfunc: not nfunc(row)
+
+        def func(row):
+            return not nfunc(row)
+
     elif op == '~':
         fields = [body[0]]
-        func = lambda row, body=body: re.search(body[1], row[body[0]])
+
+        def func(row):
+            return re.search(body[1], row[body[0]])
+
     elif op == '!~':
         fields = [body[0]]
-        func = lambda row, body=body: not re.search(body[1], row[body[0]])
+
+        def func(row):
+            return not re.search(body[1], row[body[0]])
+
     else:
         fields = [body[0]]
         compare = _operator_functions[op]
+
         def func(row):
             return compare(row.get(body[0], cast=True), body[1])
+
     return func, fields
 
 
@@ -301,7 +316,7 @@ def _transitive_join(tab1, tab2, ts, how):
     return table
 
 
-### QUERY PARSING #############################################################
+# QUERY PARSING ###############################################################
 
 _keywords = list(map(re.escape,
                      ('info', 'set', 'retrieve', 'select', 'insert',
@@ -333,7 +348,7 @@ _tsql_lex_re = re.compile(
                t=r'\s*\([0-9]{2}:[0-9]{2}(?::[0-9]{2})?\)',
                tt=r'\s+[0-9]{2}:[0-9]{2}(?::[0-9]{2})',
                id=r'[a-zA-Z][-_a-zA-Z0-9]*'),
-    flags=re.VERBOSE|re.IGNORECASE)
+    flags=re.VERBOSE | re.IGNORECASE)
 
 
 def _lex(s):
@@ -345,7 +360,7 @@ def _lex(s):
     """
     s += '.'  # make sure there's a terminator to know when to stop parsing
     lines = enumerate(s.splitlines(), 1)
-    lineno = pos = 0
+    lineno = 0
     try:
         for lineno, line in lines:
             matches = _tsql_lex_re.finditer(line)

@@ -17,6 +17,9 @@ delphin.sembase
       :show-inheritance:
       :members:
 
+   .. autoclass:: Constraint(lhs, relation, rhs)
+      :members:
+
    .. autoclass:: SemanticStructure
       :show-inheritance:
       :members:

@@ -59,8 +59,6 @@ the server (e.g. LaTeX output), the original string would be returned
 by these methods (i.e. the same as via dict-access).
 """
 
-import json
-
 import requests
 from urllib.parse import urljoin
 
@@ -77,8 +75,10 @@ class _HTTPResponse(interface.Response):
     def __getitem__(self, key):
         if key == 'tokens' and ('initial' in self or 'internal' in self):
             d = {}
-            if 'initial' in self: d['initial'] = self['initial']
-            if 'internal' in self: d['internal'] = self['internal']
+            if 'initial' in self:
+                d['initial'] = self['initial']
+            if 'internal' in self:
+                d['internal'] = self['internal']
             return d
         else:
             return super().__getitem__(self, key)

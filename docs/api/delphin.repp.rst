@@ -10,10 +10,10 @@ delphin.repp
    .. autoclass:: REPP
       :members:
 
-   .. autoclass:: REPPResult
+   .. autoclass:: REPPResult(string, startmap, endmap)
       :members:
 
-   .. autoclass:: REPPStep
+   .. autoclass:: REPPStep(input, output, operation, applied, startmap, endmap)
       :members:
 
    Exceptions

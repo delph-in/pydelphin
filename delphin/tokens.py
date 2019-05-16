@@ -196,7 +196,8 @@ class YYTokenLattice(object):
     def __eq__(self, other):
         if not isinstance(other, YYTokenLattice):
             return NotImplemented
-        if (len(self.tokens) == len(other.tokens) and
-                all(t1 == t2 for t1, t2 in zip(self.tokens, other.tokens))):
+        if (len(self.tokens) == len(other.tokens)
+            and all(t1 == t2 for t1, t2
+                    in zip(self.tokens, other.tokens))):
             return True
         return False
