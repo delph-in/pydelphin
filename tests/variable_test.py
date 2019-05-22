@@ -3,6 +3,7 @@ import pytest
 
 from delphin import variable
 
+
 def test_split():
     assert variable.split('x1') == ('x', '1')
     assert variable.split('event10') == ('event', '10')
@@ -34,11 +35,11 @@ def test_id():
 
 
 def test_is_valid():
-    assert variable.is_valid('h3') == True
-    assert variable.is_valid('ref-ind12') == True
-    assert variable.is_valid('x') == False
-    assert variable.is_valid('1') == False
-    assert variable.is_valid('x 1') == False
+    assert variable.is_valid('h3')
+    assert variable.is_valid('ref-ind12')
+    assert not variable.is_valid('x')
+    assert not variable.is_valid('1')
+    assert not variable.is_valid('x 1')
 
 
 class TestVariableFactory():
@@ -60,4 +61,3 @@ class TestVariableFactory():
         assert v == 'e2'
         assert vf.vid == 3
         assert len(vf.store['e2']) == 1
-

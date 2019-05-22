@@ -7,25 +7,6 @@ delphin.variable
    Module Constants
    ----------------
 
-   .. data:: hierarchy
-
-      A :class:`delphin.tfs.TypeHierarchy` object containing the
-      standard variable type hierarchy. While the most accurate
-      variable type hierarchy for a particular grammar is obtained via
-      its SEM-I (see :mod:`delphin.semi`), in practice the standard
-      hierarchy given here is used by all DELPH-IN grammars. The
-      hierarchy in TDL would look like this (with an ASCII rendering
-      in comments on the right):
-
-      .. code-block:: tdl
-
-         u := *top*.  ;     u
-         i := u.      ;    / \\
-         p := u.      ;   i   p
-         e := i.      ;  / \ / \\
-         x := i & p.  ; e   x   h
-         h := p.
-
    .. data:: UNSPECIFIC
 
       `u` -- The unspecific (or unbound) top-level variable type.

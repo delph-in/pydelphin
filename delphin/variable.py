@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 
-"""
+r"""
 Functions for working with MRS variables.
 
 This module contains functions to inspect the type and identifier of
 variables (:func:`split`, :func:`type`, :func:`id`) and check if a
 variable string is well-formed (:func:`is_valid`). It additionally has
-constants for the standard variable types (:data:`UNSPECIFIC`,
+constants for the standard variable types: :data:`UNSPECIFIC`,
 :data:`INDIVIDUAL`, :data:`INSTANCE_OR_HANDLE`, :data:`EVENTUALITY`,
-:data:`INSTANCE`, and :data:`HANDLE`) and hierarchy
-(:data:`hierarchy`). Finally, the :class:`VariableFactory` class may
-be useful for tasks like DMRS to MRS conversion for managing the
-creation of new variables.
+:data:`INSTANCE`, and :data:`HANDLE`. Finally, the
+:class:`VariableFactory` class may be useful for tasks like DMRS to
+MRS conversion for managing the creation of new variables.
 
 Variables in MRS
 ----------------
@@ -49,25 +48,37 @@ The form of MRS variables is the concatenation of a variable *type*
 type `e` and id `2` form the variable `e2`. Generally in MRS the
 variable ids, regardless of the type, are unique, so for instance one
 would not see `x2` and `e2` in the same structure.
+
+The variable types are arranged in a hierarchy. While the most
+accurate variable type hierarchy for a particular grammar is obtained
+via its SEM-I (see :mod:`delphin.semi`), in practice the standard
+hierarchy given below is used by all DELPH-IN grammars. The hierarchy
+in TDL would look like this (with an ASCII rendering in comments on
+the right):
+
+.. code-block:: tdl
+
+   u := *top*.  ;     u
+   i := u.      ;    / \
+   p := u.      ;   i   p
+   e := i.      ;  / \ / \
+   x := i & p.  ; e   x   h
+   h := p.
+
+In PyDelphin the equivalent hierarchy could be created as follows:
+
+>>> from delphin import hierarchy
+>>> h = hierarchy.MultiHierarchy(
+...     '*top*',
+...     {'u': '*top*', 'i': 'u', 'p': 'u', 'e': 'i', 'x': 'i p', 'h': 'p'}
+... )
 """
 
 import re
 
-from delphin import hierarchy
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
-
-# Default variable types
-
-hierarchy = hierarchy.MultiHierarchy(
-    '*top*',
-    {'u': '*top*',
-     'i': 'u',
-     'p': 'u',
-     'h': 'p',
-     'e': 'i',
-     'x': ('i', 'p')})
 
 UNSPECIFIC         = 'u'  # also 'unbound'; previously 'unknown'
 INDIVIDUAL         = 'i'
@@ -76,9 +87,10 @@ EVENTUALITY        = 'e'
 INSTANCE           = 'x'
 HANDLE             = 'h'
 
+
 # Functions
 
-variable_re = re.compile(r'^([-\w]*[^\s\d])(\d+)$')
+_variable_re = re.compile(r'^([-\w]*[^\s\d])(\d+)$')
 
 
 def split(var):
@@ -91,7 +103,7 @@ def split(var):
         >>> variable.split('ref-ind12')
         ('ref-ind', '12')
     """
-    match = variable_re.match(var)
+    match = _variable_re.match(var)
     if match is None:
         raise ValueError('Invalid variable string: {}'.format(str(var)))
     else:
@@ -141,7 +153,7 @@ def is_valid(var):
         >>> variable.is_valid('x')
         False
     """
-    return variable_re.match(var) is not None
+    return _variable_re.match(var) is not None
 
 
 class VariableFactory(object):
