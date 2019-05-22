@@ -22,10 +22,13 @@ For bug requests, please provide the following, if possible:
 
   ```python
   >>> from delphin.__about__ import __version__
-  >>> __version__
-  '0.9.2'
+  >>> __version__  # distribution version
+  '1.0.0'
+  >>> from delphin import mrs
+  >>> mrs.__version__  # package version
+  '1.0.0'
   ```
-* Python version (e.g. 2.7, 3.4, etc.)
+* Python version (e.g. 3.5, 3.6, etc.)
 
 For feature requests, please provide a use case for the feature.
 
@@ -44,9 +47,9 @@ Please follow these guidelines for code and repository changes:
   http://moin.delph-in.net/; if a wiki doesn't exist, it's a good idea
   to make one), and secondly convenient. Avoid adding features that
   aren't part of the spec and would have limited utility.
-* PyDelphin is a library, not an application, so application code
-  belongs in separate repositories. See [gTest][] and [bottlenose][] for
-  examples of applications utilizing PyDelphin.
+* PyDelphin is primarily a library, not an application, so application
+  code in general belongs in separate repositories. Applications can,
+  however, make use of the `delphin` namespace.
 * API documentation is generated from the code and uses docstrings, so
   provide descriptive docstrings for all modules, classs, methods, and
   functions. Follow [Google-style docstrings][] and use
@@ -54,26 +57,31 @@ Please follow these guidelines for code and repository changes:
 
 ### Testing
 
-Always run the unit tests before committing.
+Always run the unit tests before committing. You can use a tool like
+[Tox](https://testrun.org/tox/latest/) with a minimal config like
+this:
 
-    tox
+    [tox]
+    envlist = py35,py36,py37
 
-[Tox](https://testrun.org/tox/latest/) must be installed, along with
-Python versions 2.7, 3.4, 3.5, and 3.6. It creates a virtual environment
-in order to run the tests, which helps avoid missing dependencies. For
-basic unit testing, you may install [pytest](http://pytest.org/) and
-run:
+    [testenv]
+    deps = pytest
+    commands = pytest
 
-    py.test
+But this config is no longer distributed with PyDelphin. To run the
+tests without tox, then for each supported Python version:
 
-But be sure to test against all versions with `tox` prior to committing.
+ - create a virtual environment and activate it
+ - `pip install -e .[test]` (from the PyDelphin directory)
+ - `pytest` (maybe `py.test` depending on your system)
+
 
 ### Test Coverage
 
 Compute test coverage by installing
 [pytest-cov](https://github.com/pytest-dev/pytest-cov) and running:
 
-    py.test --cov-report=html --cov=delphin
+    pytest --cov-report=html --cov=delphin
 
 Note that the codebase doesn't yet have full test coverage.
 Contributions of unit tests are very welcome!
@@ -81,17 +89,18 @@ Contributions of unit tests are very welcome!
 ## Documentation
 
 The documentation resides in the `docs/` subdirectory, which contains
-all content for the tutorials and some content for the API reference.
-The bulk of the content for the API reference is in the docstrings of
-the modules, classes, and functions of the code itself. Therefore, all
-*public* modules, classes, methods, and functions should have
-docstrings and should not have a name with a leading underscore, as
-otherwise they will not appear in the documentation.
+all content for the guides and some structural content for the API
+reference. The bulk of the content for the API reference is in the
+docstrings of the modules, classes, and functions of the code
+itself. Therefore, all *public* modules, classes, methods, and
+functions should have docstrings and should not have a name with a
+leading underscore, as otherwise they will not appear in the
+documentation.
 
 The API reference and tutorials are written in [reStructuredText][]
 and generated using [Sphinx][] on the [Read the Docs][] service.
 Repository files, such as the README, CHANGELOG, and CONTRIBUTING
-fies, are written in [Markdown][].
+files, are written in [Markdown][].
 
 For instructions on building the documentation, see [docs/](docs).
 Do not check in the generated documentation files (e.g., `*.html`);
@@ -107,13 +116,13 @@ Do the following tasks prior to releasing on GitHub and PyPI.
 - [ ] Make the release commit on `develop` branch
   - [ ] Update `CHANGELOG.md`
   - [ ] Update `README.md` (contributors, requirements, etc.) if necessary
-  - [ ] Ensure tests pass: `tox`
+  - [ ] Ensure tests pass
   - [ ] Ensure the documentation builds without error (see above)
   - [ ] Bump the version in `delphin/__about__.py`
   - [ ] commit
   - [ ] push
 - [ ] Merge to master
-  - [ ] Test again: `tox`
+  - [ ] Test again
   - [ ] push
 - [ ] Create a source distribution: `setup.py sdist`
 - [ ] Build a wheel distribution: `setup.py bdist_wheel --universal`
@@ -123,10 +132,6 @@ Do the following tasks prior to releasing on GitHub and PyPI.
 
 [issues]: https://github.com/delph-in/pydelphin/issues
 [milestones]: https://github.com/delph-in/pydelphin/milestones
-[gTest]: https://github.com/goodmami/gtest
-[bottlenose]: https://github.com/delph-in/bottlenose
-[CartogrAPI]: https://github.com/goodmami/cartograpi
-[RenderDown]: https://github.com/goodmami/renderdown
 [Google-style docstrings]: https://google.github.io/styleguide/pyguide.html?showone=Comments#Comments
 [Sphinx]: http://www.sphinx-doc.org/
 [reStructuredText]: http://docutils.sourceforge.net/
