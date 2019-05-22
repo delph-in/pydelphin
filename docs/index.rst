@@ -24,6 +24,7 @@ PyDelphin
   guides/ace.rst
   guides/commands.rst
   guides/itsdb.rst
+  guides/developer.rst
 
 .. toctree::
   :maxdepth: 1
