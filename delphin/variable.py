@@ -6,7 +6,7 @@ Functions for working with MRS variables.
 This module contains functions to inspect the type and identifier of
 variables (:func:`split`, :func:`type`, :func:`id`) and check if a
 variable string is well-formed (:func:`is_valid`). It additionally has
-constants for the standard variable types (:data:`UNKNOWN`,
+constants for the standard variable types (:data:`UNSPECIFIC`,
 :data:`INDIVIDUAL`, :data:`INSTANCE_OR_HANDLE`, :data:`EVENTUALITY`,
 :data:`INSTANCE`, and :data:`HANDLE`) and hierarchy
 (:data:`hierarchy`). Finally, the :class:`VariableFactory` class may
@@ -69,7 +69,7 @@ hierarchy = hierarchy.MultiHierarchy(
      'e': 'i',
      'x': ('i', 'p')})
 
-UNKNOWN            = 'u'  # also 'unspecific' or 'unbound'
+UNSPECIFIC         = 'u'  # also 'unbound'; previously 'unknown'
 INDIVIDUAL         = 'i'
 INSTANCE_OR_HANDLE = 'p'
 EVENTUALITY        = 'e'
@@ -176,7 +176,7 @@ class VariableFactory(object):
             A (variable, properties) tuple
         """
         if type is None:
-            type = UNKNOWN
+            type = UNSPECIFIC
         # find next available vid
         vid, index = self.vid, self.index
         while vid in index:

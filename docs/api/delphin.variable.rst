@@ -26,7 +26,7 @@ delphin.variable
          x := i & p.  ; e   x   h
          h := p.
 
-   .. data:: UNKNOWN
+   .. data:: UNSPECIFIC
 
       `u` -- The unspecific (or unbound) top-level variable type.
 

@@ -298,7 +298,7 @@ def _encode_node(node, properties, lnk):
 
     if properties and (node.properties or node.type):
         parts.append('{')
-        parts.append(node.type or variable.UNKNOWN)
+        parts.append(node.type or variable.UNSPECIFIC)
         if node.properties:
             proplist = ['{} {}'.format(prop, node.properties[prop])
                         for prop in sorted(node.properties,
