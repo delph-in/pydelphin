@@ -101,8 +101,11 @@ def call_select(args):
         args.TESTSUITE,
         mode='row',
         cast=False)
-    for row in rows:
-        print(row)
+    try:
+        for row in rows:
+            print(row)
+    except (BrokenPipeError):
+        logging.info('broken pipe')
 
 
 def call_mkprof(args):
