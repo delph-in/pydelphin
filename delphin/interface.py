@@ -9,24 +9,23 @@ remote services like the `DELPH-IN Web API
 <http://moin.delph-in.net/ErgApi>`_, and user code or storage
 backends, namely [incr tsdb()] :doc:`test suites <delphin.itsdb>`. An
 interface sends requests to a provider, then receives and interprets
-the response. The interface may also detect and deserialize supported
-DELPH-IN formats.
+the response.
+
+The interface may also detect and deserialize supported DELPH-IN
+formats if the appropriate modules are available.
 """
 
 from collections import Sequence
 from datetime import datetime
 
-from delphin import derivation
-from delphin import tokens
-from delphin.codecs import (
-    mrsjson,
-    simplemrs,
-    dmrsjson,
-    edsjson,
-    eds)
-from delphin.util import SExpr
+from delphin import util
+from delphin import exceptions
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
+
+
+class InterfaceError(exceptions.PyDelphinException):
+    """Raised on invalid interface operations."""
 
 
 class Processor(object):
@@ -80,27 +79,42 @@ class Result(dict):
 
     def derivation(self):
         """
-        Deserialize and return a Derivation object for UDF- or
-        JSON-formatted derivation data; otherwise return the original
-        string.
+        Interpret and return a Derivation object.
+
+        If :mod:`delphin.derivation` is available and the value of the
+        `derivation` key in the result dictionary is a valid UDF
+        string or a dictionary, return the interpeted
+        Derivation object. If there is no 'derivation' key in the
+        result, return `None`.
+
+        Raises:
+            InterfaceError: when the value is an unsupported type or
+                :mod:`delphin.derivation` is unavailable
         """
         drv = self.get('derivation')
-        if drv is not None:
+        try:
+            from delphin import derivation
             if isinstance(drv, dict):
                 drv = derivation.from_dict(drv)
             elif isinstance(drv, str):
                 drv = derivation.from_string(drv)
+            elif drv is not None:
+                raise TypeError(drv.__class__.__name__)
+        except (ImportError, TypeError) as exc:
+            raise InterfaceError('can not get Derivation object') from exc
         return drv
 
     def tree(self):
         """
-        Deserialize and return a labeled syntax tree. The tree data
-        may be a standalone datum, or embedded in the derivation.
+        Interpret and return a labeled syntax tree.
+
+        The tree data may be a standalone datum, or embedded in a
+        derivation.
         """
         tree = self.get('tree')
 
         if isinstance(tree, str):
-            tree = SExpr.parse(tree).data
+            tree = util.SExpr.parse(tree).data
 
         elif tree is None:
             drv = self.get('derivation')
@@ -121,39 +135,82 @@ class Result(dict):
 
     def mrs(self):
         """
-        Deserialize and return an Mrs object for simplemrs or
-        JSON-formatted MRS data; otherwise return the original string.
+        Interpret and return an MRS object.
+
+        If :mod:`delphin.codecs.simplemrs` is available and the value
+        of the `mrs` key in the result is a valid SimpleMRS string, or
+        if :mod:`delphin.codecs.mrsjson` is available and the value is
+        a dictionary, return the interpreted MRS object. If there is
+        no `mrs` key in the result, return `None`.
+
+        Raises:
+            InterfaceError: when the value is an unsupported type or
+                the corresponding module is unavailable
         """
         mrs = self.get('mrs')
-        if mrs is not None:
+        try:
             if isinstance(mrs, dict):
+                from delphin.codecs import mrsjson
                 mrs = mrsjson.from_dict(mrs)
             elif isinstance(mrs, str):
+                from delphin.codecs import simplemrs
                 mrs = simplemrs.decode(mrs)
+            elif mrs is not None:
+                raise TypeError(mrs.__class__.__name__)
+        except (ImportError, TypeError) as exc:
+            raise InterfaceError('can not get MRS object') from exc
         return mrs
 
     def eds(self):
         """
-        Deserialize and return an Eds object for native- or
-        JSON-formatted EDS data; otherwise return the original string.
+        Interpret and return an Eds object.
+
+        If :mod:`delphin.codecs.eds` is available and the value of the
+        `eds` key in the result is a valid "native" EDS serialization,
+        or if :mod:`delphin.codecs.edsjson` is available and the value
+        is a dictionary, return the interpreted EDS object. If there
+        is no `eds` key in the result, return `None`.
+
+        Raises:
+            InterfaceError: when the value is an unsupported type or
+                the corresponding module is unavailable
         """
-        _eds = self.get('eds')
-        if _eds is not None:
-            if isinstance(_eds, dict):
-                _eds = edsjson.from_dict(_eds)
-            elif isinstance(_eds, str):
-                _eds = eds.decode(_eds)
-        return _eds
+        eds = self.get('eds')
+        try:
+            if isinstance(eds, dict):
+                from delphin.codecs import edsjson
+                eds = edsjson.from_dict(eds)
+            elif isinstance(eds, str):
+                from delphin.codecs import eds as edsnative
+                eds = edsnative.decode(eds)
+            elif eds is not None:
+                raise TypeError(eds.__class__.__name__)
+        except (ImportError, TypeError) as exc:
+            raise InterfaceError('can not get EDS object') from exc
+        return eds
 
     def dmrs(self):
         """
-        Deserialize and return a Dmrs object for JSON-formatted DMRS
-        data; otherwise return the original string.
+        Interpret and return a Dmrs object.
+
+        If :mod:`delphin.codecs.dmrsjson` is available and the value
+        of the `dmrs` key in the result is a dictionary, return the
+        interpreted DMRS object. If there is no `dmrs` key in the
+        result, return `None`.
+
+        Raises:
+            InterfaceError: when the value is not a dictionary or
+                :mod:`delphin.codecs.dmrsjson` is unavailable
         """
         dmrs = self.get('dmrs')
-        if dmrs is not None:
+        try:
             if isinstance(dmrs, dict):
+                from delphin.codecs import dmrsjson
                 dmrs = dmrsjson.from_dict(dmrs)
+            elif dmrs is not None:
+                raise TypeError(dmrs.__class__.__name__)
+        except (ImportError, TypeError) as exc:
+            raise InterfaceError('can not get DMRS object') from exc
         return dmrs
 
 
@@ -177,23 +234,33 @@ class Response(dict):
 
     def tokens(self, tokenset='internal'):
         """
-        Deserialize and return a YYTokenLattice object for the
-        initial or internal token set, if provided, from the YY
-        format or the JSON-formatted data; otherwise return the
-        original string.
+        Interpret and return a YYTokenLattice object.
+
+        If *tokenset* is a key under the `tokens` key of the response,
+        interpret its value as a :class:`YYTokenLattice` from a valid
+        YY serialization or from a dictionary. If *tokenset* is not
+        available, return `None`.
 
         Args:
             tokenset (str): return `'initial'` or `'internal'` tokens
                 (default: `'internal'`)
         Returns:
             :class:`YYTokenLattice`
+        Raises:
+            InterfaceError: when the value is an unsupported type or
+                :mod:`delphin.tokens` is unavailble
         """
         toks = self.get('tokens', {}).get(tokenset)
-        if toks is not None:
+        try:
+            from delphin import tokens
             if isinstance(toks, str):
                 toks = tokens.YYTokenLattice.from_string(toks)
             elif isinstance(toks, Sequence):
                 toks = tokens.YYTokenLattice.from_list(toks)
+            elif toks is not None:
+                raise TypeError(toks.__class__.__name__)
+        except (KeyError, ImportError, TypeError) as exc:
+            raise InterfaceError('can not get YYTokenLattice object') from exc
         return toks
 
 
@@ -284,7 +351,7 @@ class FieldMapper(object):
         for result in response.get('results', []):
             d = {'parse-id': self._parse_id}
             if 'flags' in result:
-                d['flags'] = SExpr.format(result['flags'])
+                d['flags'] = util.SExpr.format(result['flags'])
             for key in self._result_keys:
                 if key in result:
                     d[key] = result[key]

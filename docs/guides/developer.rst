@@ -2,60 +2,88 @@
 Developer Guide
 ===============
 
-Code Organization
------------------
+This guide is for helping developers of modules in the `delphin`
+namespace or developers of PyDelphin itself.
+
+.. contents::
+   :local:
+
+Module Dependencies
+-------------------
+
+Below is a listing of modules arranged into tiers by their
+dependencies. A "tier" is just a grouping here; there is no
+corresponding structure in the code except for the imports used in the
+modules. Each module within a tier only imports modules from tiers
+above it (imported modules, except for Tier 0 ones, are shown in
+parentheses after the module name).
+
+It is good for a module to be conservative with its dependencies
+(i.e., climb to higher tiers). Module authors may consult this list to
+see on which tier their modules would be placed.
+
+If someone wants to take over maintainership of a module and spin it
+off as a separate repository, those without dependencies are the most
+eligible. For instance, if someone wants to take over responsibility
+for the :mod:`delphin.mrs` module, then they may want to also include
+the MRS codecs in their repository, or at least test the codecs to
+changes they make.
 
 * Tier 0
 
-  - `__about__`
-  - `exceptions`
-  - `util`
+  - `delphin.__about__`
+  - :mod:`delphin.exceptions`
+  - `delphin.util`
 
 * Tier 1
 
-  - `derivation`
-  - `hierarchy`
-  - `lnk`
-  - `predicate`
-  - `variable`
+  - :mod:`delphin.derivation`
+  - :mod:`delphin.hierarchy`
+  - :mod:`delphin.interface`
+  - :mod:`delphin.lnk`
+  - :mod:`delphin.predicate`
+  - :mod:`delphin.variable`
 
 * Tier 2
 
-  - `sembase` (lnk)
-  - `semi` (hierarchy, predicate)
-  - `tfs` (hierarchy)
-  - `tokens` (lnk)
-  - `vpm` (variable)
+  - :mod:`delphin.ace` (interface)
+  - :mod:`delphin.itsdb` (interface)
+  - :mod:`delphin.sembase` (lnk)
+  - :mod:`delphin.semi` (hierarchy, predicate)
+  - :mod:`delphin.tfs` (hierarchy)
+  - :mod:`delphin.tokens` (lnk)
+  - :mod:`delphin.vpm` (variable)
+  - :mod:`delphin.web` (interface)
 
 * Tier 3
 
-  - `repp` (lnk, tokens)
-  - `scope` (lnk, predicate, sembase)
-  - `tdl` (tfs)
+  - :mod:`delphin.repp` (lnk, tokens)
+  - :mod:`delphin.scope` (lnk, predicate, sembase)
+  - :mod:`delphin.tdl` (tfs)
+  - :mod:`delphin.tsql` (itsdb)
 
 * Tier 4
 
-  - `dmrs` (lnk, scope, sembase, variable)
-  - `eds` (lnk, scope, sembase, variable)
-  - `mrs` (lnk, predicate, scope, sembase, variable)
+  - :mod:`delphin.dmrs` (lnk, scope, sembase, variable)
+  - :mod:`delphin.eds` (lnk, scope, sembase, variable)
+  - :mod:`delphin.mrs` (lnk, predicate, scope, sembase, variable)
 
 * Tier 5
 
-  - `codecs` (dmrs, eds, mrs, ...)
+  - `delphin.codecs` (dmrs, eds, mrs, ...); see :doc:`../api/delphin.codecs`
 
 * Tier 6
 
-  - `interface` (codecs, derivation, tokens)
+  - :mod:`delphin.commands` (itsdb, lnk, semi, tsql, ...)
 
-* Tier 7
 
-  - `ace` (interface)
-  - `itsdb` (interface)
+Creating a New Module
+---------------------
 
-* Tier 8
+TBD
 
-  - `tsql` (itsdb)
 
-* Tier 9
+Creating a New Codec Module
+---------------------------
 
-  - `commands` (itsdb, lnk, semi, tsql, ...)
+TBD
