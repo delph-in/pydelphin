@@ -101,6 +101,38 @@ _all_fields = tuple(
 )
 
 
+def from_string(s):
+    """
+    Instantiate a Derivation from a UDF or UDX string representation.
+
+    The UDF/UDX representations are as output by a processor like the
+    `LKB <http://moin.delph-in.net/LkbTop>`_ or
+    `ACE <http://sweaglesw.org/linguistics/ace/>`_, or from the
+    :meth:`UDFNode.to_udf` or :meth:`UDFNode.to_udx` methods.
+
+    Args:
+        s (str): UDF or UDX serialization
+    """
+    udfnode = _from_string(s)
+    return Derivation(*udfnode, head=udfnode._head, type=udfnode.type)
+
+
+def from_dict(d):
+    """
+    Instantiate a Derivation from a dictionary representation.
+
+    The dictionary representation may come from the HTTP interface
+    (see the `ErgApi <http://moin.delph-in.net/ErgApi>`_ wiki) or
+    from the :meth:`UDFNode.to_dict` method. Note that in the
+    former case, the JSON response should have already been decoded
+    into a Python dictionary.
+
+    Args:
+        d (dict): dictionary representation of a derivation
+    """
+    return Derivation(*_from_dict(d))
+
+
 class _UDFNodeBase(object):
     """
     Base class for :class:`UDFNode` and :class:`UDFTerminal`.
@@ -153,112 +185,7 @@ class _UDFNodeBase(object):
         Returns:
             dict: the dictionary representation of the structure
         """
-        fields = set(fields)
-        diff = fields.difference(_all_fields)
-        if isinstance(labels, Sequence):
-            labels = _map_labels(self, labels)
-        elif labels is None:
-            labels = {}
-        if diff:
-            raise ValueError(
-                'Invalid field(s): {}'.format(', '.join(diff))
-            )
         return _to_dict(self, fields, labels)
-
-
-def _to_udf(obj, indent, level, udx=False):
-    delim = ' ' if indent is None else '\n' + ' ' * indent * level
-    if isinstance(obj, UDFNode):
-        entity = obj.entity
-        if udx:
-            if obj._head:
-                entity = '^' + entity
-            if obj.type:
-                entity = '{}@{}'.format(entity, obj.type)
-        dtrs = [_to_udf(dtr, indent, level+1, udx) for dtr in obj.daughters]
-        dtrs = delim.join([''] + dtrs)  # empty first item to force indent
-        if obj.id is None:
-            return '({}{})'.format(entity, dtrs)
-        else:
-            # :g for score makes -1.0 look like -1
-            return '({} {} {:g} {} {}{})'.format(
-                obj.id,
-                entity,
-                obj.score,
-                obj.start,
-                obj.end,
-                dtrs
-            )
-    elif isinstance(obj, UDFTerminal):
-        form = '"{}"'.format(obj.form)
-        tokens = ['{} "{}"'.format(t.id, t.tfs) for t in obj.tokens]
-        return '({})'.format(delim.join([form] + tokens))
-    else:
-        raise TypeError('Invalid node: {}'.format(str(obj)))
-
-
-def _map_labels(drv, labels):
-    m = {}
-    if not labels:
-        return m
-    if labels[0]:
-        m[drv.id] = labels[0]
-    subds = getattr(drv, 'daughters', getattr(drv, 'tokens', []))
-    sublbls = labels[1:]
-    if (sublbls and len(subds) != len(sublbls)):
-        raise ValueError('Labels do not match derivation structure.')
-    for d, lbls in zip(subds, sublbls):
-        if hasattr(d, 'id'):
-            m.update(_map_labels(d, lbls))
-    return m
-
-
-def _to_dict(obj, fields, labels):
-    d = {}
-    if isinstance(obj, UDFNode):
-        if 'entity' in fields:
-            d['entity'] = obj.entity
-        if obj.id is not None:
-            if 'id' in fields:
-                d['id'] = obj.id
-            if 'score' in fields:
-                d['score'] = obj.score
-            if 'start' in fields:
-                d['start'] = obj.start
-            if 'end' in fields:
-                d['end'] = obj.end
-            if 'type' in fields and obj.type:
-                d['type'] = obj.type
-            if 'head' in fields and obj._head:
-                d['head'] = obj._head
-        dtrs = obj.daughters
-        if dtrs:
-            # terminals should always be single daughters
-            if len(dtrs) == 1 and isinstance(dtrs[0], UDFTerminal):
-                # merge terminal daughter info into current node
-                d.update(_to_dict(dtrs[0], fields, labels))
-            else:
-                d['daughters'] = [
-                    _to_dict(dtr, fields, labels) for dtr in dtrs
-                ]
-        if obj.id in labels:
-            d['label'] = labels[obj.id]
-    elif isinstance(obj, UDFTerminal):
-        d['form'] = obj.form
-        # d['from'] = min(t.tfs['+FROM'] for t in obj.tokens)
-        # d['to'] = max(t.tfs['+TO'] for t in obj.tokens)
-        if obj.tokens and 'tokens' in fields:
-            tokens = []
-            for tok in obj.tokens:
-                td = {'id': tok.id}
-                # td['from'] = tok.tfs['+FROM']
-                # td['to'] = tok.tfs['+TO']
-                td['tfs'] = tok.tfs
-                tokens.append(td)
-            d['tokens'] = tokens
-    # else:
-    #     raies TypeError()
-    return d
 
 
 class UDFToken(namedtuple('UDFToken', _token_fields)):
@@ -485,31 +412,6 @@ class Derivation(UDFNode):
     :class:`UDFNode`, and inherits all its methods.
     """
 
-    # note that this regex doesn't have the initial open-parenthesis
-    # (see from_string())
-    udf_re = re.compile(
-        # regular node
-        r'\s*(?P<id>{token})\s+(?P<entity>{string}|{token})'
-        r'\s+(?P<score>{token})\s+(?P<start>{token})'
-        r'\s+(?P<end>{token})\s*\('
-        # branch end
-        r'|\s*(?P<done>\))'
-        # terminal node (lexical token info; unbound list)
-        r'|\s*(?P<form>{string})'
-        # anything after form is optional
-        r'('
-        # LKB-style start/end (e.g. ("word" 1 2) )
-        r'\s+(?P<lkb_start>\d+)\s+(?P<lkb_end>\d+)'
-        # Token TFSs (e.g. ("word" 1 "token [ ... ]" 2 "token [... ]") )
-        # usually there's only one, though
-        r'|(?P<tokens>(?:\s+{token}\s+{string})*)'
-        r')?'
-        r'\s*\)'  # end terminal node
-        # root symbol
-        r'|\s*(?P<root>{token})\s*\(?'
-        .format(token=r'[^\s()]+', string=r'"[^"\\]*(?:\\.[^"\\]*)*"')
-    )
-
     def __init__(self, id, entity,
                  score=None, start=None, end=None, daughters=None,
                  head=None, type=None, parent=None):
@@ -530,86 +432,88 @@ class Derivation(UDFNode):
                     'must have a single daughter node.'
                 )
 
-    @classmethod
-    def from_string(cls, s):
-        """
-        Instantiate a `Derivation` from a UDF or UDX string representation.
 
-        The UDF/UDX representations are as output by a processor like the
-        `LKB <http://moin.delph-in.net/LkbTop>`_ or
-        `ACE <http://sweaglesw.org/linguistics/ace/>`_, or from the
-        :meth:`UDFNode.to_udf` or :meth:`UDFNode.to_udx` methods.
+###############################################################################
+# Deserialization
 
-        Args:
-            s (str): UDF or UDX serialization
-        """
-        if not (s.startswith('(') and s.endswith(')')):
-            raise ValueError(
-                'Derivations must begin and end with parentheses: ( )'
-            )
-        s_ = s[1:]  # get rid of initial open-parenthesis
-        stack = []
-        deriv = None
-        try:
-            matches = cls.udf_re.finditer(s_)
-            for match in matches:
-                if match.group('done'):
-                    node = stack.pop()
-                    if len(stack) == 0:
-                        deriv = node
-                        break
-                    else:
-                        stack[-1].daughters.append(node)
-                elif match.group('form'):
-                    if len(stack) == 0:
-                        raise ValueError('Possible leaf node with no parent.')
-                    gd = match.groupdict()
-                    # ignore LKB-style start/end data if it exists on gd
-                    term = UDFTerminal(
-                        _unquote(gd['form']),
-                        tokens=_udf_tokens(gd.get('tokens')),
-                        parent=stack[-1] if stack else None
-                    )
-                    stack[-1].daughters.append(term)
-                elif match.group('id'):
-                    gd = match.groupdict()
-                    head = None
-                    entity, _, type = gd['entity'].partition('@')
-                    if entity[0] == '^':
-                        entity = entity[1:]
-                        head = True
-                    if type == '':
-                        type = None
-                    udf = UDFNode(gd['id'], entity, gd['score'],
-                                  gd['start'], gd['end'],
-                                  head=head, type=type,
-                                  parent=stack[-1] if stack else None)
-                    stack.append(udf)
-                elif match.group('root'):
-                    udf = UDFNode(None, match.group('root'))
-                    stack.append(udf)
-        except (ValueError, AttributeError):
-            raise ValueError('Invalid derivation: %s' % s)
-        if stack or deriv is None:
-            raise ValueError('Invalid derivation; possibly unbalanced '
-                             'parentheses: %s' % s)
-        return cls(*deriv, head=deriv._head, type=deriv.type)
+# note that this regex doesn't have the initial open-parenthesis
+# (see _from_string())
+_udf_re = re.compile(
+    # regular node
+    r'\s*(?P<id>{token})\s+(?P<entity>{string}|{token})'
+    r'\s+(?P<score>{token})\s+(?P<start>{token})'
+    r'\s+(?P<end>{token})\s*\('
+    # branch end
+    r'|\s*(?P<done>\))'
+    # terminal node (lexical token info; unbound list)
+    r'|\s*(?P<form>{string})'
+    # anything after form is optional
+    r'('
+    # LKB-style start/end (e.g. ("word" 1 2) )
+    r'\s+(?P<lkb_start>\d+)\s+(?P<lkb_end>\d+)'
+    # Token TFSs (e.g. ("word" 1 "token [ ... ]" 2 "token [... ]") )
+    # usually there's only one, though
+    r'|(?P<tokens>(?:\s+{token}\s+{string})*)'
+    r')?'
+    r'\s*\)'  # end terminal node
+    # root symbol
+    r'|\s*(?P<root>{token})\s*\(?'
+    .format(token=r'[^\s()]+', string=r'"[^"\\]*(?:\\.[^"\\]*)*"')
+)
 
-    @classmethod
-    def from_dict(cls, d):
-        """
-        Instantiate a `Derivation` from a dictionary representation.
 
-        The dictionary representation may come from the HTTP interface
-        (see the `ErgApi <http://moin.delph-in.net/ErgApi>`_ wiki) or
-        from the :meth:`UDFNode.to_dict` method. Note that in the
-        former case, the JSON response should have already been decoded
-        into a Python dictionary.
-
-        Args:
-            d (dict): dictionary representation of a derivation
-        """
-        return cls(*_from_dict(d))
+def _from_string(s):
+    if not (s.startswith('(') and s.endswith(')')):
+        raise ValueError(
+            'Derivations must begin and end with parentheses: ( )'
+        )
+    s_ = s[1:]  # get rid of initial open-parenthesis
+    stack = []
+    deriv = None
+    try:
+        matches = _udf_re.finditer(s_)
+        for match in matches:
+            if match.group('done'):
+                node = stack.pop()
+                if len(stack) == 0:
+                    deriv = node
+                    break
+                else:
+                    stack[-1].daughters.append(node)
+            elif match.group('form'):
+                if len(stack) == 0:
+                    raise ValueError('Possible leaf node with no parent.')
+                gd = match.groupdict()
+                # ignore LKB-style start/end data if it exists on gd
+                term = UDFTerminal(
+                    _unquote(gd['form']),
+                    tokens=_udf_tokens(gd.get('tokens')),
+                    parent=stack[-1] if stack else None
+                )
+                stack[-1].daughters.append(term)
+            elif match.group('id'):
+                gd = match.groupdict()
+                head = None
+                entity, _, type = gd['entity'].partition('@')
+                if entity[0] == '^':
+                    entity = entity[1:]
+                    head = True
+                if type == '':
+                    type = None
+                udf = UDFNode(gd['id'], entity, gd['score'],
+                              gd['start'], gd['end'],
+                              head=head, type=type,
+                              parent=stack[-1] if stack else None)
+                stack.append(udf)
+            elif match.group('root'):
+                udf = UDFNode(None, match.group('root'))
+                stack.append(udf)
+    except (ValueError, AttributeError):
+        raise ValueError('Invalid derivation: %s' % s)
+    if stack or deriv is None:
+        raise ValueError('Invalid derivation; possibly unbalanced '
+                         'parentheses: %s' % s)
+    return deriv
 
 
 def _unquote(s):
@@ -667,3 +571,115 @@ def _from_dict(d, parent=None):
             )
         )
         return n
+
+
+###############################################################################
+# Serialization
+
+def _to_udf(obj, indent, level, udx=False):
+    delim = ' ' if indent is None else '\n' + ' ' * indent * level
+    if isinstance(obj, UDFNode):
+        entity = obj.entity
+        if udx:
+            if obj._head:
+                entity = '^' + entity
+            if obj.type:
+                entity = '{}@{}'.format(entity, obj.type)
+        dtrs = [_to_udf(dtr, indent, level+1, udx) for dtr in obj.daughters]
+        dtrs = delim.join([''] + dtrs)  # empty first item to force indent
+        if obj.id is None:
+            return '({}{})'.format(entity, dtrs)
+        else:
+            # :g for score makes -1.0 look like -1
+            return '({} {} {:g} {} {}{})'.format(
+                obj.id,
+                entity,
+                obj.score,
+                obj.start,
+                obj.end,
+                dtrs
+            )
+    elif isinstance(obj, UDFTerminal):
+        form = '"{}"'.format(obj.form)
+        tokens = ['{} "{}"'.format(t.id, t.tfs) for t in obj.tokens]
+        return '({})'.format(delim.join([form] + tokens))
+    else:
+        raise TypeError('Invalid node: {}'.format(str(obj)))
+
+
+def _to_dict(obj, fields, labels):
+    fields = set(fields)
+    diff = fields.difference(_all_fields)
+    if isinstance(labels, Sequence):
+        labels = _map_labels(obj, labels)
+    elif labels is None:
+        labels = {}
+    if diff:
+        raise ValueError(
+            'Invalid field(s): {}'.format(', '.join(diff))
+        )
+    return _to_dict_recursive(obj, fields, labels)
+
+
+def _map_labels(drv, labels):
+    m = {}
+    if not labels:
+        return m
+    if labels[0]:
+        m[drv.id] = labels[0]
+    subds = getattr(drv, 'daughters', getattr(drv, 'tokens', []))
+    sublbls = labels[1:]
+    if (sublbls and len(subds) != len(sublbls)):
+        raise ValueError('Labels do not match derivation structure.')
+    for d, lbls in zip(subds, sublbls):
+        if hasattr(d, 'id'):
+            m.update(_map_labels(d, lbls))
+    return m
+
+
+def _to_dict_recursive(obj, fields, labels):
+    d = {}
+    if isinstance(obj, UDFNode):
+        if 'entity' in fields:
+            d['entity'] = obj.entity
+        if obj.id is not None:
+            if 'id' in fields:
+                d['id'] = obj.id
+            if 'score' in fields:
+                d['score'] = obj.score
+            if 'start' in fields:
+                d['start'] = obj.start
+            if 'end' in fields:
+                d['end'] = obj.end
+            if 'type' in fields and obj.type:
+                d['type'] = obj.type
+            if 'head' in fields and obj._head:
+                d['head'] = obj._head
+        dtrs = obj.daughters
+        if dtrs:
+            # terminals should always be single daughters
+            if len(dtrs) == 1 and isinstance(dtrs[0], UDFTerminal):
+                # merge terminal daughter info into current node
+                d.update(_to_dict_recursive(dtrs[0], fields, labels))
+            else:
+                d['daughters'] = [
+                    _to_dict_recursive(dtr, fields, labels) for dtr in dtrs
+                ]
+        if obj.id in labels:
+            d['label'] = labels[obj.id]
+    elif isinstance(obj, UDFTerminal):
+        d['form'] = obj.form
+        # d['from'] = min(t.tfs['+FROM'] for t in obj.tokens)
+        # d['to'] = max(t.tfs['+TO'] for t in obj.tokens)
+        if obj.tokens and 'tokens' in fields:
+            tokens = []
+            for tok in obj.tokens:
+                td = {'id': tok.id}
+                # td['from'] = tok.tfs['+FROM']
+                # td['to'] = tok.tfs['+TO']
+                td['tfs'] = tok.tfs
+                tokens.append(td)
+            d['tokens'] = tokens
+    # else:
+    #     raies TypeError()
+    return d

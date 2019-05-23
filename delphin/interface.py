@@ -16,8 +16,8 @@ DELPH-IN formats.
 from collections import Sequence
 from datetime import datetime
 
-from delphin.derivation import Derivation
-from delphin.tokens import YYTokenLattice
+from delphin import derivation
+from delphin import tokens
 from delphin.codecs import (
     mrsjson,
     simplemrs,
@@ -87,9 +87,9 @@ class Result(dict):
         drv = self.get('derivation')
         if drv is not None:
             if isinstance(drv, dict):
-                drv = Derivation.from_dict(drv)
+                drv = derivation.from_dict(drv)
             elif isinstance(drv, str):
-                drv = Derivation.from_string(drv)
+                drv = derivation.from_string(drv)
         return drv
 
     def tree(self):
@@ -98,11 +98,14 @@ class Result(dict):
         may be a standalone datum, or embedded in the derivation.
         """
         tree = self.get('tree')
+
         if isinstance(tree, str):
             tree = SExpr.parse(tree).data
+
         elif tree is None:
             drv = self.get('derivation')
             if isinstance(drv, dict) and 'label' in drv:
+
                 def _extract_tree(d):
                     t = [d.get('label', '')]
                     if 'tokens' in d:
@@ -111,7 +114,9 @@ class Result(dict):
                         for dtr in d.get('daughters', []):
                             t.append(_extract_tree(dtr))
                     return t
+
                 tree = _extract_tree(drv)
+
         return tree
 
     def mrs(self):
@@ -186,9 +191,9 @@ class Response(dict):
         toks = self.get('tokens', {}).get(tokenset)
         if toks is not None:
             if isinstance(toks, str):
-                toks = YYTokenLattice.from_string(toks)
+                toks = tokens.YYTokenLattice.from_string(toks)
             elif isinstance(toks, Sequence):
-                toks = YYTokenLattice.from_list(toks)
+                toks = tokens.YYTokenLattice.from_list(toks)
         return toks
 
 

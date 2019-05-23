@@ -2,6 +2,8 @@
 import pytest
 
 from delphin.derivation import (
+    from_string,
+    from_dict,
     Derivation as D,
     UDFNode as N,
     UDFTerminal as T,
@@ -89,20 +91,20 @@ class TestDerivation():
 
     def test_fromstring(self):
         with pytest.raises(ValueError):
-            D.from_string('')
+            from_string('')
         # root with no children
         with pytest.raises(ValueError):
-            D.from_string('(some-root)')
+            from_string('(some-root)')
         # does not start with `(` or end with `)`
         with pytest.raises(ValueError):
-            D.from_string(' (1 some-thing -1 -1 -1 ("token"))')
+            from_string(' (1 some-thing -1 -1 -1 ("token"))')
         with pytest.raises(ValueError):
-            D.from_string(' (1 some-thing -1 -1 -1 ("token")) ')
+            from_string(' (1 some-thing -1 -1 -1 ("token")) ')
         # uneven parens
         with pytest.raises(ValueError):
-            D.from_string('(1 some-thing -1 -1 -1 ("token")')
+            from_string('(1 some-thing -1 -1 -1 ("token")')
         # ok
-        t = D.from_string('(1 some-thing -1 -1 -1 ("token"))')
+        t = from_string('(1 some-thing -1 -1 -1 ("token"))')
         assert t.id == 1
         assert t.entity == 'some-thing'
         assert t.score == -1.0
@@ -110,8 +112,8 @@ class TestDerivation():
         assert t.end == -1
         assert t.daughters == [T('token')]
         # newlines in tree
-        t = D.from_string('''(1 some-thing -1 -1 -1
-                                ("token"))''')
+        t = from_string('''(1 some-thing -1 -1 -1
+                              ("token"))''')
         assert t.id == 1
         assert t.entity == 'some-thing'
         assert t.score == -1.0
@@ -119,8 +121,8 @@ class TestDerivation():
         assert t.end == -1
         assert t.daughters == [T('token')]
         # LKB-style terminals
-        t = D.from_string('''(1 some-thing -1 -1 -1
-                                ("to ken" 1 2))''')
+        t = from_string('''(1 some-thing -1 -1 -1
+                              ("to ken" 1 2))''')
         assert t.id == 1
         assert t.entity == 'some-thing'
         assert t.score == -1.0
@@ -128,9 +130,9 @@ class TestDerivation():
         assert t.end == -1
         assert t.daughters == [T('to ken')]  # start/end ignored
         # TFS-style terminals
-        t = D.from_string(r'''(1 some-thing -1 -1 -1
-                                ("to ken" 2 "token [ +FORM \"to\" ]"
-                                          3 "token [ +FORM \"ken\" ]"))''')
+        t = from_string(r'''(1 some-thing -1 -1 -1
+                              ("to ken" 2 "token [ +FORM \"to\" ]"
+                                        3 "token [ +FORM \"ken\" ]"))''')
         assert t.id == 1
         assert t.entity == 'some-thing'
         assert t.score == -1.0
@@ -141,7 +143,7 @@ class TestDerivation():
                          Tk(3, r'token [ +FORM \"ken\" ]')])
         ]
         # longer example
-        t = D.from_string(r'''(root
+        t = from_string(r'''(root
             (1 some-thing 0.4 0 5
                 (2 a-lex 0.8 0 1
                     ("a" 1 "token [ +FORM \"a\" ]"))
@@ -175,77 +177,77 @@ class TestDerivation():
 
     def test_str(self):
         s = '(1 some-thing -1 -1 -1 ("token"))'
-        assert str(D.from_string(s)) == s
+        assert str(from_string(s)) == s
         s = (r'(root (1 some-thing 0.4 0 5 (2 a-lex 0.8 0 1 '
              r'("a" 1 "token [ +FORM \"a\" ]")) '
              r'(3 bcd-lex 0.5 2 5 ("bcd" 2 "token [ +FORM \"bcd\" ]"))))')
-        assert str(D.from_string(s)) == s
+        assert str(from_string(s)) == s
 
     def test_eq(self):
-        a = D.from_string('(1 some-thing -1 -1 -1 ("token"))')
+        a = from_string('(1 some-thing -1 -1 -1 ("token"))')
         # identity
-        b = D.from_string('(1 some-thing -1 -1 -1 ("token"))')
+        b = from_string('(1 some-thing -1 -1 -1 ("token"))')
         assert a == b
         # ids and scores don't matter
-        b = D.from_string('(100 some-thing 0.114 -1 -1 ("token"))')
+        b = from_string('(100 some-thing 0.114 -1 -1 ("token"))')
         assert a == b
         # tokens matter
-        b = D.from_string('(1 some-thing -1 -1 -1 ("nekot"))')
+        b = from_string('(1 some-thing -1 -1 -1 ("nekot"))')
         assert a != b
         # and type of rhs
         assert a != '(1 some-thing -1 -1 -1 ("token"))'
         # and tokenization
-        b = D.from_string('(1 some-thing -1 2 7 ("token"))')
+        b = from_string('(1 some-thing -1 2 7 ("token"))')
         assert a != b
         # and of course entities
-        b = D.from_string('(1 epyt-emos -1 -1 -1 ("token"))')
+        b = from_string('(1 epyt-emos -1 -1 -1 ("token"))')
         assert a != b
         # and number of children
-        a = D.from_string('(1 x -1 -1 -1 (2 y -1 -1 -1 ("y")))')
-        b = D.from_string('(1 x -1 -1 -1 (2 y -1 -1 -1 ("y")) (3 z -1 -1 -1 ("z")))')
+        a = from_string('(1 x -1 -1 -1 (2 y -1 -1 -1 ("y")))')
+        b = from_string('(1 x -1 -1 -1 (2 y -1 -1 -1 ("y")) (3 z -1 -1 -1 ("z")))')
         assert a != b
         # and order of children
-        a = D.from_string('(1 x -1 -1 -1 (2 y -1 -1 -1 ("y")) (3 z -1 -1 -1 ("z")))')
-        b = D.from_string('(1 x -1 -1 -1 (3 z -1 -1 -1 ("z")) (2 y -1 -1 -1 ("y")))')
+        a = from_string('(1 x -1 -1 -1 (2 y -1 -1 -1 ("y")) (3 z -1 -1 -1 ("z")))')
+        b = from_string('(1 x -1 -1 -1 (3 z -1 -1 -1 ("z")) (2 y -1 -1 -1 ("y")))')
         assert a != b
         # and UDX properties when specified
-        a = D.from_string('(1 x -1 -1 -1 (2 ^y -1 -1 -1 ("y")) (3 z -1 -1 -1 ("z")))')
-        b = D.from_string('(1 x -1 -1 -1 (2 ^y -1 -1 -1 ("y")) (3 z -1 -1 -1 ("z")))')
+        a = from_string('(1 x -1 -1 -1 (2 ^y -1 -1 -1 ("y")) (3 z -1 -1 -1 ("z")))')
+        b = from_string('(1 x -1 -1 -1 (2 ^y -1 -1 -1 ("y")) (3 z -1 -1 -1 ("z")))')
         assert a == b
-        b = D.from_string('(1 x -1 -1 -1 (2 y -1 -1 -1 ("y")) (3 ^z -1 -1 -1 ("z")))')
+        b = from_string('(1 x -1 -1 -1 (2 y -1 -1 -1 ("y")) (3 ^z -1 -1 -1 ("z")))')
         assert a != b
-        b = D.from_string('(1 x -1 -1 -1 (2 y -1 -1 -1 ("y")) (3 z -1 -1 -1 ("z")))')
+        b = from_string('(1 x -1 -1 -1 (2 y -1 -1 -1 ("y")) (3 z -1 -1 -1 ("z")))')
         assert a != b
-        a = D.from_string('(1 some-thing@some-type -1 -1 -1 ("token"))')
-        b = D.from_string('(1 some-thing@some-type -1 -1 -1 ("token"))')
+        a = from_string('(1 some-thing@some-type -1 -1 -1 ("token"))')
+        b = from_string('(1 some-thing@some-type -1 -1 -1 ("token"))')
         assert a == b
-        b = D.from_string('(1 some-thing@another-type -1 -1 -1 ("token"))')
+        b = from_string('(1 some-thing@another-type -1 -1 -1 ("token"))')
         assert a != b
-        b = D.from_string('(1 some-thing -1 -1 -1 ("token"))')
+        b = from_string('(1 some-thing -1 -1 -1 ("token"))')
         assert a != b
 
     def test_is_root(self):
-        a = D.from_string('(1 some-thing -1 -1 -1 ("token"))')
+        a = from_string('(1 some-thing -1 -1 -1 ("token"))')
         assert not a.is_root()
-        a = D.from_string('(root (1 some-thing -1 -1 -1 ("token")))')
+        a = from_string('(root (1 some-thing -1 -1 -1 ("token")))')
         assert a.is_root()
         assert not a.daughters[0].is_root()
 
     def test_is_head(self):
         # NOTE: is_head() is undefined for nodes with multiple
         # siblings, none of which are marked head (e.g. in plain UDF)
-        a = D.from_string('(root (1 some-thing -1 -1 -1'
-                          '  (2 some-thing -1 -1 -1 ("a"))'
-                          '  (3 some-thing -1 -1 -1 ("b"))))')
+        a = from_string('(root (1 some-thing -1 -1 -1'
+                        '  (2 some-thing -1 -1 -1 ("a"))'
+                        '  (3 some-thing -1 -1 -1 ("b"))))')
         assert a.is_head()
         node = a.daughters[0]
         assert node.is_head()
         assert node.daughters[0].is_head() is None
         assert node.daughters[1].is_head() is None
         # if one sibling is marked, all become decidable
-        a = D.from_string('(root (1 some-thing -1 -1 -1'
-                          '  (2 some-thing -1 -1 -1 ("a"))'
-                          '  (3 ^some-thing -1 -1 -1 ("b"))))')
+        a = from_string('(root (1 some-thing -1 -1 -1'
+                        '  (2 some-thing -1 -1 -1 ("a"))'
+                        '  (3 ^some-thing -1 -1 -1 ("b"))))')
         assert a.is_head()
         node = a.daughters[0]
         assert node.is_head()
@@ -253,17 +255,17 @@ class TestDerivation():
         assert node.daughters[1].is_head()
 
     def test_entity(self):
-        a = D.from_string('(root (1 some-thing -1 -1 -1'
-                          '  (2 a-thing -1 -1 -1 ("a"))'
-                          '  (3 b-thing -1 -1 -1 ("b"))))')
+        a = from_string('(root (1 some-thing -1 -1 -1'
+                        '  (2 a-thing -1 -1 -1 ("a"))'
+                        '  (3 b-thing -1 -1 -1 ("b"))))')
         assert a.entity == 'root'
         node = a.daughters[0]
         assert node.entity == 'some-thing'
         assert node.daughters[0].entity == 'a-thing'
         assert node.daughters[1].entity == 'b-thing'
-        a = D.from_string('(root (1 some-thing@some-type -1 -1 -1'
-                          '  (2 a-thing@a-type -1 -1 -1 ("a"))'
-                          '  (3 b-thing@b-type -1 -1 -1 ("b"))))')
+        a = from_string('(root (1 some-thing@some-type -1 -1 -1'
+                        '  (2 a-thing@a-type -1 -1 -1 ("a"))'
+                        '  (3 b-thing@b-type -1 -1 -1 ("b"))))')
         assert a.entity == 'root'
         node = a.daughters[0]
         assert node.entity == 'some-thing'
@@ -271,17 +273,17 @@ class TestDerivation():
         assert node.daughters[1].entity == 'b-thing'
 
     def test_type(self):
-        a = D.from_string('(root (1 some-thing -1 -1 -1'
-                          '  (2 a-thing -1 -1 -1 ("a"))'
-                          '  (3 b-thing -1 -1 -1 ("b"))))')
+        a = from_string('(root (1 some-thing -1 -1 -1'
+                        '  (2 a-thing -1 -1 -1 ("a"))'
+                        '  (3 b-thing -1 -1 -1 ("b"))))')
         assert a.type is None
         node = a.daughters[0]
         assert node.type is None
         assert node.daughters[0].type is None
         assert node.daughters[1].type is None
-        a = D.from_string('(root (1 some-thing@some-type -1 -1 -1'
-                          '  (2 a-thing@a-type -1 -1 -1 ("a"))'
-                          '  (3 b-thing@b-type -1 -1 -1 ("b"))))')
+        a = from_string('(root (1 some-thing@some-type -1 -1 -1'
+                        '  (2 a-thing@a-type -1 -1 -1 ("a"))'
+                        '  (3 b-thing@b-type -1 -1 -1 ("b"))))')
         assert a.type is None
         node = a.daughters[0]
         assert node.type == 'some-type'
@@ -289,11 +291,11 @@ class TestDerivation():
         assert node.daughters[1].type == 'b-type'
 
     def test_preterminals(self):
-        a = D.from_string('(root (1 some-thing -1 -1 -1'
-                          '  (2 a-thing -1 -1 -1 ("a"))'
-                          '  (3 b-thing -1 -1 -1 ("b"))))')
+        a = from_string('(root (1 some-thing -1 -1 -1'
+                        '  (2 a-thing -1 -1 -1 ("a"))'
+                        '  (3 b-thing -1 -1 -1 ("b"))))')
         assert [t.id for t in a.preterminals()] == [2, 3]
-        a = D.from_string(
+        a = from_string(
             '(root'
             ' (1 some-thing@some-type 0.4 0 5'
             '  (2 a-lex@a-type 0.8 0 1'
@@ -306,11 +308,11 @@ class TestDerivation():
         assert [t.id for t in a.preterminals()] == [2, 5]
 
     def test_terminals(self):
-        a = D.from_string('(root (1 some-thing -1 -1 -1'
-                          '  (2 a-thing -1 -1 -1 ("a"))'
-                          '  (3 b-thing -1 -1 -1 ("b"))))')
+        a = from_string('(root (1 some-thing -1 -1 -1'
+                        '  (2 a-thing -1 -1 -1 ("a"))'
+                        '  (3 b-thing -1 -1 -1 ("b"))))')
         assert [t.form for t in a.terminals()] == ['a', 'b']
-        a = D.from_string(
+        a = from_string(
             '(root'
             ' (1 some-thing@some-type 0.4 0 5'
             '  (2 a-lex@a-type 0.8 0 1'
@@ -324,15 +326,15 @@ class TestDerivation():
 
     def test_to_udf(self):
         s = '(1 some-thing -1 -1 -1 ("token"))'
-        assert D.from_string(s).to_udf(indent=None) == s
-        assert D.from_string(s).to_udf(indent=1) == (
+        assert from_string(s).to_udf(indent=None) == s
+        assert from_string(s).to_udf(indent=1) == (
             '(1 some-thing -1 -1 -1\n'
             ' ("token"))'
         )
         s = (r'(root (1 some-thing 0.4 0 5 (2 a-lex 0.8 0 1 '
              r'("a" 3 "token [ +FORM \"a\" ]")) '
              r'(4 bcd-lex 0.5 2 5 ("bcd" 5 "token [ +FORM \"bcd\" ]"))))')
-        assert D.from_string(s).to_udf(indent=1) == (
+        assert from_string(s).to_udf(indent=1) == (
             '(root\n'
             ' (1 some-thing 0.4 0 5\n'
             '  (2 a-lex 0.8 0 1\n'
@@ -344,7 +346,7 @@ class TestDerivation():
         )
         s = (r'(root (1 some-thing 0.4 0 5 (2 a-lex 0.8 0 1 '
              r'("a b" 3 "token [ +FORM \"a\" ]" 4 "token [ +FORM \"b\" ]"))))')
-        assert D.from_string(s).to_udf(indent=1) == (
+        assert from_string(s).to_udf(indent=1) == (
             '(root\n'
             ' (1 some-thing 0.4 0 5\n'
             '  (2 a-lex 0.8 0 1\n'
@@ -354,7 +356,7 @@ class TestDerivation():
         )
         s = (r'(root (1 some-thing@some-type 0.4 0 5 (2 a-lex@a-type 0.8 0 1 '
              r'("a b" 3 "token [ +FORM \"a\" ]" 4 "token [ +FORM \"b\" ]"))))')
-        assert D.from_string(s).to_udf(indent=1) == (
+        assert from_string(s).to_udf(indent=1) == (
             '(root\n'
             ' (1 some-thing 0.4 0 5\n'
             '  (2 a-lex 0.8 0 1\n'
@@ -365,13 +367,13 @@ class TestDerivation():
 
     def test_to_udx(self):
         s = '(1 some-thing -1 -1 -1 ("token"))'
-        assert D.from_string(s).to_udx(indent=None) == s
+        assert from_string(s).to_udx(indent=None) == s
         s = (r'(root (1 some-thing@some-type 0.4 0 5 '
              r'(2 a-lex@a-type 0.8 0 1 '
              r'("a b" 3 "token [ +FORM \"a\" ]" 4 "token [ +FORM \"b\" ]")) '
              r'(5 b-lex@b-type 0.9 1 2 '
              r'("b" 6 "token [ +FORM \"b\" ]"))))')
-        assert D.from_string(s).to_udx(indent=1) == (
+        assert from_string(s).to_udx(indent=1) == (
             '(root\n'
             ' (1 some-thing@some-type 0.4 0 5\n'
             '  (2 a-lex@a-type 0.8 0 1\n'
@@ -385,7 +387,7 @@ class TestDerivation():
 
     def test_to_dict(self):
         s = '(1 some-thing -1 -1 -1 ("token"))'
-        assert D.from_string(s).to_dict() == {
+        assert from_string(s).to_dict() == {
             'id': 1,
             'entity': 'some-thing',
             'score': -1.0,
@@ -395,7 +397,7 @@ class TestDerivation():
         }
         fields = ('id', 'entity', 'score')
         # daughters and form are always shown
-        assert D.from_string(s).to_dict(fields=fields) == {
+        assert from_string(s).to_dict(fields=fields) == {
             'id': 1,
             'entity': 'some-thing',
             'score': -1.0,
@@ -405,7 +407,7 @@ class TestDerivation():
              r' (1 a-lex@a-type -1 -1 -1 ("a b" 2 "token [ +FORM \"a\" ]"'
              r'  3 "token [ +FORM \"b\" ]"))'
              r' (4 ^c-lex@c-type -1 -1 -1 ("c" 5 "token [ +FORM \"c\" ]"))))')
-        assert D.from_string(s).to_dict() == {
+        assert from_string(s).to_dict() == {
             'entity': 'root',
             'daughters': [
                 {
@@ -446,7 +448,7 @@ class TestDerivation():
                 }
             ]
         }
-        assert D.from_string(s).to_dict(fields=fields) == {
+        assert from_string(s).to_dict(fields=fields) == {
             'entity': 'root',
             'daughters': [
                 {
@@ -484,7 +486,7 @@ class TestDerivation():
                 }
             ]
         }
-        assert D.from_dict(d) == D.from_string(s)
+        assert from_dict(d) == from_string(s)
         s = (r'(root (1 ^some-thing@some-type -1 -1 -1 ("a b"'
              r' 2 "token [ +FORM \"a\" ]"'
              r' 3 "token [ +FORM \"b\" ]")))')
@@ -504,4 +506,4 @@ class TestDerivation():
                 }
             ]
         }
-        assert D.from_dict(d) == D.from_string(s)
+        assert from_dict(d) == from_string(s)

@@ -1,13 +1,11 @@
 
-import pytest
-
 from delphin.interface import Response, Result
 from delphin.codecs import (
     edsjson,
     simplemrs,
     dmrsjson)
-from delphin.derivation import Derivation
-from delphin.tokens import YYTokenLattice
+from delphin import derivation
+from delphin import tokens
 
 
 def test_Result():
@@ -18,7 +16,9 @@ def test_Result():
     assert r.eds() is None
     assert r.derivation() is None
 
-    mrs_s = '[ TOP: h0 RELS: < ["_rain_v_1_rel" LBL: h1 ARG0: e2 ] > HCONS: < h0 qeq h1 > ]'
+    mrs_s = ('[ TOP: h0'
+             '  RELS: < ["_rain_v_1_rel" LBL: h1 ARG0: e2 ] >'
+             '  HCONS: < h0 qeq h1 > ]')
     mrs_d = {
         'top': 'h0',
         'relations': [
@@ -123,7 +123,7 @@ def test_Result():
                     {"id": 56, "entity": "rain_v1", "score": 0, "start": 1, "end": 2, "form": "rained.", "tokens": [  # , "type": "v_-_it_le", "from": 3, "to": 10
                         {"id": 32, "tfs": "token [ +FORM \\\"rained.\\\" +FROM #1=\\\"3\\\" +TO \\\"10\\\" ]"}]}]}]}]  # , "from": 3, "to": 10
     }
-    deriv = Derivation.from_dict(deriv_d)
+    deriv = derivation.from_dict(deriv_d)
 
     r = Result(derivation=deriv_s)
     assert len(r) == 1
@@ -135,6 +135,7 @@ def test_Result():
     assert r['derivation'] == deriv_d
     assert r.derivation() == deriv
 
+
 def test_Response():
     r = Response()
     assert len(r) == 0
@@ -145,7 +146,7 @@ def test_Response():
     assert len(r) == 1
     assert r['key'] == 'val'
 
-    r = Response(results=[{}]) 
+    r = Response(results=[{}])
     assert len(r) == 1
     assert r['results'] == [{}]
     assert isinstance(r.results()[0], Result)
@@ -155,21 +156,21 @@ def test_Response():
     toks_d = [
         {'id': 1, 'start': 0, 'end': 1, 'from': 0, 'to': 4, "form": "Dogs"}
     ]
-    toks = YYTokenLattice.from_list(toks_d)
+    toks = tokens.YYTokenLattice.from_list(toks_d)
 
     r = Response(tokens={'initial': toks_s})
     assert r['tokens']['initial'] == toks_s
     print(r.tokens('initial'))
     assert r.tokens('initial') == toks
-    assert r.tokens('internal') == None
+    assert r.tokens('internal') is None
 
     r = Response(tokens={'initial': toks_d})
     assert r['tokens']['initial'] == toks_d
     assert r.tokens('initial') == toks
-    assert r.tokens('internal') == None
+    assert r.tokens('internal') is None
 
     r = Response(tokens={'internal': toks_s})
     assert r['tokens']['internal'] == toks_s
-    assert r.tokens('initial') == None
+    assert r.tokens('initial') is None
     assert r.tokens('internal') == toks
     assert r.tokens() == toks
