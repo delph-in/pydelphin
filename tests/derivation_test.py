@@ -4,6 +4,7 @@ import pytest
 from delphin.derivation import (
     from_string,
     from_dict,
+    DerivationSyntaxError,
     Derivation as D,
     UDFNode as N,
     UDFTerminal as T,
@@ -90,18 +91,21 @@ class TestDerivation():
         assert len(t.daughters) == 1
 
     def test_fromstring(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(DerivationSyntaxError):
             from_string('')
         # root with no children
+        # TODO: this should be a DerivationSyntaxError but the current
+        # UDF parser doesn't make that straightforward. Revist this
+        # when/if the UDF parsing changes
         with pytest.raises(ValueError):
             from_string('(some-root)')
         # does not start with `(` or end with `)`
-        with pytest.raises(ValueError):
+        with pytest.raises(DerivationSyntaxError):
             from_string(' (1 some-thing -1 -1 -1 ("token"))')
-        with pytest.raises(ValueError):
+        with pytest.raises(DerivationSyntaxError):
             from_string(' (1 some-thing -1 -1 -1 ("token")) ')
         # uneven parens
-        with pytest.raises(ValueError):
+        with pytest.raises(DerivationSyntaxError):
             from_string('(1 some-thing -1 -1 -1 ("token")')
         # ok
         t = from_string('(1 some-thing -1 -1 -1 ("token"))')

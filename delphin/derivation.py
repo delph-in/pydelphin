@@ -88,6 +88,11 @@ from collections import namedtuple, Sequence
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
+from delphin.exceptions import PyDelphinSyntaxError
+
+
+class DerivationSyntaxError(PyDelphinSyntaxError):
+    """Raised when parsing an invalid UDF string."""
 
 
 _terminal_fields = ('form', 'tokens')
@@ -464,55 +469,51 @@ _udf_re = re.compile(
 
 def _from_string(s):
     if not (s.startswith('(') and s.endswith(')')):
-        raise ValueError(
-            'Derivations must begin and end with parentheses: ( )'
-        )
+        raise DerivationSyntaxError(
+            'missing opening or closing parentheses', text=s)
     s_ = s[1:]  # get rid of initial open-parenthesis
     stack = []
     deriv = None
-    try:
-        matches = _udf_re.finditer(s_)
-        for match in matches:
-            if match.group('done'):
-                node = stack.pop()
-                if len(stack) == 0:
-                    deriv = node
-                    break
-                else:
-                    stack[-1].daughters.append(node)
-            elif match.group('form'):
-                if len(stack) == 0:
-                    raise ValueError('Possible leaf node with no parent.')
-                gd = match.groupdict()
-                # ignore LKB-style start/end data if it exists on gd
-                term = UDFTerminal(
-                    _unquote(gd['form']),
-                    tokens=_udf_tokens(gd.get('tokens')),
-                    parent=stack[-1] if stack else None
-                )
-                stack[-1].daughters.append(term)
-            elif match.group('id'):
-                gd = match.groupdict()
-                head = None
-                entity, _, type = gd['entity'].partition('@')
-                if entity[0] == '^':
-                    entity = entity[1:]
-                    head = True
-                if type == '':
-                    type = None
-                udf = UDFNode(gd['id'], entity, gd['score'],
-                              gd['start'], gd['end'],
-                              head=head, type=type,
-                              parent=stack[-1] if stack else None)
-                stack.append(udf)
-            elif match.group('root'):
-                udf = UDFNode(None, match.group('root'))
-                stack.append(udf)
-    except (ValueError, AttributeError):
-        raise ValueError('Invalid derivation: %s' % s)
-    if stack or deriv is None:
-        raise ValueError('Invalid derivation; possibly unbalanced '
-                         'parentheses: %s' % s)
+    matches = _udf_re.finditer(s_)
+    for match in matches:
+        if match.group('done'):
+            node = stack.pop()
+            if len(stack) == 0:
+                deriv = node
+                break
+            else:
+                stack[-1].daughters.append(node)
+        elif match.group('form'):
+            gd = match.groupdict()
+            # ignore LKB-style start/end data if it exists on gd
+            term = UDFTerminal(
+                _unquote(gd['form']),
+                tokens=_udf_tokens(gd.get('tokens')),
+                parent=stack[-1] if stack else None
+            )
+            stack[-1].daughters.append(term)
+        elif match.group('id'):
+            gd = match.groupdict()
+            head = None
+            entity, _, type = gd['entity'].partition('@')
+            if entity[0] == '^':
+                entity = entity[1:]
+                head = True
+            if type == '':
+                type = None
+            udf = UDFNode(gd['id'], entity, gd['score'],
+                          gd['start'], gd['end'],
+                          head=head, type=type,
+                          parent=stack[-1] if stack else None)
+            stack.append(udf)
+        elif match.group('root'):
+            udf = UDFNode(None, match.group('root'))
+            stack.append(udf)
+    if deriv is None:
+        raise DerivationSyntaxError(text=s)
+    elif stack:
+        raise DerivationSyntaxError(
+            'possibly unbalanced parentheses', text=s)
     return deriv
 
 
