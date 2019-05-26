@@ -579,13 +579,6 @@ class TestSuite(object):
         assert len(t['parse']) == 1
         assert len(t['result']) == 1
 
-    def test_select(self, single_item_profile):
-        rels = itsdb.Relations.from_string(_simple_relations)
-        t = itsdb.TestSuite(relations=rels)
-        assert list(t.select('item:i-input')) == []
-        t = itsdb.TestSuite(single_item_profile)
-        assert list(t.select('item:i-id@i-input')) == [[0, 'The dog barks.']]
-
     def test_reload(self, single_item_profile):
         t = itsdb.TestSuite(single_item_profile)
         assert t['item'][0]['i-input'] == 'The dog barks.'

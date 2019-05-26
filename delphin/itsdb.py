@@ -107,23 +107,13 @@ from delphin.__about__ import __version__  # noqa: F401
 RELATIONS_FILENAME = 'relations'
 FIELD_DELIMITER = '@'
 DEFAULT_DATATYPE_VALUES = {
-    ':integer': '-1'
+    ':integer': -1
 }
 TSDB_CODED_ATTRIBUTES = {
     'i-wf': 1,
     'i-difficulty': 1,
     'polarity': -1
 }
-_primary_keys = [
-    ["i-id", "item"],
-    ["p-id", "phenomenon"],
-    ["ip-id", "item-phenomenon"],
-    ["s-id", "set"],
-    ["run-id", "run"],
-    ["parse-id", "parse"],
-    ["e-id", "edge"],
-    ["f-id", "fold"]
-]
 TSDB_CORE_FILES = [
     "item",
     "analysis",
@@ -184,8 +174,8 @@ class Field(namedtuple('Field', 'name datatype key partial comment')):
         """Get the default value of the field."""
         if self.name in TSDB_CODED_ATTRIBUTES:
             return TSDB_CODED_ATTRIBUTES[self.name]
-        elif self.datatype == ':integer':
-            return -1
+        elif self.datatype in DEFAULT_DATATYPE_VALUES:
+            return DEFAULT_DATATYPE_VALUES[self.datatype]
         else:
             return ''
 
@@ -1083,34 +1073,6 @@ class TestSuite(object):
                                 fields=fields,
                                 encoding=self.encoding)
         self._data[tablename] = table
-
-    def select(self, arg, cols=None, mode='list'):
-        """
-        Select columns from each row in the table.
-
-        The first parameter, *arg*, may either be a table name or a
-        data specifier. If the former, the *cols* parameter selects
-        the columns from the table. If the latter, *cols* is left
-        unspecified and both the table and columns are taken from the
-        data specifier; e.g., `select('item:i-id@i-input')` is
-        equivalent to `select('item', ('i-id', 'i-input'))`.
-
-        See select_rows() for a description of how to use the *mode*
-        parameter.
-
-        Args:
-            arg: a table name, if *cols* is specified, otherwise a data
-                specifier
-            cols: an iterable of Field (column) names
-            mode: how to return the data
-        """
-        if cols is None:
-            table, cols = get_data_specifier(arg)
-        else:
-            table = arg
-        if cols is None:
-            cols = [f.name for f in self.relations[table]]
-        return select_rows(cols, self[table], mode=mode)
 
     def write(self, tables=None, path=None, relations=None,
               append=False, gzip=None):
