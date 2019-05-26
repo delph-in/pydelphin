@@ -107,9 +107,9 @@ class TSQLSyntaxError(PyDelphinSyntaxError):
 
 # QUERY INSPECTION ############################################################
 
-def inspect_query(query):
+def inspect_query(querystring):
     """
-    Parse *query* and return the interpreted query object.
+    Parse *querystring* and return the interpreted query object.
 
     Example:
         >>> from delphin import tsql
@@ -121,19 +121,19 @@ def inspect_query(query):
          'tables': ['item'],
          'where': ('<', ('i-id', 100))}
     """
-    return _parse_query(query)
+    return _parse_query(querystring)
 
 
 # QUERY PROCESSING ############################################################
 
-def query(query, ts, **kwargs):
+def query(querystring, ts, **kwargs):
     """
-    Perform *query* on the testsuite *ts*.
+    Perform query *querystring* on the testsuite *ts*.
 
     Note: currently only 'select' queries are supported.
 
     Args:
-        query (str): TSQL query string
+        querystring (str): TSQL query string
         ts (:class:`delphin.itsdb.TestSuite`): testsuite to query over
         kwargs: keyword arguments passed to the more specific query
             function (e.g., :func:`select`)
@@ -141,7 +141,7 @@ def query(query, ts, **kwargs):
         >>> list(tsql.query('select i-id where i-length < 4', ts))
         [[142], [1061]]
     """
-    queryobj = _parse_query(query)
+    queryobj = _parse_query(querystring)
 
     if queryobj['querytype'] in ('select', 'retrieve'):
         return _select(
@@ -158,14 +158,14 @@ def query(query, ts, **kwargs):
                               + ' queries are not supported')
 
 
-def select(query, ts, mode='list', cast=True):
+def select(querystring, ts, mode='list', cast=True):
     """
-    Perform the TSQL selection query *query* on testsuite *ts*.
+    Perform the TSQL selection query *querystring* on testsuite *ts*.
 
     Note: The `select`/`retrieve` part of the query is not included.
 
     Args:
-        query (str): TSQL select query
+        querystring (str): TSQL select query
         ts (:class:`delphin.itsdb.TestSuite`): testsuite to query over
         mode (str): how to return the results (see
             :func:`delphin.itsdb.select_rows` for more information
@@ -176,7 +176,7 @@ def select(query, ts, mode='list', cast=True):
         >>> list(tsql.select('i-id where i-length < 4', ts))
         [[142], [1061]]
     """
-    queryobj = _parse_select(query)
+    queryobj = _parse_select(querystring)
     return _select(
         queryobj['projection'],
         queryobj['tables'],
@@ -187,7 +187,7 @@ def select(query, ts, mode='list', cast=True):
 
 
 def _select(projection, tables, condition, ts, mode, cast):
-    table = _select_from(tables, None, ts)
+    table = _select_from(tables, ts)
     table = _select_projection(projection, table, ts)
     table = _select_where(condition, table, ts)
 
@@ -203,8 +203,9 @@ def _select(projection, tables, condition, ts, mode, cast):
     return itsdb.select_rows(projection, table, mode=mode, cast=cast)
 
 
-def _select_from(tables, table, ts):
-    joined = set([] if table is None else table.name.split('+'))
+def _select_from(tables, ts):
+    table = None
+    joined = set()
     for tab in tables:
         if tab not in joined:
             joined.add(tab)
@@ -380,8 +381,8 @@ def _lex(s):
         pass
 
 
-def _parse_query(query):
-    querytype, _, querybody = query.lstrip().partition(' ')
+def _parse_query(querystring):
+    querytype, _, querybody = querystring.lstrip().partition(' ')
     querytype = querytype.lower()
     if querytype in ('select', 'retrieve'):
         result = _parse_select(querybody)
@@ -392,8 +393,8 @@ def _parse_query(query):
     return result
 
 
-def _parse_select(query):
-    tokens = LookaheadIterator(_lex(query))
+def _parse_select(querystring):
+    tokens = LookaheadIterator(_lex(querystring))
     _, token, lineno = tokens.peek()  # maybe used in error below
 
     projection = _parse_select_projection(tokens)
