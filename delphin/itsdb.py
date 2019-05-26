@@ -85,6 +85,7 @@ from pathlib import Path
 import re
 from gzip import open as gzopen
 import tempfile
+from datetime import datetime
 import shutil
 import logging
 from collections import (
@@ -95,8 +96,7 @@ from contextlib import contextmanager
 import weakref
 
 from delphin.exceptions import PyDelphinException
-from delphin.util import (safe_int, parse_datetime)
-from delphin.interface import FieldMapper
+from delphin import util
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
@@ -150,8 +150,7 @@ class ITSDBError(PyDelphinException):
 #############################################################################
 # Relations files
 
-class Field(
-        namedtuple('Field', 'name datatype key partial comment'.split())):
+class Field(namedtuple('Field', 'name datatype key partial comment')):
     '''
     A tuple describing a column in an [incr tsdb()] profile.
 
@@ -1329,6 +1328,140 @@ def _add_record(table, data, buffer_size):
 
 
 ##############################################################################
+# Processor Interface
+
+class FieldMapper(object):
+    """
+    A class for mapping responses to [incr tsdb()] fields.
+
+    This class provides two methods for mapping responses to fields:
+
+    * map() - takes a response and returns a list of (table, data)
+        tuples for the data in the response, as well as aggregating
+        any necessary information
+    * cleanup() - returns any (table, data) tuples resulting from
+        aggregated data over all runs, then clears this data
+
+    In addition, the :attr:`affected_tables` attribute should list
+    the names of tables that become invalidated by using this
+    FieldMapper to process a profile. Generally this is the list of
+    tables that :meth:`map` and :meth:`cleanup` create records for,
+    but it may also include those that rely on the previous set
+    (e.g., treebanking preferences, etc.).
+
+    Alternative [incr tsdb()] schema can be handled by overriding
+    these two methods and the __init__() method.
+
+    Attributes:
+        affected_tables: list of tables that are affected by the
+            processing
+    """
+    def __init__(self):
+        # the parse keys exclude some that are handled specially
+        self._parse_keys = '''
+            ninputs ntokens readings first total tcpu tgc treal words
+            l-stasks p-ctasks p-ftasks p-etasks p-stasks
+            aedges pedges raedges rpedges tedges eedges ledges sedges redges
+            unifications copies conses symbols others gcs i-load a-load
+            date error comment
+        '''.split()
+        self._result_keys = '''
+            result-id time r-ctasks r-ftasks r-etasks r-stasks size
+            r-aedges r-pedges derivation surface tree mrs
+        '''.split()
+        self._run_keys = '''
+            run-comment platform protocol tsdb application environment
+            grammar avms sorts templates lexicon lrules rules
+            user host os start end items status
+        '''.split()
+        self._parse_id = -1
+        self._runs = {}
+        self._last_run_id = -1
+
+        self.affected_tables = '''
+            run parse result rule output edge tree decision preference
+            update fold score
+        '''.split()
+
+    def map(self, response):
+        """
+        Process *response* and return a list of (table, rowdata) tuples.
+        """
+        inserts = []
+
+        parse = {}
+        # custom remapping, cleanup, and filling in holes
+        parse['i-id'] = response.get('keys', {}).get('i-id', -1)
+        self._parse_id = max(self._parse_id + 1, parse['i-id'])
+        parse['parse-id'] = self._parse_id
+        parse['run-id'] = response.get('run', {}).get('run-id', -1)
+        if 'tokens' in response:
+            parse['p-input'] = response['tokens'].get('initial')
+            parse['p-tokens'] = response['tokens'].get('internal')
+            if 'ninputs' not in response:
+                toks = response.tokens('initial')
+                if toks is not None:
+                    response['ninputs'] = len(toks.tokens)
+            if 'ntokens' not in response:
+                toks = response.tokens('internal')
+                if toks is not None:
+                    response['ntokens'] = len(toks.tokens)
+        if 'readings' not in response and 'results' in response:
+            response['readings'] = len(response['results'])
+        # basic mapping
+        for key in self._parse_keys:
+            if key in response:
+                parse[key] = response[key]
+        inserts.append(('parse', parse))
+
+        for result in response.get('results', []):
+            d = {'parse-id': self._parse_id}
+            if 'flags' in result:
+                d['flags'] = util.SExpr.format(result['flags'])
+            for key in self._result_keys:
+                if key in result:
+                    d[key] = result[key]
+            inserts.append(('result', d))
+
+        if 'run' in response:
+            run_id = response['run'].get('run-id', -1)
+            # check if last run was not closed properly
+            if run_id not in self._runs and self._last_run_id in self._runs:
+                last_run = self._runs[self._last_run_id]
+                if 'end' not in last_run:
+                    last_run['end'] = datetime.now()
+            self._runs[run_id] = response['run']
+            self._last_run_id = run_id
+
+        return inserts
+
+    def cleanup(self):
+        """
+        Return aggregated (table, rowdata) tuples and clear the state.
+        """
+        inserts = []
+
+        last_run = self._runs[self._last_run_id]
+        if 'end' not in last_run:
+            last_run['end'] = datetime.now()
+
+        for run_id in sorted(self._runs):
+            run = self._runs[run_id]
+            d = {'run-id': run.get('run-id', -1)}
+            for key in self._run_keys:
+                if key in run:
+                    d[key] = run[key]
+            inserts.append(('run', d))
+
+        # reset for next task
+        self._parse_id = -1
+        self._runs = {}
+        self._last_run_id = -1
+
+        return inserts
+
+
+##############################################################################
 # Non-class (i.e. static) functions
 
 data_specifier_re = re.compile(r'(?P<table>[^:]+)?(:(?P<cols>.+))?$')
@@ -1404,7 +1537,7 @@ def _cast_to_datatype(col, field):
         elif dt == ':float':
             col = float(col)
         elif dt == ':date':
-            dt = parse_datetime(col)
+            dt = util.parse_datetime(col)
             col = dt if dt is not None else col
         # other casts? :position?
     return col
@@ -1683,7 +1816,7 @@ def match_rows(rows1, rows2, key, sort_keys=True):
             data[i].append(row)
     vals = matched.keys()
     if sort_keys:
-        vals = sorted(vals, key=safe_int)
+        vals = sorted(vals, key=util.safe_int)
     for val in vals:
         left, right = matched[val]
         yield (val, left, right)
