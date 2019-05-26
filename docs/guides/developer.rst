@@ -19,15 +19,16 @@ above it (imported modules, except for Tier 0 ones, are shown in
 parentheses after the module name).
 
 It is good for a module to be conservative with its dependencies
-(i.e., climb to higher tiers). Module authors may consult this list to
-see on which tier their modules would be placed.
+(i.e., climb to higher tiers, where Tier 0 is higher than Tier 1, and
+so on). Module authors may consult this list to see on which tier
+their modules would be placed.
 
-If someone wants to take over maintainership of a module and spin it
-off as a separate repository, those without dependencies are the most
-eligible. For instance, if someone wants to take over responsibility
-for the :mod:`delphin.mrs` module, then they may want to also include
-the MRS codecs in their repository, or at least test the codecs to
-changes they make.
+If someone wants to take over maintainership of a PyDelphin module and
+spin it off as a separate repository, then modules without
+dependencies are the most eligible. For instance, if someone wants to
+take over responsibility for the :mod:`delphin.mrs` module, then they
+may want to also include the MRS codecs in their repository, or at
+least test the codecs to changes they make.
 
 * Tier 0
 
@@ -39,42 +40,43 @@ changes they make.
 
   - :mod:`delphin.derivation`
   - :mod:`delphin.hierarchy`
-  - :mod:`delphin.interface`
+  - :mod:`delphin.interface` (soft dependencies on `tokens`,
+    `derivation`, and `codecs`)
   - :mod:`delphin.lnk`
   - :mod:`delphin.predicate`
   - :mod:`delphin.variable`
 
 * Tier 2
 
-  - :mod:`delphin.ace` (interface)
-  - :mod:`delphin.itsdb` (interface)
-  - :mod:`delphin.sembase` (lnk)
-  - :mod:`delphin.semi` (hierarchy, predicate)
-  - :mod:`delphin.tfs` (hierarchy)
-  - :mod:`delphin.tokens` (lnk)
-  - :mod:`delphin.vpm` (variable)
-  - :mod:`delphin.web` (interface)
+  - :mod:`delphin.ace` [`interface`]
+  - :mod:`delphin.itsdb` [`interface`]
+  - :mod:`delphin.sembase` [`lnk`]
+  - :mod:`delphin.semi` [`hierarchy`, `predicate`]
+  - :mod:`delphin.tfs` [`hierarchy`]
+  - :mod:`delphin.tokens` [`lnk`]
+  - :mod:`delphin.vpm` [`variable`]
+  - :mod:`delphin.web` [`interface`]
 
 * Tier 3
 
-  - :mod:`delphin.repp` (lnk, tokens)
-  - :mod:`delphin.scope` (lnk, predicate, sembase)
-  - :mod:`delphin.tdl` (tfs)
-  - :mod:`delphin.tsql` (itsdb)
+  - :mod:`delphin.repp` [`lnk`, `tokens`]
+  - :mod:`delphin.scope` [`lnk`, `predicate`, `sembase`]
+  - :mod:`delphin.tdl` [`tfs`]
+  - :mod:`delphin.tsql` [`itsdb`]
 
 * Tier 4
 
-  - :mod:`delphin.dmrs` (lnk, scope, sembase, variable)
-  - :mod:`delphin.eds` (lnk, scope, sembase, variable)
-  - :mod:`delphin.mrs` (lnk, predicate, scope, sembase, variable)
+  - :mod:`delphin.dmrs` [`lnk`, `scope`, `sembase`, `variable`]
+  - :mod:`delphin.eds` [`lnk`, `scope`, `sembase`, `variable`]
+  - :mod:`delphin.mrs` [`lnk`, `predicate`, `scope`, `sembase`, `variable`]
 
 * Tier 5
 
-  - `delphin.codecs` (dmrs, eds, mrs, ...); see :doc:`../api/delphin.codecs`
+  - `delphin.codecs` [`dmrs`, `eds`, `mrs`, ...] (see :doc:`../api/delphin.codecs`)
 
 * Tier 6
 
-  - :mod:`delphin.commands` (itsdb, lnk, semi, tsql, ...)
+  - :mod:`delphin.commands` [`itsdb`, `lnk`, `semi`, `tsql`, ...]
 
 
 Creating a New Module
