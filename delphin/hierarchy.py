@@ -114,11 +114,6 @@ class MultiHierarchy(object):
                 and self._hier == other._hier
                 and self._data == other._data)
 
-    def __ne__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return not self.__eq__(other)
-
     def __getitem__(self, identifier):
         identifier = self._norm(identifier)
         data = None

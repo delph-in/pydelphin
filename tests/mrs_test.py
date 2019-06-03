@@ -41,6 +41,30 @@ def dogs_bark():
 #     assert m.variables == {}
 
 
+class TestEP():
+    def test__init__(self):
+        with pytest.raises(TypeError):
+            EP()
+        with pytest.raises(TypeError):
+            EP('_dog_n_1')
+        EP('_dog_n_1', 'h3')
+
+    def test__eq__(self):
+        ep = EP('_dog_n_1', 'h3')
+        assert ep == EP('_dog_n_1', 'h3')
+        assert ep != EP('_dog_n_2', 'h3')
+        assert ep != EP('_dog_n_1', 'h4')
+        ep = EP('_chase_v_1', 'h1', {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
+        assert ep == EP('_chase_v_1', 'h1',
+                        {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
+        assert ep != EP('_chase_v_2', 'h1',
+                        {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
+        assert ep != EP('_chase_v_1', 'h2',
+                        {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
+        assert ep != EP('_chase_v_1', 'h2',
+                        {'ARG0': 'e2', 'ARG1': 'x6', 'ARG2': 'x4'})
+        assert ep != EP('_chase_v_1', 'h2')
+
 def test_basic_MRS(dogs_bark):
     m = MRS(**dogs_bark)
     assert m.top == 'h0'

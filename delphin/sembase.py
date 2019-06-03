@@ -97,11 +97,6 @@ class Predication(LnkMixin):
             str(self.lnk),
             id(self))
 
-    def __ne__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return not (self == other)
-
 
 class Constraint(tuple):
 
@@ -166,11 +161,6 @@ class SemanticStructure(LnkMixin):
             return NotImplemented
         return (self.top == other.top
                 and self.predications == other.predications)
-
-    def __ne__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return not (self == other)
 
     def __contains__(self, id):
         return id in self._pidx

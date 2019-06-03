@@ -89,11 +89,6 @@ class Node(Predication):
                 and self.properties == other.properties
                 and self.carg == other.carg)
 
-    def __ne__(self, other):
-        if not isinstance(other, Node):
-            return NotImplemented
-        return not (self == other)
-
 
 class Link(object):
     """
@@ -141,11 +136,6 @@ class Link(object):
                 and self.end == other.end
                 and self.role == other.role
                 and self.post == other.post)
-
-    def __ne__(self, other):
-        if not isinstance(other, Link):
-            return NotImplemented
-        return not self.__eq__(other)
 
 
 class DMRS(scope.ScopingSemanticStructure):

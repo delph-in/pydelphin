@@ -77,11 +77,6 @@ class EP(Predication):
                 and self.label == other.label
                 and self.args == other.args)
 
-    def __ne__(self, other):
-        if not isinstance(other, EP):
-            return NotImplemented
-        return not (self == other)
-
     def __repr__(self):
         return '<{} object ({}:{}({})) at {}>'.format(
             self.__class__.__name__,

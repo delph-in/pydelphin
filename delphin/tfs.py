@@ -52,11 +52,6 @@ class FeatureStructure(object):
             return NotImplemented
         return self._avm == other._avm
 
-    def __ne__(self, other):
-        if not isinstance(other, FeatureStructure):
-            return NotImplemented
-        return self._avm != other._avm
-
     def __setitem__(self, key, val):
         avm = self._avm
         subkeys = key.split('.', 1)
@@ -172,11 +167,6 @@ class TypedFeatureStructure(FeatureStructure):
         if not isinstance(other, TypedFeatureStructure):
             return NotImplemented
         return self._type == other._type and self._avm == other._avm
-
-    def __ne__(self, other):
-        if not isinstance(other, TypedFeatureStructure):
-            return NotImplemented
-        return self._type != other._type or self._avm != other._avm
 
     @property
     def type(self):

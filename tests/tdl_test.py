@@ -249,6 +249,8 @@ class TestConjunction:
         b = Conjunction([String('a')])
         assert a == a
         assert a != b
+        assert a == TypeIdentifier('a')
+        assert a != String('a')
 
     def test__contains__(self):
         a = Conjunction()

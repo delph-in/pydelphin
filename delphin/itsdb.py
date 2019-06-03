@@ -540,9 +540,6 @@ class Record(list):
     def __eq__(self, other):
         return all(a == b for a, b in zip(self, other))
 
-    def __ne__(self, other):
-        return any(a != b for a, b in zip(self, other))
-
     def __iter__(self):
         for raw, field in zip(list.__iter__(self), self.fields):
             yield _cast_to_datatype(raw, field)

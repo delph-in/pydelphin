@@ -145,12 +145,11 @@ class _UDFNodeBase(object):
     def __str__(self):
         return self.to_udf(indent=None)
 
-    # for some reason != is not the opposite of __eq__ by default...
+    # cannot rely on default __ne__ while namedtuple is a shared base class
     def __ne__(self, other):
-        eq = self.__eq__(other)
-        if eq is NotImplemented:
-            return eq  # pass this one along
-        return not eq
+        if not isinstance(other, _UDFNodeBase):
+            return NotImplemented
+        return not (self == other)
 
     # serialization
 

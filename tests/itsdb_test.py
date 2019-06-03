@@ -233,6 +233,9 @@ def test_Record():
     assert r.get('i-input') == 'sentence'
     assert r.get('unknown') is None
     assert str(r) == '0@sentence'
+    assert r == itsdb.Record(rels['item'], [0, 'sentence'])
+    assert r != itsdb.Record(rels['item'], [1, 'sentence'])
+    assert r != itsdb.Record(rels['item'], [0, 'string'])
     # incorrect number of fields
     with pytest.raises(itsdb.ITSDBError):
         itsdb.Record(rels['item'], [0])

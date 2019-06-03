@@ -160,7 +160,6 @@ def test_Response():
 
     r = Response(tokens={'initial': toks_s})
     assert r['tokens']['initial'] == toks_s
-    print(r.tokens('initial'))
     assert r.tokens('initial') == toks
     assert r.tokens('internal') is None
 

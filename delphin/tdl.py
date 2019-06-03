@@ -514,11 +514,6 @@ class Conjunction(object):
             return NotImplemented
         return self._terms == other._terms
 
-    def __ne__(self, other):
-        if not isinstance(other, Conjunction):
-            return NotImplemented
-        return self._terms != other._terms
-
     def __contains__(self, key):
         return any(key in term
                    for term in self._terms

@@ -16,6 +16,61 @@ def dogs_bark():
                   Link(10001, 10002, 'RSTR', 'H')]}
 
 
+class TestNode():
+    def test_init(self):
+        with pytest.raises(TypeError):
+            Node()
+        with pytest.raises(TypeError):
+            Node(1)
+        with pytest.raises(TypeError):
+            Node('1', '_dog_n_1')
+        Node(1, '_dog_n_1')
+        Node(1, '_dog_n_1', type='x')
+        Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'})
+        Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'}, carg='Dog')
+
+    def test__eq__(self):
+        n = Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'})
+        assert n == Node(2, '_dog_n_1', type='x', properties={'NUM': 'sg'})
+        assert n != Node(1, '_dog_n_2', type='x', properties={'NUM': 'sg'})
+        assert n != Node(2, '_dog_n_1', type='e', properties={'NUM': 'sg'})
+        assert n != Node(2, '_dog_n_1', type='x', properties={'NUM': 'pl'})
+
+    def test_sortinfo(self):
+        n = Node(1, '_dog_n_1')
+        assert n.sortinfo == {}
+        n = Node(1, '_dog_n_1', type='x')
+        assert n.sortinfo == {'cvarsort': 'x'}
+        n = Node(1, '_dog_n_1', properties={'NUM': 'sg'})
+        assert n.sortinfo == {'NUM': 'sg'}
+        n = Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'})
+        assert n.sortinfo == {'cvarsort': 'x', 'NUM': 'sg'}
+
+
+class TestLink():
+    def test_init(self):
+        with pytest.raises(TypeError):
+            Link()
+        with pytest.raises(TypeError):
+            Link(1)
+        with pytest.raises(TypeError):
+            Link(1, 2)
+        with pytest.raises(TypeError):
+            Link(1, 2, 'ARG1')
+        with pytest.raises(TypeError):
+            Link('1', 2, 'ARG1', 'EQ')
+        with pytest.raises(TypeError):
+            Link(1, '2', 'ARG1', 'EQ')
+        Link(1, 2, 'ARG1', 'EQ')
+
+    def test__eq__(self):
+        link1 = Link(1, 2, 'ARG1', 'EQ')
+        assert link1 == Link(1, 2, 'ARG1', 'EQ')
+        assert link1 != Link(2, 1, 'ARG1', 'EQ')
+        assert link1 != Link(1, 2, 'ARG2', 'EQ')
+        assert link1 != Link(1, 2, 'ARG1', 'NEQ')
+
+
 def test_empty_DMRS():
     d = DMRS()
     assert d.top is None

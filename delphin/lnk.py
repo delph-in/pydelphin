@@ -210,13 +210,8 @@ class Lnk(object):
     def __eq__(self, other):
         return self.type == other.type and self.data == other.data
 
-    def __ne__(self, other):
-        if not isinstance(other, Lnk):
-            return NotImplemented
-        return not (self == other)
-
     def __bool__(self):
-        if self.type == Lnk.UNSPECIFIED or not self.data:
+        if self.type == Lnk.UNSPECIFIED:
             return False
         if self.type == Lnk.CHARSPAN and self.data == (-1, -1):
             return False

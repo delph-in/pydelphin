@@ -36,6 +36,12 @@ class TestMultiHierarchy():
         assert 'A' in h
         assert 'a' in h  # case normalized
 
+    def test__eq__(self, h1):
+        assert h1 == MH(h1.top, {id: h1.parents(id) for id in h1})
+        assert h1 != MH(h1.top.upper(), {
+            id.upper(): [p.upper() for p in h1.parents(id)]
+            for id in h1})
+
     def test_parents(self, h1):
         assert h1.parents('d') == ('a', 'b')
         assert h1.parents('c') == ('a', 'b')
