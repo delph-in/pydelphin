@@ -73,12 +73,19 @@ class FeatureStructure(object):
             subdef[subkeys[1]] = val
 
     def __getitem__(self, key):
-        subkeys = key.split('.', 1)
-        subkey = subkeys[0].upper()
-        val = self._avm[subkey]
-        if len(subkeys) == 2:
-            val = val[subkeys[1]]
+        first, _, remainder = key.partition('.')
+        val = self._avm[first.upper()]
+        if remainder:
+            val = val[remainder]
         return val
+
+    def __delitem__(self, key):
+        first, _, remainder = key.partition('.')
+        if remainder:
+            fs = self._avm[first.upper()]
+            del fs[remainder]
+        else:
+            del self._avm[first.upper()]
 
     def __contains__(self, key):
         subkeys = key.split('.', 1)

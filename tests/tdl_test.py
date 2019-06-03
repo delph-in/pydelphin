@@ -286,6 +286,15 @@ class TestConjunction:
         a['ATTR'] = TypeIdentifier('val4')
         assert a.terms[1]['ATTR'] == TypeIdentifier('val4')
 
+    def test__delitem__(self):
+        a = Conjunction([AVM({'A.B': String('x')}),
+                         AVM({'A.D': String('y')})])
+        del a['A.B']
+        assert 'A.B' not in a
+        assert 'A.D' in a
+        del a['A']
+        assert 'A' not in a
+
     def test_get(self):
         pass
 

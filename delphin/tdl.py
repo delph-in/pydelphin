@@ -525,6 +525,7 @@ class Conjunction(object):
                    if isinstance(term, AVM))
 
     def __getitem__(self, key):
+        """Get the value of *key* across all AVMs in the conjunction"""
         terms = []
         for term in self._terms:
             if isinstance(term, AVM):
@@ -539,6 +540,7 @@ class Conjunction(object):
             return Conjunction(terms)
 
     def __setitem__(self, key, val):
+        """Set *key* to *val* in the last AVM in the conjunction"""
         avm = None
         for term in self._terms:
             if isinstance(term, AVM):
@@ -546,6 +548,16 @@ class Conjunction(object):
         if avm is None:
             raise TDLError('no AVM in Conjunction')
         avm[key] = val
+
+    def __delitem__(self, key):
+        """Delete *key* from all AVMs in the conjunction"""
+        found = False
+        for term in self._terms:
+            if isinstance(term, AVM) and key in term:
+                found = True
+                del term[key]
+        if not found:
+            raise KeyError(key)
 
     def get(self, key, default=None):
         """
@@ -676,10 +688,13 @@ class TypeDefinition(object):
         return key in self.conjunction
 
     def __getitem__(self, key):
-        return self.conjunction.__getitem__(key)
+        return self.conjunction[key]
 
     def __setitem__(self, key, value):
-        return self.conjunction.__setitem__(key, value)
+        self.conjunction[key] = value
+
+    def __delitem__(self, key):
+        del self.conjunction[key]
 
     def documentation(self, level='first'):
         """
