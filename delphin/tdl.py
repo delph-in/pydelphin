@@ -538,6 +538,15 @@ class Conjunction(object):
         else:
             return Conjunction(terms)
 
+    def __setitem__(self, key, val):
+        avm = None
+        for term in self._terms:
+            if isinstance(term, AVM):
+                avm = term
+        if avm is None:
+            raise TDLError('no AVM in Conjunction')
+        avm[key] = val
+
     def get(self, key, default=None):
         """
         Get the value of attribute *key* in any AVM in the conjunction.

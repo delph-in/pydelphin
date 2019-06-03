@@ -124,6 +124,9 @@ def test_AVM():
     assert a.features() == []
     assert 'ATTR' not in a
 
+    with pytest.raises(TypeError):
+        AVM({'ATTR': 'val'})
+
     a = AVM([('ATTR', Conjunction([TypeIdentifier('a')]))])
     assert len(a.features()) == 1
     assert 'ATTR' in a
@@ -218,17 +221,95 @@ def test_Coreference():
         Coreference()
 
 
-def test_Conjunction():
-    c = Conjunction()
-    orig_c = c
-    assert len(c.terms) == 0
-    c &= TypeIdentifier('a')
-    assert len(c.terms) == 1
-    assert len(orig_c.terms) == 0
-    with pytest.raises(TypeError):
-        c &= 'b'
-    with pytest.raises(TypeError):
-        c.add('b')
+class TestConjunction:
+    def test_init(self):
+        c = Conjunction()
+        assert c.terms == []
+        c = Conjunction([TypeIdentifier('a')])
+        assert len(c.terms) == 1
+        with pytest.raises(TypeError):
+            Conjunction('a')
+        with pytest.raises(TypeError):
+            Conjunction(['a'])
+        with pytest.raises(TypeError):
+            Conjunction(TypeIdentifier('a'))
+
+    def test_and(self):
+        c = Conjunction()
+        assert len(c.terms) == 0
+        c &= TypeIdentifier('a')
+        assert len(c.terms) == 1
+        c &= TypeIdentifier('b')
+        assert len(c.terms) == 2
+        with pytest.raises(TypeError):
+            c &= 'b'
+
+    def test_eq(self):
+        a = Conjunction([TypeIdentifier('a')])
+        b = Conjunction([String('a')])
+        assert a == a
+        assert a != b
+
+    def test__contains__(self):
+        a = Conjunction()
+        assert 'ATTR' not in a
+        a.add(AVM({'ATTR': TypeIdentifier('val')}))
+        assert 'ATTR' in a
+        a.add(AVM({'ATTR': TypeIdentifier('val2')}))  # two AVMs
+        assert 'ATTR' in a
+
+    def test__getitem__(self):
+        a = Conjunction()
+        with pytest.raises(KeyError):
+            a['ATTR']
+        a.add(AVM({'ATTR': TypeIdentifier('val')}))
+        assert a['ATTR'] == TypeIdentifier('val')
+        a.add(AVM({'ATTR': TypeIdentifier('val2')}))  # two AVMs
+        assert a['ATTR'] == Conjunction([TypeIdentifier('val'),
+                                         TypeIdentifier('val2')])
+
+    def test__setitem__(self):
+        a = Conjunction()
+        with pytest.raises(TDLError):
+            a['ATTR'] = TypeIdentifier('val')
+        a.add(AVM())
+        a['ATTR'] = TypeIdentifier('val')
+        assert a['ATTR'] == TypeIdentifier('val')
+        # reassignment overwrites
+        a['ATTR'] = TypeIdentifier('val2')
+        assert a['ATTR'] == TypeIdentifier('val2')
+        a['ATTR'] &= TypeIdentifier('val3')
+        assert a['ATTR'] == Conjunction([TypeIdentifier('val2'),
+                                         TypeIdentifier('val3')])
+        # setitem adds to the last AVM
+        a.add(AVM())
+        a['ATTR'] = TypeIdentifier('val4')
+        assert a.terms[1]['ATTR'] == TypeIdentifier('val4')
+
+    def test_get(self):
+        pass
+
+    def test_normalize(self):
+        pass
+
+    def test_terms(self):
+        pass
+
+    def test_add(self):
+        c = Conjunction()
+        with pytest.raises(TypeError):
+            c.add('b')
+        c.add(TypeIdentifier('a'))
+        assert c.terms == [TypeIdentifier('a')]
+
+    def test_types(self):
+        pass
+
+    def test_features(self):
+        pass
+
+    def test_string(self):
+        pass
 
 
 def test_TypeDefinition():
