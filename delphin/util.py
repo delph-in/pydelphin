@@ -1,5 +1,7 @@
 
 
+from typing import Union
+from pathlib import Path
 import warnings
 import pkgutil
 import codecs
@@ -11,6 +13,9 @@ from enum import IntEnum
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
+
+
+PathLike = Union[str, Path]
 
 
 def deprecated(message=None, final_version=None, alternative=None):
