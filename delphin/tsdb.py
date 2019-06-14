@@ -113,12 +113,12 @@ class Field(object):
         flags (list): List of additional flags
         comment (str): a description of the column
     Attributes:
-        key (bool): `True` if the column is a key in the database.
+        is_key (bool): `True` if the column is a key in the database.
         default (str): The default value to use when writing a table
             if the value is `None`.
     '''
 
-    __slots__ = 'name', 'datatype', 'flags', 'comment', 'key', 'default'
+    __slots__ = 'name', 'datatype', 'flags', 'comment', 'is_key', 'default'
 
     def __init__(self,
                  name: str,
@@ -130,10 +130,10 @@ class Field(object):
         self.flags = tuple(flags or [])
         self.comment = comment
 
-        self.key = False
+        self.is_key = False
         for flag in self.flags:
             if flag in (':key', ':primary') or flag.startswith(':foreign'):
-                self.key = True
+                self.is_key = True
 
         self.default = TSDB_CODED_ATTRIBUTES.get(
             name,
@@ -158,6 +158,7 @@ class Field(object):
 
 Fields = Sequence[Field]
 Schema = Mapping[str, Fields]
+SchemaLike = Union[Schema, util.PathLike]
 
 
 def read_schema(path: util.PathLike) -> Schema:
@@ -238,6 +239,116 @@ def _format_schema(schema: Schema) -> str:
         )
         for name in schema
     )
+
+
+#############################################################################
+# Basic Database Classes
+
+class Table(object):
+    """
+    A basic abstraction of a TSDB database table.
+
+    This class provides a basic read-only view into a TSDB table. It
+    supports iteration over the rows and basic column selection.
+    Column values are not cast into their datatypes.
+
+    Args:
+        dir: path to the database directory
+        name: name of the table
+        fields: the table schema; an iterable of :class:`Field` objects
+        encoding: character encoding of the table file
+    Attributes:
+        dir: The path to the database directory.
+        name: The name of the table.
+        fields: The table's schema.
+        encoding: The character encoding of table files.
+    """
+    def __init__(self,
+                 dir: util.PathLike,
+                 name: str,
+                 fields: Fields,
+                 encoding: str = 'utf-8') -> None:
+        self.dir = Path(dir).expanduser()
+        self.name = name
+        self.fields = fields
+        self.encoding = encoding
+        self._field_index = {field.name: i for i, field in enumerate(fields)}
+
+    def __iter__(self) -> Generator[Row, None, None]:
+        with open_table(self.dir, self.name, encoding=self.encoding) as f:
+            for line in f:
+                yield decode_row(line)
+
+    def column_index(self, name: str) -> int:
+        """Return the tuple index of the column with name *name*."""
+        return self._field_index[name]
+
+    def select(self, *names: str) -> Generator[Row, None, None]:
+        """
+        Select fields given by *names* from each row in the table.
+
+        If no field names are given, all fields are returned.
+
+        Yields:
+            tuple: rows containing the specified columns
+        Examples:
+            >>> next(table.select())
+            ('10', 'unknown', 'formal', 'none', '1', 'S', 'It rained.', ...)
+            >>> next(table.select('i-id'))
+            ('10',)
+            >>> next(table.select('i-id', 'i-input'))
+            ('10', 'It rained.')
+        """
+        if not names:
+            yield from iter(self)
+        else:
+            indices = []
+            for name in names:
+                try:
+                    indices.append(self._field_index[name])
+                except KeyError as exc:
+                    msg = 'no such field: {}'.format(name)
+                    raise TSDBError(msg) from exc
+            for record in self:
+                yield tuple(record[idx] for idx in indices)
+
+
+class Database(object):
+    """
+    A basic abstraction of a TSDB database.
+
+    This class manages the basic access into a TSDB database by
+    loading its schema and allowing for named access to table data.
+
+    Args:
+        path: path to the database directory
+        encoding: character encoding of the table files
+    Example:
+        >>> db = tsdb.Database('my-profile')
+        >>> item = db['item']
+    Attributes:
+        schema: The database's schema.
+        encoding: The character encoding of table files.
+    """
+    def __init__(self,
+                 path: util.PathLike,
+                 encoding: str = 'utf-8') -> None:
+        path = Path(path).expanduser()
+        if not is_database_directory(path):
+            raise TSDBError('not a valid TSDB database: {!s}'.format(path))
+        self._path = path
+        self.schema = read_schema(path)
+        self.encoding = encoding
+
+    @property
+    def path(self) -> util.PathLike:
+        """The database directory's path."""
+        return self._path
+
+    def __getitem__(self, name: str) -> Table:
+        if name not in self.schema:
+            raise TSDBError('table not defined in schema: {}'.format(name))
+        return Table(self.path, name, self.schema[name], self.encoding)
 
 
 #############################################################################
@@ -605,13 +716,8 @@ def write_table(dir: util.PathLike,
             mode='w+b', suffix='.tmp',
             prefix=name, dir=str(dir)) as f_tmp:
 
-        # akwardly set delim inside loop so records are joined with \n
-        # without the final record having a trailing \n; but initial
-        # delim needs to be \n if appending to a non-empty file
-        delim = b'\n' if append_nonempty else b''
         for row in rows:
-            f_tmp.write(delim + (encode_row(row, fields)).encode(encoding))
-            delim = b'\n'
+            f_tmp.write((encode_row(row, fields) + '\n').encode(encoding))
 
         # only gzip non-empty files
         gzip = gzip and (f_tmp.tell() != 0 or append_nonempty)
@@ -630,107 +736,84 @@ def write_table(dir: util.PathLike,
         other.unlink()
 
 
-#############################################################################
-# Basic Database Classes
-
-class Table(object):
+def write_database(db: Database,
+                   path: util.PathLike,
+                   tables: Optional[Iterable[str]] = None,
+                   schema: SchemaLike = None,
+                   gzip: Optional[bool] = None,
+                   encoding: str = 'utf-8') -> None:
     """
-    A basic abstraction of a TSDB database table.
+    Write TSDB database *db* to *path*.
 
-    This class provides a basic read-only view into a TSDB table. It
-    supports iteration over the rows and basic column selection.
-    Column values are not cast into their datatypes.
+    If *path* is an existing file (not a directory), a
+    :class:`TSDBError` is raised. If *path* is an existing directory,
+    the directory will be cleared. Every table name in *tables* must
+    exist in the destination schema. If *schema* is given (even if it
+    is the same as for *db*), every row will be remade (using
+    :func:`make_row`) using the schema, and columns may be
+    dropped or `None` values inserted as necessary, but no more
+    sophisticated changed will be made.
+
+    .. warning::
+
+       If *path* points to an existing directory, all files in that
+       directory will be deleted prior to writing the database!
+       Directories under *path* will not be deleted.
 
     Args:
-        dir: path to the database directory
-        name: name of the table
-        fields: the table schema; an iterable of :class:`Field` objects
-        encoding: character encoding of the table file
-    Attributes:
-        dir: The path to the database directory.
-        name: The name of the table.
-        fields: The table's schema.
-        encoding: The character encoding of table files.
+        db: Database containing data to write
+        path: the path to the destination database directory
+        tables: list of tables to write; if `None` use all tables in
+            the destination schema
+        schema: the destination database schema; if `None` use the
+            schema of *db*
+        gzip: if `True`, compress all non-empty tables; if `False`, do
+            not compress; if `None` compress if destination table
+            exists, is non-empty, and is compressed
+        encoding: character encoding for the table files
     """
-    def __init__(self,
-                 dir: util.PathLike,
-                 name: str,
-                 fields: Fields,
-                 encoding: str = 'utf-8') -> None:
-        self.dir = Path(dir).expanduser()
-        self.name = name
-        self.fields = fields
-        self.encoding = encoding
-        self._field_index = {field.name: i for i, field in enumerate(fields)}
+    path = Path(path).expanduser()
+    if path.is_file():
+        raise TSDBError('not a directory: {!s}'.format(path))
+    remake_rows = schema is not None
+    if schema is None:
+        schema = db.schema
+    elif isinstance(schema, (str, Path)):
+        schema = read_schema(schema)
+    if tables is None:
+        tables = list(schema)
 
-    def __iter__(self) -> Generator[Row, None, None]:
-        with open_table(self.dir, self.name, encoding=self.encoding) as f:
-            for line in f:
-                yield decode_row(line)
+    # Prepare destination directory
+    path.mkdir(exist_ok=True)
+    write_schema(path, schema)
 
-    def select(self, *names: str) -> Generator[Row, None, None]:
-        """
-        Select fields given by *names* from each row in the table.
-
-        If no field names are given, all fields are returned.
-
-        Yields:
-            tuple: rows containing the specified columns
-        Examples:
-            >>> next(table.select())
-            ('10', 'unknown', 'formal', 'none', '1', 'S', 'It rained.', ...)
-            >>> next(table.select('i-id'))
-            ('10',)
-            >>> next(table.select('i-id', 'i-input'))
-            ('10', 'It rained.')
-        """
-        if not names:
-            yield from iter(self)
+    for name in tables:
+        fields = schema[name]
+        if name in db.schema:
+            table = db[name]
         else:
-            indices = []
-            for name in names:
-                try:
-                    indices.append(self._field_index[name])
-                except KeyError as exc:
-                    msg = 'no such field: {}'.format(name)
-                    raise TSDBError(msg) from exc
-            for record in self:
-                yield tuple(record[idx] for idx in indices)
+            table = Table(path, name, fields, encoding=encoding)
+        if remake_rows:
+            rows = _remake_rows(table, fields)
+        else:
+            rows = iter(table)
+        write_table(path,
+                    name,
+                    rows,
+                    fields,
+                    append=False,
+                    gzip=gzip,
+                    encoding=encoding)
+
+    # only delete other files at the end in case db.path == path
+    keepers = set(tables).union([SCHEMA_FILENAME])
+    for existing in path.iterdir():
+        if existing.is_file() and existing.with_suffix('').name not in keepers:
+            existing.unlink()
 
 
-class Database(object):
-    """
-    A basic abstraction of a TSDB database.
-
-    This class manages the basic access into a TSDB database by
-    loading its schema and allowing for named access to table data.
-
-    Args:
-        path: path to the database directory
-        encoding: character encoding of the table files
-    Example:
-        >>> db = tsdb.Database('my-profile')
-        >>> item = db['item']
-    Attributes:
-        schema: The database's schema.
-        encoding: The character encoding of table files.
-    """
-    def __init__(self,
-                 path: util.PathLike,
-                 encoding: str = 'utf-8') -> None:
-        path = Path(path).expanduser()
-        if not is_database_directory(path):
-            raise TSDBError('not a valid TSDB database: {!s}'.format(path))
-        self._path = path
-        self.schema = read_schema(path)
-        self.encoding = encoding
-
-    @property
-    def path(self) -> util.PathLike:
-        """The database directory's path."""
-        return self._path
-
-    def __getitem__(self, name: str) -> Table:
-        if name not in self.schema:
-            raise TSDBError('table not defined in schema: {}'.format(name))
-        return Table(self.path, name, self.schema[name], self.encoding)
+def _remake_rows(table, fields):
+    field_names = [field.name for field in table.fields]
+    for row in table:
+        colmap = dict(zip(field_names, row))
+        yield make_row(colmap, fields)

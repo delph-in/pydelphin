@@ -9,11 +9,11 @@ delphin.tsdb
 
    .. data:: SCHEMA_FILENAME
 
-      `relations` -- The filename for the schema.
+      ``relations`` -- The filename for the schema.
 
    .. data:: FIELD_DELIMITER
 
-      `@` -- The character used to delimit fields (or columns) in a table.
+      ``@`` -- The character used to delimit fields (or columns) in a table.
 
    .. data:: TSDB_CORE_FILES
 
@@ -93,6 +93,7 @@ delphin.tsdb
    .. autofunction:: table_path
    .. autofunction:: open_table
    .. autofunction:: write_table
+   .. autofunction:: write_database
 
 
    Basic Database and Table Classes

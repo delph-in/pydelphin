@@ -15,7 +15,7 @@ def test_Field():
     f = tsdb.Field('x', ':y', (':key',), 'a comment')
     assert f.name == 'x'
     assert f.datatype == ':y'
-    assert f.key
+    assert f.is_key
     assert f.flags == (':key',)
     assert f.comment == 'a comment'
     f = tsdb.Field('x', ':integer', (), '')
@@ -68,6 +68,51 @@ def test_write_schema(empty_testsuite, tmp_path):
     orig = empty_testsuite.joinpath('relations')
     new = tmp_dir.joinpath('relations')
     assert orig.read_text() == new.read_text()
+
+
+class TestTable():
+    def test_init(self, mini_testsuite):
+        schema = tsdb.read_schema(mini_testsuite)
+        table = tsdb.Table(mini_testsuite, 'item', schema['item'])
+        assert table.dir == mini_testsuite
+        assert table.name == 'item'
+        assert table.fields == schema['item']
+
+    def test__iter__(self, mini_testsuite):
+        schema = tsdb.read_schema(mini_testsuite)
+        item = tsdb.Table(mini_testsuite, 'item', schema['item'])
+        assert len(list(item)) == 3
+
+    def test_select(self, mini_testsuite):
+        schema = tsdb.read_schema(mini_testsuite)
+        item = tsdb.Table(mini_testsuite, 'item', schema['item'])
+        assert list(item.select('i-id')) == [('10',), ('20',), ('30',)]
+        assert list(item.select('i-input', 'i-id')) == [
+            ('It rained.', '10'),
+            ('Rained.', '20'),
+            ('It snowed.', '30')]
+
+
+class TestDatabase():
+    def test_init(self, tmp_path, mini_testsuite):
+        with pytest.raises(TypeError):
+            tsdb.Database()
+        with pytest.raises(tsdb.TSDBError):
+            dir = tmp_path.joinpath('not_a_testsuite')
+            dir.mkdir()
+            tsdb.Database(dir)
+        tsdb.Database(mini_testsuite)
+
+    def test_path(self, mini_testsuite):
+        db = tsdb.Database(mini_testsuite)
+        assert db.path == mini_testsuite
+
+    def test__getitem__(self, mini_testsuite):
+        db = tsdb.Database(mini_testsuite)
+        item = db['item']
+        assert item.name == 'item'
+        with pytest.raises(tsdb.TSDBError):
+            db['not_a_table']
 
 
 def test_escape():
@@ -151,11 +196,11 @@ def test_write_table(single_item_skeleton):
     path = dir.joinpath('item')
     tsdb.write_table(dir, 'item', [(0, 'The cat meows.')], fields)
     with tsdb.open_table(dir, 'item') as fh:
-        assert list(fh) == ['0@The cat meows.']
+        assert list(fh) == ['0@The cat meows.\n']
     tsdb.write_table(dir, 'item', [(1, 'The wolf howls.')], fields,
                      append=True)
     with tsdb.open_table(dir, 'item') as fh:
-        assert list(fh) == ['0@The cat meows.\n', '1@The wolf howls.']
+        assert list(fh) == ['0@The cat meows.\n', '1@The wolf howls.\n']
 
     tsdb.write_table(dir, 'item', [(0, 'The cat meows.')], fields, gzip=True)
     assert not path.with_suffix('').exists()
@@ -168,46 +213,30 @@ def test_write_table(single_item_skeleton):
     assert path.with_suffix('').exists()
 
 
-class TestTable():
-    def test_init(self, mini_testsuite):
-        schema = tsdb.read_schema(mini_testsuite)
-        table = tsdb.Table(mini_testsuite, 'item', schema['item'])
-        assert table.dir == mini_testsuite
-        assert table.name == 'item'
-        assert table.fields == schema['item']
-
-    def test__iter__(self, mini_testsuite):
-        schema = tsdb.read_schema(mini_testsuite)
-        item = tsdb.Table(mini_testsuite, 'item', schema['item'])
-        assert len(list(item)) == 3
-
-    def test_select(self, mini_testsuite):
-        schema = tsdb.read_schema(mini_testsuite)
-        item = tsdb.Table(mini_testsuite, 'item', schema['item'])
-        assert list(item.select('i-id')) == [('10',), ('20',), ('30',)]
-        assert list(item.select('i-input', 'i-id')) == [
-            ('It rained.', '10'),
-            ('Rained.', '20'),
-            ('It snowed.', '30')]
-
-
-class TestDatabase():
-    def test_init(self, tmp_path, mini_testsuite):
-        with pytest.raises(TypeError):
-            tsdb.Database()
-        with pytest.raises(tsdb.TSDBError):
-            dir = tmp_path.joinpath('not_a_testsuite')
-            dir.mkdir()
-            tsdb.Database(dir)
-        tsdb.Database(mini_testsuite)
-
-    def test_path(self, mini_testsuite):
-        db = tsdb.Database(mini_testsuite)
-        assert db.path == mini_testsuite
-
-    def test__getitem__(self, mini_testsuite):
-        db = tsdb.Database(mini_testsuite)
-        item = db['item']
-        assert item.name == 'item'
-        with pytest.raises(tsdb.TSDBError):
-            db['not_a_table']
+def test_write_database(tmp_path, mini_testsuite, empty_alt_testsuite):
+    tmp_ts = tmp_path.joinpath('test_write_database')
+    db = tsdb.Database(mini_testsuite)
+    tsdb.write_database(db, tmp_ts)
+    assert tmp_ts.is_dir()
+    assert tmp_ts.joinpath('relations').is_file()
+    assert tmp_ts.joinpath('item').is_file()
+    assert tmp_ts.joinpath('parse').is_file()
+    assert tmp_ts.joinpath('result').is_file()
+    assert tmp_ts.joinpath('parse').read_text() == (
+        '10@10@1\n'
+        '20@20@0\n'
+        '30@30@1\n')
+    tsdb.write_database(db, tmp_ts, tables=['item'])
+    assert tmp_ts.joinpath('item').is_file()
+    assert not tmp_ts.joinpath('parse').is_file()
+    assert not tmp_ts.joinpath('result').is_file()
+    # alt_schema drops i-wf field from mini_testsuite's schema
+    alt_schema = tsdb.read_schema(empty_alt_testsuite)
+    tsdb.write_database(db, tmp_ts, tables=['item'], schema=alt_schema)
+    alt_db = tsdb.Database(tmp_ts)
+    assert len(db.schema['item']) == 4
+    assert len(alt_db.schema['item']) == 3
+    assert tmp_ts.joinpath('item').read_text() == (
+        '10@It rained.@1-feb-2018 15:00\n'
+        '20@Rained.@01-02-18 15:00:00\n'
+        '30@It snowed.@2018-2-1 (15:00:00)\n')
