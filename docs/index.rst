@@ -29,6 +29,7 @@ PyDelphin
 .. toctree::
   :maxdepth: 1
   :caption: API Reference:
+  :hidden:
 
   api/delphin.ace.rst
   api/delphin.codecs.rst
@@ -56,6 +57,65 @@ PyDelphin
   api/delphin.variable.rst
   api/delphin.vpm.rst
   api/delphin.web.rst
+
+API Reference:
+--------------
+
+Core API
+''''''''
+
+- :doc:`api/delphin.exceptions`
+- :doc:`api/delphin.hierarchy` -- Multiple-inheritance hierarchies
+- :doc:`api/delphin.codecs` -- Serialization codecs
+- :doc:`api/delphin.commands`
+
+
+Interfacing External Tools
+''''''''''''''''''''''''''
+
+- :doc:`api/delphin.interface`
+- :doc:`api/delphin.ace` -- ACE
+- :doc:`api/delphin.web` -- DELPH-IN Web API
+
+Tokenization
+''''''''''''
+
+- :doc:`api/delphin.lnk` -- Surface alignment
+- :doc:`api/delphin.repp` -- Regular Expression Preprocessor
+- :doc:`api/delphin.tokens` -- YY token lattices
+
+Syntax
+''''''
+
+- :doc:`api/delphin.derivation` -- UDF/UDX derivation trees
+
+Semantics
+'''''''''
+
+- :doc:`api/delphin.dmrs` -- Dependency Minimal Recursion Semantics
+- :doc:`api/delphin.eds` -- Elementary Dependency Structures
+- :doc:`api/delphin.predicate` -- Semantic predicates
+- :doc:`api/delphin.mrs` -- Minimal Recursion Semantics
+- :doc:`api/delphin.sembase`
+- :doc:`api/delphin.semi` -- Semantic Interface (or model)
+- :doc:`api/delphin.scope` -- Scope operations
+- :doc:`api/delphin.variable`
+- :doc:`api/delphin.vpm` -- Variable property mapping
+
+Test Suites
+'''''''''''
+
+- :doc:`api/delphin.itsdb` -- [incr tsdb()]
+- :doc:`api/delphin.tsdb` -- Test Suite Database
+- :doc:`api/delphin.tsql` -- Test Suite Query Language
+
+
+Grammars
+''''''''
+
+- :doc:`api/delphin.tdl` -- Type Description Language
+- :doc:`api/delphin.tfs` -- Typed feature structures
+
 
 
 Indices and tables
