@@ -14,7 +14,7 @@ import importlib
 import logging
 import warnings
 
-from delphin import itsdb, tsql
+from delphin import tsdb, itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
 from delphin import util
@@ -232,7 +232,7 @@ def select(dataspec, testsuite, mode='list', cast=True):
 ###############################################################################
 # MKPROF ######################################################################
 
-def mkprof(destination, source=None, relations=None, where=None,
+def mkprof(destination, source=None, schema=None, where=None,
            in_place=False, skeleton=False, full=False, gzip=False):
     """
     Create [incr tsdb()] profiles or skeletons.
@@ -245,16 +245,16 @@ def mkprof(destination, source=None, relations=None, where=None,
         - `source=None, in_place=False` -- read sentences from stdin
         - `source="sents.txt"` -- read sentences from `sents.txt`
 
-    For the latter two, the *relations* parameter must be specified.
+    For the latter two, the *schema* parameter must be specified.
 
     Args:
         destination (str): path of the new testsuite
         source (str): path to a source testsuite or a file containing
             sentences; if not given and *in_place* is `False`,
             sentences are read from stdin
-        relations (str): path to a relations file to use for the
-            created testsuite; if `None` and *source* is given, the
-            relations file of the source testsuite is used
+        schema (str): path to a relations file to use for the created
+            testsuite; if `None` and *source* is given, the schema of
+            the source testsuite is used
         where (str): TSQL condition to filter records by; ignored if
             *source* is not a testsuite
         in_place (bool): if `True` and *source* is not given, use
@@ -281,29 +281,29 @@ def mkprof(destination, source=None, relations=None, where=None,
         source = Path(source)
     if full and (source is None or not source.is_dir()):
         raise ValueError("'full' must be used with a source testsuite")
-    if relations is not None:
-        relations = Path(relations).expanduser()
-    if relations is None and source is not None and source.is_dir():
-        relations = source.joinpath('relations')
-    if relations is None or not relations.is_file():
+    if schema is not None:
+        schema = Path(schema).expanduser()
+    if schema is None and source is not None and source.is_dir():
+        schema = source.joinpath('relations')
+    if schema is None or not schema.is_file():
         raise ValueError('invalid or missing relations file: {}'
-                         .format(relations))
+                         .format(schema))
     # setup destination testsuite
     destination.mkdir(parents=True, exist_ok=True)
-    dts = itsdb.TestSuite(path=destination, relations=relations)
+    dts = itsdb.TestSuite(path=destination, schema=schema)
     # input is sentences on stdin
     if source is None:
-        dts.write({'item': _lines_to_rows(sys.stdin, dts.relations)},
+        dts.write({'item': _lines_to_rows(sys.stdin, dts.schema)},
                   gzip=gzip)
     # input is sentence file
     elif source.is_file():
         with source.open() as fh:
-            dts.write({'item': _lines_to_rows(fh, dts.relations)},
+            dts.write({'item': _lines_to_rows(fh, dts.schema)},
                       gzip=gzip)
     # input is source testsuite
     elif source.is_dir():
         sts = itsdb.TestSuite(source)
-        tables = dts.relations.tables if full else itsdb.TSDB_CORE_FILES
+        tables = list(dts.schema) if full else tsdb.TSDB_CORE_FILES
         where = '' if where is None else 'where ' + where
         for table in tables:
             if sts.size(table) > 0:
@@ -318,7 +318,7 @@ def mkprof(destination, source=None, relations=None, where=None,
     dts.reload()
     # unless a skeleton was requested, make empty files for other tables
     if not skeleton:
-        for table in dts.relations:
+        for table in dts.schema:
             if len(dts[table]) == 0:
                 dts.write({table: []})
 
@@ -329,7 +329,7 @@ def mkprof(destination, source=None, relations=None, where=None,
         return '\x1b[1;31m{}\x1b[0m'.format(s) if isatty else s
 
     fmt = '{:>8} bytes\t{}'
-    for filename in ['relations'] + list(dts.relations.tables):
+    for filename in ['relations'] + list(dts.schema):
         path = destination.joinpath(filename)
         if path.is_file():
             stat = path.stat()
@@ -339,20 +339,21 @@ def mkprof(destination, source=None, relations=None, where=None,
             print(fmt.format(stat.st_size, _red(filename + '.gz')))
 
 
-def _lines_to_rows(lines, relations):
+def _lines_to_rows(lines, schema):
     # field indices only need to be computed once, so don't use
     # itsdb.Record.from_dict()
-    i_id_idx = relations['item'].index('i-id')
-    i_wf_idx = relations['item'].index('i-wf')
-    i_input_idx = relations['item'].index('i-input')
-    num_fields = len(relations['item'])
+    index = {field.name: i for i, field in enumerate(schema['item'])}
+    i_id_idx = index['i-id']
+    i_wf_idx = index['i-wf']
+    i_input_idx = index['i-input']
+    num_fields = len(schema['item'])
 
     def make_row(i_id, i_wf, i_input):
         row = [None] * num_fields
         row[i_id_idx] = i_id
         row[i_wf_idx] = i_wf
         row[i_input_idx] = i_input
-        return itsdb.Record(relations['item'], row)
+        return itsdb.Record(schema['item'], row)
 
     for i, line in enumerate(lines):
         i_wf, i_input = (0, line[1:]) if line.startswith('*') else (1, line)
@@ -450,7 +451,9 @@ def _interpret_selection(select, source):
             tablename = queryobj['tables'][0]
         # otherwise guess
         else:
-            tablename = source.relations.find(column)[0]
+            tablename = next(
+                table for table in source.schema
+                if any(f.name == column for f in source.schema[table]))
     try:
         condition = select[select.index(' where ') + 1:]
     except ValueError:

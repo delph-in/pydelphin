@@ -6,8 +6,6 @@ import pytest
 from delphin import tsql
 from delphin import itsdb
 
-from .commands_test import mini_testsuite as ts0
-
 
 def test_parse_query():
     parse = lambda s: tsql._parse_query(s)
@@ -116,8 +114,8 @@ def test_parse_select_where():
                 ('not', ('==', ('i-wf', 2)))))
 
 
-def test_select(ts0):
-    ts = itsdb.TestSuite(str(ts0))
+def test_select(mini_testsuite):
+    ts = itsdb.TestSuite(str(mini_testsuite))
     assert list(tsql.select('i-input', ts)) == [
         ['It rained.'], ['Rained.'], ['It snowed.']]
     assert list(tsql.select('i-input from item', ts)) == [
@@ -138,8 +136,8 @@ def test_select(ts0):
     assert list(tsql.select('* from item', ts, cast=True)) == list(ts['item'])
 
 
-def test_select_where(ts0):
-    ts = itsdb.TestSuite(str(ts0))
+def test_select_where(mini_testsuite):
+    ts = itsdb.TestSuite(str(mini_testsuite))
     assert list(tsql.select('i-input where i-input ~ "It"', ts)) == [
         ['It rained.'], ['It snowed.']]
     assert list(tsql.select('i-input where i-input ~ "It" or i-id = 20', ts)) == [
@@ -148,3 +146,19 @@ def test_select_where(ts0):
         ['It rained.'], ['Rained.'], ['It snowed.']]
     assert list(tsql.select('i-input where readings > 0', ts)) == [
         ['It rained.'], ['It snowed.']]
+
+    # def test_Relations_path(simple_relations):
+#     r = tsdb.Relations.from_string(simple_relations)
+#     assert r.path('item', 'result') == [('parse', 'i-id'), ('result', 'parse-id')]
+#     assert r.path('parse', 'item') == [('item', 'i-id')]
+#     assert r.path('item+parse', 'result') == [('result', 'parse-id')]
+#     assert r.path('item', 'parse+result') == [('parse', 'i-id')]
+#     assert r.path('parse', 'parse') == []
+#     assert r.path('item+parse', 'parse+result') == [('result', 'parse-id')]
+#     with pytest.raises(KeyError):
+#         r.path('foo', 'result')
+#     with pytest.raises(KeyError):
+#         r.path('item', 'bar')
+#     with pytest.raises(tsdb.TSDBError):
+#         r.path('item', 'fold')
+

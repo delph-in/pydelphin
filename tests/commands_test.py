@@ -26,45 +26,6 @@ def dir_with_mrs(tmpdir):
 
 
 @pytest.fixture
-def mini_testsuite(tmpdir):
-    ts = tmpdir.mkdir('ts0')
-    rel = ts.join('relations')
-    item = ts.join('item')
-    parse = ts.join('parse')
-    result = ts.join('result')
-    rel.write('item:\n'
-              '  i-id :integer :key\n'
-              '  i-input :string\n'
-              '  i-wf :integer\n'
-              '  i-date :date\n'
-              '\n'
-              'parse:\n'
-              '  parse-id :integer :key\n'
-              '  i-id :integer :key\n'
-              '  readings :integer\n'
-              '\n'
-              'result:\n'
-              '  parse-id :integer :key\n'
-              '  result-id :integer\n'
-              '  mrs :string\n')
-    item.write('10@It rained.@1@1-feb-2018 15:00\n'
-               '20@Rained.@0@01-02-18 15:00:00\n'
-               '30@It snowed.@1@2018-2-1 (15:00:00)\n')
-    parse.write('10@10@1\n'
-                '20@20@0\n'
-                '30@30@1\n')
-    result.write('10@0@'
-                 '[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
-                 '  RELS: < [ _rain_v_1<3:9> LBL: h1 ARG0: e2 ] >'
-                 '  HCONS: < h0 qeq h1 > ]\n'
-                 '30@0@'
-                 '[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
-                 '  RELS: < [ _snow_v_1<3:9> LBL: h1 ARG0: e2 ] >'
-                 '  HCONS: < h0 qeq h1 > ]\n')
-    return str(ts)
-
-
-@pytest.fixture
 def ace_output():
     return r'''SENT: It rained.
 [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ] RELS: < [ _rain_v_1<3:10> LBL: h1 ARG0: e2 ] > HCONS: < h0 qeq h1 > ICONS: < > ] ;  (545 sb-hd_mc_c 1.206314 0 2 (71 it 0.947944 0 1 ("it" 46 "token [ +FORM \"it\" +FROM \"0\" +TO \"2\" +ID *diff-list* [ LIST *list* LAST *list* ] +TNT null_tnt [ +TAGS *null* +PRBS *null* +MAIN tnt_main [ +TAG \"PRP\" +PRB \"1.0\" ] ] +CLASS alphabetic [ +CASE capitalized+lower +INITIAL + ] +TRAIT token_trait [ +UW - +IT italics +LB bracket_null [ LIST *list* LAST *list* ] +RB bracket_null [ LIST *list* LAST *list* ] +LD bracket_null [ LIST *list* LAST *list* ] +RD bracket_null [ LIST *list* LAST *list* ] +HD token_head [ +TI \"<0:2>\" +LL ctype [ -CTYPE- string ] +TG string ] ] +PRED predsort +CARG \"It\" +TICK + +ONSET c-or-v-onset ]")) (544 w_period_plr 0.291582 1 2 (543 v_pst_olr 0.000000 1 2 (57 rain_v1 0.000000 1 2 ("rained." 44 "token [ +FORM \"rained.\" +FROM \"3\" +TO \"10\" +ID *diff-list* [ LIST *list* LAST *list* ] +TNT null_tnt [ +TAGS *null* +PRBS *null* +MAIN tnt_main [ +TAG \"VBD\" +PRB \"1.0\" ] ] +CLASS alphabetic [ +CASE non_capitalized+lower +INITIAL - ] +TRAIT token_trait [ +UW - +IT italics +LB bracket_null [ LIST *list* LAST *list* ] +RB bracket_null [ LIST *list* LAST *list* ] +LD bracket_null [ LIST *list* LAST *list* ] +RD bracket_null [ LIST *list* LAST *list* ] +HD token_head [ +TI \"<3:10>\" +LL ctype [ -CTYPE- string ] +TG string ] ] +PRED predsort +CARG \"rained\" +TICK + +ONSET c-or-v-onset ]")))))

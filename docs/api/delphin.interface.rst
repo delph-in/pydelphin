@@ -13,10 +13,6 @@ delphin.interface
    .. autoclass:: Result
       :members:
 
-   .. autoclass:: FieldMapper
-      :members:
-
-
 .. _preprocessor-example:
 
 Wrapping a Processor for Preprocessing

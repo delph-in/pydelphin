@@ -2,6 +2,13 @@
 """
 TSQL -- Test Suite Query Language
 
+.. note::
+
+  This module deals with queries of TSDB databases. For basic,
+  low-level access to the databases, see :mod:`delphin.tsdb`. For
+  high-level operations and structures on top of the databases, see
+  :mod:`delphin.itsdb`.
+
 This module implements a subset of TSQL, namely the 'select' (or
 'retrieve') queries for extracting data from test suites. The general
 form of a select query is::
@@ -93,7 +100,8 @@ import operator
 import re
 
 from delphin.exceptions import PyDelphinSyntaxError
-from delphin.util import LookaheadIterator, parse_datetime
+from delphin.util import LookaheadIterator
+from delphin import tsdb
 from delphin import itsdb
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -194,12 +202,12 @@ def _select(projection, tables, condition, ts, mode, cast):
     # finally select the relevant columns from the joined table
     if projection == '*':
         if len(tables) == 1:
-            projection = [f.name for f in ts.relations[tables[0]]]
+            projection = [f.name for f in ts.schema[tables[0]]]
         else:
             projection = []
             for t in tables:
                 projection.extend(t + ':' + f.name
-                                  for f in ts.relations[t])
+                                  for f in ts.schema[t])
     return itsdb.select_rows(projection, table, mode=mode, cast=cast)
 
 
@@ -294,6 +302,75 @@ def _process_condition(condition):
     return func, fields
 
 
+def _join(table1, table2, on=None, how='inner', name=None):
+    """
+    Join two tables and return the resulting Table object.
+
+    Fields in the resulting table have their names prefixed with their
+    corresponding table name. For example, when joining `item` and
+    `parse` tables, the `i-input` field of the `item` table will be
+    named `item:i-input` in the resulting Table. Pivot fields (those
+    in *on*) are only stored once without the prefix.
+
+    Both inner and left joins are possible by setting the *how*
+    parameter to `inner` and `left`, respectively.
+
+    .. warning::
+
+       Both *table2* and the resulting joined table will exist in
+       memory for this operation, so it is not recommended for very
+       large tables on low-memory systems.
+
+    Args:
+        table1 (:class:`Table`): the left table to join
+        table2 (:class:`Table`): the right table to join
+        on (str): the shared key to use for joining; if `None`, find
+            shared keys using the schemata of the tables
+        how (str): the method used for joining (`"inner"` or `"left"`)
+        name (str): the name assigned to the resulting table
+    """
+    if how not in ('inner', 'left'):
+        itsdb.ITSDBError('only \'inner\' and \'left\' join methods are allowed.')
+
+    # validate and normalize the pivot
+    on = _join_pivot(on, table1, table2)
+    # the fields of the joined table
+    fields = _join_fields(table1.fields, table2.fields, on=on)
+
+    # get key mappings to the right side (useful for inner and left joins)
+    def get_key(rec):
+        return tuple(rec.get(k) for k in on)
+
+    key_indices = set(table2.fields.index(k) for k in on)
+    right = defaultdict(list)
+    for rec in table2:
+        right[get_key(rec)].append([c for i, c in enumerate(rec)
+                                    if i not in key_indices])
+
+    # build joined table
+    rfill = [f.default_value() for f in table2.fields if f.name not in on]
+    joined = []
+    for lrec in table1:
+        k = get_key(lrec)
+        if how == 'left' or k in right:
+            joined.extend(lrec + rrec for rrec in right.get(k, [rfill]))
+
+    return Table(fields, joined)
+
+
+def _join_pivot(on, table1, table2):
+    if isinstance(on, str):
+        on = _split_cols(on)
+    if not on:
+        on = set(table1.fields.keys()).intersection(table2.fields.keys())
+        if not on:
+            raise itsdb.ITSDBError(
+                'No shared key to join on in the \'{}\' and \'{}\' tables.'
+                .format(table1.name, table2.name)
+            )
+    return sorted(on)
+
+
 def _join_if_missing(table, col, ts, how):
     tab, _, column = col.rpartition(':')
     if not tab:
@@ -315,7 +392,7 @@ def _transitive_join(tab1, tab2, ts, how):
         # joinable transitively via a 'path' of table joins
         path = ts.relations.path(tab1.name, tab2.name)
         for intervening, pivot in path:
-            table = itsdb.join(table, ts[intervening], on=pivot, how=how)
+            table = _join(table, ts[intervening], on=pivot, how=how)
     return table
 
 
@@ -552,7 +629,7 @@ def _parse_condition_statement(tokens):
             .format(op), lineno=lineno, text=op)
     else:
         if gid in (6, 7, 8):
-            value = parse_datetime(value)
+            value = tsdb.cast(value, ':date')
         elif gid == 9:
             value = int(value)
         return (op, (column, value))

@@ -29,10 +29,20 @@ result:
   mrs :string                           # MRS for this reading
 '''
 
+_alt_relations = '''item:
+  i-id :integer :key
+  i-input :string
+  i-date :date
 
-@pytest.fixture
-def simple_relations():
-    return _simple_relations
+parse:
+  parse-id :integer :key                # unique parse identifier
+  run-id :integer :key                  # test run for this parse
+  i-id :integer :key                    # item parsed
+
+result:
+  parse-id :integer :key                # parse for this result
+  result-id :integer                    # result identifier
+    mrs :string                           # MRS for this reading'''
 
 
 @pytest.fixture
@@ -44,19 +54,27 @@ def empty_testsuite(tmp_path):
 
 
 @pytest.fixture
-def single_item_skeleton(tmp_path, simple_relations):
+def empty_alt_testsuite(tmp_path):
+    altrels = tmp_path.joinpath('empty_alt')
+    altrels.mkdir()
+    altrels.joinpath('relations').write_text(_alt_relations)
+    return altrels
+
+
+@pytest.fixture
+def single_item_skeleton(tmp_path):
     ts = tmp_path.joinpath('skeleton')
     ts.mkdir()
-    ts.joinpath('relations').write_text(simple_relations)
+    ts.joinpath('relations').write_text(_simple_relations)
     ts.joinpath('item').write_text('0@The dog barks.')
     return ts
 
 
 @pytest.fixture
-def gzipped_single_item_skeleton(tmp_path, simple_relations):
+def gzipped_single_item_skeleton(tmp_path):
     ts = tmp_path.joinpath('gz_skeleton')
     ts.mkdir()
-    ts.joinpath('relations').write_text(simple_relations)
+    ts.joinpath('relations').write_text(_simple_relations)
     fh = io.TextIOWrapper(
         gzip.GzipFile(str(ts.joinpath('item.gz')), 'w'),
         encoding='utf-8')
@@ -66,10 +84,10 @@ def gzipped_single_item_skeleton(tmp_path, simple_relations):
 
 
 @pytest.fixture
-def single_item_profile(tmp_path, simple_relations):
+def single_item_profile(tmp_path):
     ts = tmp_path.joinpath('single')
     ts.mkdir()
-    ts.joinpath('relations').write_text(simple_relations)
+    ts.joinpath('relations').write_text(_simple_relations)
     ts.joinpath('item').write_text('0@The dog barks.')
     ts.joinpath('run').write_text('0')
     ts.joinpath('parse').write_text('0@0@0')
@@ -109,11 +127,11 @@ def mini_testsuite(tmp_path):
     item.write_text(
         '10@It rained.@1@1-feb-2018 15:00\n'
         '20@Rained.@0@01-02-18 15:00:00\n'
-        '30@It snowed.@1@2018-2-1 (15:00:00)\n')
+        '30@It snowed.@1@2018-2-1 (15:00:00)')
     parse.write_text(
         '10@10@1\n'
         '20@20@0\n'
-        '30@30@1\n')
+        '30@30@1')
     result.write_text(
         '10@0@'
         '[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
@@ -122,7 +140,7 @@ def mini_testsuite(tmp_path):
         '30@0@'
         '[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
         '  RELS: < [ _snow_v_1<3:9> LBL: h1 ARG0: e2 ] >'
-        '  HCONS: < h0 qeq h1 > ]\n')
+        '  HCONS: < h0 qeq h1 > ]')
     return ts
 
 

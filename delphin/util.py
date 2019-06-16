@@ -6,7 +6,6 @@ import warnings
 import pkgutil
 import codecs
 import re
-from datetime import datetime
 from collections import deque, namedtuple
 from functools import wraps
 from enum import IntEnum
@@ -49,49 +48,6 @@ def safe_int(x):
     except ValueError:
         pass
     return x
-
-
-def parse_datetime(s):
-    if re.match(r':?(today|now)', s):
-        return datetime.now()
-
-    # YYYY-MM-DD HH:MM:SS
-    m = re.match(
-        r'''
-        (?P<y>[0-9]{4})
-        -(?P<m>[0-9]{1,2}|\w{3})
-        (?:-(?P<d>[0-9]{1,2}))?
-        (?:\s*\(?
-        (?P<H>[0-9]{2}):(?P<M>[0-9]{2})(?::(?P<S>[0-9]{2}))?
-        \)?)?''', s, flags=re.VERBOSE)
-    if m is None:
-        # DD-MM-YYYY HH:MM:SS
-        m = re.match(
-            r'''
-            (?:(?P<d>[0-9]{1,2})-)?
-            (?P<m>[0-9]{1,2}|\w{3})
-            -(?P<y>[0-9]{2}(?:[0-9]{2})?)
-            (?:\s*\(?
-                (?P<H>[0-9]{2}):(?P<M>[0-9]{2})(?::(?P<S>[0-9]{2}))?
-            \)?)?''', s, flags=re.VERBOSE)
-    if m is not None:
-        return datetime.strptime(_date_fix(m), '%Y-%m-%d %H:%M:%S')
-
-    return None
-
-
-def _date_fix(mo):
-    y = mo.group('y')
-    if len(y) == 2:
-        y = '20' + y  # buggy in ~80yrs or if using ~20yr-old data :)
-    m = mo.group('m')
-    if len(m) == 3:  # assuming 3-letter abbreviations
-        m = str(datetime.strptime(m, '%b').month)
-    d = mo.group('d') or '01'
-    H = mo.group('H') or '00'
-    M = mo.group('M') or '00'
-    S = mo.group('S') or '00'
-    return '{}-{}-{} {}:{}:{}'.format(y, m, d, H, M, S)
 
 
 # inspired by NetworkX is_connected():
