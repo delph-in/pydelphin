@@ -33,6 +33,7 @@ expressions.
 .. _`DELPH-IN Wiki`: http://moin.delph-in.net/
 """
 
+from typing import Tuple, Union, Generator
 import re
 from pathlib import Path
 import textwrap
@@ -43,7 +44,7 @@ from delphin.exceptions import (
     PyDelphinSyntaxError,
     PyDelphinWarning)
 from delphin.tfs import FeatureStructure
-from delphin.util import LookaheadIterator
+from delphin import util
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
@@ -863,12 +864,16 @@ class FileInclude(object):
     Include other TDL files in the current environment.
 
     Args:
-        path (str): path to the TDL file to include
-        basedir (str): parent directory of *path*
+        value: quoted value of the TDL include statement
+        basedir: directory containing the file with the include
+            statement
+    Attributes:
+        value: The quoted value of TDL include statement.
+        path: The path to the TDL file to include.
     """
-    def __init__(self, path='', basedir=''):
-        self.path = path
-        self.basedir = basedir
+    def __init__(self, value: str = '', basedir: util.PathLike = '') -> None:
+        self.value = value
+        self.path = Path(basedir, value).with_suffix('.tdl')
 
 
 # NOTE: be careful rearranging subpatterns in _tdl_lex_re; some must
@@ -1060,25 +1065,30 @@ def _bounded(p1, p2, line, pos, line_no, lines):
 
 
 # Parsing functions
-def iterparse(source, encoding='utf-8'):
-    """
-    Parse the TDL file *source* and iteratively yield parse events.
 
-    If *source* is a filename, the file is opened and closed when the
-    generator has finished, otherwise *source* is an open file object
-    and will not be closed when the generator has finished.
+ParseEvent = Tuple[
+    str,
+    Union[str, TypeDefinition, _MorphSet, _Environment, FileInclude],
+    int
+]
+
+
+def iterparse(path: util.PathLike,
+              encoding: str = 'utf-8') -> Generator[ParseEvent, None, None]:
+    """
+    Parse the TDL file at *path* and iteratively yield parse events.
 
     Parse events are `(event, object, lineno)` tuples, where `event`
     is a string (`"TypeDefinition"`, `"TypeAddendum"`,
     `"LexicalRuleDefinition"`, `"LetterSet"`, `"WildCard"`,
+    `"BeginEnvironment"`, `"EndEnvironment"`, `"FileInclude"`,
     `"LineComment"`, or `"BlockComment"`), `object` is the interpreted
     TDL object, and `lineno` is the line number where the entity began
-    in *source*.
+    in *path*.
 
     Args:
-        source (str, file): a filename or open file object
-        encoding (str): the encoding of the file (default: `"utf-8"`;
-            ignored if *source* is an open file)
+        path: path to a TDL file
+        encoding (str): the encoding of the file (default: `"utf-8"`)
     Yields:
         `(event, object, lineno)` tuples
     Example:
@@ -1090,25 +1100,21 @@ def iterparse(source, encoding='utf-8'):
         >>> lex['eucalyptus_n1']['SYNSEM.LKEYS.KEYREL.PRED']
         <String object (_eucalyptus_n_1_rel) at 140625748595960>
     """
-    if hasattr(source, 'read'):
-        yield from _parse(source)
-    else:
-        source = Path(source).expanduser()
-        with source.open(encoding=encoding) as fh:
-            yield from _parse(fh)
+    path = Path(path).expanduser()
+    with path.open(encoding=encoding) as fh:
+        yield from _parse(fh, path)
 
 
-def _parse(f):
-    tokens = LookaheadIterator(_lex(f))
+def _parse(f, path):
+    tokens = util.LookaheadIterator(_lex(f))
     try:
-        yield from _parse_tdl(tokens)
+        yield from _parse_tdl(tokens, path)
     except TDLSyntaxError as ex:
-        if hasattr(f, 'name'):
-            ex.filename = f.name
+        ex.filename = str(path)
         raise
 
 
-def _parse_tdl(tokens):
+def _parse_tdl(tokens, path):
     environment = None
     envstack = []
     try:
@@ -1141,7 +1147,7 @@ def _parse_tdl(tokens):
                 yield ('EndEnvironment', environment, line_no)
                 environment = envstack.pop()
             elif gid == 29:
-                obj = _parse_tdl_include(tokens)
+                obj = _parse_tdl_include(tokens, path.parent)
                 yield ('FileInclude', obj, line_no)
             else:
                 raise TDLSyntaxError(
@@ -1391,15 +1397,15 @@ def _parse_tdl_end_environment(tokens, env):
     return envtype
 
 
-def _parse_tdl_include(tokens):
-    gid, path, lineno = tokens.next()
+def _parse_tdl_include(tokens, basedir):
+    gid, value, lineno = tokens.next()
     if gid != 4:
         raise TDLSyntaxError('expected: a quoted filename',
-                             lineno=lineno, text=path)
+                             lineno=lineno, text=value)
     gid, _, lineno = tokens.next()
     if gid != 10:
         raise TDLSyntaxError('expected: .', lineno=lineno)
-    return FileInclude(path)
+    return FileInclude(value, basedir=basedir)
 
 
 # Serialization helpers
@@ -1649,4 +1655,4 @@ def _format_environment(env, indent):
 
 
 def _format_include(fi, indent):
-    return '{}:include "{}".'.format(' ' * indent, fi.path)
+    return '{}:include "{}".'.format(' ' * indent, fi.value)

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals
-
-from io import StringIO
+import os
+import tempfile
 
 import pytest
 
@@ -30,8 +29,17 @@ from delphin.tdl import (
     TDLWarning)
 
 
+def _iterparse(s):
+    with tempfile.TemporaryDirectory() as dir:
+        path = os.path.join(dir, 'tmp.tdl')
+        with open(path, 'w') as fh:
+            print(s, file=fh)
+        yield from tdl.iterparse(path)
+
+
 def tdlparse(s):
-    return next(obj for _, obj, _ in tdl.iterparse(StringIO(s)))
+    _, obj, _ = next(_iterparse(s))
+    return obj
 
 
 def test_Term():
@@ -665,9 +673,8 @@ def test_parse_blockcomment():
 
 
 def test_parse_environments():
-    tdlparse = lambda s: tdl.iterparse(StringIO(s))
-    g = tdlparse(':begin :type.\n'
-                 ':end :type.')
+    g = _iterparse(':begin :type.\n'
+                   ':end :type.')
     event, e, _ = next(g)
     assert event == 'BeginEnvironment'
     assert isinstance(e, TypeEnvironment)
@@ -677,8 +684,8 @@ def test_parse_environments():
     assert isinstance(e, TypeEnvironment)
     assert e.entries == []
 
-    g = tdlparse(':begin :instance.\n'
-                 ':end :instance.')
+    g = _iterparse(':begin :instance.\n'
+                   ':end :instance.')
     event, e, _ = next(g)
     assert event == 'BeginEnvironment'
     assert isinstance(e, InstanceEnvironment)
@@ -689,9 +696,9 @@ def test_parse_environments():
     assert isinstance(e, InstanceEnvironment)
     assert e.entries == []
 
-    g = tdlparse(':begin :type.\n'
-                 'a := b & [ ATTR val ].\n'
-                 ':end :type.')
+    g = _iterparse(':begin :type.\n'
+                   'a := b & [ ATTR val ].\n'
+                   ':end :type.')
     event, e, _ = next(g)
     assert event == 'BeginEnvironment'
     assert len(e.entries) == 0
@@ -701,7 +708,7 @@ def test_parse_environments():
     assert event == 'EndEnvironment'
     assert e.entries == [t]
 
-    g = tdlparse(':begin :type.\n'
+    g = _iterparse(':begin :type.\n'
                  ':include "file1.tdl".\n'
                  ':include "subdir/file2.tdl".\n'
                  ':end :type.')
@@ -712,17 +719,18 @@ def test_parse_environments():
     assert next(g)[0] == 'EndEnvironment'
     assert len(e.entries) == 2
     assert isinstance(e.entries[0], FileInclude)
-    assert e.entries[0].path == 'file1.tdl'
-    assert e.entries[0].basedir == ''
-    assert e.entries[1].path == 'subdir/file2.tdl'
-    assert e.entries[1].basedir == ''
+    assert e.entries[0].value == 'file1.tdl'
+    assert e.entries[0].path.name == 'file1.tdl'
+    assert e.entries[1].value == 'subdir/file2.tdl'
+    assert e.entries[1].path.name == 'file2.tdl'
+    assert e.entries[1].path.parent.name == 'subdir'
 
-    g = tdlparse(':begin :type.\n'
-                 '  :include "file1.tdl".\n'
-                 '  :begin :instance :status lex-rule.\n'
-                 '    :include "lrules.tdl".\n'
-                 '  :end :instance.\n'
-                 ':end :type.')
+    g = _iterparse(':begin :type.\n'
+                   '  :include "file1.tdl".\n'
+                   '  :begin :instance :status lex-rule.\n'
+                   '    :include "lrules.tdl".\n'
+                   '  :end :instance.\n'
+                   ':end :type.')
     event, e, _ = next(g)
     assert next(g)[0] == 'FileInclude'
     event, e2, _ = next(g)
