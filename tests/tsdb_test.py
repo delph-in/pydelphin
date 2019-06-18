@@ -180,6 +180,14 @@ def test_cast():
             == datetime(2008, 10, 12, 10, 51))
 
 
+def test_format():
+    assert tsdb.format(':integer', 42) == '42'
+    assert tsdb.format(':integer', 42, default='1') == '42'
+    assert tsdb.format(':integer', None) == '-1'
+    assert tsdb.format(':integer', None, default='1') == '1'
+    assert tsdb.format(':date', datetime(1999, 9, 8)) == '8-sep-1999'
+
+
 def test_open_table(single_item_skeleton, gzipped_single_item_skeleton):
     with pytest.raises(tsdb.TSDBError):
         with tsdb.open_table(single_item_skeleton, 'non') as fh:

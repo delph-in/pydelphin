@@ -78,6 +78,21 @@ TSDB_CODED_ATTRIBUTES = {
     'i-difficulty': '1',
     'polarity': '-1'
 }
+# bidirectional de-localized month map for date parsing/formatting
+_MONTHS = {
+    1: 'jan', 'jan': 1,
+    2: 'feb', 'feb': 2,
+    3: 'mar', 'mar': 3,
+    4: 'apr', 'apr': 4,
+    5: 'may', 'may': 5,
+    6: 'jun', 'jun': 6,
+    7: 'jul', 'jul': 7,
+    8: 'aug', 'aug': 8,
+    9: 'sep', 'sep': 9,
+    10: 'oct', 'oct': 10,
+    11: 'nov', 'nov': 11,
+    12: 'dec', 'dec': 12,
+}
 
 
 #############################################################################
@@ -305,7 +320,7 @@ class Table(object):
             indices = []
             for name in names:
                 try:
-                    indices.append(self._field_index[name])
+                    indices.append(self.column_index(name))
                 except KeyError as exc:
                     msg = 'no such field: {}'.format(name)
                     raise TSDBError(msg) from exc
@@ -447,8 +462,8 @@ def encode_row(values: Row,
     if fields:
         if len(values) != len(fields):
             _mismatched_counts(values, fields)
-        raw_values = [field.default if val is None else str(val)
-                      for val, field in zip(values, fields)]
+        raw_values = [format(f.datatype, val, default=f.default)
+                      for f, val in zip(fields, values)]
     else:
         raw_values = ['' if v is None else str(v) for v in values]
     escaped_values = map(escape, raw_values)
@@ -580,13 +595,57 @@ def _date_fix(mo):
         y = pre + y  # beware the year-2093 bug! Use 4-digit dates.
     m = mo.group('m')
     if len(m) == 3:  # assuming 3-letter abbreviations
-        m = str(datetime.strptime(m, '%b').month)
+        m = _MONTHS[m.lower()]
     d = mo.group('d') or '01'
     H = mo.group('H') or '00'
     M = mo.group('M') or '00'
     S = mo.group('S') or '00'
     return '{}-{}-{} {}:{}:{}'.format(y, m, d, H, M, S)
 
+
+def format(datatype: str,
+           value: Optional[Value],
+           default: Optional[str] = None) -> str:
+    """
+    Format a column *value* based on its *field*.
+
+    If *value* is `None` then *default* is returned if it is given
+    (i.e., not `None`). If *default* is `None`, `'-1'` is returned if
+    *datatype* is `':integer'`, otherwise an empty string (`''`) is
+    returned.
+
+    If *datatype* is `':date'` and *value* is a
+    :class:`datetime.datetime` object then a TSDB-compatible date
+    format (DD-MM-YYYY) is returned.
+
+    In all other cases, *value* is cast directly to a string and
+    returned.
+
+    Examples:
+        >>> tsdb.format(':integer', 42)
+        '42'
+        >>> tsdb.format(':integer', None)
+        '-1'
+        >>> tsdb.format(':integer', None, default='1')
+        '1'
+        >>> tsdb.format(':date', datetime.datetime(1999,9,8))
+        '8-sep-1999'
+    """
+    if value is None:
+        if default is None:
+            default = '-1' if datatype == ':integer' else ''
+        else:
+            default = str(default)  # ensure it is a string
+        raw_value = default
+    elif datatype == ':date' and isinstance(value, datetime):
+        month = _MONTHS[value.month]
+        pattern = '{}-{}-%Y'.format(str(value.day), month)
+        if (value.hour, value.minute, value.second) != (0, 0, 0):
+            pattern += ' %H:%M:%S'
+        raw_value = value.strftime(pattern)
+    else:
+        raw_value = str(value)
+    return raw_value
 
 #############################################################################
 # Files

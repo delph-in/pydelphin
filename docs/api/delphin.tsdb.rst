@@ -84,6 +84,7 @@ delphin.tsdb
    .. autofunction:: encode_row
    .. autofunction:: make_row
    .. autofunction:: cast
+   .. autofunction:: format
 
 
    File and Directory Operations
