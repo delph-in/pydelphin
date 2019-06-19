@@ -70,22 +70,22 @@ def test_write_schema(empty_testsuite, tmp_path):
     assert orig.read_text() == new.read_text()
 
 
-class TestTable():
+class TestRelation():
     def test_init(self, mini_testsuite):
         schema = tsdb.read_schema(mini_testsuite)
-        table = tsdb.Table(mini_testsuite, 'item', schema['item'])
-        assert table.dir == mini_testsuite
-        assert table.name == 'item'
-        assert table.fields == schema['item']
+        relation = tsdb.Relation(mini_testsuite, 'item', schema['item'])
+        assert relation.dir == mini_testsuite
+        assert relation.name == 'item'
+        assert relation.fields == schema['item']
 
     def test__iter__(self, mini_testsuite):
         schema = tsdb.read_schema(mini_testsuite)
-        item = tsdb.Table(mini_testsuite, 'item', schema['item'])
+        item = tsdb.Relation(mini_testsuite, 'item', schema['item'])
         assert len(list(item)) == 3
 
     def test_select(self, mini_testsuite):
         schema = tsdb.read_schema(mini_testsuite)
-        item = tsdb.Table(mini_testsuite, 'item', schema['item'])
+        item = tsdb.Relation(mini_testsuite, 'item', schema['item'])
         assert list(item.select('i-id')) == [('10',), ('20',), ('30',)]
         assert list(item.select('i-input', 'i-id')) == [
             ('It rained.', '10'),
@@ -112,7 +112,7 @@ class TestDatabase():
         item = db['item']
         assert item.name == 'item'
         with pytest.raises(tsdb.TSDBError):
-            db['not_a_table']
+            db['not_a_relation']
 
 
 def test_escape():
@@ -133,34 +133,34 @@ def test_unescape():
     assert tsdb.unescape(' a b ') == ' a b '
 
 
-def test_decode_row(empty_testsuite):
-    assert tsdb.decode_row('') == (None,)
-    assert tsdb.decode_row('one') == ('one',)
-    assert tsdb.decode_row(u'あ') == (u'あ',)
-    assert tsdb.decode_row('one@two') == ('one', 'two')
-    assert tsdb.decode_row('one@@three') == ('one', None, 'three')
-    assert (tsdb.decode_row('one\\s@\\\\two\\nabc\\x')
+def test_decode(empty_testsuite):
+    assert tsdb.decode('') == (None,)
+    assert tsdb.decode('one') == ('one',)
+    assert tsdb.decode(u'あ') == (u'あ',)
+    assert tsdb.decode('one@two') == ('one', 'two')
+    assert tsdb.decode('one@@three') == ('one', None, 'three')
+    assert (tsdb.decode('one\\s@\\\\two\\nabc\\x')
             == ('one@', '\\two\nabc\\x'))
     rels = tsdb.read_schema(empty_testsuite)
-    assert tsdb.decode_row('10@one', fields=rels['item']) == (10, 'one')
+    assert tsdb.decode('10@one', fields=rels['item']) == (10, 'one')
 
 
-def test_encode_row():
-    assert tsdb.encode_row([None]) == ''
-    assert tsdb.encode_row(['one']) == 'one'
-    assert tsdb.encode_row([u'あ']) == u'あ'
-    assert tsdb.encode_row(['one', 'two']) == 'one@two'
-    assert tsdb.encode_row(['one', None, 'three']) == 'one@@three'
-    assert tsdb.encode_row(['one@', '\\two\nabc']) == 'one\\s@\\\\two\\nabc'
+def test_encode():
+    assert tsdb.encode([None]) == ''
+    assert tsdb.encode(['one']) == 'one'
+    assert tsdb.encode([u'あ']) == u'あ'
+    assert tsdb.encode(['one', 'two']) == 'one@two'
+    assert tsdb.encode(['one', None, 'three']) == 'one@@three'
+    assert tsdb.encode(['one@', '\\two\nabc']) == 'one\\s@\\\\two\\nabc'
 
 
-def test_make_row(empty_testsuite):
+def test_make_record(empty_testsuite):
     r = tsdb.read_schema(empty_testsuite.joinpath('relations'))
-    assert (tsdb.make_row({'i-input': 'one', 'i-id': 100}, r['item'])
+    assert (tsdb.make_record({'i-input': 'one', 'i-id': 100}, r['item'])
             == (100, 'one'))
-    assert tsdb.make_row({'i-id': 100}, r['item']) == (100, None)
-    assert tsdb.make_row({'i-id': 100, 'mrs': '[RELS: < > HCONS: < >]'},
-                         r['item']) == (100, None)
+    assert tsdb.make_record({'i-id': 100}, r['item']) == (100, None)
+    assert tsdb.make_record({'i-id': 100, 'mrs': '[RELS: < > HCONS: < >]'},
+                            r['item']) == (100, None)
 
 
 def test_cast():
@@ -188,35 +188,34 @@ def test_format():
     assert tsdb.format(':date', datetime(1999, 9, 8)) == '8-sep-1999'
 
 
-def test_open_table(single_item_skeleton, gzipped_single_item_skeleton):
+def test_open(single_item_skeleton, gzipped_single_item_skeleton):
     with pytest.raises(tsdb.TSDBError):
-        with tsdb.open_table(single_item_skeleton, 'non') as fh:
+        with tsdb.open(single_item_skeleton, 'non') as fh:
             pass
-    with tsdb.open_table(single_item_skeleton, 'item') as fh:
+    with tsdb.open(single_item_skeleton, 'item') as fh:
         assert list(fh) == ['0@The dog barks.']
-    with tsdb.open_table(gzipped_single_item_skeleton, 'item') as fh:
+    with tsdb.open(gzipped_single_item_skeleton, 'item') as fh:
         assert list(fh) == ['0@The dog barks.']
 
 
-def test_write_table(single_item_skeleton):
+def test_write(single_item_skeleton):
     dir = single_item_skeleton
     fields = tsdb.read_schema(dir)['item']
     path = dir.joinpath('item')
-    tsdb.write_table(dir, 'item', [(0, 'The cat meows.')], fields)
-    with tsdb.open_table(dir, 'item') as fh:
+    tsdb.write(dir, 'item', [(0, 'The cat meows.')], fields)
+    with tsdb.open(dir, 'item') as fh:
         assert list(fh) == ['0@The cat meows.\n']
-    tsdb.write_table(dir, 'item', [(1, 'The wolf howls.')], fields,
-                     append=True)
-    with tsdb.open_table(dir, 'item') as fh:
+    tsdb.write(dir, 'item', [(1, 'The wolf howls.')], fields, append=True)
+    with tsdb.open(dir, 'item') as fh:
         assert list(fh) == ['0@The cat meows.\n', '1@The wolf howls.\n']
 
-    tsdb.write_table(dir, 'item', [(0, 'The cat meows.')], fields, gzip=True)
+    tsdb.write(dir, 'item', [(0, 'The cat meows.')], fields, gzip=True)
     assert not path.with_suffix('').exists()
     assert path.with_suffix('.gz').exists()
-    tsdb.write_table(dir, 'item', [(0, 'The cat meows.')], fields)
+    tsdb.write(dir, 'item', [(0, 'The cat meows.')], fields)
     assert not path.with_suffix('').exists()
     assert path.with_suffix('.gz').exists()
-    tsdb.write_table(dir, 'item', [(0, 'The cat meows.')], fields, gzip=False)
+    tsdb.write(dir, 'item', [(0, 'The cat meows.')], fields, gzip=False)
     assert not path.with_suffix('.gz').exists()
     assert path.with_suffix('').exists()
 
@@ -234,13 +233,13 @@ def test_write_database(tmp_path, mini_testsuite, empty_alt_testsuite):
         '10@10@1\n'
         '20@20@0\n'
         '30@30@1\n')
-    tsdb.write_database(db, tmp_ts, tables=['item'])
+    tsdb.write_database(db, tmp_ts, names=['item'])
     assert tmp_ts.joinpath('item').is_file()
     assert not tmp_ts.joinpath('parse').is_file()
     assert not tmp_ts.joinpath('result').is_file()
     # alt_schema drops i-wf field from mini_testsuite's schema
     alt_schema = tsdb.read_schema(empty_alt_testsuite)
-    tsdb.write_database(db, tmp_ts, tables=['item'], schema=alt_schema)
+    tsdb.write_database(db, tmp_ts, names=['item'], schema=alt_schema)
     alt_db = tsdb.Database(tmp_ts)
     assert len(db.schema['item']) == 4
     assert len(alt_db.schema['item']) == 3

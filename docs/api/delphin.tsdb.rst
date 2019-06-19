@@ -13,7 +13,7 @@ delphin.tsdb
 
    .. data:: FIELD_DELIMITER
 
-      ``@`` -- The character used to delimit fields (or columns) in a table.
+      ``@`` -- The character used to delimit fields (or columns) in a record.
 
    .. data:: TSDB_CORE_FILES
 
@@ -42,12 +42,12 @@ delphin.tsdb
    Schemas
    -------
 
-   TSDB databases define their schema in a file called ``relations``.
-   It contains descriptions of tables and their fields (i.e.,
-   columns), including the datatypes and whether a column counts as a
-   "key". Key columns may be used when joining tables together. As an
-   example, the first 9 lines of the ``run`` table description is as
-   follows:
+   A TSDB database defines its schema in a file called ``relations``.
+   This file contains descriptions of each relation (table) and its
+   fields (columns), including the datatypes and whether a column
+   counts as a "key". Key columns may be used when joining relations
+   together. As an example, the first 9 lines of the ``run`` relation
+   description is as follows:
 
    ::
 
@@ -75,14 +75,14 @@ delphin.tsdb
    .. autofunction:: read_schema
    .. autofunction:: write_schema
 
-   Table Data
-   ----------
+   Data Operations
+   ---------------
 
    .. autofunction:: escape
    .. autofunction:: unescape
-   .. autofunction:: decode_row
-   .. autofunction:: encode_row
-   .. autofunction:: make_row
+   .. autofunction:: decode
+   .. autofunction:: encode
+   .. autofunction:: make_record
    .. autofunction:: cast
    .. autofunction:: format
 
@@ -91,9 +91,9 @@ delphin.tsdb
    -----------------------------
 
    .. autofunction:: is_database_directory
-   .. autofunction:: table_path
-   .. autofunction:: open_table
-   .. autofunction:: write_table
+   .. autofunction:: get_path
+   .. autofunction:: open
+   .. autofunction:: write
    .. autofunction:: write_database
 
 
@@ -103,7 +103,7 @@ delphin.tsdb
    .. autoclass:: Database
       :members:
 
-   .. autoclass:: Table
+   .. autoclass:: Relation
       :members:
 
 

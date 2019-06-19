@@ -12,32 +12,34 @@ TSDB: Test Suite Databases
 
 TSDB databases are plain-text file-based relational databases
 minimally consisting of a directory with a file, called `relations`,
-containing the database's schema (see `Schemas`_). Every table in the
-database has its own file, which may be `gzipped
-<https://en.wikipedia.org/wiki/Gzip>`_ to save space. The tables have
-a simple format with columns delimited by ``@`` and rows delimited by
-newlines. This makes them easy to inspect at the command line with
-standard Unix tools such as ``cut`` and ``awk`` (but gzipped tables need
-to be decompressed or piped from a tool such as ``zcat``).
+containing the database's schema (see `Schemas`_). Every relation, or
+table, in the database has its own file, which may be `gzipped
+<https://en.wikipedia.org/wiki/Gzip>`_ to save space. The relations
+have a simple format with columns delimited by ``@`` and records
+delimited by newlines. This makes them easy to inspect at the command
+line with standard Unix tools such as ``cut`` and ``awk`` (but gzipped
+relations need to be decompressed or piped from a tool such as
+``zcat``).
 
 This module handles the technical details of reading and writing TSDB
 databases, including:
 
 - parsing database schemas
 
-- transparently opening either the plain-text or gzipped tables on
+- transparently opening either the plain-text or gzipped relations on
   disk, as appropriate
 
-- escaping and unescaping reserved characters in table data
+- escaping and unescaping reserved characters in the data
 
 - pairing columns with their schema descriptions
 
 - casting types (such as ``:integer``, ``:date``, etc.)
 
 Additionally, this module provides very basic abstractions of
-databases and tables as the :class:`Database` and :class:`Table`
+databases and relations as the :class:`Database` and :class:`Relation`
 classes, respectively. These serve as base classes for the more
-featureful :class:`delphin.itsdb.TestSuite` class, but may be useful
+featureful :class:`delphin.itsdb.TestSuite` and
+:class:`delphin.itsdb.Table` classes, but may be useful as they are
 for simple needs.
 """
 
@@ -99,8 +101,8 @@ _MONTHS = {
 # Local types
 
 Value = Union[str, int, float, datetime, None]
-Row = Tuple[Value, ...]
-ColumnMap = Mapping[str, Value]  # e.g., a partial Row
+Record = Tuple[Value, ...]
+ColumnMap = Mapping[str, Value]  # e.g., a partial Record
 
 #############################################################################
 # Exceptions
@@ -119,18 +121,19 @@ class TSDBSchemaError(PyDelphinException):
 
 class Field(object):
     '''
-    A tuple describing a column in a TSDB database table.
+    A tuple describing a column in a TSDB database relation.
 
     Args:
-        name (str): the column name
+        name (str): column name
         datatype (str): `":string"`, `":integer"`, `":date"`,
             or `":float"`
         flags (list): List of additional flags
-        comment (str): a description of the column
+        comment (str): description of the column
     Attributes:
         is_key (bool): `True` if the column is a key in the database.
-        default (str): The default value to use when writing a table
-            if the value is `None`.
+
+        default (str): The default formatted value (see
+            :func:`format`) when the value it describes is `None`.
     '''
 
     __slots__ = 'name', 'datatype', 'flags', 'comment', 'is_key', 'default'
@@ -259,24 +262,25 @@ def _format_schema(schema: Schema) -> str:
 #############################################################################
 # Basic Database Classes
 
-class Table(object):
+class Relation(object):
     """
-    A basic abstraction of a TSDB database table.
+    A basic abstraction of a TSDB database relation (table).
 
-    This class provides a basic read-only view into a TSDB table. It
-    supports iteration over the rows and basic column selection.
-    Column values are not cast into their datatypes.
+    This class provides a basic read-only view into a TSDB
+    relation. It supports iteration over the records and basic column
+    selection. Column values are not cast into their datatypes.
 
     Args:
         dir: path to the database directory
-        name: name of the table
-        fields: the table schema; an iterable of :class:`Field` objects
-        encoding: character encoding of the table file
+        name: name of the relation
+        fields: schema for the relation; a sequence of :class:`Field`
+            objects
+        encoding: character encoding of the underlying file
     Attributes:
         dir: The path to the database directory.
-        name: The name of the table.
-        fields: The table's schema.
-        encoding: The character encoding of table files.
+        name: The name of the relation.
+        fields: The schema for the relation.
+        encoding: The character encoding of the underlying file.
     """
     def __init__(self,
                  dir: util.PathLike,
@@ -289,29 +293,29 @@ class Table(object):
         self.encoding = encoding
         self._field_index = {field.name: i for i, field in enumerate(fields)}
 
-    def __iter__(self) -> Generator[Row, None, None]:
-        with open_table(self.dir, self.name, encoding=self.encoding) as f:
+    def __iter__(self) -> Generator[Record, None, None]:
+        with open(self.dir, self.name, encoding=self.encoding) as f:
             for line in f:
-                yield decode_row(line)
+                yield decode(line)
 
     def column_index(self, name: str) -> int:
         """Return the tuple index of the column with name *name*."""
         return self._field_index[name]
 
-    def select(self, *names: str) -> Generator[Row, None, None]:
+    def select(self, *names: str) -> Generator[Record, None, None]:
         """
-        Select fields given by *names* from each row in the table.
+        Select columns *names* from each record in the relation.
 
         If no field names are given, all fields are returned.
 
         Yields:
-            tuple: rows containing the specified columns
+            tuple: records containing the specified columns
         Examples:
-            >>> next(table.select())
+            >>> next(relation.select())
             ('10', 'unknown', 'formal', 'none', '1', 'S', 'It rained.', ...)
-            >>> next(table.select('i-id'))
+            >>> next(relation.select('i-id'))
             ('10',)
-            >>> next(table.select('i-id', 'i-input'))
+            >>> next(relation.select('i-id', 'i-input'))
             ('10', 'It rained.')
         """
         if not names:
@@ -332,18 +336,18 @@ class Database(object):
     """
     A basic abstraction of a TSDB database.
 
-    This class manages the basic access into a TSDB database by
-    loading its schema and allowing for named access to table data.
+    This class manages basic access into a TSDB database by loading
+    its schema and allowing for named access to relation data.
 
     Args:
         path: path to the database directory
-        encoding: character encoding of the table files
+        encoding: character encoding of the database files
     Example:
         >>> db = tsdb.Database('my-profile')
         >>> item = db['item']
     Attributes:
-        schema: The database's schema.
-        encoding: The character encoding of table files.
+        schema: The schema for the database.
+        encoding: The character encoding of database files.
     """
     def __init__(self,
                  path: util.PathLike,
@@ -360,14 +364,14 @@ class Database(object):
         """The database directory's path."""
         return self._path
 
-    def __getitem__(self, name: str) -> Table:
+    def __getitem__(self, name: str) -> Relation:
         if name not in self.schema:
-            raise TSDBError('table not defined in schema: {}'.format(name))
-        return Table(self.path, name, self.schema[name], self.encoding)
+            raise TSDBError('relation not defined in schema: {}'.format(name))
+        return Relation(self.path, name, self.schema[name], self.encoding)
 
 
 #############################################################################
-# Table Encoding
+# Data Encoding
 
 def escape(string: str) -> str:
     r"""
@@ -381,7 +385,7 @@ def escape(string: str) -> str:
     Also see :func:`unescape`
 
     Args:
-        string: the string to escape
+        string: string to escape
     Returns:
         The escaped string
     """
@@ -399,7 +403,7 @@ def unescape(string: str) -> str:
     Also see :func:`escape`.
 
     Args:
-        string (str): the escaped string
+        string (str): TSDB-escaped string
     Returns:
         The string with escape sequences replaced
     """
@@ -410,10 +414,10 @@ def unescape(string: str) -> str:
             .replace('\\s', FIELD_DELIMITER))
 
 
-def decode_row(line: str,
-               fields: Fields = None) -> Row:
+def decode(line: str,
+           fields: Fields = None) -> Record:
     """
-    Decode a raw line from a table into a list of column values.
+    Decode a raw line from a relation into a list of column values.
 
     Decoding involves splitting the line by the field delimiter and
     unescaping special characters. The column value for empty fields
@@ -423,8 +427,8 @@ def decode_row(line: str,
     otherwise the value is returned as a string.
 
     Args:
-        line: a raw line from a TSDB table file.
-        fields: an iterable of :class:`Field` objects
+        line: raw line from a TSDB relation file.
+        fields: iterable of :class:`Field` objects
     Returns:
         A list of column values.
     """
@@ -433,29 +437,29 @@ def decode_row(line: str,
     if fields:
         if len(raw_values) != len(fields):
             _mismatched_counts(raw_values, fields)
-        row = tuple(cast(f.datatype, col)
-                    for col, f in zip(raw_values, fields))
+        record = tuple(cast(f.datatype, col)
+                       for col, f in zip(raw_values, fields))
     else:
-        row = tuple(raw_values)
-    return row
+        record = tuple(raw_values)
+    return record
 
 
-def encode_row(values: Row,
-               fields: Fields = None) -> str:
+def encode(values: Record,
+           fields: Fields = None) -> str:
     """
-    Encode a list of column values into a string for a table file.
+    Encode a list of column values into a string for a relation file.
 
     Encoding involves escaping special characters for each value, then
     joining the values into a single string with the field
     delimiter. If *fields* is given, `None` values will be replaced
     with the default value for their datatype.
 
-    For creating a row from a mapping of column names to values, see
-    :func:`make_row`.
+    For creating a record from a mapping of column names to values,
+    see :func:`make_record`.
 
     Args:
-        values: a list of column values
-        fields: an iterable of :class:`Field` objects
+        values: list of column values
+        fields: iterable of :class:`Field` objects
     Returns:
         A TSDB-encoded string
     """
@@ -475,20 +479,19 @@ def _mismatched_counts(columns, fields):
                     .format(len(columns), len(fields)))
 
 
-def make_row(colmap: ColumnMap, fields: Fields) -> Row:
+def make_record(colmap: ColumnMap, fields: Fields) -> Record:
     """
-    Encode a mapping of column names to values into a TSDB table row.
+    Create a record tuple from a mapping of column names to values.
 
     This function is useful when *colmap* is either a subset or
-    superset of the columns defined for a row (as determined by
+    superset of the columns defined for a relation (as determined by
     *fields*). That is, it selects the relevant column values and
-    fills in the missing ones with `None` (not the default value; this
-    is done in :func:`encode_row`). *fields* is also responsible for
-    determining the column order.
+    fills in the missing ones with `None`. *fields* is also
+    responsible for determining the column order.
 
     Args:
-        row: a mapping of column names to values
-        fields: an iterable of :class:`Field` objects
+        colmap: mapping of column names to values
+        fields: iterable of :class:`Field` objects
     Returns:
         A list of column values
     """
@@ -663,31 +666,31 @@ def is_database_directory(path: util.PathLike) -> bool:
     return path.is_dir() and path.joinpath(SCHEMA_FILENAME).is_file()
 
 
-def table_path(dir: util.PathLike,
-               name: str) -> Path:
+def get_path(dir: util.PathLike,
+             name: str) -> Path:
     """
-    Determine if the table path should end in .gz or not and return it.
+    Determine if the file path should end in .gz or not and return it.
 
     A .gz path is preferred only if it exists and is newer than any
     regular text file path.
 
     Args:
         dir: TSDB database directory
-        name: name of a table in the database
+        name: name of a file in the database
     Raises:
         TSDBError: when neither the .gz nor the text file exist.
     """
-    tx_path, gz_path, use_gz = _table_paths(dir, name)
+    tx_path, gz_path, use_gz = _get_paths(dir, name)
     tbl_path = gz_path if use_gz else tx_path
     if not tbl_path.is_file():
         raise TSDBError(
-            'Table does not exist at {!s}(.gz)'
+            'File does not exist at {!s}(.gz)'
             .format(tbl_path)
         )
     return tbl_path
 
 
-def _table_paths(dir: util.PathLike, name: str) -> Tuple[Path, Path, bool]:
+def _get_paths(dir: util.PathLike, name: str) -> Tuple[Path, Path, bool]:
     tbl_path = Path(dir, name).expanduser()
     tx_path = tbl_path.with_suffix('')
     gz_path = tbl_path.with_suffix('.gz')
@@ -703,26 +706,27 @@ def _table_paths(dir: util.PathLike, name: str) -> Tuple[Path, Path, bool]:
 # there's a bug in the type checker. Replace when mypy no longer
 # complains about TextIO.
 @contextmanager
-def open_table(dir: util.PathLike,
-               name: str,
-               encoding: str = 'utf-8') -> Generator[IO[str], None, None]:
+def open(dir: util.PathLike,
+         name: str,
+         encoding: str = 'utf-8') -> Generator[IO[str], None, None]:
     """
-    Transparently open the compressed or text table file.
+    Open a TSDB database file.
 
-    Can be used as a context manager in a 'with' statement, but it
-    cannot be directly iterated over like a normal open file.
+    This function should be used as a context manager (in a 'with'
+    statement); the return value cannot be directly iterated over like
+    a normal open file.
 
     Args:
         dir: path to the database directory
-        name: the name of the table to open
-        encoding: character encoding of the table file
+        name: name of the file to open
+        encoding: character encoding of the file
     Example:
         >>> sentences = []
-        >>> with tsdb.'item', open_table('my-profile') as item:
+        >>> with tsdb.open('my-profile', 'item') as item:
         ...     for line in item:
-        ...         sentences.append(tsdb.decode_row(line)[6])
+        ...         sentences.append(tsdb.decode(line)[6])
     """
-    path = table_path(dir, name)
+    path = get_path(dir, name)
     # open and gzip.open don't accept pathlib.Path objects until Python 3.6
     if path.suffix.lower() == '.gz':
         with gzopen(str(path), mode='rt', encoding=encoding) as f:
@@ -732,31 +736,31 @@ def open_table(dir: util.PathLike,
             yield f
 
 
-def write_table(dir: util.PathLike,
-                name: str,
-                rows: Iterable[Row],
-                fields: Fields,
-                append: bool = False,
-                gzip: Optional[bool] = None,
-                encoding: str = 'utf-8') -> None:
+def write(dir: util.PathLike,
+          name: str,
+          records: Iterable[Record],
+          fields: Fields,
+          append: bool = False,
+          gzip: Optional[bool] = None,
+          encoding: str = 'utf-8') -> None:
     """
-    Write *rows* to table *name* in the test suite at *dir*.
+    Write *records* to relation *name* in the database at *dir*.
 
     Args:
         dir: path to the database directory
-        name: the name of the table to write
-        rows: an iterable of rows to write
-        fields: an iterable of :class:`Field` objects
+        name: name of the relation to write
+        records: iterable of records to write
+        fields: iterable of :class:`Field` objects
         append: if `True`, append to rather than overwriting the file
-        gzip: if `True` and the table is not empty, compress the table
+        gzip: if `True` and the file is not empty, compress the file
             with `gzip`; if `False`, do not compress; if `None`,
-            compress if existing table is compressed
-        encoding: character encoding of the table file
+            compress if overwriting an existing compressed file
+        encoding: character encoding of the file
     Example:
-        >>> tsdb.write_table('my-profile',
-        ...                  'item',
-        ...                  item_rows,
-        ...                  schema['item'])
+        >>> tsdb.write('my-profile',
+        ...            'item',
+        ...            item_records,
+        ...            schema['item'])
     """
     if encoding is None:
         encoding = 'utf-8'
@@ -764,7 +768,7 @@ def write_table(dir: util.PathLike,
     if not dir.is_dir():
         raise TSDBError('invalid test suite directory: {}'.format(dir))
 
-    tx_path, gz_path, use_gz = _table_paths(dir, name)
+    tx_path, gz_path, use_gz = _get_paths(dir, name)
     if gzip is None:
         gzip = use_gz
     dest, other = (gz_path, tx_path) if gzip else (tx_path, gz_path)
@@ -775,8 +779,9 @@ def write_table(dir: util.PathLike,
             mode='w+b', suffix='.tmp',
             prefix=name, dir=str(dir)) as f_tmp:
 
-        for row in rows:
-            f_tmp.write((encode_row(row, fields) + '\n').encode(encoding))
+        for record in records:
+            f_tmp.write(
+                (encode(record, fields) + '\n').encode(encoding))
 
         # only gzip non-empty files
         gzip = gzip and (f_tmp.tell() != 0 or append_nonempty)
@@ -797,7 +802,7 @@ def write_table(dir: util.PathLike,
 
 def write_database(db: Database,
                    path: util.PathLike,
-                   tables: Optional[Iterable[str]] = None,
+                   names: Optional[Iterable[str]] = None,
                    schema: SchemaLike = None,
                    gzip: Optional[bool] = None,
                    encoding: str = 'utf-8') -> None:
@@ -806,12 +811,12 @@ def write_database(db: Database,
 
     If *path* is an existing file (not a directory), a
     :class:`TSDBError` is raised. If *path* is an existing directory,
-    the directory will be cleared. Every table name in *tables* must
+    the directory will be cleared. Every relation name in *names* must
     exist in the destination schema. If *schema* is given (even if it
-    is the same as for *db*), every row will be remade (using
-    :func:`make_row`) using the schema, and columns may be
-    dropped or `None` values inserted as necessary, but no more
-    sophisticated changed will be made.
+    is the same as for *db*), every record will be remade (using
+    :func:`make_record`) using the schema, and columns may be dropped
+    or `None` values inserted as necessary, but no more sophisticated
+    changed will be made.
 
     .. warning::
 
@@ -822,57 +827,57 @@ def write_database(db: Database,
     Args:
         db: Database containing data to write
         path: the path to the destination database directory
-        tables: list of tables to write; if `None` use all tables in
-            the destination schema
+        names: list of names of relations to write; if `None` use all
+            relations in the destination schema
         schema: the destination database schema; if `None` use the
             schema of *db*
-        gzip: if `True`, compress all non-empty tables; if `False`, do
-            not compress; if `None` compress if destination table
-            exists, is non-empty, and is compressed
-        encoding: character encoding for the table files
+        gzip: if `True`, compress all non-empty files; if `False`, do
+            not compress; if `None` compress if overwriting an
+            existing compressed file
+        encoding: character encoding for the database files
     """
     path = Path(path).expanduser()
     if path.is_file():
         raise TSDBError('not a directory: {!s}'.format(path))
-    remake_rows = schema is not None
+    remake_records = schema is not None
     if schema is None:
         schema = db.schema
     elif isinstance(schema, (str, Path)):
         schema = read_schema(schema)
-    if tables is None:
-        tables = list(schema)
+    if names is None:
+        names = list(schema)
 
     # Prepare destination directory
     path.mkdir(exist_ok=True)
     write_schema(path, schema)
 
-    for name in tables:
+    for name in names:
         fields = schema[name]
         if name in db.schema:
-            table = db[name]
+            relation = db[name]
         else:
-            table = Table(path, name, fields, encoding=encoding)
-        if remake_rows:
-            rows = _remake_rows(table, fields)
+            relation = Relation(path, name, fields, encoding=encoding)
+        if remake_records:
+            records = _remake_records(relation, fields)
         else:
-            rows = iter(table)
-        write_table(path,
-                    name,
-                    rows,
-                    fields,
-                    append=False,
-                    gzip=gzip,
-                    encoding=encoding)
+            records = iter(relation)
+        write(path,
+              name,
+              records,
+              fields,
+              append=False,
+              gzip=gzip,
+              encoding=encoding)
 
     # only delete other files at the end in case db.path == path
-    keepers = set(tables).union([SCHEMA_FILENAME])
+    keepers = set(names).union([SCHEMA_FILENAME])
     for existing in path.iterdir():
         if existing.is_file() and existing.with_suffix('').name not in keepers:
             existing.unlink()
 
 
-def _remake_rows(table, fields):
-    field_names = [field.name for field in table.fields]
-    for row in table:
-        colmap = dict(zip(field_names, row))
-        yield make_row(colmap, fields)
+def _remake_records(relation, fields):
+    field_names = [field.name for field in relation.fields]
+    for record in relation:
+        colmap = dict(zip(field_names, record))
+        yield make_record(colmap, fields)
