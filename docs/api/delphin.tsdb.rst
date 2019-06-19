@@ -74,6 +74,7 @@ delphin.tsdb
 
    .. autofunction:: read_schema
    .. autofunction:: write_schema
+   .. autofunction:: make_field_index
 
    Data Operations
    ---------------

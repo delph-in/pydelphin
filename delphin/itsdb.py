@@ -19,7 +19,7 @@ processing, or manipulating test suites.
 """
 
 from typing import (
-    Iterable, Sequence, Mapping, Tuple, List, Dict,
+    Iterable, Sequence, Tuple, List, Dict,
     Iterator, Generator, Optional, Callable, overload
 )
 from pathlib import Path
@@ -224,13 +224,13 @@ class Row(tsdb.Record):
     def __init__(self,
                  fields: tsdb.Fields,
                  data: Sequence[tsdb.Value],
-                 field_index: Mapping[str, int] = None):
+                 field_index: tsdb.FieldIndex = None):
         if len(data) != len(fields):
             raise ITSDBError(
                 'number of columns ({}) != number of fields ({})'
                 .format(len(data), len(fields)))
         if field_index is None:
-            field_index = {field.name: i for i, field in enumerate(fields)}
+            field_index = tsdb.make_field_index(fields)
         self.fields = fields
         self.data = tuple(tsdb.format(f.datatype, val)
                           for f, val in zip(fields, data))
@@ -475,7 +475,7 @@ class Table(tsdb.Relation):
             self._rows.append(row)
 
     def update(self, index: int,
-               data: Mapping[str, tsdb.Value]) -> None:
+               data: tsdb.ColumnMap) -> None:
         """
         Update the row at *index* with *data*.
 
@@ -514,7 +514,7 @@ class Table(tsdb.Relation):
         """
         indices = map(self._field_index.__getitem__, names)
         fields = list(map(self.fields.__getitem__, indices))
-        field_index = {field.name: i for i, field in enumerate(fields)}
+        field_index = tsdb.make_field_index(fields)
         for row in super().select(*names):
             yield Row(fields, row, field_index=field_index)
 

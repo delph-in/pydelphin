@@ -175,8 +175,26 @@ class Field(object):
 
 
 Fields = Sequence[Field]
+FieldIndex = Mapping[str, int]
 Schema = Mapping[str, Fields]
 SchemaLike = Union[Schema, util.PathLike]
+
+
+def make_field_index(fields: Fields) -> FieldIndex:
+    """
+    Create and return a mapping of field names to indices.
+
+    This mapping helps with looking up columns by their names.
+
+    Args:
+        fields: iterable of :class:`Field` objects
+    Examples:
+        >>> fields = [tsdb.Field('i-id', ':integer'),
+        ...           tsdb.Field('i-input', ':string')]
+        >>> tsdb.make_field_index(fields)
+        {'i-id': 0, 'i-input': 1}
+    """
+    return {field.name: i for i, field in enumerate(fields)}
 
 
 def read_schema(path: util.PathLike) -> Schema:
@@ -291,7 +309,7 @@ class Relation(object):
         self.name = name
         self.fields = fields
         self.encoding = encoding
-        self._field_index = {field.name: i for i, field in enumerate(fields)}
+        self._field_index = make_field_index(fields)
 
     def __iter__(self) -> Generator[Record, None, None]:
         with open(self.dir, self.name, encoding=self.encoding) as f:
