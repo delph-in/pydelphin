@@ -833,18 +833,18 @@ def write_database(db: Database,
 
     If *path* is an existing file (not a directory), a
     :class:`TSDBError` is raised. If *path* is an existing directory,
-    the directory will be cleared. Every relation name in *names* must
-    exist in the destination schema. If *schema* is given (even if it
-    is the same as for *db*), every record will be remade (using
+    the files for all relations in the destination schema will be
+    cleared.  Every relation name in *names* must exist in the
+    destination schema. If *schema* is given (even if it is the same
+    as for *db*), every record will be remade (using
     :func:`make_record`) using the schema, and columns may be dropped
     or `None` values inserted as necessary, but no more sophisticated
-    changed will be made.
+    changes will be made.
 
     .. warning::
 
-       If *path* points to an existing directory, all files in that
-       directory will be deleted prior to writing the database!
-       Directories under *path* will not be deleted.
+       If *path* points to an existing directory, all relation files
+       defined by the schema will be written to or deleted.
 
     Args:
         db: Database containing data to write
@@ -892,10 +892,13 @@ def write_database(db: Database,
               encoding=encoding)
 
     # only delete other files at the end in case db.path == path
-    keepers = set(names).union([SCHEMA_FILENAME])
-    for existing in path.iterdir():
-        if existing.is_file() and existing.with_suffix('').name not in keepers:
-            existing.unlink()
+    for name in set(schema).difference(names):
+        tx_path = Path(path, name).with_suffix('')
+        gz_path = Path(path, name).with_suffix('.gz')
+        if tx_path.is_file():
+            tx_path.unlink()
+        if gz_path.is_file():
+            gz_path.unlink()
 
 
 def _remake_records(relation, fields):
