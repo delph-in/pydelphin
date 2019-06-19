@@ -101,7 +101,7 @@ _MONTHS = {
 # Local types
 
 Value = Union[str, int, float, datetime, None]
-Record = Tuple[Value, ...]
+Record = Sequence[Value]
 ColumnMap = Mapping[str, Value]  # e.g., a partial Record
 
 #############################################################################

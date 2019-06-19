@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
+
 import pytest
 
 from delphin import tsdb
@@ -95,27 +97,32 @@ class TestTestSuite(object):
         assert ts['result'][1]['result-id'] == 1
 
 
-def test_Row(empty_testsuite):
-    ts = itsdb.TestSuite(str(empty_testsuite))
+def test_Row(empty_alt_testsuite):
+    ts = itsdb.TestSuite(str(empty_alt_testsuite))
     item = ts['item']
-    r = itsdb.Row(item.fields, [0, 'sentence'])
+    r = itsdb.Row(item.fields, [0, 'sentence', datetime(2009, 9, 7)])
     assert r.fields == item.fields
-    assert r.keys() == ['i-id', 'i-input']
-    assert len(r) == 2
+    assert r.keys() == ['i-id', 'i-input', 'i-date']
+    assert len(r) == 3
     assert r['i-id'] == r[0] == 0
     assert r['i-input'] == r[1] == 'sentence'
-    assert str(r) == '0@sentence'
-    assert r == itsdb.Row(item.fields, [0, 'sentence'])
-    assert r != itsdb.Row(item.fields, [1, 'sentence'])
-    assert r != itsdb.Row(item.fields, [0, 'string'])
+    assert r['i-date'] == r[2] == datetime(2009, 9, 7)
+    assert str(r) == '0@sentence@7-sep-2009'
+    assert r == (0, 'sentence', datetime(2009, 9, 7))
+    assert r.data == ('0', 'sentence', '7-sep-2009')
+    assert r == itsdb.Row(item.fields, [0, 'sentence', datetime(2009, 9, 7)])
+    assert r != itsdb.Row(item.fields, [1, 'sentence', datetime(2009, 9, 7)])
+    assert r != itsdb.Row(item.fields, [0, 'string', datetime(2009, 9, 7)])
+    assert r != itsdb.Row(item.fields, [0, 'sentence', datetime(2009, 7, 9)])
     # incorrect number of fields
     with pytest.raises(itsdb.ITSDBError):
         itsdb.Row(item.fields, [0])
     # None values get set to default, and
     # non-string values are left as-is
-    r = itsdb.Row(item.fields, [0, None])
+    r = itsdb.Row(item.fields, [0, None, None])
     assert r['i-id'] == 0
     assert r['i-input'] is None
+    assert r['i-date'] is None
 
 
 class TestTable(object):

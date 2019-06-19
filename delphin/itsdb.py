@@ -19,8 +19,8 @@ processing, or manipulating test suites.
 """
 
 from typing import (
-    Iterable, Sequence, Mapping, Tuple, List, Dict, Generator,
-    Optional, overload
+    Iterable, Sequence, Mapping, Tuple, List, Dict,
+    Iterator, Generator, Optional, Callable, overload
 )
 from pathlib import Path
 import tempfile
@@ -40,7 +40,7 @@ from delphin.__about__ import __version__  # noqa: F401
 # Module variables
 
 _default_task_selectors = {
-    'parse':    ('item', 'i-input'),
+    'parse': ('item', 'i-input'),
     'transfer': ('result', 'mrs'),
     'generate': ('result', 'mrs'),
 }
@@ -204,38 +204,37 @@ class FieldMapper(object):
 ##############################################################################
 # Test items and test suites
 
-class Row(tuple):
+class Row(tsdb.Record):
     """
     A row in a [incr tsdb()] table.
 
     Args:
         fields: column descriptions; an iterable of
             :class:`tsdb.Field` objects
-        data: column values
+        data: raw column values
         field_index: mapping of field name to its index in *fields*;
             if not given, it will be computed from *fields*
     Attributes:
         fields: The fields of the row.
+        data: The raw column values.
     """
 
-    # the following is for the benefit of the type checker
-    fields = []  # type: List[tsdb.Field]
-    _field_index = {}  # type: Mapping[str, int]
+    __slots__ = 'fields', 'data', '_field_index'
 
-    def __new__(cls,
-                fields: tsdb.Fields,
-                data: Sequence[tsdb.Value],
-                field_index: Mapping[str, int] = None) -> 'Row':
+    def __init__(self,
+                 fields: tsdb.Fields,
+                 data: Sequence[tsdb.Value],
+                 field_index: Mapping[str, int] = None):
         if len(data) != len(fields):
             raise ITSDBError(
                 'number of columns ({}) != number of fields ({})'
                 .format(len(data), len(fields)))
         if field_index is None:
             field_index = {field.name: i for i, field in enumerate(fields)}
-        row = super(Row, cls).__new__(cls, data)
-        row.fields = fields
-        row._field_index = field_index
-        return row
+        self.fields = fields
+        self.data = tuple(tsdb.format(f.datatype, val)
+                          for f, val in zip(fields, data))
+        self._field_index = field_index
 
     def __repr__(self) -> str:
         return 'Row({})'.format(', '.join(map(repr, self)))
@@ -244,9 +243,18 @@ class Row(tuple):
         return tsdb.encode(self, self.fields)
 
     def __eq__(self, other) -> bool:
-        if not isinstance(other, collections.Sequence):
+        if not hasattr(other, '__iter__'):
             return NotImplemented
         return tuple(self) == tuple(other)
+
+    def __len__(self) -> int:
+        return len(self.fields)
+
+    def __iter__(self) -> Iterator[tsdb.Value]:
+        cast = tsdb.cast
+        datatypes = tuple(field.datatype for field in self.fields)
+        for datatype, raw_value in zip(datatypes, self.data):
+            yield cast(datatype, raw_value)
 
     @overload
     def __getitem__(self, key: int) -> tsdb.Value:
@@ -261,11 +269,20 @@ class Row(tuple):
         ...
 
     def __getitem__(self, key):  # noqa: F811
-        if isinstance(key, str):
-            index = self._field_index[key]
+        cast = tsdb.cast
+        if isinstance(key, slice):
+            fields = self.fields[key]
+            raw_values = self.data[key]
+            return tuple(cast(field.datatype, raw)
+                         for field, raw in zip(fields, raw_values))
         else:
-            index = key
-        return super().__getitem__(index)
+            if isinstance(key, str):
+                index = self._field_index[key]
+            else:
+                index = key
+            field = self.fields[index]
+            raw_value = self.data[index]
+            return cast(field.datatype, raw_value)
 
     def keys(self) -> List[str]:
         """
