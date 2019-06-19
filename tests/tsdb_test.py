@@ -169,8 +169,12 @@ def test_cast():
     assert tsdb.cast(':string', None) is None
     assert tsdb.cast(':date', None) is None
     assert tsdb.cast(':integer', '15') == 15
+    assert tsdb.cast(':integer', '-1') == -1
+    assert tsdb.cast(':integer', '') is None
     assert tsdb.cast(':float', '2.05e-3') == 0.00205
+    assert tsdb.cast(':float', '') is None
     assert tsdb.cast(':string', 'Abrams slept.') == 'Abrams slept.'
+    assert tsdb.cast(':string', '') is None
     assert tsdb.cast(':date', '10-6-2002') == datetime(2002, 6, 10, 0, 0)
     assert tsdb.cast(':date', '8-sep-1999') == datetime(1999, 9, 8, 0, 0)
     assert tsdb.cast(':date', 'apr-95') == datetime(1995, 4, 1, 0, 0)
@@ -178,6 +182,7 @@ def test_cast():
             == datetime(2002, 12, 1, 15, 31, 1))
     assert (tsdb.cast(':date', '2008-10-12 10:51')
             == datetime(2008, 10, 12, 10, 51))
+    assert tsdb.cast(':date', '') is None
 
 
 def test_format():

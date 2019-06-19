@@ -502,8 +502,12 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
     """
     Cast TSDB field *raw_value* into *datatype*.
 
-    If *raw_value* is `None`, `None` will be returned, regardless of
-    the *datatype*.
+    If *raw_value* is `None` or an empty string (`''`), `None` will be
+    returned, regardless of the *datatype*. However, when *datatype*
+    is `:integer` and *raw_value* is `'-1'` (the default value for
+    most `:integer` columns), `-1` is returned instead of `None`. This
+    means that :func:`cast` the inverse of :func:`format` except for
+    integer values of `-1`, some date formats, and coded defaults.
 
     Supported datatypes:
 
@@ -548,7 +552,7 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
         >>> tsdb.cast(':date', '2008-10-12 10:51')
         datetime.datetime(2008, 10, 12, 10, 51)
     """
-    if raw_value is None:
+    if raw_value is None or raw_value == '':
         return None
     elif datatype == ':integer':
         return int(raw_value)
