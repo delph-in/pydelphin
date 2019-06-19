@@ -9,8 +9,7 @@ delphin.itsdb
 
 .. automodule:: delphin.itsdb
 
-   The typical test suite contains
-   these files:
+   The typical test suite contains these files:
 
    ::
 
@@ -29,7 +28,7 @@ databases:
 
 - :class:`TestSuite`
 - :class:`Table`
-- :class:`Record`
+- :class:`Row`
 
 .. autoclass:: TestSuite
    :show-inheritance:
@@ -41,8 +40,9 @@ databases:
    :members:
    :inherited-members:
 
-.. autoclass:: Record
+.. autoclass:: Row
   :members:
+
 
 Processing Test Suites
 ----------------------

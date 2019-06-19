@@ -76,7 +76,7 @@ class FieldMapper(object):
     In addition, the :attr:`affected_tables` attribute should list
     the names of tables that become invalidated by using this
     FieldMapper to process a profile. Generally this is the list of
-    tables that :meth:`map` and :meth:`cleanup` create records for,
+    tables that :meth:`map` and :meth:`cleanup` create rows for,
     but it may also include those that rely on the previous set
     (e.g., treebanking preferences, etc.).
 
@@ -204,18 +204,18 @@ class FieldMapper(object):
 ##############################################################################
 # Test items and test suites
 
-class Record(tuple):
+class Row(tuple):
     """
     A row in a [incr tsdb()] table.
 
     Args:
-        fields: the table schema; an iterable of :class:`tsdb.Field`
-            objects
-        data: column values for the record
+        fields: column descriptions; an iterable of
+            :class:`tsdb.Field` objects
+        data: column values
         field_index: mapping of field name to its index in *fields*;
             if not given, it will be computed from *fields*
     Attributes:
-        fields: The fields of the record.
+        fields: The fields of the row.
     """
 
     # the following is for the benefit of the type checker
@@ -225,23 +225,23 @@ class Record(tuple):
     def __new__(cls,
                 fields: tsdb.Fields,
                 data: Sequence[tsdb.Value],
-                field_index: Mapping[str, int] = None) -> 'Record':
+                field_index: Mapping[str, int] = None) -> 'Row':
         if len(data) != len(fields):
             raise ITSDBError(
-                'number of record columns ({}) != number of fields ({})'
+                'number of columns ({}) != number of fields ({})'
                 .format(len(data), len(fields)))
         if field_index is None:
             field_index = {field.name: i for i, field in enumerate(fields)}
-        record = super(Record, cls).__new__(cls, data)
-        record.fields = fields
-        record._field_index = field_index
-        return record
+        row = super(Row, cls).__new__(cls, data)
+        row.fields = fields
+        row._field_index = field_index
+        return row
 
     def __repr__(self) -> str:
-        return 'Record({})'.format(', '.join(map(repr, self)))
+        return 'Row({})'.format(', '.join(map(repr, self)))
 
     def __str__(self) -> str:
-        return tsdb.encode_row(self, self.fields)
+        return tsdb.encode(self, self.fields)
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, collections.Sequence):
@@ -269,7 +269,7 @@ class Record(tuple):
 
     def keys(self) -> List[str]:
         """
-        Return the list of field names for the record.
+        Return the list of field names for the row.
 
         Note this returns the names of all fields, not just those with
         the `:key` flag.
@@ -277,10 +277,10 @@ class Record(tuple):
         return [f.name for f in self.fields]
 
 
-Records = Sequence[Record]
+Rows = Sequence[Row]
 
 
-class Table(tsdb.Table):
+class Table(tsdb.Relation):
     """
     A [incr tsdb()] table.
 
@@ -295,8 +295,8 @@ class Table(tsdb.Table):
 
     Tables have two modes: **attached** and **detached**. Attached
     tables are backed by a file on disk (whether as part of a test
-    suite or not) and only store modified records in memory---all
-    unmodified records are retrieved from disk. Therefore, iterating
+    suite or not) and only store modified rows in memory---all
+    unmodified rows are retrieved from disk. Therefore, iterating
     over a table is more efficient than random-access. Attached files
     use significantly less memory than detached tables but also
     require more processing time. Detached tables are entirely stored
@@ -327,17 +327,17 @@ class Table(tsdb.Table):
                  encoding: str = 'utf-8') -> None:
         super().__init__(dir, name, fields, encoding=encoding)
         try:
-            tsdb.table_path(self.dir, name)
+            tsdb.get_path(self.dir, name)
         except tsdb.TSDBError:
             # file didn't exist as plain-text or gzipped, so create it
             path = self.dir.joinpath(name)
             path.write_text('')
-        self._records = []  # type: List[Optional[Record]]
+        self._rows = []  # type: List[Optional[Row]]
 
         # These two numbers are needed to track if changes to the
         # table are only additions or if they remove/alter existing
-        # rows. The first is the number of records in the file and the
-        # second is the index of the first unwritten record
+        # rows. The first is the number of rows in the file and the
+        # second is the index of the first unwritten row
         self._persistent_count = 0
         self._volatile_index = 0
 
@@ -345,28 +345,28 @@ class Table(tsdb.Table):
 
     @property
     def _in_transaction(self) -> bool:
-        num_recs = len(self._records)
+        num_recs = len(self._rows)
         return (num_recs > self._persistent_count
                 or self._volatile_index < self._persistent_count)
 
     def _sync_with_file(self) -> None:
         """Clear in-memory structures so table is synced with the file."""
-        self._records = []
+        self._rows = []
         i = -1
         for i, line in self._enum_lines():
-            self._records.append(None)
+            self._rows.append(None)
         self._persistent_count = i + 1
         self._volatile_index = i + 1
 
-    def __iter__(self) -> Generator[Record, None, None]:
+    def __iter__(self) -> Generator[Row, None, None]:
         yield from self._iterslice(slice(None))
 
     @overload
-    def __getitem__(self, index: int) -> Record:
+    def __getitem__(self, index: int) -> Row:
         ...
 
     @overload  # noqa: F811
-    def __getitem__(self, index: slice) -> Records:
+    def __getitem__(self, index: slice) -> Rows:
         ...
 
     def __getitem__(self, index):  # noqa: F811
@@ -375,35 +375,35 @@ class Table(tsdb.Table):
         else:
             return self._getitem(index)
 
-    def _iterslice(self, slice: slice) -> Generator[Record, None, None]:
-        """Yield records from a slice index."""
-        indices = range(*slice.indices(len(self._records)))
-        rows = self._enum_records(indices)
+    def _iterslice(self, slice: slice) -> Generator[Row, None, None]:
+        """Yield rows from a slice index."""
+        indices = range(*slice.indices(len(self._rows)))
+        rows = self._enum_rows(indices)
         if slice.step is not None and slice.step < 0:
             rows = reversed(list(rows))
         for i, row in rows:
             yield row
 
-    def _getitem(self, index: int) -> Record:
+    def _getitem(self, index: int) -> Row:
         """Get a single non-slice index."""
-        row = self._records[index]
+        row = self._rows[index]
         if row is None:
             # need to handle negative indices manually
             if index < 0:
-                index = len(self._records) + index
-            row = next((Record(self.fields,
-                               tsdb.decode_row(line, self.fields),
-                               field_index=self._field_index)
+                index = len(self._rows) + index
+            row = next((Row(self.fields,
+                            tsdb.decode(line, self.fields),
+                            field_index=self._field_index)
                         for i, line in self._enum_lines()
                         if i == index))
         return row
 
     @overload
-    def __setitem__(self, index: int, value: Record) -> None:
+    def __setitem__(self, index: int, value: Row) -> None:
         ...
 
     @overload  # noqa: F811
-    def __setitem__(self, index: slice, value: Iterable[Record]) -> None:
+    def __setitem__(self, index: slice, value: Iterable[Row]) -> None:
         ...
 
     def __setitem__(self, index, value):  # noqa: F811
@@ -411,56 +411,56 @@ class Table(tsdb.Table):
         if isinstance(index, slice):
             values = list(value)
         else:
-            self._records[index]  # check for IndexError
+            self._rows[index]  # check for IndexError
             values = [value]
             index = slice(index, index + 1)
-        # now prepare the records for being in a table
-        for i, record in enumerate(values):
-            values[i] = Record(self.fields,
-                               record,
-                               field_index=self._field_index)
-        self._records[index] = values
+        # now prepare the rows for being in a table
+        for i, row in enumerate(values):
+            values[i] = Row(self.fields,
+                            row,
+                            field_index=self._field_index)
+        self._rows[index] = values
         self._volatile_index = min(
             self._volatile_index,
-            min(index.indices(len(self._records))[:2])
+            min(index.indices(len(self._rows))[:2])
         )
 
     def __len__(self) -> int:
-        return len(self._records)
+        return len(self._rows)
 
     def clear(self) -> None:
-        self._records.clear()
+        self._rows.clear()
         self._volatile_index = 0
 
-    def append(self, record: Record) -> None:
+    def append(self, row: Row) -> None:
         """
-        Add *record* to the end of the table.
+        Add *row* to the end of the table.
 
         Args:
-            record: a :class:`Record` or other iterable containing
+            row: a :class:`Row` or other iterable containing
                 column values
         """
-        self.extend([record])
+        self.extend([row])
 
-    def extend(self, records: Records) -> None:
+    def extend(self, rows: Rows) -> None:
         """
-        Add each record in *records* to the end of the table.
+        Add each row in *rows* to the end of the table.
 
         Args:
-            record: an iterable of :class:`Record` or other iterables
+            row: an iterable of :class:`Row` or other iterables
                 containing column values
         """
-        for record in records:
-            if not isinstance(record, Record):
-                record = Record(self.fields,
-                                record,
-                                field_index=self._field_index)
-            self._records.append(record)
+        for row in rows:
+            if not isinstance(row, Row):
+                row = Row(self.fields,
+                          row,
+                          field_index=self._field_index)
+            self._rows.append(row)
 
     def update(self, index: int,
                data: Mapping[str, tsdb.Value]) -> None:
         """
-        Update the record at *index* with *data*.
+        Update the row at *index* with *data*.
 
         Args:
             index: the 0-based index of the row in the table
@@ -475,58 +475,58 @@ class Table(tsdb.Table):
         for key, value in data.items():
             field_index = self._field_index[key]
             values[field_index] = value
-        self[index] = Record(self.fields,
-                             values,
-                             field_index=self._field_index)
+        self[index] = Row(self.fields,
+                          values,
+                          field_index=self._field_index)
 
-    def select(self, *names: str) -> Generator[Record, None, None]:
+    def select(self, *names: str) -> Generator[Row, None, None]:
         """
         Select fields given by *names* from each row in the table.
 
         If no field names are given, all fields are returned.
 
         Yields:
-            Record
+            Row
         Examples:
             >>> next(table.select())
-            Record(10, 'unknown', 'formal', 'none', 1, 'S', 'It rained.', ...)
+            Row(10, 'unknown', 'formal', 'none', 1, 'S', 'It rained.', ...)
             >>> next(table.select('i-id'))
-            Record(10)
+            Row(10)
             >>> next(table.select('i-id', 'i-input'))
-            Record(10, 'It rained.')
+            Row(10, 'It rained.')
         """
         indices = map(self._field_index.__getitem__, names)
         fields = list(map(self.fields.__getitem__, indices))
         field_index = {field.name: i for i, field in enumerate(fields)}
         for row in super().select(*names):
-            yield Record(fields, row, field_index=field_index)
+            yield Row(fields, row, field_index=field_index)
 
     def _enum_lines(self):
         """Enumerate raw lines from the table file."""
-        with tsdb.open_table(self.dir,
-                             self.name,
-                             encoding=self.encoding) as lines:
+        with tsdb.open(self.dir,
+                       self.name,
+                       encoding=self.encoding) as lines:
             yield from enumerate(lines)
 
-    def _enum_records(self, indices):
-        """Enumerate on-disk and in-memory records."""
+    def _enum_rows(self, indices):
+        """Enumerate on-disk and in-memory rows."""
         fields = self.fields
         field_index = self._field_index
-        records = self._records
+        rows = self._rows
         i = 0
         # first rows covered by the file
         for i, line in self._enum_lines():
             if i in indices:
-                row = records[i]
+                row = rows[i]
                 if row is None:
-                    row = Record(fields,
-                                 tsdb.decode_row(line, fields),
-                                 field_index=field_index)
+                    row = Row(fields,
+                              tsdb.decode(line, fields),
+                              field_index=field_index)
                 yield (i, row)
         # then any uncommitted rows
-        for j in range(i, len(records)):
-            if j in indices and records[j] is not None:
-                yield (j, records[j])
+        for j in range(i, len(rows)):
+            if j in indices and rows[j] is not None:
+                yield (j, rows[j])
 
 
 class TestSuite(tsdb.Database):
@@ -617,7 +617,7 @@ class TestSuite(tsdb.Database):
                 else:
                     append = False
                     data = table
-                tsdb.write_table(
+                tsdb.write(
                     self.path,
                     name,
                     data,
@@ -637,11 +637,8 @@ class TestSuite(tsdb.Database):
         """
         Process each item in a [incr tsdb()] test suite.
 
-        The output
-        records will be flushed to disk when the number of new records
-        in a table is *buffer_size*. If the test suite is not attached
-        to files or *buffer_size* is set to `None`, records are kept
-        in memory and not flushed to disk.
+        The output rows will be flushed to disk when the number of new
+        rows in a table is *buffer_size*.
 
         Args:
             cpu (:class:`~delphin.interface.Processor`): processor
@@ -655,8 +652,8 @@ class TestSuite(tsdb.Database):
             fieldmapper (:class:`FieldMapper`): object for
                 mapping response fields to [incr tsdb()] fields; if
                 `None`, use a default mapper for the standard schema
-            gzip: compress non-empty tables with gzip
-            buffer_size (int): number of output records to hold in memory
+            gzip: if `True`, compress non-empty tables with gzip
+            buffer_size (int): number of output rows to hold in memory
                 before flushing to disk; ignored if the test suite is all
                 in-memory; if `None`, do not flush to disk
         Examples:
@@ -683,36 +680,36 @@ class TestSuite(tsdb.Database):
 
         key_names = [f.name for f in source.schema[input_table] if f.is_key]
 
-        for record in source[input_table]:
-            datum = record[input_column]
-            keys = [record[name] for name in key_names]
+        for row in source[input_table]:
+            datum = row[input_column]
+            keys = [row[name] for name in key_names]
             keys_dict = dict(zip(key_names, keys))
             response = cpu.process_item(datum, keys=keys_dict)
             logging.info(
                 'Processed item {:>16}  {:>8} results'
-                .format(tsdb.encode_row(keys), len(response['results']))
+                .format(tsdb.encode(keys), len(response['results']))
             )
             for tablename, data in fieldmapper.map(response):
-                _add_record(self[tablename], data, buffer_size)
+                _add_row(self[tablename], data, buffer_size)
 
         for tablename, data in fieldmapper.cleanup():
-            _add_record(self[tablename], data, buffer_size)
+            _add_row(self[tablename], data, buffer_size)
 
         tsdb.write_database(self, self.path, gzip=gzip)
 
 
-def _add_record(table: Table,
-                data: Dict,
-                buffer_size: int) -> None:
+def _add_row(table: Table,
+             data: Dict,
+             buffer_size: int) -> None:
     """
-    Prepare and append a Record into its Table; flush to disk if necessary.
+    Prepare and append a Row into its Table; flush to disk if necessary.
     """
     fields = table.fields
     # remove any keys that aren't relation fields
     for invalid_key in set(data).difference([f.name for f in fields]):
         del data[invalid_key]
 
-    table.append(tsdb.make_row(data, fields))
+    table.append(tsdb.make_record(data, fields))
 
     if len(table) - table._persistent_count > buffer_size:
         table.commit()
@@ -721,12 +718,12 @@ def _add_record(table: Table,
 ##############################################################################
 # Non-class (i.e. static) functions
 
-Match = Tuple[tsdb.Value, Records, Records]
-_Matched = Tuple[List[Record], List[Record]]
+Match = Tuple[tsdb.Value, Rows, Rows]
+_Matched = Tuple[List[Row], List[Row]]
 
 
-def match_rows(rows1: Records,
-               rows2: Records,
+def match_rows(rows1: Rows,
+               rows2: Rows,
                key: str,
                sort_keys: bool = True) -> Generator[Match, None, None]:
     """
@@ -742,8 +739,8 @@ def match_rows(rows1: Records,
        low-memory systems.
 
     Args:
-        rows1: a :class:`Table` or list of :class:`Record` objects
-        rows2: a :class:`Table` or list of :class:`Record` objects
+        rows1: a :class:`Table` or list of :class:`Row` objects
+        rows2: a :class:`Table` or list of :class:`Row` objects
         key (str): the column name on which to match
         sort_keys (bool): if `True`, yield matching rows sorted by the
             matched key instead of the original order

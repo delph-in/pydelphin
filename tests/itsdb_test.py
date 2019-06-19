@@ -6,6 +6,20 @@ from delphin import tsdb
 from delphin import itsdb
 
 
+@pytest.fixture
+def single_item_table(single_item_skeleton):
+    fields = tsdb.read_schema(single_item_skeleton)['item']
+    table = itsdb.Table(single_item_skeleton, 'item', fields)
+    return table
+
+
+@pytest.fixture
+def empty_item_table(empty_testsuite):
+    fields = tsdb.read_schema(empty_testsuite)['item']
+    table = itsdb.Table(empty_testsuite, 'item', fields)
+    return table
+
+
 class TestTestSuite(object):
     def test_init(self, single_item_profile):
         with pytest.raises(itsdb.ITSDBError):
@@ -81,56 +95,54 @@ class TestTestSuite(object):
         assert ts['result'][1]['result-id'] == 1
 
 
-def test_Record(empty_testsuite):
+def test_Row(empty_testsuite):
     ts = itsdb.TestSuite(str(empty_testsuite))
     item = ts['item']
-    r = itsdb.Record(item.fields, [0, 'sentence'])
+    r = itsdb.Row(item.fields, [0, 'sentence'])
     assert r.fields == item.fields
     assert r.keys() == ['i-id', 'i-input']
     assert len(r) == 2
     assert r['i-id'] == r[0] == 0
     assert r['i-input'] == r[1] == 'sentence'
     assert str(r) == '0@sentence'
-    assert r == itsdb.Record(item.fields, [0, 'sentence'])
-    assert r != itsdb.Record(item.fields, [1, 'sentence'])
-    assert r != itsdb.Record(item.fields, [0, 'string'])
+    assert r == itsdb.Row(item.fields, [0, 'sentence'])
+    assert r != itsdb.Row(item.fields, [1, 'sentence'])
+    assert r != itsdb.Row(item.fields, [0, 'string'])
     # incorrect number of fields
     with pytest.raises(itsdb.ITSDBError):
-        itsdb.Record(item.fields, [0])
+        itsdb.Row(item.fields, [0])
     # None values get set to default, and
     # non-string values are left as-is
-    r = itsdb.Record(item.fields, [0, None])
+    r = itsdb.Row(item.fields, [0, None])
     assert r['i-id'] == 0
     assert r['i-input'] is None
 
 
 class TestTable(object):
-    def test_init(self, empty_testsuite):
-        fields = tsdb.read_schema(empty_testsuite)['item']
+    def test_init(self, empty_item_table):
+        dir = empty_item_table.dir
+        fields = empty_item_table.fields
         with pytest.raises(TypeError):
             itsdb.Table()
         with pytest.raises(TypeError):
-            itsdb.Table(empty_testsuite)
+            itsdb.Table(dir)
         with pytest.raises(TypeError):
-            itsdb.Table(empty_testsuite, 'item')
+            itsdb.Table(dir, 'item')
         # empty table
-        table = itsdb.Table(empty_testsuite, 'item', fields)
+        table = itsdb.Table(dir, 'item', fields)
         assert len(table) == 0
         assert table.name == 'item'
         assert table.fields == fields
-        assert table.dir == empty_testsuite
+        assert table.dir == dir
         assert table.encoding == 'utf-8'
 
-    def test_clear(self, single_item_skeleton):
-        fields = tsdb.read_schema(single_item_skeleton)['item']
-        table = itsdb.Table(single_item_skeleton, 'item', fields)
-        assert len(table) == 1
-        table.clear()
-        assert len(table) == 0
+    def test_clear(self, single_item_table):
+        assert len(single_item_table) == 1
+        single_item_table.clear()
+        assert len(single_item_table) == 0
 
-    def test_append(self, empty_testsuite):
-        fields = tsdb.read_schema(empty_testsuite)['item']
-        table = itsdb.Table(empty_testsuite, 'item', fields)
+    def test_append(self, empty_item_table):
+        table = empty_item_table
         assert len(table) == 0
         table.append((10, 'The dog barks.'))
         assert len(table) == 1
@@ -139,30 +151,30 @@ class TestTable(object):
         assert len(table) == 2
         assert table[-1]['i-input'] == 'The cat meows.'
 
-    def test_extend(self, empty_testsuite):
-        fields = tsdb.read_schema(empty_testsuite)['item']
-        # on bare table
-        table = itsdb.Table(empty_testsuite, 'item', fields)
+    def test_extend(self, empty_item_table):
+        table = empty_item_table
         assert len(table) == 0
         table.extend([(10, 'The dog barks.')])
         assert len(table) == 1
         assert table[-1]['i-input'] == 'The dog barks.'
 
-        def record_generator():
+        def row_generator():
             yield (20, 'The cat meows.')
             yield (20, 'The horse whinnies.')
             yield (20, 'The elephant trumpets.')
 
-        table.extend(record_generator())
+        table.extend(row_generator())
         assert len(table) == 4
         assert table[-1]['i-input'] == 'The elephant trumpets.'
 
-    def test_update(self, single_item_skeleton):
-        pass
+    def test_update(self, single_item_table):
+        table = single_item_table
+        assert table[0] == (0, 'The dog barks.')
+        table.update(0, {'i-input': 'The dog sleeps.'})
+        assert table[0] == (0, 'The dog sleeps.')
 
-    def test_select(self, single_item_skeleton):
-        fields = tsdb.read_schema(single_item_skeleton)['item']
-        table = itsdb.Table(single_item_skeleton, 'item', fields)
+    def test_select(self, single_item_table):
+        table = single_item_table
         assert list(table.select('i-id')) == [[0]]
         table.append((1, 'The bear growls.'))
         assert list(table.select('i-id')) == [[0], [1]]
@@ -171,17 +183,23 @@ class TestTable(object):
             ['The dog barks.', 0],
             ['The bear growls.', 1]]
 
-    def test_getitem(self, empty_testsuite, single_item_skeleton):
-        fields = tsdb.read_schema(empty_testsuite)['item']
-        # empty table
-        table = itsdb.Table(empty_testsuite, 'item', fields)
+    def test__iter__(self, single_item_table):
+        table = single_item_table
+        assert list(table) == [(0, 'The dog barks.')]
+        table.append((10, 'The cat meows.'))
+        assert list(table) == [(0, 'The dog barks.'), (10, 'The cat meows.')]
+        table.clear()
+        assert list(table) == []
+
+    def test__getitem__(self, empty_item_table, single_item_table):
+        table = empty_item_table
         with pytest.raises(IndexError):
             table[0]
         table.append((10, 'The bird chirps.'))
         assert table[0] == (10, 'The bird chirps.')
         assert table[-1] == (10, 'The bird chirps.')
-        # existing records
-        table = itsdb.Table(single_item_skeleton, 'item', fields)
+        # existing rows
+        table = single_item_table
         assert table[0] == (0, 'The dog barks.')
         table.append((1, 'The bear growls.'))
         assert table[-1] == (1, 'The bear growls.')
@@ -191,23 +209,21 @@ class TestTable(object):
         assert table[::2] == [(0, 'The dog barks.')]
         assert table[::-1] == [(1, 'The bear growls.'), (0, 'The dog barks.')]
 
-    def test_setitem(self, empty_testsuite, single_item_skeleton):
-        fields = tsdb.read_schema(empty_testsuite)['item']
-        # empty table
-        table = itsdb.Table(empty_testsuite, 'item', fields)
+    def test__setitem__(self, empty_item_table, single_item_table):
+        table = empty_item_table
         with pytest.raises(IndexError):
             table[0] = (10, 'The bird chirps.')
         table.append((10, 'The bird chirps.'))
         table[0] = (10, 'The bird chirped.')
         assert len(table) == 1
         assert table[0] == (10, 'The bird chirped.')
-        # existing records
-        table = itsdb.Table(single_item_skeleton, 'item', fields)
+        # existing rows
+        table = single_item_table
         assert table[0] == (0, 'The dog barks.')
         table[0] = (0, 'The dog barked.')
         assert table[0] == (0, 'The dog barked.')
         # slice
-        table = itsdb.Table(empty_testsuite, 'item', fields)
+        table = empty_item_table
         table[:] = [(0, 'The whale sings.')]
         assert len(table) == 1
         assert table[0] == (0, 'The whale sings.')
