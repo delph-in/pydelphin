@@ -45,7 +45,7 @@ for simple needs.
 
 from typing import (
     Union, Iterable, Sequence, Mapping, Tuple, List, Set,
-    Optional, Generator, IO
+    Optional, Iterator, IO
 )
 import re
 from pathlib import Path
@@ -311,7 +311,7 @@ class Relation(object):
         self.encoding = encoding
         self._field_index = make_field_index(fields)
 
-    def __iter__(self) -> Generator[Record, None, None]:
+    def __iter__(self) -> Iterator[Record]:
         with open(self.dir, self.name, encoding=self.encoding) as f:
             for line in f:
                 yield decode(line)
@@ -320,7 +320,7 @@ class Relation(object):
         """Return the tuple index of the column with name *name*."""
         return self._field_index[name]
 
-    def select(self, *names: str) -> Generator[Record, None, None]:
+    def select(self, *names: str) -> Iterator[Record]:
         """
         Select columns *names* from each record in the relation.
 
@@ -730,7 +730,7 @@ def _get_paths(dir: util.PathLike, name: str) -> Tuple[Path, Path, bool]:
 @contextmanager
 def open(dir: util.PathLike,
          name: str,
-         encoding: str = 'utf-8') -> Generator[IO[str], None, None]:
+         encoding: str = 'utf-8') -> Iterator[IO[str]]:
     """
     Open a TSDB database file.
 

@@ -20,7 +20,7 @@ processing, or manipulating test suites.
 
 from typing import (
     Iterable, Sequence, Tuple, List, Dict,
-    Iterator, Generator, Optional, Callable, overload
+    Iterator, Optional, overload
 )
 from pathlib import Path
 import tempfile
@@ -384,7 +384,7 @@ class Table(tsdb.Relation):
         self._persistent_count = i + 1
         self._volatile_index = i + 1
 
-    def __iter__(self) -> Generator[Row, None, None]:
+    def __iter__(self) -> Iterator[Row]:
         yield from self._iterslice(slice(None))
 
     @overload
@@ -401,7 +401,7 @@ class Table(tsdb.Relation):
         else:
             return self._getitem(index)
 
-    def _iterslice(self, slice: slice) -> Generator[Row, None, None]:
+    def _iterslice(self, slice: slice) -> Iterator[Row]:
         """Yield rows from a slice index."""
         indices = range(*slice.indices(len(self._rows)))
         rows = self._enum_rows(indices)
@@ -505,7 +505,7 @@ class Table(tsdb.Relation):
                           values,
                           field_index=self._field_index)
 
-    def select(self, *names: str) -> Generator[Row, None, None]:
+    def select(self, *names: str) -> Iterator[Row]:
         """
         Select fields given by *names* from each row in the table.
 
@@ -751,7 +751,7 @@ _Matched = Tuple[List[Row], List[Row]]
 def match_rows(rows1: Rows,
                rows2: Rows,
                key: str,
-               sort_keys: bool = True) -> Generator[Match, None, None]:
+               sort_keys: bool = True) -> Iterator[Match]:
     """
     Yield triples of `(value, left_rows, right_rows)` where
     `left_rows` and `right_rows` are lists of rows that share the same
