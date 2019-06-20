@@ -208,6 +208,12 @@ class Row(tsdb.Record):
     """
     A row in a [incr tsdb()] table.
 
+    The third argument, *field_index*, is optional. Its purpose is to
+    reduce memory usage because the same field index can be shared by
+    all rows for a table, but using an incompatible index can yield
+    unexpected results for value retrieval by field names
+    (`row[field_name]`).
+
     Args:
         fields: column descriptions; an iterable of
             :class:`tsdb.Field` objects
@@ -237,7 +243,10 @@ class Row(tsdb.Record):
         self._field_index = field_index
 
     def __repr__(self) -> str:
-        return 'Row({})'.format(', '.join(map(repr, self)))
+        return '<{} object ({}) at {}>'.format(
+            type(self).__name__,
+            ', '.join(map(repr, self)),
+            id(self))
 
     def __str__(self) -> str:
         return tsdb.encode(self, self.fields)
@@ -409,7 +418,7 @@ class Table(tsdb.Relation):
             if index < 0:
                 index = len(self._rows) + index
             row = next((Row(self.fields,
-                            tsdb.decode(line, self.fields),
+                            tsdb.decode(line),
                             field_index=self._field_index)
                         for i, line in self._enum_lines()
                         if i == index))
@@ -537,7 +546,7 @@ class Table(tsdb.Relation):
                 row = rows[i]
                 if row is None:
                     row = Row(fields,
-                              tsdb.decode(line, fields),
+                              tsdb.decode(line),
                               field_index=field_index)
                 yield (i, row)
         # then any uncommitted rows
