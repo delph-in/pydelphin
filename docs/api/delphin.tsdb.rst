@@ -64,7 +64,9 @@ delphin.tsdb
 
    .. seealso::
 
-      See the `TsdbSchemaRfc <http://moin.delph-in.net/TsdbSchemaRfc>`_ wiki for a description of the format of ``relations`` files.
+      See the `TsdbSchemaRfc
+      <http://moin.delph-in.net/TsdbSchemaRfc>`_ wiki for a
+      description of the format of ``relations`` files.
 
    In PyDelphin, TSDB schemas are represented as dictionaries of lists
    of :class:`Field` objects.
@@ -98,15 +100,11 @@ delphin.tsdb
    .. autofunction:: write_database
 
 
-   Basic Database and Table Classes
-   --------------------------------
+   Basic Database Class
+   --------------------
 
    .. autoclass:: Database
       :members:
-
-   .. autoclass:: Relation
-      :members:
-
 
    Exceptions
    ----------

@@ -70,29 +70,6 @@ def test_write_schema(empty_testsuite, tmp_path):
     assert orig.read_text() == new.read_text()
 
 
-class TestRelation():
-    def test_init(self, mini_testsuite):
-        schema = tsdb.read_schema(mini_testsuite)
-        relation = tsdb.Relation(mini_testsuite, 'item', schema['item'])
-        assert relation.dir == mini_testsuite
-        assert relation.name == 'item'
-        assert relation.fields == schema['item']
-
-    def test__iter__(self, mini_testsuite):
-        schema = tsdb.read_schema(mini_testsuite)
-        item = tsdb.Relation(mini_testsuite, 'item', schema['item'])
-        assert len(list(item)) == 3
-
-    def test_select(self, mini_testsuite):
-        schema = tsdb.read_schema(mini_testsuite)
-        item = tsdb.Relation(mini_testsuite, 'item', schema['item'])
-        assert list(item.select('i-id')) == [('10',), ('20',), ('30',)]
-        assert list(item.select('i-input', 'i-id')) == [
-            ('It rained.', '10'),
-            ('Rained.', '20'),
-            ('It snowed.', '30')]
-
-
 class TestDatabase():
     def test_init(self, tmp_path, mini_testsuite):
         with pytest.raises(TypeError):
@@ -109,8 +86,8 @@ class TestDatabase():
 
     def test__getitem__(self, mini_testsuite):
         db = tsdb.Database(mini_testsuite)
-        item = db['item']
-        assert item.name == 'item'
+        items = db['item']
+        assert len(list(items)) == 3
         with pytest.raises(tsdb.TSDBError):
             db['not_a_relation']
 
@@ -195,8 +172,14 @@ def test_format():
 
 def test_open(single_item_skeleton, gzipped_single_item_skeleton):
     with pytest.raises(tsdb.TSDBError):
-        with tsdb.open(single_item_skeleton, 'non') as fh:
-            pass
+        tsdb.open(single_item_skeleton, 'non')
+
+    fh = tsdb.open(single_item_skeleton, 'item')
+    assert not fh.closed
+    with fh:
+        assert list(fh) == ['0@The dog barks.']
+    assert fh.closed
+
     with tsdb.open(single_item_skeleton, 'item') as fh:
         assert list(fh) == ['0@The dog barks.']
     with tsdb.open(gzipped_single_item_skeleton, 'item') as fh:

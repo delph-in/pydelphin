@@ -44,15 +44,13 @@ for simple needs.
 """
 
 from typing import (
-    Union, Iterable, Sequence, Mapping, Tuple, List, Set,
-    Optional, Generator, IO
+    Union, Iterable, Sequence, Mapping, Tuple, List, Set, Optional, IO
 )
 import re
 from pathlib import Path
 from gzip import open as gzopen
 import tempfile
 import shutil
-from contextlib import contextmanager
 from datetime import datetime
 
 from delphin.exceptions import PyDelphinException
@@ -102,6 +100,7 @@ _MONTHS = {
 
 Value = Union[str, int, float, datetime, None]
 Record = Sequence[Value]
+Relation = Iterable[Record]
 ColumnMap = Mapping[str, Value]  # e.g., a partial Record
 
 #############################################################################
@@ -112,7 +111,7 @@ class TSDBError(PyDelphinException):
     """Raised when encountering invalid TSDB databases."""
 
 
-class TSDBSchemaError(PyDelphinException):
+class TSDBSchemaError(TSDBError):
     """Raised when there is an error processing a TSDB schema."""
 
 
@@ -280,76 +279,6 @@ def _format_schema(schema: Schema) -> str:
 #############################################################################
 # Basic Database Classes
 
-class Relation(object):
-    """
-    A basic abstraction of a TSDB database relation (table).
-
-    This class provides a basic read-only view into a TSDB
-    relation. It supports iteration over the records and basic column
-    selection. Column values are not cast into their datatypes.
-
-    Args:
-        dir: path to the database directory
-        name: name of the relation
-        fields: schema for the relation; a sequence of :class:`Field`
-            objects
-        encoding: character encoding of the underlying file
-    Attributes:
-        dir: The path to the database directory.
-        name: The name of the relation.
-        fields: The schema for the relation.
-        encoding: The character encoding of the underlying file.
-    """
-    def __init__(self,
-                 dir: util.PathLike,
-                 name: str,
-                 fields: Fields,
-                 encoding: str = 'utf-8') -> None:
-        self.dir = Path(dir).expanduser()
-        self.name = name
-        self.fields = fields
-        self.encoding = encoding
-        self._field_index = make_field_index(fields)
-
-    def __iter__(self) -> Generator[Record, None, None]:
-        with open(self.dir, self.name, encoding=self.encoding) as f:
-            for line in f:
-                yield decode(line)
-
-    def column_index(self, name: str) -> int:
-        """Return the tuple index of the column with name *name*."""
-        return self._field_index[name]
-
-    def select(self, *names: str) -> Generator[Record, None, None]:
-        """
-        Select columns *names* from each record in the relation.
-
-        If no field names are given, all fields are returned.
-
-        Yields:
-            tuple: records containing the specified columns
-        Examples:
-            >>> next(relation.select())
-            ('10', 'unknown', 'formal', 'none', '1', 'S', 'It rained.', ...)
-            >>> next(relation.select('i-id'))
-            ('10',)
-            >>> next(relation.select('i-id', 'i-input'))
-            ('10', 'It rained.')
-        """
-        if not names:
-            yield from iter(self)
-        else:
-            indices = []
-            for name in names:
-                try:
-                    indices.append(self.column_index(name))
-                except KeyError as exc:
-                    msg = 'no such field: {}'.format(name)
-                    raise TSDBError(msg) from exc
-            for record in self:
-                yield tuple(record[idx] for idx in indices)
-
-
 class Database(object):
     """
     A basic abstraction of a TSDB database.
@@ -362,7 +291,7 @@ class Database(object):
         encoding: character encoding of the database files
     Example:
         >>> db = tsdb.Database('my-profile')
-        >>> item = db['item']
+        >>> items = db['item']
     Attributes:
         schema: The schema for the database.
         encoding: The character encoding of database files.
@@ -385,7 +314,8 @@ class Database(object):
     def __getitem__(self, name: str) -> Relation:
         if name not in self.schema:
             raise TSDBError('relation not defined in schema: {}'.format(name))
-        return Relation(self.path, name, self.schema[name], self.encoding)
+        return (decode(line)
+                for line in open(self._path, name, encoding=self.encoding))
 
 
 #############################################################################
@@ -727,16 +657,17 @@ def _get_paths(dir: util.PathLike, name: str) -> Tuple[Path, Path, bool]:
 # Note: the return type should have TextIO instead of IO[str], but
 # there's a bug in the type checker. Replace when mypy no longer
 # complains about TextIO.
-@contextmanager
 def open(dir: util.PathLike,
          name: str,
-         encoding: str = 'utf-8') -> Generator[IO[str], None, None]:
+         encoding: Optional[str] = None) -> IO[str]:
     """
     Open a TSDB database file.
 
-    This function should be used as a context manager (in a 'with'
-    statement); the return value cannot be directly iterated over like
-    a normal open file.
+    Unlike a normal `open()` call, this function takes a base
+    directory *dir* and a filename *name* and determines whether the
+    plain text *dir*/*name* or compressed *dir*/*name*.gz file is
+    opened. Furthermore, this function only opens files in read-only
+    text mode. For writing database files, see :func:`write`.
 
     Args:
         dir: path to the database directory
@@ -751,11 +682,9 @@ def open(dir: util.PathLike,
     path = get_path(dir, name)
     # open and gzip.open don't accept pathlib.Path objects until Python 3.6
     if path.suffix.lower() == '.gz':
-        with gzopen(str(path), mode='rt', encoding=encoding) as f:
-            yield f
+        return gzopen(str(path), mode='rt', encoding=encoding)
     else:
-        with path.open(encoding=encoding) as f:
-            yield f
+        return path.open(encoding=encoding)
 
 
 def write(dir: util.PathLike,
@@ -768,12 +697,36 @@ def write(dir: util.PathLike,
     """
     Write *records* to relation *name* in the database at *dir*.
 
+    The simplest way to write data to a file would be something like
+    the following:
+
+    >>> with open(os.path.join(db.dir, 'item'), 'w') as fh:
+    ...     print('\\n'.join(map(tsdb.encode, db['item'])), file=fh)
+
+    This function improves on that method by doing the following:
+
+    * Determining the path from the *gzip* parameter and existing files
+
+    * Writing plain text or compressed data, as appropriate
+
+    * Appending or overwriting data, as appropriate
+
+    * Using the schema information to format fields
+
+    * Writing to a temporary file then copying when done; this
+      prevents accidental data loss when overwriting a file that is
+      being read
+
+    * Deleting any alternative (compressed or plain text) file to
+      avoid having inconsistent files (e.g., delete any existing
+      `item` when writing `item.gz`)
+
     Args:
         dir: path to the database directory
         name: name of the relation to write
         records: iterable of records to write
         fields: iterable of :class:`Field` objects
-        append: if `True`, append to rather than overwriting the file
+        append: if `True`, append to rather than overwrite the file
         gzip: if `True` and the file is not empty, compress the file
             with `gzip`; if `False`, do not compress; if `None`,
             compress if overwriting an existing compressed file
@@ -877,15 +830,13 @@ def write_database(db: Database,
         fields = schema[name]
         if name in db.schema:
             relation = db[name]
+            if remake_records:
+                relation = _remake_records(relation, db.schema[name], fields)
         else:
-            relation = Relation(path, name, fields, encoding=encoding)
-        if remake_records:
-            records = _remake_records(relation, fields)
-        else:
-            records = iter(relation)
+            relation = []
         write(path,
               name,
-              records,
+              relation,
               fields,
               append=False,
               gzip=gzip,
@@ -901,8 +852,8 @@ def write_database(db: Database,
             gz_path.unlink()
 
 
-def _remake_records(relation, fields):
-    field_names = [field.name for field in relation.fields]
+def _remake_records(relation, old_fields, new_fields):
+    field_names = [field.name for field in old_fields]
     for record in relation:
         colmap = dict(zip(field_names, record))
-        yield make_record(colmap, fields)
+        yield make_record(colmap, new_fields)
