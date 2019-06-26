@@ -7,145 +7,141 @@ from delphin import tsql
 from delphin import itsdb
 
 
-def test_parse_query():
-    parse = lambda s: tsql._parse_query(s)
+def test_inspect_query():
     with pytest.raises(tsql.TSQLSyntaxError):
-        parse('info relations')
+        tsql.inspect_query('info relations')
     with pytest.raises(tsql.TSQLSyntaxError):
-        parse('set max-results 5')
+        tsql.inspect_query('set max-results 5')
     with pytest.raises(tsql.TSQLSyntaxError):
-        parse('insert into item i-id values 10')
-
-
-def test_parse_select():
-    parse = lambda s: tsql._parse_select(s)
+        tsql.inspect_query('insert into item i-id values 10')
     with pytest.raises(tsql.TSQLSyntaxError):
-        parse('*')
+        tsql.inspect_query('select *')
     # with pytest.raises(tsql.TSQLSyntaxError):
-    #     parse('i-input from item report "%s"')
-
-    assert parse('i-input') == {
-        'querytype': 'select',
+    assert tsql.inspect_query('select i-input') == {
+        'type': 'select',
         'projection': ['i-input'],
-        'tables': [],
-        'where': None}
+        'relations': [],
+        'condition': None}
 
-    assert parse('i-input i-wf') == {
-        'querytype': 'select',
+    assert tsql.inspect_query('select i-input i-wf') == {
+        'type': 'select',
         'projection': ['i-input', 'i-wf'],
-        'tables': [],
-        'where': None}
+        'relations': [],
+        'condition': None}
 
-    assert parse('i-input i-wf from item') == {
-        'querytype': 'select',
+    assert tsql.inspect_query('select i-input i-wf from item') == {
+        'type': 'select',
         'projection': ['i-input', 'i-wf'],
-        'tables': ['item'],
-        'where': None}
+        'relations': ['item'],
+        'condition': None}
 
-    assert parse('i-input mrs from item result') == {
-        'querytype': 'select',
+    assert tsql.inspect_query('select i-input mrs from item result') == {
+        'type': 'select',
         'projection': ['i-input', 'mrs'],
-        'tables': ['item', 'result'],
-        'where': None}
+        'relations': ['item', 'result'],
+        'condition': None}
 
 
 def test_parse_select_complex_identifiers():
-    parse = lambda s: tsql._parse_select(s)
-    assert parse('item:i-input') == {
-        'querytype': 'select',
-        'projection': ['item:i-input'],
-        'tables': [],
-        'where': None}
+    assert tsql.inspect_query('select item.i-input') == {
+        'type': 'select',
+        'projection': ['item.i-input'],
+        'relations': [],
+        'condition': None}
 
-    assert parse('item:i-id@i-input') == {
-        'querytype': 'select',
-        'projection': ['item:i-id', 'item:i-input'],
-        'tables': [],
-        'where': None}
+    assert tsql.inspect_query('select item.i-id result.mrs') == {
+        'type': 'select',
+        'projection': ['item.i-id', 'result.mrs'],
+        'relations': [],
+        'condition': None}
 
-    assert parse('item:i-id@result:mrs') == {
-        'querytype': 'select',
-        'projection': ['item:i-id', 'result:mrs'],
-        'tables': [],
-        'where': None}
-
-    assert parse('item:i-id@i-input mrs') == {
-        'querytype': 'select',
-        'projection': ['item:i-id', 'item:i-input', 'mrs'],
-        'tables': [],
-        'where': None}
+    assert tsql.inspect_query('select item.i-id i-input mrs') == {
+        'type': 'select',
+        'projection': ['item.i-id', 'i-input', 'mrs'],
+        'relations': [],
+        'condition': None}
 
 
 def test_parse_select_where():
-    parse = lambda s: tsql._parse_select(s)
-    assert parse('i-input where i-wf = 2') == {
-        'querytype': 'select',
+    assert tsql.inspect_query('select i-input where i-wf = 2') == {
+        'type': 'select',
         'projection': ['i-input'],
-        'tables': [],
-        'where': ('==', ('i-wf', 2))}
+        'relations': [],
+        'condition': ('==', ('i-wf', 2))}
 
-    assert parse('i-input where i-date < 2018-01-15')['where'] == (
-        '<', ('i-date', datetime(2018, 1, 15)))
+    assert tsql.inspect_query(
+        'select i-input'
+        ' where i-date < 2018-01-15')['condition'] == (
+            '<', ('i-date', datetime(2018, 1, 15)))
 
-    assert parse('i-input where i-date > 15-jan-2018(15:00:00)')['where'] == (
-        '>', ('i-date', datetime(2018, 1, 15, 15, 0, 0)))
+    assert tsql.inspect_query(
+        'select i-input'
+        ' where i-date > 15-jan-2018(15:00:00)')['condition'] == (
+            '>', ('i-date', datetime(2018, 1, 15, 15, 0, 0)))
 
-    assert parse('i-input where i-input ~ "Abrams"')['where'] == (
-        '~', ('i-input', 'Abrams'))
+    assert tsql.inspect_query(
+        'select i-input'
+        ' where i-input ~ "Abrams"')['condition'] == (
+            '~', ('i-input', 'Abrams'))
 
-    assert parse("i-input where i-input !~ 'Browne'")['where'] == (
-        '!~', ('i-input', 'Browne'))
+    assert tsql.inspect_query(
+        "select i-input"
+        " where i-input !~ 'Browne'")['condition'] == (
+            '!~', ('i-input', 'Browne'))
 
-    assert parse('i-input '
-                 'where i-wf = 2 & i-input ~ \'[Dd]og\'')['where'] == (
-        'and', (('==', ('i-wf', 2)),
-                ('~', ('i-input', '[Dd]og'))))
+    assert tsql.inspect_query(
+        'select i-input'
+        ' where i-wf = 2 & i-input ~ \'[Dd]og\'')['condition'] == (
+            'and', (('==', ('i-wf', 2)),
+                    ('~', ('i-input', '[Dd]og'))))
 
-    assert parse('i-input '
-                 'where i-id = 10 | i-id = 20 & i-wf = 2')['where'] == (
-        'or', (('==', ('i-id', 10)),
-               ('and', (('==', ('i-id', 20)),
-                        ('==', ('i-wf', 2))))))
+    assert tsql.inspect_query(
+        'select i-input'
+        ' where i-id = 10 | i-id = 20 & i-wf = 2')['condition'] == (
+            'or', (('==', ('i-id', 10)),
+                   ('and', (('==', ('i-id', 20)),
+                            ('==', ('i-wf', 2))))))
 
-    assert parse('i-input '
-                 'where (i-id = 10 | i-id = 20) & !i-wf = 2')['where'] == (
-        'and', (('or', (('==', ('i-id', 10)),
-                        ('==', ('i-id', 20)))),
-                ('not', ('==', ('i-wf', 2)))))
+    assert tsql.inspect_query(
+        'select i-input'
+        ' where (i-id = 10 | i-id = 20) & !i-wf = 2')['condition'] == (
+            'and', (('or', (('==', ('i-id', 10)),
+                            ('==', ('i-id', 20)))),
+                    ('not', ('==', ('i-wf', 2)))))
 
 
 def test_select(mini_testsuite):
     ts = itsdb.TestSuite(str(mini_testsuite))
     assert list(tsql.select('i-input', ts)) == [
-        ['It rained.'], ['Rained.'], ['It snowed.']]
+        ('It rained.',), ('Rained.',), ('It snowed.',)]
     assert list(tsql.select('i-input from item', ts)) == [
-        ['It rained.'], ['Rained.'], ['It snowed.']]
+        ('It rained.',), ('Rained.',), ('It snowed.',)]
     assert list(tsql.select('i-input from item item', ts)) == [
-        ['It rained.'], ['Rained.'], ['It snowed.']]
+        ('It rained.',), ('Rained.',), ('It snowed.',)]
     assert list(tsql.select('i-input from result', ts)) == [
-        ['It rained.'], ['It snowed.']]
+        ('It rained.',), ('It snowed.',)]
     assert list(tsql.select('i-input from item result', ts)) == [
-        ['It rained.'], ['It snowed.']]
+        ('It rained.',), ('It snowed.',)]
     assert list(tsql.select('i-id i-input', ts)) == [
-        [10, 'It rained.'], [20, 'Rained.'], [30, 'It snowed.']]
+        (10, 'It rained.'), (20, 'Rained.'), (30, 'It snowed.')]
     res = ts['result']
     assert list(tsql.select('i-id mrs', ts)) == [
-        [10, res[0]['mrs']], [30, res[1]['mrs']]]
+        (10, res[0]['mrs']), (30, res[1]['mrs'])]
     with pytest.raises(tsql.TSQLSyntaxError):
         tsql.select('*', ts)
-    assert list(tsql.select('* from item', ts, cast=True)) == list(ts['item'])
+    # assert list(tsql.select('* from item', ts, cast=True)) == list(ts['item'])
 
 
 def test_select_where(mini_testsuite):
     ts = itsdb.TestSuite(str(mini_testsuite))
     assert list(tsql.select('i-input where i-input ~ "It"', ts)) == [
-        ['It rained.'], ['It snowed.']]
+        ('It rained.',), ('It snowed.',)]
     assert list(tsql.select('i-input where i-input ~ "It" or i-id = 20', ts)) == [
-        ['It rained.'], ['Rained.'], ['It snowed.']]
+        ('It rained.',), ('Rained.',), ('It snowed.',)]
     assert list(tsql.select('i-input where i-date >= 2018-02-01', ts)) == [
-        ['It rained.'], ['Rained.'], ['It snowed.']]
+        ('It rained.',), ('Rained.',), ('It snowed.',)]
     assert list(tsql.select('i-input where readings > 0', ts)) == [
-        ['It rained.'], ['It snowed.']]
+        ('It rained.',), ('It snowed.',)]
 
     # def test_Relations_path(simple_relations):
 #     r = tsdb.Relations.from_string(simple_relations)

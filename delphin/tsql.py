@@ -115,19 +115,19 @@ class TSQLSyntaxError(PyDelphinSyntaxError):
 
 # QUERY INSPECTION ############################################################
 
-def inspect_query(querystring):
+def inspect_query(querystring: str) -> dict:
     """
-    Parse *querystring* and return the interpreted query object.
+    Parse *querystring* and return the interpreted query dictionary.
 
     Example:
         >>> from delphin import tsql
         >>> from pprint import pprint
         >>> pprint(tsql.inspect_query(
         ...     'select i-input from item where i-id < 100'))
-        {'querytype': 'select',
+        {'type': 'select',
          'projection': ['i-input'],
-         'tables': ['item'],
-         'where': ('<', ('i-id', 100))}
+         'relations': ['item'],
+         'condition': ('<', ('i-id', 100))}
     """
     return _parse_query(querystring)
 
@@ -151,35 +151,31 @@ def query(querystring, ts, **kwargs):
     """
     queryobj = _parse_query(querystring)
 
-    if queryobj['querytype'] in ('select', 'retrieve'):
+    if queryobj['type'] in ('select', 'retrieve'):
         return _select(
             queryobj['projection'],
-            queryobj['tables'],
-            queryobj['where'],
-            ts,
-            mode=kwargs.get('mode', 'list'),
-            cast=kwargs.get('cast', True))
+            queryobj['relations'],
+            queryobj['condition'],
+            db,
+            record_class=kwargs.get('record_class', None))
     else:
         # not really a syntax error; replace with TSQLError or something
         # when the proper exception class exists
-        raise TSQLSyntaxError(queryobj['querytype']
-                              + ' queries are not supported')
+        raise TSQLSyntaxError(queryobj['type'] + ' queries are not supported',
+                              text=querystring)
 
 
-def select(querystring, ts, mode='list', cast=True):
+def select(querystring: str,
+           db: tsdb.Database,
+           record_class: _RecordType = None) -> Selection:
     """
     Perform the TSQL selection query *querystring* on testsuite *ts*.
 
     Note: The `select`/`retrieve` part of the query is not included.
 
     Args:
-        querystring (str): TSQL select query
-        ts (:class:`delphin.itsdb.TestSuite`): testsuite to query over
-        mode (str): how to return the results (see
-            :func:`delphin.itsdb.select_rows` for more information
-            about the *mode* parameter; default: `list`)
-        cast (bool): if `True`, values will be cast to their datatype
-            according to the testsuite's relations (default: `True`)
+        querystring: TSQL select query
+        db: TSDB database to query over
     Example:
         >>> list(tsql.select('i-id where i-length < 4', ts))
         [[142], [1061]]
@@ -187,67 +183,196 @@ def select(querystring, ts, mode='list', cast=True):
     queryobj = _parse_select(querystring)
     return _select(
         queryobj['projection'],
-        queryobj['tables'],
-        queryobj['where'],
-        ts,
-        mode,
-        cast)
+        queryobj['relations'],
+        queryobj['condition'],
+        db,
+        record_class=record_class)
 
 
-def _select(projection, tables, condition, ts, mode, cast):
-    table = _select_from(tables, ts)
-    table = _select_projection(projection, table, ts)
-    table = _select_where(condition, table, ts)
+def _select(projection: List[str],
+            relations: List[str],
+            condition: Optional[Condition],
+            db: tsdb.Database,
+            record_class: _RecordType) -> Selection:
 
-    # finally select the relevant columns from the joined table
-    if projection == '*':
-        if len(tables) == 1:
-            projection = [f.name for f in ts.schema[tables[0]]]
-        else:
-            projection = []
-            for t in tables:
-                projection.extend(t + ':' + f.name
-                                  for f in ts.schema[t])
-    return itsdb.select_rows(projection, table, mode=mode, cast=cast)
+    plan = _make_execution_plan(projection, relations, condition, db)
+    selection = Selection(record_class=record_class)
 
+    for name, colnames in plan['joins']:
+        relation = db[name]
+        fields = list(map(relation.get_field, colnames))
+        _join(selection, relation, fields, 'inner')
 
-def _select_from(tables, ts):
-    table = None
-    joined = set()
-    for tab in tables:
-        if tab not in joined:
-            joined.add(tab)
-            table = _transitive_join(table, ts[tab], ts, 'inner')
-    return table
+    selection.data = list(filter(plan['condition'], selection.data))
+    selection.projection = plan['projection']
+    return selection
 
 
-def _select_projection(projection, table, ts):
-    if projection != '*':
-        for p in projection:
-            table = _join_if_missing(table, p, ts, 'inner')
-    return table
+def _make_execution_plan(
+        projection: List[str],
+        relations: List[str],
+        condition: Optional[Condition],
+        db: tsdb.Database) -> dict:
+    """Make a plan for all relations to join and columns to keep."""
+    schema_map = _make_schema_map(db, relations)
+    resolve_qname = _make_qname_resolver(schema_map)
+
+    if projection == ['*']:
+        projection = _project_all(relations, db)
+    else:
+        projection = [resolve_qname(name) for name in projection]
+
+    if condition:
+        cond_func, cond_fields = _process_condition(condition,
+                                                    resolve_qname)
+    else:
+        cond_func, cond_fields = None, ()
+
+    joins = _plan_joins(projection, cond_fields, relations, db)
+
+    return {'projection': projection,
+            'joins': joins,
+            'condition': cond_func}
 
 
-def _select_where(condition, table, ts):
-    keys = table.fields.keys()
-    ids = set()
-    if condition is not None:
-        func, fields = _process_condition(condition)
-        # join tables in the condition for filtering
-        tmptable = table
+def _project_all(relations: List[str], db: tsdb.Database) -> List[str]:
+    projection = []
+    keys_added = set()
+    for name in relations:
+        for field in db.schema[name]:
+            qname = '{}.{}'.format(name, field.name)
+            # only include same keys once
+            if not field.is_key:
+                projection.append(qname)
+            elif field.name not in keys_added:
+                projection.append(qname)
+                keys_added.add(field.name)
+    return projection
+
+
+def _make_schema_map(
+        db: tsdb.Database,
+        relations: List[str]) -> Mapping[str, List[str]]:
+    """Return an inverse mapping from field names to relations."""
+    schema_map = {}
+    for relname, fields in db.schema.items():
         for field in fields:
-            tmptable = _join_if_missing(tmptable, field, ts, 'left')
-        # filter the rows and store the keys only
-        for record in filter(func, tmptable):
-            idtuple = tuple(record[key] for key in keys)
-            ids.add(idtuple)
+            schema_map.setdefault(field.name, []).append(relname)
+    # prefer those appearing in specified relations
+    for colname in schema_map:
+        schema_map[colname] = sorted(schema_map[colname],
+                                     key=relations.__contains__,
+                                     reverse=True)
+    return schema_map
 
-        # check if a matching idtuple was retained
-        def meta_condition(rec):
-            return tuple(rec[key] for key in keys) in ids
 
-        table[:] = filter(meta_condition, table)
-    return table
+def _make_qname_resolver(schema_map):
+    """
+    Return a function that turns column names into qualified names.
+
+    For example, `i-input` becomes `item.i-input`.
+    """
+
+    def resolve(colname: str) -> str:
+        rel, _, col = colname.rpartition('.')
+        if rel:
+            qname = colname
+        elif col in schema_map:
+            qname = '{}.{}'.format(schema_map[col][0], col)
+        else:
+            raise TSQLError('undefined column: {}'.format(colname))
+        return qname
+
+    return resolve
+
+
+def _plan_joins(projection, condition_fields, relations, db):
+    """
+    Calculate the relations and columns needed for the query.
+    """
+    joinmap = {}
+    added = set()
+    relset = set(relations)
+    for qname in projection + list(condition_fields):
+        if qname not in added:
+            rel, _, col = qname.rpartition('.')
+            relset.add(rel)
+            joinmap.setdefault(rel, []).append(col)
+            added.add(qname)
+    # add necessary relations to span all requested relations
+    keymap = _make_keymap(db)
+    relset.update(_pivot_relations(relset, keymap, db))
+    # always add keys
+    for relation in relset:
+        for field in db.schema[relation]:
+            if field.is_key:
+                qname = '{}.{}'.format(relation, field.name)
+                if qname not in added:
+                    joinmap.setdefault(relation, []).append(field.name)
+    # finally ensure joins occur in a valid order
+    joined_keys = set()
+    joins = []
+    while joinmap:
+        changed = False
+        for rel in list(joinmap):
+            if not joins or joined_keys.intersection(joinmap[rel]):
+                joins.append((rel, joinmap.pop(rel)))
+                joined_keys.update(keymap[rel])
+                changed = True
+                break
+        if not changed:
+            raise TSQLError('infinite loop detected!')
+
+    return joins
+
+
+def _make_keymap(db):
+    keymap = {}
+    for rel, fields in db.schema.items():
+        keys = [field.name for field in db.schema[rel] if field.is_key]
+        keymap[rel] = keys
+    return keymap
+
+
+def _pivot_relations(relset, keymap, db):
+    """
+    Search to find a relation that can join two disjoint relations.
+
+    Note: If disjoint relation sets cannot be conjoined with a single
+        other relation, a TSQLError is raised.
+    """
+    edges = []
+    nodes = set()
+
+    def add_edges(keys):
+        for i in range(len(keys) - 1):
+            for j in range(i + 1, len(keys)):
+                edges.append((keys[i], keys[j]))
+
+    for rel in relset:
+        keys = keymap[rel]
+        nodes.update(keys)
+        add_edges(keys)
+
+    pivots = set()
+    components = util._connected_components(nodes, edges)
+    while len(components) > 1:
+        improved = False
+        for rel, keys in keymap.items():
+            if rel not in relset.union(pivots) and len(keys) > 1:
+                if sum(1 if c.intersection(keys) else 0
+                       for c in components) > 1:
+                    nodes.update(keys)
+                    add_edges(keys)
+                    pivots.add(rel)
+                    improved = True
+                    break
+        if not improved:
+            raise TSQLError('could not find relation to join: {}'
+                            .format(', '.join(sorted(relset))))
+        components = util._connected_components(nodes, edges)
+
+    return pivots
 
 
 _operator_functions = {'==': operator.eq,
@@ -258,207 +383,211 @@ _operator_functions = {'==': operator.eq,
                        '>=': operator.ge}
 
 
-def _process_condition(condition):
+def _process_condition(
+        condition: Condition,
+        resolve_qname: Callable[[str], str]) -> Tuple[Condition, _Names]:
     # conditions are something like:
     #  ('==', ('i-id', 11))
     op, body = condition
     if op in ('and', 'or'):
-        fields = []
+        fieldset = set()
         conditions = []
         for cond in body:
-            _func, _fields = _process_condition(cond)
-            fields.extend(_fields)
+            _func, _fields = _process_condition(cond, resolve_qname)
+            fieldset.update(_fields)
             conditions.append(_func)
+        fields = tuple(sorted(fieldset))
         _func = all if op == 'and' else any
 
         def func(row):
             return _func(cond(row) for cond in conditions)
 
     elif op == 'not':
-        nfunc, fields = _process_condition(body)
+        nfunc, fields = _process_condition(body, resolve_qname)
 
         def func(row):
             return not nfunc(row)
 
     elif op == '~':
-        fields = [body[0]]
+        qname = resolve_qname(body[0])
+        fields = (qname,)
 
         def func(row):
-            return re.search(body[1], row[body[0]])
+            return re.search(body[1], row[qname])
 
     elif op == '!~':
-        fields = [body[0]]
+        qname = resolve_qname(body[0])
+        fields = (qname,)
 
         def func(row):
-            return not re.search(body[1], row[body[0]])
+            return not re.search(body[1], row[qname])
 
     else:
-        fields = [body[0]]
+        qname = resolve_qname(body[0])
+        fields = (qname,)
         compare = _operator_functions[op]
 
         def func(row):
-            return compare(row.get(body[0], cast=True), body[1])
+            return compare(row.get(qname, cast=True), body[1])
 
     return func, fields
 
 
-def _join(table1, table2, on=None, how='inner', name=None):
+# RELATION JOINS ##############################################################
+
+def _join(selection: Selection,
+          relation: tsdb.Relation,
+          fields: tsdb.Fields = None,
+          how: str = 'inner') -> None:
     """
-    Join two tables and return the resulting Table object.
+    Join *fields* from *relation* into *selection*.
 
-    Fields in the resulting table have their names prefixed with their
-    corresponding table name. For example, when joining `item` and
-    `parse` tables, the `i-input` field of the `item` table will be
-    named `item:i-input` in the resulting Table. Pivot fields (those
-    in *on*) are only stored once without the prefix.
+    If *fields* is `None`, all fields from *relation* are used. Fields
+    in *relation* where :attr:`Field.is_key
+    <delphin.tsdb.Field.is_key>` returns `True` are always included.
 
-    Both inner and left joins are possible by setting the *how*
-    parameter to `inner` and `left`, respectively.
-
-    .. warning::
-
-       Both *table2* and the resulting joined table will exist in
-       memory for this operation, so it is not recommended for very
-       large tables on low-memory systems.
-
-    Args:
-        table1 (:class:`Table`): the left table to join
-        table2 (:class:`Table`): the right table to join
-        on (str): the shared key to use for joining; if `None`, find
-            shared keys using the schemata of the tables
-        how (str): the method used for joining (`"inner"` or `"left"`)
-        name (str): the name assigned to the resulting table
+    If *how* is `"inner"`, then only matched rows persist after
+    the join; if *how* is `"left"`, all existing rows are kept and
+    those without a match are padded with `None` values.
     """
     if how not in ('inner', 'left'):
-        itsdb.ITSDBError('only \'inner\' and \'left\' join methods are allowed.')
+        raise TSQLError("only 'inner' and 'left' join methods are allowed")
+    if relation.name in selection.joined:
+        raise TSQLError('cannot join the same relation twice')
 
-    # validate and normalize the pivot
-    on = _join_pivot(on, table1, table2)
-    # the fields of the joined table
-    fields = _join_fields(table1.fields, table2.fields, on=on)
-
-    # get key mappings to the right side (useful for inner and left joins)
-    def get_key(rec):
-        return tuple(rec.get(k) for k in on)
-
-    key_indices = set(table2.fields.index(k) for k in on)
-    right = defaultdict(list)
-    for rec in table2:
-        right[get_key(rec)].append([c for i, c in enumerate(rec)
-                                    if i not in key_indices])
-
-    # build joined table
-    rfill = [f.default_value() for f in table2.fields if f.name not in on]
-    joined = []
-    for lrec in table1:
-        k = get_key(lrec)
-        if how == 'left' or k in right:
-            joined.extend(lrec + rrec for rrec in right.get(k, [rfill]))
-
-    return Table(fields, joined)
-
-
-def _join_pivot(on, table1, table2):
-    if isinstance(on, str):
-        on = _split_cols(on)
-    if not on:
-        on = set(table1.fields.keys()).intersection(table2.fields.keys())
-        if not on:
-            raise itsdb.ITSDBError(
-                'No shared key to join on in the \'{}\' and \'{}\' tables.'
-                .format(table1.name, table2.name)
-            )
-    return sorted(on)
-
-
-def _join_if_missing(table, col, ts, how):
-    tab, _, column = col.rpartition(':')
-    if not tab:
-        # Just get the first table defining the column. This
-        # makes the assumption that relations are ordered and
-        # that the first one is 'primary'
-        tab = ts.relations.find(column)[0]
-    if table is None or column not in table.fields:
-        table = _transitive_join(table, ts[tab], ts, how)
-    return table
-
-
-def _transitive_join(tab1, tab2, ts, how):
-    if tab1 is None:
-        table = itsdb.Table(tab2.fields, list(tab2))
+    if not selection.joined:
+        _merge_fields(selection, relation.name, fields)
+        selection.data = list(relation.select(*[f.name for f in fields]))
     else:
-        table = tab1
-        # the tables may not be directly joinable but could be
-        # joinable transitively via a 'path' of table joins
-        path = ts.relations.path(tab1.name, tab2.name)
-        for intervening, pivot in path:
-            table = _join(table, ts[intervening], on=pivot, how=how)
-    return table
+        on = []  # type: List[str, ...]
+        if selection is not None:
+            on = [f.name for f in fields
+                  if f.is_key and f.name in selection._field_index]
+        fields = [f for f in fields if f.name not in on]
+        cols = [f.name for f in fields]
+
+        if not on:
+            raise TSQLError('no shared keys for joining')
+
+        right = {}  # type: Mapping[Tuple[tsdb.Value, ...], tsdb.Record]
+        for keys, row in zip(relation.select(*on), relation.select(*cols)):
+            right.setdefault(tuple(keys), []).append(tuple(row))
+
+        rfill = tuple([None] * len(fields))
+        data = []  # type: List[tsdb.Record]
+        for keys, lrow in zip(selection.select(*on), selection):
+            keys = tuple(keys)
+            if how == 'left' or keys in right:
+                data.extend(lrow + rrow
+                            for rrow in right.get(keys, [rfill]))
+
+        selection.data = data
+        _merge_fields(selection, relation.name, fields)
+
+
+# def _prepare_fields(
+#         fields: tsdb.Fields,
+#         selection: Selection,
+#         relation: tsdb.Relation) -> Tuple[_Names, tsdb.Fields]:
+#     on = []  # type: List[str, ...]
+#     if selection is not None:
+#         on = [f.name for f in fields
+#               if f.is_key and f.name in selection._field_index]
+
+#     # we want to ensure key fields are always included
+#     if fields is None:
+#         fields = relation.fields
+#     else:
+#         included = {field.name for field in fields}
+#         for field in relation.fields:
+#             if field.is_key and field.name not in included:
+#                 fields = [field] + fields
+#                 included.add(field.name)
+
+#     # but filter out keys used in the join pivot
+#     fields = [f for f in fields if f.name not in on]
+
+#     return on, fields
+
+
+def _merge_fields(selection: Selection,
+                  relationname: str,
+                  fields: tsdb.Fields) -> None:
+    offset = len(selection.fields)
+    for i, field in enumerate(fields, offset):
+        selection.fields.append(field)
+        if field.name not in selection._field_index:
+            selection._field_index[field.name] = i
+        selection._field_index[relationname + '.' + field.name] = i
+    selection.joined.add(relationname)
 
 
 # QUERY PARSING ###############################################################
 
-_keywords = list(map(re.escape,
-                     ('info', 'set', 'retrieve', 'select', 'insert',
-                      'from', 'where', 'report', '*', '.')))
-_operators = list(map(re.escape,
-                      ('==', '=', '!=', '~', '!~', '<=', '<', '>=', '>',
-                       '&&', '&', 'and', '||', '|', 'or', '!', 'not')))
+_year = r'[0-9]{4}'
+_yr = r'(?:[0-9]{2})?[0-9]{2}'
+_month = r'(?:[0-9][0-9]?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)'
+_day = r'[0-9]{1,2}'
+_time = (r'\s*\({t}:{t}(?::{t})?\)'
+         r'|\s+{t}:{t}(?::{t})').format(t=r'[0-9]{2}')
+_yyyy_mm_dd = r'{year}-{month}(?:-{day})?(?:{time})?'.format(
+    year=_year, month=_month, day=_day, time=_time)
+_dd_mm_yy = r'(?:{day}-)?{month}-{year}(?:{time})?'.format(
+    year=_yr, month=_month, day=_day, time=_time)
+_id = r'[a-zA-Z][-_a-zA-Z0-9]*'
+_qid = r'{id}\.{id}'.format(id=_id)  # qualified id: "table.column"
 
-_tsql_lex_re = re.compile(
-    r'''# regex-pattern                      gid  description
-    ({keywords})                           #   1  keywords
-    |({operators})                         #   2  operators
-    |(\(|\))                               #   3  parentheses
-    |"([^"\\]*(?:\\.[^"\\]*)*)"            #   4  double-quoted "strings"
-    |'([^'\\]*(?:\\.[^'\\]*)*)'            #   5  single-quoted 'strings'
-    |({yyyy}-{m}(?:-{d})?(?:{t}|{tt})?)    #   6  yyyy-mm-dd date
-    |((?:{d}-)?{m}-{yy}(?:{t}|{tt})?)      #   7  dd-mm-yy date
-    |(:today|now)                          #   8  keyword date
-    |([+-]?\d+)                            #   9  integers
-    |((?:{id}:)?{id}(?:@(?:{id}:)?{id})*)  #  10  identifier (extended def)
-    |([^\s])                               #  11  unexpected
-    '''.format(keywords='|'.join(_keywords),
-               operators='|'.join(_operators),
-               d=r'[0-9]{1,2}',
-               m=(r'(?:[0-9]{1,2}|'
-                  r'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)'),
-               yy=r'(?:[0-9]{2})?[0-9]{2}',
-               yyyy=r'[0-9]{4}',
-               t=r'\s*\([0-9]{2}:[0-9]{2}(?::[0-9]{2})?\)',
-               tt=r'\s+[0-9]{2}:[0-9]{2}(?::[0-9]{2})',
-               id=r'[a-zA-Z][-_a-zA-Z0-9]*'),
-    flags=re.VERBOSE | re.IGNORECASE)
-
-
-def _lex(s):
-    """
-    Lex the input string according to _tsql_lex_re.
-
-    Yields
-        (gid, token, line_number)
-    """
-    s += '.'  # make sure there's a terminator to know when to stop parsing
-    lines = enumerate(s.splitlines(), 1)
-    lineno = 0
-    try:
-        for lineno, line in lines:
-            matches = _tsql_lex_re.finditer(line)
-            for m in matches:
-                gid = m.lastindex
-                if gid == 11:
-                    raise TSQLSyntaxError('unexpected input',
-                                          lineno=lineno,
-                                          offset=m.start(),
-                                          text=line)
-                else:
-                    token = m.group(gid)
-                    yield (gid, token, lineno)
-    except StopIteration:
-        pass
+_TSQLLexer = util.Lexer(
+    tokens=[
+        (r'info|set|retrieve|select|insert', 'QUERY:a query type'),
+        (r'from', 'FROM:from'),
+        (r'where', 'WHERE:where'),
+        (r'report', 'REPORT:report'),
+        (r'\*', 'STAR:*'),
+        (r'\.', 'DOT:.'),
+        (r'==|=|!=|~|!~|<=|<|>=|>', 'OP:a comparison operator'),
+        (r'&&|&|and', "AND:'&&', '&', or 'and'"),
+        (r'\|\||\||or', "OR:'||', '|', or 'or'"),
+        (r'!|not', "NOT:'!' or 'not'"),
+        (r'\(', 'LPAREN:('),
+        (r'\)', 'RPAREN:)'),
+        (r'"([^"\\]*(?:\\.[^"\\]*)*)"', 'DQSTRING:a double-quoted string'),
+        (r"'([^'\\]*(?:\\.[^'\\]*)*)'", 'SQSTRING:a single-quoted string'),
+        (_yyyy_mm_dd, 'YYYYMMDD:a YYYY-MM-DD date'),
+        (_dd_mm_yy, 'DDMMYY: a DD-MM-YY date'),
+        (r':today|now', "KWDATE:'now' or ':today'"),
+        (r'[+-]?\d+', 'INT:an integer'),
+        (_qid, 'QID:a qualified identifier'),
+        (_id, 'ID:a simple identifier'),
+        (r'[^\s]', 'UNEXPECTED')
+    ],
+    error_class=TSQLSyntaxError)
 
 
-def _parse_query(querystring):
+_QUERY      = _TSQLLexer.tokentypes.QUERY
+_FROM       = _TSQLLexer.tokentypes.FROM
+_WHERE      = _TSQLLexer.tokentypes.WHERE
+_REPORT     = _TSQLLexer.tokentypes.REPORT
+_STAR       = _TSQLLexer.tokentypes.STAR
+_DOT        = _TSQLLexer.tokentypes.DOT
+_OP         = _TSQLLexer.tokentypes.OP
+_AND        = _TSQLLexer.tokentypes.AND
+_OR         = _TSQLLexer.tokentypes.OR
+_NOT        = _TSQLLexer.tokentypes.NOT
+_LPAREN     = _TSQLLexer.tokentypes.LPAREN
+_RPAREN     = _TSQLLexer.tokentypes.RPAREN
+_DQSTRING   = _TSQLLexer.tokentypes.DQSTRING
+_SQSTRING   = _TSQLLexer.tokentypes.SQSTRING
+_YYYYMMDD   = _TSQLLexer.tokentypes.YYYYMMDD
+_DDMMYY     = _TSQLLexer.tokentypes.DDMMYY
+_KWDATE     = _TSQLLexer.tokentypes.KWDATE
+_INT        = _TSQLLexer.tokentypes.INT
+_QID        = _TSQLLexer.tokentypes.QID
+_ID         = _TSQLLexer.tokentypes.ID
+_UNEXPECTED = _TSQLLexer.tokentypes.UNEXPECTED
+
+
+def _parse_query(querystring: str) -> dict:
     querytype, _, querybody = querystring.lstrip().partition(' ')
     querytype = querytype.lower()
     if querytype in ('select', 'retrieve'):
@@ -470,172 +599,114 @@ def _parse_query(querystring):
     return result
 
 
-def _parse_select(querystring):
-    tokens = LookaheadIterator(_lex(querystring))
-    _, token, lineno = tokens.peek()  # maybe used in error below
+def _parse_select(querystring: str) -> dict:
+    querystring += '.'  # just a sentinel to indicate the end of the query
+    lexer = _TSQLLexer.lex(querystring.splitlines())
+    projection = _parse_select_projection(lexer)
+    relations = _parse_select_from(lexer)
+    condition = _parse_select_where(lexer)
+    lexer.expect_type(_DOT)
 
-    projection = _parse_select_projection(tokens)
-    tables = _parse_select_from(tokens)
-    condition = _parse_select_where(tokens)
-
-    if projection == '*' and not tables:
+    if projection == ['*'] and not relations:
         raise TSQLSyntaxError(
             "'select *' requires a 'from' clause",
-            lineno=lineno, text=token)
+            text=querystring)
 
-    # verify we're at the end of the query (the '.' may have been
-    # added in _lex())
-    gid, token, lineno = tokens.next()
-    _expect(gid == 1 and token == '.', token, lineno, "'.'")
-
-    return {'querytype': 'select',
+    return {'type': 'select',
             'projection': projection,
-            'tables': tables,
-            'where': condition}
+            'relations': relations,
+            'condition': condition}
 
 
-def _parse_select_projection(tokens):
-    gid, token, lineno = tokens.next()
-    if token == '*':
-        projection = token
-    elif gid == 10:
-        projection = [token]
-        while tokens.peek()[0] == 10:
-            _, col, _ = tokens.next()
-            projection.append(col)
-        projection = _prepare_columns(projection)
+def _parse_select_projection(lexer: util.Lexer) -> List[str]:
+    typ, col_id = lexer.choice_type(_STAR, _QID, _ID)
+    projection = []
+    if typ in (_QID, _ID):
+        while col_id:
+            projection.append(col_id)
+            col_id = lexer.accept_type(_QID) or lexer.accept_type(_ID)
     else:
-        raise TSQLSyntaxError("expected '*' or column identifiers",
-                              lineno=lineno, text=token)
+        projection.append(col_id)
     return projection
 
 
-def _prepare_columns(cols):
-    columns = []
-    for col in cols:
-        table = ''
-        for part in col.split('@'):
-            tblname, _, colname = part.rpartition(':')
-            if tblname:
-                table = tblname + ':'
-            columns.append(table + colname)
-    return columns
+def _parse_select_from(lexer: util.Lexer) -> List[str]:
+    relations = []
+    if lexer.accept_type(_FROM):
+        relation = lexer.expect_type(_ID)
+        while relation:
+            relations.append(relation)
+            relation = lexer.accept_type(_ID)
+    return relations
 
 
-def _parse_select_from(tokens):
-    tables = []
-    if tokens.peek()[1] == 'from':
-        tokens.next()
-        while tokens.peek()[0] == 10:
-            _, table, _ = tokens.next()
-            tables.append(table)
-    return tables
-
-
-def _parse_select_where(tokens):
-    conditions = []
-    while tokens.peek()[1] == 'where':
-        tokens.next()
-        conditions.append(_parse_condition_disjunction(tokens))
+def _parse_select_where(lexer: util.Lexer) -> Optional[Condition]:
+    conditions = []  # type: List[Condition]
+    while lexer.accept_type(_WHERE):
+        conditions.append(_parse_condition_disjunction(lexer))
+    condition = None  # type: Optional[Condition]
     if len(conditions) == 1:
         condition = conditions[0]
     elif len(conditions) > 1:
-        condition = ('and', conditions)
-    else:
-        condition = None
+        condition = ('and', tuple(conditions))
     return condition
 
 
-def _parse_condition_disjunction(tokens):
+def _parse_condition_disjunction(lexer: util.Lexer) -> Condition:
     conds = []
     while True:
-        cond = _parse_condition_conjunction(tokens)
-        if cond is not None:
-            conds.append(cond)
-        if tokens.peek()[1] in ('|', '||', 'or'):
-            tokens.next()
-            nextgid, nexttoken, nextlineno = tokens.peek()
-        else:
+        conds.append(_parse_condition_conjunction(lexer))
+
+        if not lexer.accept_type(_OR):
             break
+
     if len(conds) == 0:
-        return None
+        raise TSQLSyntaxError('invalid query')
     elif len(conds) == 1:
         return conds[0]
     else:
         return ('or', tuple(conds))
 
 
-def _parse_condition_conjunction(tokens):
-    conds = []
-    nextgid, nexttoken, nextlineno = tokens.peek()
+def _parse_condition_conjunction(lexer: util.Lexer) -> Condition:
+    conds = []  # type: List[Condition]
     while True:
-        if nextgid == 2 and nexttoken.lower() in ('!', 'not'):
-            cond = _parse_condition_negation(tokens)
-        elif nextgid == 3 and nexttoken == '(':
-            cond = _parse_condition_group(tokens)
-        elif nextgid == 3 and nexttoken == ')':
-            break
-        elif nextgid == 10:
-            cond = _parse_condition_statement(tokens)
-        else:
-            raise TSQLSyntaxError("expected '!', 'not', '(', or a column name",
-                                  lineno=nextlineno, text=nexttoken)
-        conds.append(cond)
-        if tokens.peek()[1].lower() in ('&', '&&', 'and'):
-            tokens.next()
-            nextgid, nexttoken, nextlineno = tokens.peek()
-        else:
+        typ, token = lexer.choice_type(_NOT, _LPAREN, _QID, _ID)
+        if typ == _NOT:
+            conds.append(('not', _parse_condition_disjunction(lexer)))
+        elif typ == _LPAREN:
+            conds.append(_parse_condition_disjunction(lexer))
+            lexer.expect_type(_RPAREN)
+        elif typ in (_QID, _ID):
+            conds.append(_parse_condition_statement(token, lexer))
+
+        if not lexer.accept_type(_AND):
             break
 
     if len(conds) == 0:
-        return None
+        raise TSQLSyntaxError('invalid query')
     elif len(conds) == 1:
         return conds[0]
     else:
         return ('and', tuple(conds))
 
 
-def _parse_condition_negation(tokens):
-    gid, token, lineno = tokens.next()
-    _expect(gid == 2 and token in ('!', 'not'), token, lineno, "'!' or 'not'")
-    cond = _parse_condition_disjunction(tokens)
-    return ('not', cond)
-
-
-def _parse_condition_group(tokens):
-    gid, token, lineno = tokens.next()
-    _expect(gid == 3 and token == '(', token, lineno, "'('")
-    cond = _parse_condition_disjunction(tokens)
-    gid, token, lineno = tokens.next()
-    _expect(gid == 3 and token == ')', token, lineno, "')'")
-    return tuple(cond)
-
-
-def _parse_condition_statement(tokens):
-    gid, column, lineno = tokens.next()
-    _expect(gid == 10, column, lineno, 'a column name')
-    gid, op, lineno = tokens.next()
-    _expect(gid == 2, op, lineno, 'an operator')
+def _parse_condition_statement(column: str, lexer: util.Lexer) -> Comparison:
+    op = lexer.expect_type(_OP)
     if op == '=':
         op = '=='  # normalize = to == (I think these are equivalent)
-    gid, value, lineno = tokens.next()
-    if op in ('~', '!~') and gid not in (4, 5):
-        raise TSQLSyntaxError(
-            "the '{}' operator is only valid with strings".format(op),
-            lineno=lineno, text=op)
-    elif op in ('<', '<=', '>', '>=') and gid not in (6, 7, 8, 9):
-        raise TSQLSyntaxError(
-            "the '{}' operator is only valid with integers and dates"
-            .format(op), lineno=lineno, text=op)
-    else:
-        if gid in (6, 7, 8):
-            value = tsdb.cast(value, ':date')
-        elif gid == 9:
-            value = int(value)
-        return (op, (column, value))
 
+    if op in ('~', '!~'):
+        typ, value = lexer.choice_type(_DQSTRING, _SQSTRING)
+    elif op in ('<', '<=', '>', '>='):
+        typ, value = lexer.choice_type(_INT, _YYYYMMDD, _DDMMYY, _KWDATE)
+    else:  # must be == or !=
+        typ, value = lexer.choice_type(_INT, _DQSTRING, _SQSTRING,
+                                       _YYYYMMDD, _DDMMYY, _KWDATE)
 
-def _expect(expected, token, lineno, msg):
-    msg = 'expected ' + msg
-    if not expected:
-        raise TSQLSyntaxError(msg, lineno=lineno, text=token)
+    if typ == _INT:
+        value = int(value)
+    elif typ in (_YYYYMMDD, _DDMMYY, _KWDATE):
+        value = tsdb.cast(':date', value)
+
+    return (op, (column, value))
