@@ -13,7 +13,7 @@ This module implements a subset of TSQL, namely the 'select' (or
 'retrieve') queries for extracting data from test suites. The general
 form of a select query is::
 
-    [select] <projection> [from <tables>] [where <condition>]*
+    [select] <projection> [from <relations>] [where <condition>]*
 
 For example, the following selects item identifiers that took more
 than half a second to parse::
@@ -26,15 +26,15 @@ the :func:`select` function.
 
 The `<projection>` is a list of space-separated field names (e.g.,
 `i-id i-input mrs`), or the special string `*` which selects all
-columns from the joined tables.
+columns from the joined relations.
 
-The optional `from` clause provides a list of table names (e.g.,
-`item parse result`) that are joined on shared keys. The `from`
-clause is required when `*` is used for the projection, but it can
-also be used to select columns from non-standard tables (e.g., `i-id
-from output`). Alternatively, `delphin.itsdb`-style data specifiers
-(see :func:`delphin.itsdb.get_data_specifier`) may be used to specify
-the table on the column name (e.g., `item:i-id`).
+The optional `from` clause provides a list of relation names (e.g.,
+`item parse result`) that are joined on shared keys. The `from` clause
+is required when `*` is used for the projection, but it can also be
+used to select columns from non-standard relations (e.g., `i-id from
+output`). Alternatively, `delphin.itsdb`-style data specifiers (see
+:func:`delphin.itsdb.get_data_specifier`) may be used to specify the
+relation on the column name (e.g., `item.i-id`).
 
 The `where` clause provide conditions for filtering the list of
 results. Conditions are binary operations that take a column or data
@@ -86,31 +86,95 @@ PyDelphin has several differences to standard TSQL:
 
 * `select *` requires a `from` clause
 * `select * from item result` does not also include columns from the
-  intervening `parse` table
+  intervening `parse` relation
 * `select i-input from result` returns a matching `i-input` for every
   row in `result`, rather than only the unique rows
 
 PyDelphin also adds some features to standard TSQL:
 
-* optional table specifications on columns (e.g., `item:i-id`)
+* qualified column names (e.g., `item.i-id`)
 * multiple `where` clauses (as described above)
 """
 
+from typing import (
+    List, Tuple, Mapping, Optional, Union, Any,
+    Iterator, Iterable, Callable)
 import operator
 import re
 
-from delphin.exceptions import PyDelphinSyntaxError
-from delphin.util import LookaheadIterator
+from delphin.exceptions import PyDelphinException, PyDelphinSyntaxError
+from delphin import util
 from delphin import tsdb
-from delphin import itsdb
+
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
 
 # CUSTOM EXCEPTIONS ###########################################################
 
+class TSQLError(PyDelphinException):
+    """Raised on invalid TSQL operations."""
+
+
 class TSQLSyntaxError(PyDelphinSyntaxError):
     """Raised when encountering an invalid TSQL query."""
+
+
+# LOCAL TYPES #################################################################
+
+Comparison = Tuple[str, Tuple[str, tsdb.Value]]
+# the following should be recursive:
+#     Boolean = Tuple[str, Tuple[Boolean, ...]]
+# but use Any until the type checker supports recursive types.
+# see: https://github.com/python/mypy/issues/731
+Boolean = Tuple[str, Tuple[Any, ...]]
+Condition = Union[Comparison, Boolean]
+# This matches the signature for itsdb.Row; tsdb does not actually
+# have a Record class, only a type description.
+_RecordType = Callable[[tsdb.Fields, tsdb.Record, Optional[tsdb.FieldIndex]],
+                       tsdb.Record]
+_Names = Tuple[str, ...]
+
+
+def _default_record_class(
+        fields: tsdb.Fields,
+        data: tsdb.Record,
+        field_index: tsdb.FieldIndex) -> tsdb.Record:
+    return tuple(data)
+
+
+class Selection(tsdb.Relation):
+    def __init__(self,
+                 record_class: _RecordType = None) -> None:
+        """
+        The results of a 'select' query.
+        """
+        self.fields = []  # type: tsdb.Fields
+        self._field_index = {}  # type: tsdb.FieldIndex
+        self.data = []  # type: tsdb.Relation
+        self.projection = None
+        if record_class is None:
+            record_class = _default_record_class
+        self.record_class = record_class
+        self.joined = set()
+
+    def __iter__(self) -> Iterator[tsdb.Record]:
+        if self.projection is None:
+            return self.select()
+        else:
+            return self.select(*self.projection)
+
+    def select(self, *names: str) -> Iterator[tsdb.Record]:
+        if not names:
+            indices = list(range(len(self.fields)))
+        else:
+            indices = [self._field_index[name] for name in names]
+        fields = [self.fields[idx] for idx in indices]
+        index = tsdb.make_field_index(fields)
+        cls = self.record_class
+        for row in self.data:
+            data = tuple(row[idx] for idx in indices)
+            yield cls(fields, data, field_index=index)
 
 
 # QUERY INSPECTION ############################################################
@@ -134,7 +198,9 @@ def inspect_query(querystring: str) -> dict:
 
 # QUERY PROCESSING ############################################################
 
-def query(querystring, ts, **kwargs):
+def query(querystring: str,
+          db: tsdb.Database,
+          **kwargs):
     """
     Perform query *querystring* on the testsuite *ts*.
 
