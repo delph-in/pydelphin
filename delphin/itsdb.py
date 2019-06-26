@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Classes and functions for working with [incr tsdb()] test suites.
+[incr tsdb()] Test Suites
 
 .. note::
 
@@ -20,7 +20,7 @@ processing, or manipulating test suites.
 
 from typing import (
     Iterable, Sequence, Tuple, List, Dict,
-    Iterator, Optional, overload
+    Iterator, Optional, IO, overload
 )
 from pathlib import Path
 import tempfile
@@ -310,29 +310,6 @@ class Table(tsdb.Relation):
     """
     A [incr tsdb()] table.
 
-    Instances of this class contain a collection of rows with the data
-    stored in the database. Generally a Table will be created by a
-    instantiated individually by the :meth:`Table.from_file` class
-    :class:`TestSuite` object for a database, but a Table can also be
-    method, and the relations file in the same directory is used to
-    get the schema. Tables can also be constructed entirely in-memory
-    and separate from a test suite via the standard `Table()`
-    constructor.
-
-    Tables have two modes: **attached** and **detached**. Attached
-    tables are backed by a file on disk (whether as part of a test
-    suite or not) and only store modified rows in memory---all
-    unmodified rows are retrieved from disk. Therefore, iterating
-    over a table is more efficient than random-access. Attached files
-    use significantly less memory than detached tables but also
-    require more processing time. Detached tables are entirely stored
-    in memory and are not backed by a file. They are useful for the
-    programmatic construction of test suites (including for unit
-    tests) and other operations where high-speed random-access is
-    required.  See the :meth:`attach` and :meth:`detach` methods for
-    more information. The :meth:`is_attached` method is useful for
-    determining the mode of a table.
-
     Args:
         dir: path to the database directory
         name: name of the table
@@ -351,7 +328,11 @@ class Table(tsdb.Relation):
                  name: str,
                  fields: tsdb.Fields,
                  encoding: str = 'utf-8') -> None:
-        super().__init__(dir, name, fields, encoding=encoding)
+        self.dir = Path(dir).expanduser()
+        self.name = name
+        self.fields = fields
+        self._field_index = tsdb.make_field_index(fields)
+        self.encoding = encoding
         try:
             tsdb.get_path(self.dir, name)
         except tsdb.TSDBError:
@@ -359,6 +340,8 @@ class Table(tsdb.Relation):
             path = self.dir.joinpath(name)
             path.write_text('')
         self._rows = []  # type: List[Optional[Row]]
+        # storing the open file for __iter__ let's Table.close() work
+        self._file = None  # type: Optional[IO[str]]
 
         # These two numbers are needed to track if changes to the
         # table are only additions or if they remove/alter existing
@@ -379,13 +362,23 @@ class Table(tsdb.Relation):
         """Clear in-memory structures so table is synced with the file."""
         self._rows = []
         i = -1
-        for i, line in self._enum_lines():
-            self._rows.append(None)
+        with tsdb.open(self.dir,
+                       self.name,
+                       encoding=self.encoding) as lines:
+            for i, line in enumerate(lines):
+                self._rows.append(None)
         self._persistent_count = i + 1
         self._volatile_index = i + 1
 
     def __iter__(self) -> Iterator[Row]:
-        yield from self._iterslice(slice(None))
+        if self._file is not None:
+            self._file.close()
+        fh = tsdb.open(self.dir, self.name,
+                       encoding=self.encoding)  # type: IO[str]
+        self._file = fh
+
+        for _, row in self._enum_rows(fh):
+            yield row
 
     @overload
     def __getitem__(self, index: int) -> Row:
@@ -397,18 +390,17 @@ class Table(tsdb.Relation):
 
     def __getitem__(self, index):  # noqa: F811
         if isinstance(index, slice):
-            return list(self._iterslice(index))
+            return self._iterslice(index)
         else:
             return self._getitem(index)
 
-    def _iterslice(self, slice: slice) -> Iterator[Row]:
+    def _iterslice(self, slice: slice) -> List[Row]:
         """Yield rows from a slice index."""
-        indices = range(*slice.indices(len(self._rows)))
-        rows = self._enum_rows(indices)
-        if slice.step is not None and slice.step < 0:
-            rows = reversed(list(rows))
-        for i, row in rows:
-            yield row
+        with tsdb.open(self.dir, self.name, encoding=self.encoding) as fh:
+            rows = [row for _, row in self._enum_rows(fh, slice)]
+            if slice.step is not None and slice.step < 0:
+                rows = list(reversed(rows))
+            return rows
 
     def _getitem(self, index: int) -> Row:
         """Get a single non-slice index."""
@@ -417,11 +409,17 @@ class Table(tsdb.Relation):
             # need to handle negative indices manually
             if index < 0:
                 index = len(self._rows) + index
-            row = next((Row(self.fields,
-                            tsdb.decode(line),
-                            field_index=self._field_index)
-                        for i, line in self._enum_lines()
-                        if i == index))
+            with tsdb.open(self.dir,
+                           self.name,
+                           encoding=self.encoding) as lines:
+                for i, line in enumerate(lines):
+                    if i == index:
+                        row = Row(self.fields,
+                                  tsdb.decode(line),
+                                  field_index=self._field_index)
+                        break
+        if row is None:
+            raise ITSDBError('could not retrieve row {}'.format(index))
         return row
 
     @overload
@@ -437,6 +435,8 @@ class Table(tsdb.Relation):
         if isinstance(index, slice):
             values = list(value)
         else:
+            if index < 0:
+                index = len(self._rows) + index
             self._rows[index]  # check for IndexError
             values = [value]
             index = slice(index, index + 1)
@@ -453,6 +453,11 @@ class Table(tsdb.Relation):
 
     def __len__(self) -> int:
         return len(self._rows)
+
+    def close(self) -> None:
+        if self._file is not None:
+            self._file.close()
+        self._file = None
 
     def clear(self) -> None:
         self._rows.clear()
@@ -521,27 +526,27 @@ class Table(tsdb.Relation):
             >>> next(table.select('i-id', 'i-input'))
             Row(10, 'It rained.')
         """
-        indices = map(self._field_index.__getitem__, names)
-        fields = list(map(self.fields.__getitem__, indices))
+        indices = tuple(map(self._field_index.__getitem__, names))
+        fields = tuple(map(self.fields.__getitem__, indices))
         field_index = tsdb.make_field_index(fields)
-        for row in super().select(*names):
-            yield Row(fields, row, field_index=field_index)
+        with tsdb.open(self.dir, self.name, encoding=self.encoding) as fh:
+            for _, row in self._enum_rows(fh):
+                data = [row.data[i] for i in indices]
+                yield Row(fields, data, field_index=field_index)
 
-    def _enum_lines(self):
-        """Enumerate raw lines from the table file."""
-        with tsdb.open(self.dir,
-                       self.name,
-                       encoding=self.encoding) as lines:
-            yield from enumerate(lines)
-
-    def _enum_rows(self, indices):
+    def _enum_rows(self,
+                   fh: IO[str],
+                   _slice: slice = None) -> Iterator[Tuple[int, Row]]:
         """Enumerate on-disk and in-memory rows."""
+        if _slice is None:
+            _slice = slice(None)
+        indices = range(*_slice.indices(len(self._rows)))
         fields = self.fields
         field_index = self._field_index
         rows = self._rows
         i = 0
         # first rows covered by the file
-        for i, line in self._enum_lines():
+        for i, line in enumerate(fh):
             if i in indices:
                 row = rows[i]
                 if row is None:
@@ -551,8 +556,9 @@ class Table(tsdb.Relation):
                 yield (i, row)
         # then any uncommitted rows
         for j in range(i, len(rows)):
-            if j in indices and rows[j] is not None:
-                yield (j, rows[j])
+            row = rows[j]
+            if j in indices and row is not None:
+                yield (j, row)
 
 
 class TestSuite(tsdb.Database):
