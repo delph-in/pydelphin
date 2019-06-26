@@ -28,7 +28,6 @@ from datetime import datetime
 import logging
 import collections
 
-from delphin.exceptions import PyDelphinException
 from delphin import util
 from delphin import tsdb
 from delphin.interface import Processor, Response, Result
@@ -49,7 +48,7 @@ _default_task_selectors = {
 #############################################################################
 # Exceptions
 
-class ITSDBError(PyDelphinException):
+class ITSDBError(tsdb.TSDBError):
     """Raised when there is an error processing a [incr tsdb()] profile."""
 
 
@@ -260,10 +259,9 @@ class Row(tsdb.Record):
         return len(self.fields)
 
     def __iter__(self) -> Iterator[tsdb.Value]:
-        cast = tsdb.cast
         datatypes = tuple(field.datatype for field in self.fields)
         for datatype, raw_value in zip(datatypes, self.data):
-            yield cast(datatype, raw_value)
+            yield tsdb.cast(datatype, raw_value)
 
     @overload
     def __getitem__(self, key: int) -> tsdb.Value:
@@ -278,11 +276,10 @@ class Row(tsdb.Record):
         ...
 
     def __getitem__(self, key):  # noqa: F811
-        cast = tsdb.cast
         if isinstance(key, slice):
             fields = self.fields[key]
             raw_values = self.data[key]
-            return tuple(cast(field.datatype, raw)
+            return tuple(tsdb.cast(field.datatype, raw)
                          for field, raw in zip(fields, raw_values))
         else:
             if isinstance(key, str):
@@ -291,7 +288,7 @@ class Row(tsdb.Record):
                 index = key
             field = self.fields[index]
             raw_value = self.data[index]
-            return cast(field.datatype, raw_value)
+            return tsdb.cast(field.datatype, raw_value)
 
     def keys(self) -> List[str]:
         """
@@ -455,9 +452,18 @@ class Table(tsdb.Relation):
         return len(self._rows)
 
     def close(self) -> None:
+        """Close the table file being iterated over, if open."""
         if self._file is not None:
             self._file.close()
         self._file = None
+
+    def column_index(self, name: str) -> int:
+        """Return the tuple index of the column with name *name*."""
+        return self._field_index[name]
+
+    def get_field(self, name: str) -> tsdb.Field:
+        """Return the :class:`tsdb.Field` object with column name *name*."""
+        return self.fields[self.column_index(name)]
 
     def clear(self) -> None:
         self._rows.clear()
