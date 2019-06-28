@@ -336,6 +336,16 @@ class Database(object):
         return (decode(line, fields=fields)
                 for line in open(self._path, name, encoding=self.encoding))
 
+    def select_from(self, name: str, columns: Iterable[str] = None):
+        if columns is None:
+            columns = list(self.schema[name])
+        index = make_field_index(self.schema[name])
+        indices = [index[column] for column in columns]
+        records = self[name]
+        for record in records:
+            yield tuple(record[idx] for idx in indices)
+        records.close()
+
 
 #############################################################################
 # Data Encoding

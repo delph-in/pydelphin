@@ -626,6 +626,9 @@ class TestSuite(tsdb.Database):
                 self.path, name, self.schema[name], self.encoding)
         return self._data[name]
 
+    def select_from(self, name: str, columns: Iterable[str]):
+        return self[name].select(*columns)
+
     def reload(self) -> None:
         """Discard temporary changes and reload the database from disk."""
         for name in self.schema:
