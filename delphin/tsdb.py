@@ -296,6 +296,8 @@ class Database(object):
 
     Args:
         path: path to the database directory
+        autocast: if `True`, automatically cast column values to their
+            datatypes
         encoding: character encoding of the database files
     Example:
         >>> db = tsdb.Database('my-profile')
@@ -304,16 +306,20 @@ class Database(object):
         >>> items.close()
     Attributes:
         schema: The schema for the database.
+        autocast: Whether to automatically cast column values to their
+            datatypes.
         encoding: The character encoding of database files.
     """
     def __init__(self,
                  path: util.PathLike,
+                 autocast: bool = False,
                  encoding: str = 'utf-8') -> None:
         path = Path(path).expanduser()
         if not is_database_directory(path):
             raise TSDBError('not a valid TSDB database: {!s}'.format(path))
         self._path = path
         self.schema = read_schema(path)
+        self.autocast = autocast
         self.encoding = encoding
 
     @property
@@ -324,7 +330,10 @@ class Database(object):
     def __getitem__(self, name: str) -> Generator[Record, None, None]:
         if name not in self.schema:
             raise TSDBError('relation not defined in schema: {}'.format(name))
-        return (decode(line)
+        fields = None
+        if self.autocast:
+            fields = self.schema[name]
+        return (decode(line, fields=fields)
                 for line in open(self._path, name, encoding=self.encoding))
 
 

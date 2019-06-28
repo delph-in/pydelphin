@@ -606,7 +606,7 @@ class TestSuite(tsdb.Database):
                 schema = tsdb.read_schema(schema)
             tsdb.write_schema(path, schema)
 
-        super().__init__(path, encoding=encoding)
+        super().__init__(path, autocast=False, encoding=encoding)
         self._data = {}  # type: Dict[str, Table]
 
     @property
