@@ -68,7 +68,7 @@ def test_convert(dir_with_mrs, mini_testsuite, ace_output, ace_tsdb_stdout,
         convert(ex, 'simplemrs', 'invalid')
     with pytest.raises(ValueError):
         convert(mini_testsuite, 'simplemrs', 'simplemrs',
-                select='result:result-id@mrs')
+                select='result.result-id result.mrs')
     convert(ex, 'simplemrs', 'simplemrs')
     _bidi_convert(dir_with_mrs, 'simplemrs', 'mrx')
     _bidi_convert(dir_with_mrs, 'simplemrs', 'mrs-json')
@@ -147,14 +147,13 @@ def test_process(mini_testsuite):
 def test_select(mini_testsuite):
     ts0 = mini_testsuite
     with pytest.raises(TypeError):
-        select('result:mrs')
+        select('result.mrs')
     with pytest.raises(TypeError):
         select(testsuite=ts0)
-    select('result:mrs', ts0)
+    select('result.mrs', ts0)
+    select('parse.i-id result.mrs', ts0)
     from delphin import itsdb
-    select('result:mrs', itsdb.TestSuite(ts0))
-    select('parse:i-id@result:mrs', ts0)
-    select('result:result-id@mrs', ts0, mode='row')
+    select('result.result-id mrs', ts0, record_class=itsdb.Row)
 
 
 def test_compare(mini_testsuite):

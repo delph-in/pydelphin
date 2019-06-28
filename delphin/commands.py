@@ -30,7 +30,7 @@ from delphin.__about__ import __version__  # noqa: F401
 _CODECS = util.namespace_modules(delphin.codecs)
 
 
-def convert(path, source_fmt, target_fmt, select='result:mrs',
+def convert(path, source_fmt, target_fmt, select='result.mrs',
             properties=True, lnk=True, color=False, indent=None,
             show_status=False, predicate_modifiers=False,
             semi=None):
@@ -300,12 +300,12 @@ def mkprof(destination, source=None, schema=None, where=None,
         tables = list(dts.schema) if full else tsdb.TSDB_CORE_FILES
         where = '' if where is None else 'where ' + where
         for table in tables:
-            if sts.size(table) > 0:
+            if len(sts[table]) > 0:
                 # filter the data, but use all if the query fails
                 # (e.g., if the filter and table cannot be joined)
                 try:
                     rows = tsql.select(
-                        '* from {} {}'.format(table, where), sts, cast=False)
+                        '* from {} {}'.format(table, where), sts)
                 except itsdb.ITSDBError:
                     rows = sts[table]
                 dts.write({table: rows}, gzip=gzip)
