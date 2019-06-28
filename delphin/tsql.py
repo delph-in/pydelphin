@@ -264,10 +264,8 @@ def _select(projection: _Names,
         projection, relations, condition, db)
     selection = Selection(record_class=record_class)
 
-    for name, colnames in joins:
-        relation = db[name]
-        fields = list(map(relation.get_field, colnames))
-        _join(selection, relation, fields, 'inner')
+    for name, columns in joins:
+        _join(selection, db, name, columns, 'inner')
 
     if condition:
         cond = _process_condition_function(condition, selection._field_index)
@@ -521,8 +519,9 @@ def _process_condition_function(
 # RELATION JOINS ##############################################################
 
 def _join(selection: Selection,
-          relation: tsdb.Relation,
-          fields: tsdb.Fields,
+          db: tsdb.Database,
+          name: str,
+          columns: _Names,
           how: str = 'inner') -> None:
     """
     Join *fields* from *relation* into *selection*.
@@ -533,12 +532,18 @@ def _join(selection: Selection,
     """
     if how not in ('inner', 'left'):
         raise TSQLError("only 'inner' and 'left' join methods are allowed")
-    if relation.name in selection.joined:
+    if name in selection.joined:
         raise TSQLError('cannot join the same relation twice')
 
+    all_fields = db.schema[name]
+    field_index = tsdb.make_field_index(all_fields)
+    indices = [field_index[col] for col in columns]
+    fields = [all_fields[idx] for idx in indices]
+
+    data = []  # type: List[tsdb.Record]
     if not selection.joined:
-        _merge_fields(selection, relation.name, fields)
-        selection.data = list(relation.select(*[f.name for f in fields]))
+        _merge_fields(selection, name, fields)
+        data.extend(db.select_from(name, columns))
     else:
         on = []  # type: List[str]
         if selection is not None:
@@ -551,19 +556,20 @@ def _join(selection: Selection,
             raise TSQLError('no shared keys for joining')
 
         right = {}  # type: Dict[Tuple[tsdb.Value, ...], tsdb.Record]
-        for keys, row in zip(relation.select(*on), relation.select(*cols)):
+        for keys, row in zip(db.select_from(name, on),
+                             db.select_from(name, cols)):
             right.setdefault(tuple(keys), []).append(tuple(row))
 
         rfill = tuple([None] * len(fields))
-        data = []  # type: List[tsdb.Record]
         for keys, lrow in zip(selection.select(*on), selection):
             keys = tuple(keys)
             if how == 'left' or keys in right:
                 data.extend(lrow + rrow
                             for rrow in right.get(keys, [rfill]))
 
-        selection.data = data
-        _merge_fields(selection, relation.name, fields)
+        _merge_fields(selection, name, fields)
+
+    selection.data = data
 
 
 def _merge_fields(selection: Selection,
