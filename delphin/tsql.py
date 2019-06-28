@@ -97,8 +97,8 @@ PyDelphin also adds some features to standard TSQL:
 """
 
 from typing import (
-    List, Tuple, Mapping, Optional, Union, Any,
-    Iterator, Iterable, Callable)
+    List, Tuple, Dict, Set, Mapping, Optional, Union, Any, Type,
+    Iterator, Callable)
 import operator
 import re
 
@@ -122,30 +122,29 @@ class TSQLSyntaxError(PyDelphinSyntaxError):
 
 # LOCAL TYPES #################################################################
 
-Comparison = Tuple[str, Tuple[str, tsdb.Value]]
+_Names = List[str]
+_Comparison = Tuple[str, Tuple[str, tsdb.Value]]
 # the following should be recursive:
-#     Boolean = Tuple[str, Tuple[Boolean, ...]]
+#     _Boolean = Tuple[str, Union[_Boolean, List[_Boolean, ...]]]
 # but use Any until the type checker supports recursive types.
 # see: https://github.com/python/mypy/issues/731
-Boolean = Tuple[str, Tuple[Any, ...]]
-Condition = Union[Comparison, Boolean]
-# This matches the signature for itsdb.Row; tsdb does not actually
-# have a Record class, only a type description.
-_RecordType = Callable[[tsdb.Fields, tsdb.Record, Optional[tsdb.FieldIndex]],
-                       tsdb.Record]
-_Names = Tuple[str, ...]
+_Boolean = Tuple[str, Any]
+_Condition = Union[_Comparison, _Boolean]
+_FilterFunction = Callable[[tsdb.Record], bool]
 
 
-def _default_record_class(
-        fields: tsdb.Fields,
-        data: tsdb.Record,
-        field_index: tsdb.FieldIndex) -> tsdb.Record:
-    return tuple(data)
+class _Record(object):
+    """Dummy Record type to mimic the call signature of itsdb.Row."""
+    def __new__(cls,
+                fields: tsdb.Fields,
+                data: tsdb.Record,
+                field_index: tsdb.FieldIndex = None) -> tsdb.Record:
+        return tuple(data)
 
 
 class Selection(tsdb.Relation):
     def __init__(self,
-                 record_class: _RecordType = None) -> None:
+                 record_class: Optional[Type[_Record]] = None) -> None:
         """
         The results of a 'select' query.
         """
@@ -154,9 +153,9 @@ class Selection(tsdb.Relation):
         self.data = []  # type: tsdb.Relation
         self.projection = None
         if record_class is None:
-            record_class = _default_record_class
+            record_class = _Record
         self.record_class = record_class
-        self.joined = set()
+        self.joined = set()  # type: Set[str]
 
     def __iter__(self) -> Iterator[tsdb.Record]:
         if self.projection is None:
@@ -233,7 +232,7 @@ def query(querystring: str,
 
 def select(querystring: str,
            db: tsdb.Database,
-           record_class: _RecordType = None) -> Selection:
+           record_class: Optional[Type[_Record]] = None) -> Selection:
     """
     Perform the TSQL selection query *querystring* on testsuite *ts*.
 
@@ -255,30 +254,34 @@ def select(querystring: str,
         record_class=record_class)
 
 
-def _select(projection: List[str],
+def _select(projection: _Names,
             relations: List[str],
-            condition: Optional[Condition],
+            condition: Optional[_Condition],
             db: tsdb.Database,
-            record_class: _RecordType) -> Selection:
+            record_class: Optional[Type[_Record]]) -> Selection:
 
-    plan = _make_execution_plan(projection, relations, condition, db)
+    proj, joins, condition = _make_execution_plan(
+        projection, relations, condition, db)
     selection = Selection(record_class=record_class)
 
-    for name, colnames in plan['joins']:
+    for name, colnames in joins:
         relation = db[name]
         fields = list(map(relation.get_field, colnames))
         _join(selection, relation, fields, 'inner')
 
-    selection.data = list(filter(plan['condition'], selection.data))
-    selection.projection = plan['projection']
+    if condition:
+        cond = _process_condition_function(condition, selection._field_index)
+        selection.data = list(filter(cond, selection.data))
+
+    selection.projection = proj
     return selection
 
 
 def _make_execution_plan(
-        projection: List[str],
+        projection: _Names,
         relations: List[str],
-        condition: Optional[Condition],
-        db: tsdb.Database) -> dict:
+        condition: Optional[_Condition],
+        db: tsdb.Database) -> Tuple:
     """Make a plan for all relations to join and columns to keep."""
     schema_map = _make_schema_map(db, relations)
     resolve_qname = _make_qname_resolver(schema_map)
@@ -288,22 +291,20 @@ def _make_execution_plan(
     else:
         projection = [resolve_qname(name) for name in projection]
 
+    cond_resolved = None  # type: Optional[_Condition]
+    cond_fields = []  # type: _Names
     if condition:
-        cond_func, cond_fields = _process_condition(condition,
-                                                    resolve_qname)
-    else:
-        cond_func, cond_fields = None, ()
+        cond_resolved, cond_fields = _process_condition_fields(
+            condition, resolve_qname)
 
     joins = _plan_joins(projection, cond_fields, relations, db)
 
-    return {'projection': projection,
-            'joins': joins,
-            'condition': cond_func}
+    return projection, joins, cond_resolved
 
 
 def _project_all(relations: List[str], db: tsdb.Database) -> List[str]:
     projection = []
-    keys_added = set()
+    keys_added = set()  # type: Set[str]
     for name in relations:
         for field in db.schema[name]:
             qname = '{}.{}'.format(name, field.name)
@@ -320,7 +321,7 @@ def _make_schema_map(
         db: tsdb.Database,
         relations: List[str]) -> Mapping[str, List[str]]:
     """Return an inverse mapping from field names to relations."""
-    schema_map = {}
+    schema_map = {}  # type: Dict[str, List[str]]
     for relname, fields in db.schema.items():
         for field in fields:
             schema_map.setdefault(field.name, []).append(relname)
@@ -449,68 +450,82 @@ _operator_functions = {'==': operator.eq,
                        '>=': operator.ge}
 
 
-def _process_condition(
-        condition: Condition,
-        resolve_qname: Callable[[str], str]) -> Tuple[Condition, _Names]:
+def _process_condition_fields(
+        condition: _Condition,
+        resolve_qname: Callable[[str], str]) -> Tuple[_Condition, _Names]:
     # conditions are something like:
     #  ('==', ('i-id', 11))
     op, body = condition
     if op in ('and', 'or'):
         fieldset = set()
         conditions = []
-        for cond in body:
-            _func, _fields = _process_condition(cond, resolve_qname)
+        for cond in body:  # type: _Condition
+            _cond, _fields = _process_condition_fields(cond, resolve_qname)
             fieldset.update(_fields)
+            conditions.append(_cond)
+        return (op, conditions), sorted(fieldset)
+
+    elif op == 'not':
+        ncond, fields = _process_condition_fields(body, resolve_qname)
+        return ('not', ncond), fields
+
+    else:
+        qname = resolve_qname(body[0])
+        return (op, (qname, body[1])), [qname]
+
+
+def _process_condition_function(
+        condition: _Condition,
+        field_index: tsdb.FieldIndex) -> _FilterFunction:
+    # conditions are something like:
+    #  ('==', ('i-id', 11))
+    op, body = condition
+    if op in ('and', 'or'):
+        conditions = []
+        for cond in body:  # type: _Condition
+            _func = _process_condition_function(cond, field_index)
             conditions.append(_func)
-        fields = tuple(sorted(fieldset))
         _func = all if op == 'and' else any
 
         def func(row):
             return _func(cond(row) for cond in conditions)
 
     elif op == 'not':
-        nfunc, fields = _process_condition(body, resolve_qname)
+        nfunc = _process_condition_function(body, field_index)
 
         def func(row):
             return not nfunc(row)
 
     elif op == '~':
-        qname = resolve_qname(body[0])
-        fields = (qname,)
 
         def func(row):
-            return re.search(body[1], row[qname])
+            val = row[field_index[body[0]]]
+            return re.search(body[1], val)
 
     elif op == '!~':
-        qname = resolve_qname(body[0])
-        fields = (qname,)
 
         def func(row):
-            return not re.search(body[1], row[qname])
+            val = row[field_index[body[0]]]
+            return not re.search(body[1], val)
 
     else:
-        qname = resolve_qname(body[0])
-        fields = (qname,)
         compare = _operator_functions[op]
 
         def func(row):
-            return compare(row.get(qname, cast=True), body[1])
+            idx = field_index[body[0]]
+            return compare(row[idx], body[1])
 
-    return func, fields
+    return func
 
 
 # RELATION JOINS ##############################################################
 
 def _join(selection: Selection,
           relation: tsdb.Relation,
-          fields: tsdb.Fields = None,
+          fields: tsdb.Fields,
           how: str = 'inner') -> None:
     """
     Join *fields* from *relation* into *selection*.
-
-    If *fields* is `None`, all fields from *relation* are used. Fields
-    in *relation* where :attr:`Field.is_key
-    <delphin.tsdb.Field.is_key>` returns `True` are always included.
 
     If *how* is `"inner"`, then only matched rows persist after
     the join; if *how* is `"left"`, all existing rows are kept and
@@ -525,7 +540,7 @@ def _join(selection: Selection,
         _merge_fields(selection, relation.name, fields)
         selection.data = list(relation.select(*[f.name for f in fields]))
     else:
-        on = []  # type: List[str, ...]
+        on = []  # type: List[str]
         if selection is not None:
             on = [f.name for f in fields
                   if f.is_key and f.name in selection._field_index]
@@ -535,7 +550,7 @@ def _join(selection: Selection,
         if not on:
             raise TSQLError('no shared keys for joining')
 
-        right = {}  # type: Mapping[Tuple[tsdb.Value, ...], tsdb.Record]
+        right = {}  # type: Dict[Tuple[tsdb.Value, ...], tsdb.Record]
         for keys, row in zip(relation.select(*on), relation.select(*cols)):
             right.setdefault(tuple(keys), []).append(tuple(row))
 
@@ -549,31 +564,6 @@ def _join(selection: Selection,
 
         selection.data = data
         _merge_fields(selection, relation.name, fields)
-
-
-# def _prepare_fields(
-#         fields: tsdb.Fields,
-#         selection: Selection,
-#         relation: tsdb.Relation) -> Tuple[_Names, tsdb.Fields]:
-#     on = []  # type: List[str, ...]
-#     if selection is not None:
-#         on = [f.name for f in fields
-#               if f.is_key and f.name in selection._field_index]
-
-#     # we want to ensure key fields are always included
-#     if fields is None:
-#         fields = relation.fields
-#     else:
-#         included = {field.name for field in fields}
-#         for field in relation.fields:
-#             if field.is_key and field.name not in included:
-#                 fields = [field] + fields
-#                 included.add(field.name)
-
-#     # but filter out keys used in the join pivot
-#     fields = [f for f in fields if f.name not in on]
-
-#     return on, fields
 
 
 def _merge_fields(selection: Selection,
@@ -706,19 +696,19 @@ def _parse_select_from(lexer: util.Lexer) -> List[str]:
     return relations
 
 
-def _parse_select_where(lexer: util.Lexer) -> Optional[Condition]:
-    conditions = []  # type: List[Condition]
+def _parse_select_where(lexer: util.Lexer) -> Optional[_Condition]:
+    conditions = []  # type: List[_Condition]
     while lexer.accept_type(_WHERE):
         conditions.append(_parse_condition_disjunction(lexer))
-    condition = None  # type: Optional[Condition]
+    condition = None  # type: Optional[_Condition]
     if len(conditions) == 1:
         condition = conditions[0]
     elif len(conditions) > 1:
-        condition = ('and', tuple(conditions))
+        condition = ('and', list(conditions))
     return condition
 
 
-def _parse_condition_disjunction(lexer: util.Lexer) -> Condition:
+def _parse_condition_disjunction(lexer: util.Lexer) -> _Condition:
     conds = []
     while True:
         conds.append(_parse_condition_conjunction(lexer))
@@ -731,11 +721,11 @@ def _parse_condition_disjunction(lexer: util.Lexer) -> Condition:
     elif len(conds) == 1:
         return conds[0]
     else:
-        return ('or', tuple(conds))
+        return ('or', list(conds))
 
 
-def _parse_condition_conjunction(lexer: util.Lexer) -> Condition:
-    conds = []  # type: List[Condition]
+def _parse_condition_conjunction(lexer: util.Lexer) -> _Condition:
+    conds = []  # type: List[_Condition]
     while True:
         typ, token = lexer.choice_type(_NOT, _LPAREN, _QID, _ID)
         if typ == _NOT:
@@ -754,10 +744,10 @@ def _parse_condition_conjunction(lexer: util.Lexer) -> Condition:
     elif len(conds) == 1:
         return conds[0]
     else:
-        return ('and', tuple(conds))
+        return ('and', list(conds))
 
 
-def _parse_condition_statement(column: str, lexer: util.Lexer) -> Comparison:
+def _parse_condition_statement(column: str, lexer: util.Lexer) -> _Comparison:
     op = lexer.expect_type(_OP)
     if op == '=':
         op = '=='  # normalize = to == (I think these are equivalent)

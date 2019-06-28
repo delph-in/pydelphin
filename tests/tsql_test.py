@@ -92,22 +92,22 @@ def test_parse_select_where():
     assert tsql.inspect_query(
         'select i-input'
         ' where i-wf = 2 & i-input ~ \'[Dd]og\'')['condition'] == (
-            'and', (('==', ('i-wf', 2)),
-                    ('~', ('i-input', '[Dd]og'))))
+            'and', [('==', ('i-wf', 2)),
+                    ('~', ('i-input', '[Dd]og'))])
 
     assert tsql.inspect_query(
         'select i-input'
         ' where i-id = 10 | i-id = 20 & i-wf = 2')['condition'] == (
-            'or', (('==', ('i-id', 10)),
-                   ('and', (('==', ('i-id', 20)),
-                            ('==', ('i-wf', 2))))))
+            'or', [('==', ('i-id', 10)),
+                   ('and', [('==', ('i-id', 20)),
+                            ('==', ('i-wf', 2))])])
 
     assert tsql.inspect_query(
         'select i-input'
         ' where (i-id = 10 | i-id = 20) & !i-wf = 2')['condition'] == (
-            'and', (('or', (('==', ('i-id', 10)),
-                            ('==', ('i-id', 20)))),
-                    ('not', ('==', ('i-wf', 2)))))
+            'and', [('or', [('==', ('i-id', 10)),
+                            ('==', ('i-id', 20))]),
+                    ('not', ('==', ('i-wf', 2)))])
 
 
 def test_select(mini_testsuite):
