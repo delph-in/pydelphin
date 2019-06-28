@@ -11,6 +11,7 @@ import textwrap
 import shlex
 
 from delphin.exceptions import PyDelphinWarning
+from delphin import tsdb
 from delphin import itsdb
 from delphin import util
 import delphin.codecs
@@ -98,12 +99,10 @@ def _list_codecs(verbose):
 def call_select(args):
     rows = select(
         args.QUERY,
-        args.TESTSUITE,
-        mode='row',
-        cast=False)
+        args.TESTSUITE)
     try:
         for row in rows:
-            print(row)
+            print(tsdb.encode(row))
     except (BrokenPipeError):
         logging.info('broken pipe')
 

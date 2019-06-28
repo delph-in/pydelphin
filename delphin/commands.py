@@ -207,26 +207,20 @@ def _colorize(text):
 ###############################################################################
 # SELECT ######################################################################
 
-def select(dataspec, testsuite, mode='list', cast=True):
+def select(query: str, path: util.PathLike, record_class=None):
     """
-    Select data from [incr tsdb()] profiles.
+    Select data from [incr tsdb()] test suites.
 
     Args:
         query (str): TSQL select query (e.g., `'i-id i-input mrs'` or
             `'* from item where readings > 0'`)
-        testsuite (str, TestSuite): testsuite or path to testsuite
-            containing data to select
-        mode (str): see :func:`delphin.itsdb.select_rows` for a
-            description of the *mode* parameter (default: `list`)
-        cast (bool): if `True`, cast column values to their datatype
-            according to the relations file (default: `True`)
-    Returns:
-        a generator that yields selected data
+        path: path to a TSDB test suite
+        record_class: alternative class for records in the selection
+    Yields:
+        selected data from the test suite
     """
-    if not isinstance(testsuite, itsdb.TestSuite):
-        source = Path(testsuite).expanduser()
-        testsuite = itsdb.TestSuite(source)
-    return tsql.select(dataspec, testsuite, mode=mode, cast=cast)
+    db = tsdb.Database(path, autocast=True)
+    return tsql.select(query, db, record_class=record_class)
 
 
 ###############################################################################
