@@ -248,7 +248,7 @@ class Row(tsdb.Record):
             id(self))
 
     def __str__(self) -> str:
-        return tsdb.encode(self, self.fields)
+        return tsdb.join(self, self.fields)
 
     def __eq__(self, other) -> bool:
         if not hasattr(other, '__iter__'):
@@ -412,7 +412,7 @@ class Table(tsdb.Relation):
                 for i, line in enumerate(lines):
                     if i == index:
                         row = Row(self.fields,
-                                  tsdb.decode(line),
+                                  tsdb.split(line),
                                   field_index=self._field_index)
                         break
         if row is None:
@@ -557,7 +557,7 @@ class Table(tsdb.Relation):
                 row = rows[i]
                 if row is None:
                     row = Row(fields,
-                              tsdb.decode(line),
+                              tsdb.split(line),
                               field_index=field_index)
                 yield (i, row)
         # then any uncommitted rows
@@ -728,7 +728,7 @@ class TestSuite(tsdb.Database):
             response = cpu.process_item(datum, keys=keys_dict)
             logging.info(
                 'Processed item {:>16}  {:>8} results'
-                .format(tsdb.encode(keys), len(response['results']))
+                .format(tsdb.join(keys), len(response['results']))
             )
             for tablename, data in fieldmapper.map(response):
                 _add_row(self[tablename], data, buffer_size)

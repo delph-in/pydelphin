@@ -110,25 +110,25 @@ def test_unescape():
     assert tsdb.unescape(' a b ') == ' a b '
 
 
-def test_decode(empty_testsuite):
-    assert tsdb.decode('') == (None,)
-    assert tsdb.decode('one') == ('one',)
-    assert tsdb.decode(u'あ') == (u'あ',)
-    assert tsdb.decode('one@two') == ('one', 'two')
-    assert tsdb.decode('one@@three') == ('one', None, 'three')
-    assert (tsdb.decode('one\\s@\\\\two\\nabc\\x')
+def test_split(empty_testsuite):
+    assert tsdb.split('') == (None,)
+    assert tsdb.split('one') == ('one',)
+    assert tsdb.split(u'あ') == (u'あ',)
+    assert tsdb.split('one@two') == ('one', 'two')
+    assert tsdb.split('one@@three') == ('one', None, 'three')
+    assert (tsdb.split('one\\s@\\\\two\\nabc\\x')
             == ('one@', '\\two\nabc\\x'))
     rels = tsdb.read_schema(empty_testsuite)
-    assert tsdb.decode('10@one', fields=rels['item']) == (10, 'one')
+    assert tsdb.split('10@one', fields=rels['item']) == (10, 'one')
 
 
-def test_encode():
-    assert tsdb.encode([None]) == ''
-    assert tsdb.encode(['one']) == 'one'
-    assert tsdb.encode([u'あ']) == u'あ'
-    assert tsdb.encode(['one', 'two']) == 'one@two'
-    assert tsdb.encode(['one', None, 'three']) == 'one@@three'
-    assert tsdb.encode(['one@', '\\two\nabc']) == 'one\\s@\\\\two\\nabc'
+def test_join():
+    assert tsdb.join([None]) == ''
+    assert tsdb.join(['one']) == 'one'
+    assert tsdb.join([u'あ']) == u'あ'
+    assert tsdb.join(['one', 'two']) == 'one@two'
+    assert tsdb.join(['one', None, 'three']) == 'one@@three'
+    assert tsdb.join(['one@', '\\two\nabc']) == 'one\\s@\\\\two\\nabc'
 
 
 def test_make_record(empty_testsuite):

@@ -78,14 +78,26 @@ delphin.tsdb
    .. autofunction:: write_schema
    .. autofunction:: make_field_index
 
+
    Data Operations
    ---------------
 
+   Character Escaping and Unescaping
+   '''''''''''''''''''''''''''''''''
+
    .. autofunction:: escape
    .. autofunction:: unescape
-   .. autofunction:: decode
-   .. autofunction:: encode
+
+   Record Splitting and Joining
+   ''''''''''''''''''''''''''''
+
+   .. autofunction:: split
+   .. autofunction:: join
    .. autofunction:: make_record
+
+   Datatype Conversion
+   '''''''''''''''''''
+
    .. autofunction:: cast
    .. autofunction:: format
 
@@ -93,10 +105,21 @@ delphin.tsdb
    File and Directory Operations
    -----------------------------
 
+   Paths
+   '''''
+
    .. autofunction:: is_database_directory
    .. autofunction:: get_path
+
+   Relation File Access
+   ''''''''''''''''''''
+
    .. autofunction:: open
    .. autofunction:: write
+
+   Database Directories
+   ''''''''''''''''''''
+
    .. autofunction:: write_database
 
 

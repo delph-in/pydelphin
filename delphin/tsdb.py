@@ -104,6 +104,7 @@ Record = Sequence[Value]
 Relation = Iterable[Record]
 ColumnMap = Mapping[str, Value]  # e.g., a partial Record
 
+
 #############################################################################
 # Exceptions
 
@@ -333,7 +334,7 @@ class Database(object):
         fields = None
         if self.autocast:
             fields = self.schema[name]
-        return (decode(line, fields=fields)
+        return (split(line, fields=fields)
                 for line in open(self._path, name, encoding=self.encoding))
 
     def select_from(self, name: str, columns: Iterable[str] = None):
@@ -391,10 +392,10 @@ def unescape(string: str) -> str:
             .replace('\\s', FIELD_DELIMITER))
 
 
-def decode(line: str,
-           fields: Fields = None) -> Record:
+def split(line: str,
+          fields: Fields = None) -> Record:
     """
-    Decode a raw line from a relation into a list of column values.
+    Split a raw line from a relation into a list of column values.
 
     Decoding involves splitting the line by the field delimiter and
     unescaping special characters. The column value for empty fields
@@ -421,10 +422,10 @@ def decode(line: str,
     return record
 
 
-def encode(values: Record,
-           fields: Fields = None) -> str:
+def join(values: Record,
+         fields: Fields = None) -> str:
     """
-    Encode a list of column values into a string for a relation file.
+    Join a list of column values into a string for a relation file.
 
     Encoding involves escaping special characters for each value, then
     joining the values into a single string with the field
@@ -706,7 +707,7 @@ def open(dir: util.PathLike,
         >>> sentences = []
         >>> with tsdb.open('my-profile', 'item') as item:
         ...     for line in item:
-        ...         sentences.append(tsdb.decode(line)[6])
+        ...         sentences.append(tsdb.split(line)[6])
     """
     path = get_path(dir, name)
     # open and gzip.open don't accept pathlib.Path objects until Python 3.6
@@ -730,7 +731,7 @@ def write(dir: util.PathLike,
     the following:
 
     >>> with open(os.path.join(db.dir, 'item'), 'w') as fh:
-    ...     print('\\n'.join(map(tsdb.encode, db['item'])), file=fh)
+    ...     print('\\n'.join(map(tsdb.join, db['item'])), file=fh)
 
     This function improves on that method by doing the following:
 
@@ -785,7 +786,7 @@ def write(dir: util.PathLike,
 
         for record in records:
             f_tmp.write(
-                (encode(record, fields) + '\n').encode(encoding))
+                (join(record, fields) + '\n').encode(encoding))
 
         # only gzip non-empty files
         gzip = gzip and (f_tmp.tell() != 0 or append_nonempty)
