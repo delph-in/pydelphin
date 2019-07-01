@@ -120,6 +120,7 @@ delphin.tsdb
    Database Directories
    ''''''''''''''''''''
 
+   .. autofunction:: initialize_database
    .. autofunction:: write_database
 
 

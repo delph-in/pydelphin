@@ -814,6 +814,39 @@ def write(dir: util.PathLike,
         other.unlink()
 
 
+def initialize_database(path: util.PathLike,
+                        schema: SchemaLike,
+                        files: bool = False) -> None:
+    """
+    Initialize a bare database directory at *path*.
+
+    Initialization creates the directory at *path* if it does not
+    exist, writes the schema, an deletes any existing files defined by
+    the schema.
+
+    .. warning::
+
+       If *path* points to an existing directory, all relation files
+       defined by the schema will be overwritten or deleted.
+
+    Args:
+        path: the path to the destination database directory
+        schema: the destination database schema
+        files: if `True`, create an empty file for every relation in
+            *schema*
+    """
+    path = Path(path).expanduser()
+    if isinstance(schema, (str, Path)):
+        schema = read_schema(schema)
+
+    path.mkdir(exist_ok=True)
+    write_schema(path, schema)
+    _cleanup_files(path, set(schema))
+    if files:
+        for name in schema:
+            path.joinpath(name).touch()
+
+
 def write_database(db: Database,
                    path: util.PathLike,
                    names: Optional[Iterable[str]] = None,
@@ -882,13 +915,7 @@ def write_database(db: Database,
               encoding=encoding)
 
     # only delete other files at the end in case db.path == path
-    for name in set(schema).difference(names):
-        tx_path = Path(path, name).with_suffix('')
-        gz_path = Path(path, name).with_suffix('.gz')
-        if tx_path.is_file():
-            tx_path.unlink()
-        if gz_path.is_file():
-            gz_path.unlink()
+    _cleanup_files(path, set(schema).difference(names))
 
 
 def _remake_records(relation, old_fields, new_fields):
@@ -896,3 +923,13 @@ def _remake_records(relation, old_fields, new_fields):
     for record in relation:
         colmap = dict(zip(field_names, record))
         yield make_record(colmap, new_fields)
+
+
+def _cleanup_files(path, names):
+    for name in names:
+        tx_path = Path(path, name).with_suffix('')
+        gz_path = Path(path, name).with_suffix('.gz')
+        if tx_path.is_file():
+            tx_path.unlink()
+        if gz_path.is_file():
+            gz_path.unlink()
