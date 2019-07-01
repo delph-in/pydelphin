@@ -113,6 +113,7 @@ def call_mkprof(args):
         source=args.source or args.input,
         schema=args.relations,
         where=args.where,
+        delimiter=args.delimiter,
         refresh=args.refresh,
         skeleton=args.skeleton,
         full=args.full,
@@ -267,11 +268,13 @@ select_parser.add_argument(
 select_parser.add_argument(
     'TESTSUITE', help='path to the testsuite directory to select data from')
 
+
 # mkprof subparser
 mkprof_parser = argparse.ArgumentParser(add_help=False)
 mkprof_parser.set_defaults(func=call_mkprof)
 mkprof_parser.add_argument(
     'DEST', help='directory for the destination (output) testsuite')
+
 mkprof_grp1 = mkprof_parser.add_mutually_exclusive_group()
 mkprof_grp1.add_argument(
     '-s', '--source', metavar='DIR', help='path to a testsuite directory')
@@ -284,6 +287,7 @@ mkprof_grp1.add_argument(
     '--input',
     metavar='TXT',
     help='file of test sentences (* sents are ungrammatical)')
+
 mkprof_parser.add_argument(
     '--where', metavar='CONDITION',
     help=('filter records in the testsuite with a TSQL condition '
@@ -293,6 +297,13 @@ mkprof_parser.add_argument(
     '--relations',
     metavar='FILE',
     help='relations file to use for destination testsuite')
+mkprof_parser.add_argument(
+    '--delimiter',
+    metavar='C',
+    help=('split input lines with delimiter C; if C="@", split as a '
+          'TSDB record; a header of field names is required')
+)
+
 mkprof_grp2 = mkprof_parser.add_mutually_exclusive_group()
 mkprof_grp2.add_argument(
     '--full',
@@ -302,6 +313,7 @@ mkprof_grp2.add_argument(
     '--skeleton',
     action='store_true',
     help='write only tsdb-core files for skeletons')
+
 mkprof_parser.add_argument(
     '-z', '--gzip', action='store_true', help='compress table files with gzip')
 

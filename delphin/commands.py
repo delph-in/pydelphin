@@ -235,7 +235,7 @@ def select(query: str, path: util.PathLike, record_class=None):
 ###############################################################################
 # MKPROF ######################################################################
 
-def mkprof(destination, source=None, schema=None, where=None,
+def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
            refresh=False, skeleton=False, full=False, gzip=False):
     """
     Create [incr tsdb()] profiles or skeletons.
@@ -260,6 +260,10 @@ def mkprof(destination, source=None, schema=None, where=None,
             the source testsuite is used
         where (str): TSQL condition to filter records by; ignored if
             *source* is not a testsuite
+        delimiter (str): if given, split lines from *source* or stdin
+            on the character *delimiter*; if *delimiter* is `"@"`,
+            split using :func:`delphin.tsdb.split`; a header line
+            with field names is required
         refresh (bool): if `True`, rewrite the data at *destination*;
             implies *full* is `True`; best combined with *schema* or
             *gzip* (default: `False`)
@@ -302,9 +306,14 @@ def mkprof(destination, source=None, schema=None, where=None,
             lines = sys.stdin.readlines()
         else:
             lines = source.read_text().splitlines()
+        if delimiter:
+            records = _delimiter_to_records(lines, delimiter,
+                                            dest.schema['item'])
+        else:
+            records = _lines_to_records(lines, dest.schema['item'])
         tsdb.write(dest.path,
                    'item',
-                   _lines_to_records(lines, dest.schema['item']),
+                   records,
                    fields=dest.schema['item'],
                    gzip=gzip)
     # input is source testsuite
@@ -355,6 +364,29 @@ def _lines_to_records(lines, fields):
         colmap = {'i-id': i, 'i-wf': i_wf, 'i-input': i_input.strip()}
         yield tsdb.make_record(colmap, fields)
 
+
+def _delimiter_to_records(lines, delimiter, fields):
+    split = tsdb.split if delimiter == '@' else _split(delimiter)
+    lineiter = iter(lines)
+    header = next(lineiter)
+    colnames = split(header)
+    for i, line in enumerate(lineiter, 1):
+        colvals = split(line)
+        if len(colvals) != len(colnames):
+            raise CommandError(
+                'delimited item line does not match the header:\n'
+                '  header: {}\n'
+                '  values: {}'.format(header, line))
+        colmap = dict(zip(colnames, colvals))
+        yield tsdb.make_record(colmap, fields)
+
+
+def _split(delimiter):
+
+    def split(line):
+        return line.split(delimiter)
+
+    return split
 
 ###############################################################################
 # PROCESS #####################################################################
