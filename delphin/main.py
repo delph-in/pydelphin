@@ -111,9 +111,9 @@ def call_mkprof(args):
     return mkprof(
         args.DEST,
         source=args.source or args.input,
-        relations=args.relations,
+        schema=args.relations,
         where=args.where,
-        in_place=args.in_place,
+        refresh=args.refresh,
         skeleton=args.skeleton,
         full=args.full,
         gzip=args.gzip)
@@ -276,9 +276,9 @@ mkprof_grp1 = mkprof_parser.add_mutually_exclusive_group()
 mkprof_grp1.add_argument(
     '-s', '--source', metavar='DIR', help='path to a testsuite directory')
 mkprof_grp1.add_argument(
-    '--in-place',
+    '--refresh',
     action='store_true',
-    help='use DEST as the --source (use caution)')
+    help='overwrite DEST (works with --relations or --gzip)')
 mkprof_grp1.add_argument(
     '-i',
     '--input',
@@ -415,12 +415,12 @@ subparser.add_parser(
             delphin mkprof --input=sentences.txt --relations=../relations ...
             delphin mkprof --relations=../relations ... < sentences.txt
             delphin mkprof --source=testsuite/ ...
-            delphin mkprof --in-place ...
+            delphin mkprof --refresh ...
 
         The first two read sentences (one per line; '*' in the first column
         indicates ungrammaticality) from --input or <stdin> and --relations
         is required. The second two use an existing testsuite; --relations
-        defaults to that of --source; --in-place reads and overwrites DEST.
+        defaults to that of --source; --refresh reads and overwrites DEST.
 
         By default, testsuites are skeletons as from the `mkprof` utility of
         `art`, where the tsdb-core files (e.g., 'item') are non-empty but all

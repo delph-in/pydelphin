@@ -14,6 +14,7 @@ import importlib
 import logging
 import warnings
 
+from delphin import exceptions
 from delphin import tsdb, itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
@@ -22,6 +23,12 @@ from delphin.exceptions import PyDelphinException
 import delphin.codecs
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
+
+
+# EXCEPTIONS ##################################################################
+
+class CommandError(exceptions.PyDelphinException):
+    """Raised on an invalid command call."""
 
 
 ###############################################################################
@@ -80,8 +87,9 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
         indent = int(indent)
 
     if len(tsql.inspect_query('select ' + select)['projection']) != 1:
-        raise ValueError('Exactly 1 column must be given in selection query: '
-                         '(e.g., result:mrs)')
+        raise CommandError(
+            'Exactly 1 column must be given in selection query: '
+            '(e.g., result.mrs)')
 
     if semi is not None and not isinstance(semi, SemI):
         # lets ignore the SEM-I warnings until questions regarding
@@ -100,10 +108,11 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     else:
         path = Path(path).expanduser()
         if path.is_dir():
-            ts = itsdb.TestSuite(path)
+            db = tsdb.Database(path)
+            # ts = itsdb.TestSuite(path)
             xs = [
                 next(iter(source_codec.loads(r[0], **kwargs)), None)
-                for r in tsql.select(select, ts)
+                for r in tsql.select(select, db)
             ]
         elif path.is_file():
             xs = list(source_codec.load(path, **kwargs))
@@ -158,7 +167,7 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
 
 def _get_codec(name):
     if name not in _CODECS:
-        raise ValueError('invalid codec: {}'.format(name))
+        raise CommandError('invalid codec: {}'.format(name))
     fullname = _CODECS[name]
     codec = importlib.import_module(fullname)
     return codec
@@ -189,7 +198,7 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
         converter = None
 
     else:
-        raise ValueError('{} -> {} conversion is not supported'.format(
+        raise CommandError('{} -> {} conversion is not supported'.format(
             src_rep.upper(), tgt_rep.upper()))
 
     return converter
@@ -227,7 +236,7 @@ def select(query: str, path: util.PathLike, record_class=None):
 # MKPROF ######################################################################
 
 def mkprof(destination, source=None, schema=None, where=None,
-           in_place=False, skeleton=False, full=False, gzip=False):
+           refresh=False, skeleton=False, full=False, gzip=False):
     """
     Create [incr tsdb()] profiles or skeletons.
 
@@ -235,11 +244,11 @@ def mkprof(destination, source=None, schema=None, where=None,
     a list of sentences. There are four main usage patterns:
 
         - `source="testsuite/"` -- read data from `testsuite/`
-        - `source=None, in_place=True` -- read data from *destination*
-        - `source=None, in_place=False` -- read sentences from stdin
+        - `source=None, refresh=True` -- read data from *destination*
+        - `source=None, refresh=False` -- read sentences from stdin
         - `source="sents.txt"` -- read sentences from `sents.txt`
 
-    For the latter two, the *schema* parameter must be specified.
+    The latter two require the *schema* parameter.
 
     Args:
         destination (str): path of the new testsuite
@@ -251,8 +260,9 @@ def mkprof(destination, source=None, schema=None, where=None,
             the source testsuite is used
         where (str): TSQL condition to filter records by; ignored if
             *source* is not a testsuite
-        in_place (bool): if `True` and *source* is not given, use
-            *destination* as the source for data (default: `False`)
+        refresh (bool): if `True`, rewrite the data at *destination*;
+            implies *full* is `True`; best combined with *schema* or
+            *gzip* (default: `False`)
         skeleton (bool): if `True`, only write tsdb-core files
             (default: `False`)
         full (bool): if `True`, copy all data from the source
@@ -264,57 +274,63 @@ def mkprof(destination, source=None, schema=None, where=None,
     destination = Path(destination).expanduser()
     # basic validation
     if skeleton and full:
-        raise ValueError("'skeleton' is incompatible with 'full'")
-    elif skeleton and in_place:
-        raise ValueError("'skeleton' is incompatible with 'in_place'")
-    elif in_place and source is not None:
-        raise ValueError("'in_place' is incompatible with 'source'")
-    if in_place:
+        raise CommandError("'skeleton' is incompatible with 'full'")
+    elif refresh and (source or where or skeleton):
+        raise CommandError("'refresh' is incompatible with 'source', "
+                           "'where', and 'skeleton'")
+    if refresh:
         source = destination
+        full = True
     elif source is not None:
         source = Path(source)
     if full and (source is None or not source.is_dir()):
-        raise ValueError("'full' must be used with a source testsuite")
+        raise CommandError("'full' must be used with a source testsuite")
     if schema is not None:
         schema = Path(schema).expanduser()
     if schema is None and source is not None and source.is_dir():
         schema = source.joinpath('relations')
     if schema is None or not schema.is_file():
-        raise ValueError('invalid or missing relations file: {}'
-                         .format(schema))
+        raise CommandError('invalid or missing relations file: {}'
+                           .format(schema))
     # setup destination testsuite
-    destination.mkdir(parents=True, exist_ok=True)
-    dts = itsdb.TestSuite(path=destination, schema=schema)
-    # input is sentences on stdin
-    if source is None:
-        dts.write({'item': _lines_to_rows(sys.stdin, dts.schema)},
-                  gzip=gzip)
-    # input is sentence file
-    elif source.is_file():
-        with source.open() as fh:
-            dts.write({'item': _lines_to_rows(fh, dts.schema)},
-                      gzip=gzip)
+    if source != destination:
+        tsdb.initialize_database(destination, schema, files=(not skeleton))
+    dest = tsdb.Database(path=destination)
+    # input is sentences on stdin or a file of sentences
+    if source is None or source.is_file():
+        if source is None:
+            lines = sys.stdin.readlines()
+        else:
+            lines = source.read_text().splitlines()
+        tsdb.write(dest.path,
+                   'item',
+                   _lines_to_records(lines, dest.schema['item']),
+                   fields=dest.schema['item'],
+                   gzip=gzip)
     # input is source testsuite
     elif source.is_dir():
-        sts = itsdb.TestSuite(source)
-        tables = list(dts.schema) if full else tsdb.TSDB_CORE_FILES
+        src = tsdb.Database(source)
+        tables = list(dest.schema) if full else tsdb.TSDB_CORE_FILES
         where = '' if where is None else 'where ' + where
         for table in tables:
-            if len(sts[table]) > 0:
+            if table not in dest.schema:
+                continue
+            if where:
                 # filter the data, but use all if the query fails
                 # (e.g., if the filter and table cannot be joined)
                 try:
-                    rows = tsql.select(
-                        '* from {} {}'.format(table, where), sts)
-                except itsdb.ITSDBError:
-                    rows = sts[table]
-                dts.write({table: rows}, gzip=gzip)
-    dts.reload()
-    # unless a skeleton was requested, make empty files for other tables
-    if not skeleton:
-        for table in dts.schema:
-            if len(dts[table]) == 0:
-                dts.write({table: []})
+                    records = tsql.select(
+                        '* from {} {}'.format(table, where), src)
+                except tsql.TSQLError:
+                    records = list(src[table])
+            else:
+                records = list(src[table])
+            if records:
+                tsdb.write(dest.path,
+                           table,
+                           records,
+                           dest.schema[table],
+                           gzip=gzip)
 
     # summarize what was done
     isatty = sys.stdout.isatty()
@@ -323,7 +339,7 @@ def mkprof(destination, source=None, schema=None, where=None,
         return '\x1b[1;31m{}\x1b[0m'.format(s) if isatty else s
 
     fmt = '{:>8} bytes\t{}'
-    for filename in ['relations'] + list(dts.schema):
+    for filename in ['relations'] + list(dest.schema):
         path = destination.joinpath(filename)
         if path.is_file():
             stat = path.stat()
@@ -333,25 +349,11 @@ def mkprof(destination, source=None, schema=None, where=None,
             print(fmt.format(stat.st_size, _red(filename + '.gz')))
 
 
-def _lines_to_rows(lines, schema):
-    # field indices only need to be computed once, so don't use
-    # itsdb.Record.from_dict()
-    index = {field.name: i for i, field in enumerate(schema['item'])}
-    i_id_idx = index['i-id']
-    i_wf_idx = index['i-wf']
-    i_input_idx = index['i-input']
-    num_fields = len(schema['item'])
-
-    def make_row(i_id, i_wf, i_input):
-        row = [None] * num_fields
-        row[i_id_idx] = i_id
-        row[i_wf_idx] = i_wf
-        row[i_input_idx] = i_input
-        return itsdb.Record(schema['item'], row)
-
-    for i, line in enumerate(lines):
+def _lines_to_records(lines, fields):
+    for i, line in enumerate(lines, 1):
         i_wf, i_input = (0, line[1:]) if line.startswith('*') else (1, line)
-        yield make_row(i * 10, i_wf, i_input.strip())
+        colmap = {'i-id': i, 'i-wf': i_wf, 'i-input': i_input.strip()}
+        yield tsdb.make_record(colmap, fields)
 
 
 ###############################################################################
@@ -403,11 +405,11 @@ def process(grammar, testsuite, source=None, select=None,
     testsuite = Path(testsuite).expanduser()
 
     if generate and transfer:
-        raise ValueError("'generate' is incompatible with 'transfer'")
+        raise CommandError("'generate' is incompatible with 'transfer'")
     if source is None:
         source = testsuite
     if select is None:
-        select = 'result:mrs' if (generate or transfer) else 'item:i-input'
+        select = 'result.mrs' if (generate or transfer) else 'item.i-input'
     if generate:
         processor = ace.ACEGenerator
     elif transfer:
@@ -437,7 +439,7 @@ def _interpret_selection(select, source):
     queryobj = tsql.inspect_query('select ' + select)
     projection = queryobj['projection']
     if projection == '*' or len(projection) != 1:
-        raise ValueError("'select' must return a single column")
+        raise CommandError("'select' must return a single column")
     tablename, _, column = projection[0].rpartition(':')
     if not tablename:
         # query could be 'i-input from item' instead of 'item:i-input'
@@ -486,9 +488,9 @@ def repp(source, config=None, module=None, active=None,
     from delphin.repp import REPP
 
     if config is not None and module is not None:
-        raise ValueError("cannot specify both 'config' and 'module'")
+        raise CommandError("cannot specify both 'config' and 'module'")
     if config is not None and active:
-        raise ValueError("'active' cannot be used with 'config'")
+        raise CommandError("'active' cannot be used with 'config'")
     if config:
         r = REPP.from_config(config)
     elif module:
@@ -574,7 +576,7 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
 
     queryobj = tsql.inspect_query('select ' + select)
     if len(queryobj['projection']) != 3:
-        raise ValueError('select does not return 3 fields: ' + select)
+        raise CommandError('select does not return 3 fields: ' + select)
 
     input_select = '{} {}'.format(queryobj['projection'][0],
                                   queryobj['projection'][1])

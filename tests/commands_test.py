@@ -12,17 +12,20 @@ from delphin.commands import (
     process,
     select,
     compare,
-    repp
+    repp,
+    CommandError
 )
 
 
 @pytest.fixture
-def dir_with_mrs(tmpdir):
-    f = tmpdir.join('ex.mrs')
-    f.write('[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
-            '  RELS: < [ _rain_v_1<3:9> LBL: h1 ARG0: e2 ] >'
-            '  HCONS: < h0 qeq h1 > ]')
-    return tmpdir
+def dir_with_mrs(tmp_path):
+    d = tmp_path.joinpath('mrs-dir')
+    d.mkdir()
+    f = d.joinpath('ex.mrs')
+    f.write_text('[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
+                 '  RELS: < [ _rain_v_1<3:9> LBL: h1 ARG0: e2 ] >'
+                 '  HCONS: < h0 qeq h1 > ]')
+    return d
 
 
 @pytest.fixture
@@ -47,26 +50,26 @@ NOTE: parsed 1 / 1 sentences, avg 1119k, time 0.00654s
 
 
 @pytest.fixture
-def sentence_file(tmpdir):
-    f = tmpdir.join('sents.txt')
-    f.write('A dog barked.\n*Dog barked.')
-    return str(f)
+def sentence_file(tmp_path):
+    f = tmp_path.joinpath('sents.txt')
+    f.write_text('A dog barked.\n*Dog barked.')
+    return f
 
 
 def test_convert(dir_with_mrs, mini_testsuite, ace_output, ace_tsdb_stdout,
                  monkeypatch):
-    ex = str(dir_with_mrs.join('ex.mrs'))
+    ex = str(dir_with_mrs.joinpath('ex.mrs'))
     with pytest.raises(TypeError):
         convert(ex)
     with pytest.raises(TypeError):
         convert(ex, 'simplemrs')
-    with pytest.raises(ValueError):
+    with pytest.raises(CommandError):
         convert(ex, 'eds', 'simplemrs')
-    with pytest.raises(ValueError):
+    with pytest.raises(CommandError):
         convert(ex, 'invalid', 'simplemrs')
-    with pytest.raises(ValueError):
+    with pytest.raises(CommandError):
         convert(ex, 'simplemrs', 'invalid')
-    with pytest.raises(ValueError):
+    with pytest.raises(CommandError):
         convert(mini_testsuite, 'simplemrs', 'simplemrs',
                 select='result.result-id result.mrs')
     convert(ex, 'simplemrs', 'simplemrs')
@@ -96,37 +99,38 @@ def test_convert(dir_with_mrs, mini_testsuite, ace_output, ace_tsdb_stdout,
 
 
 def _bidi_convert(d, srcfmt, tgtfmt):
-    src = d.join('ex.mrs')
-    tgt = d.join('ex.out')
-    tgt.write(convert(str(src), srcfmt, tgtfmt))
+    src = d.joinpath('ex.mrs')
+    tgt = d.joinpath('ex.out')
+    tgt.write_text(convert(str(src), srcfmt, tgtfmt))
     # below I intend to convert tgtfmt -> tgtfmt
     # because EDS -> non-EDS doesn't work
     convert(str(tgt), tgtfmt, tgtfmt)
 
 
-def test_mkprof(mini_testsuite, sentence_file, tmpdir, monkeypatch):
-    ts1 = str(tmpdir.mkdir('ts1'))
+def test_mkprof(mini_testsuite, sentence_file, tmp_path, monkeypatch):
+    ts1 = tmp_path.joinpath('ts1')
+    ts1.mkdir()
     ts0 = mini_testsuite
     sentence_file = str(sentence_file)
-    with pytest.raises(ValueError):
+    with pytest.raises(CommandError):
         mkprof(ts1, source=ts0, skeleton=True, full=True)
-    with pytest.raises(ValueError):
-        mkprof(ts1, in_place=True, skeleton=True)
-    with pytest.raises(ValueError):
-        mkprof(ts1, source=ts0, in_place=True)
-    with pytest.raises(ValueError):
+    with pytest.raises(CommandError):
+        mkprof(ts1, refresh=True, skeleton=True)
+    with pytest.raises(CommandError):
+        mkprof(ts1, source=ts0, refresh=True)
+    with pytest.raises(CommandError):
         mkprof(ts1, source=sentence_file, full=True)
-    with pytest.raises(ValueError):
+    with pytest.raises(CommandError):
         mkprof(ts1, source=sentence_file)
 
     relations = str(Path(mini_testsuite).joinpath('relations'))
 
     mkprof(ts1, source=ts0)
-    mkprof(ts1, source=None, in_place=True)
+    mkprof(ts1, source=None, refresh=True)
     with monkeypatch.context() as m:
         m.setattr('sys.stdin', io.StringIO('A dog barked.\n'))
-        mkprof(ts1, source=None, in_place=False, relations=relations)
-    mkprof(ts1, source=sentence_file, relations=relations)
+        mkprof(ts1, source=None, refresh=False, schema=relations)
+    mkprof(ts1, source=sentence_file, schema=relations)
 
     mkprof(ts1, source=ts0, full=True)
     mkprof(ts1, source=ts0, skeleton=True)
@@ -138,7 +142,7 @@ def test_process(mini_testsuite):
         process('grm.dat')
     with pytest.raises(TypeError):
         process(source=mini_testsuite)
-    with pytest.raises(ValueError):
+    with pytest.raises(CommandError):
         process('grm.dat', mini_testsuite, generate=True, transfer=True)
 
     # don't have a good way to mock ACE yet
@@ -167,8 +171,8 @@ def test_compare(mini_testsuite):
 
 def test_repp(sentence_file):
     sentence_file = str(sentence_file)  # Python2
-    with pytest.raises(ValueError):
+    with pytest.raises(CommandError):
         repp(sentence_file, config='x', module='y')
-    with pytest.raises(ValueError):
+    with pytest.raises(CommandError):
         repp(sentence_file, config='x', active=['y'])
     repp(sentence_file)
