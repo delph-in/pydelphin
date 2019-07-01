@@ -337,7 +337,16 @@ class Database(object):
         return (split(line, fields=fields)
                 for line in open(self._path, name, encoding=self.encoding))
 
+    def __iter__(self):
+        return iter(self.schema)
+
+    def __len__(self):
+        return len(self.schema)
+
     def select_from(self, name: str, columns: Iterable[str] = None):
+        """
+        Yield values for *columns* from relation *name*.
+        """
         if columns is None:
             columns = list(self.schema[name])
         index = make_field_index(self.schema[name])
@@ -827,7 +836,7 @@ def write_database(db: Database,
     .. warning::
 
        If *path* points to an existing directory, all relation files
-       defined by the schema will be written to or deleted.
+       defined by the schema will be overwritten or deleted.
 
     Args:
         db: Database containing data to write
