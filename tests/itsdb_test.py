@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import pathlib
 from datetime import datetime
 
 import pytest
@@ -27,7 +28,8 @@ class TestTestSuite(object):
         with pytest.raises(itsdb.ITSDBError):
             itsdb.TestSuite()
 
-        t = itsdb.TestSuite(schema=single_item_profile.joinpath('relations'))
+        rel = pathlib.Path(single_item_profile, 'relations')
+        t = itsdb.TestSuite(schema=rel)
         assert len(t['item']) == 0
         assert len(t['parse']) == 0
         assert len(t['result']) == 0

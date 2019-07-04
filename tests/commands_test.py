@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 import io
-from pathlib import Path
+import pathlib
 
 import pytest
 
@@ -25,7 +25,7 @@ def dir_with_mrs(tmp_path):
     f.write_text('[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
                  '  RELS: < [ _rain_v_1<3:9> LBL: h1 ARG0: e2 ] >'
                  '  HCONS: < h0 qeq h1 > ]')
-    return d
+    return str(d)
 
 
 @pytest.fixture
@@ -53,12 +53,12 @@ NOTE: parsed 1 / 1 sentences, avg 1119k, time 0.00654s
 def sentence_file(tmp_path):
     f = tmp_path.joinpath('sents.txt')
     f.write_text('A dog barked.\n*Dog barked.')
-    return f
+    return str(f)
 
 
 def test_convert(dir_with_mrs, mini_testsuite, ace_output, ace_tsdb_stdout,
                  monkeypatch):
-    ex = str(dir_with_mrs.joinpath('ex.mrs'))
+    ex = str(pathlib.Path(dir_with_mrs, 'ex.mrs'))
     with pytest.raises(TypeError):
         convert(ex)
     with pytest.raises(TypeError):
@@ -99,8 +99,8 @@ def test_convert(dir_with_mrs, mini_testsuite, ace_output, ace_tsdb_stdout,
 
 
 def _bidi_convert(d, srcfmt, tgtfmt):
-    src = d.joinpath('ex.mrs')
-    tgt = d.joinpath('ex.out')
+    src = pathlib.Path(d, 'ex.mrs')
+    tgt = pathlib.Path(d, 'ex.out')
     tgt.write_text(convert(str(src), srcfmt, tgtfmt))
     # below I intend to convert tgtfmt -> tgtfmt
     # because EDS -> non-EDS doesn't work
@@ -109,8 +109,9 @@ def _bidi_convert(d, srcfmt, tgtfmt):
 
 def test_mkprof(mini_testsuite, empty_alt_testsuite,
                 sentence_file, tmp_path, monkeypatch):
-    ts1 = tmp_path.joinpath('ts1')
-    ts1.mkdir()
+    ts1_ = tmp_path.joinpath('ts1')
+    ts1_.mkdir()
+    ts1 = str(ts1_)
     ts0 = mini_testsuite
     sentence_file = str(sentence_file)
 
@@ -119,7 +120,7 @@ def test_mkprof(mini_testsuite, empty_alt_testsuite,
     with pytest.raises(CommandError):
         mkprof(ts1, source='not a test suite')
 
-    relations = str(Path(mini_testsuite).joinpath('relations'))
+    relations = str(pathlib.Path(mini_testsuite, 'relations'))
 
     mkprof(ts1, source=ts0)
     mkprof(ts1, source=None, refresh=True)
@@ -132,8 +133,8 @@ def test_mkprof(mini_testsuite, empty_alt_testsuite,
     mkprof(ts1, source=ts0, skeleton=True)
     mkprof(ts1, source=ts0, full=True, gzip=True)
 
-    mkprof(ts1, refresh=True, schema=empty_alt_testsuite.joinpath('relations'))
-    item = ts1.joinpath('item')
+    mkprof(ts1, refresh=True, schema=pathlib.Path(empty_alt_testsuite, 'relations'))
+    item = pathlib.Path(ts1, 'item')
     assert item.read_text() == (
         '10@It rained.@1-feb-2018 15:00\n'
         '20@Rained.@01-02-18 15:00:00\n'

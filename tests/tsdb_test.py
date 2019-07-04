@@ -1,7 +1,9 @@
 
-import pytest
-
+import pathlib
+from collections import OrderedDict
 from datetime import datetime
+
+import pytest
 
 from delphin import tsdb
 
@@ -43,29 +45,29 @@ def test_read_schema(empty_testsuite):
 
 def test_write_schema(empty_testsuite, tmp_path):
     f = tsdb.Field
-    r = {
-        'item': [f('i-id', ':integer', (':key',)),
-                 f('i-input', ':string')],
-        'fold': [f('fold-id', ':integer', (':key',))],
-        'run': [f('run-id', ':integer', (':key',),
-                  'unique test run identifier')],
-        'parse': [f('parse-id', ':integer', (':key',),
-                    'unique parse identifier'),
-                  f('run-id', ':integer', (':key',),
-                    'test run for this parse'),
-                  f('i-id', ':integer', (':key',),
-                    'item parsed')],
-        'result': [f('parse-id', ':integer', (':key',),
-                     'parse for this result'),
-                   f('result-id', ':integer', (),
-                     'result identifier'),
-                   f('mrs', ':string', (),
-                     'MRS for this reading')]
-    }
+    r = OrderedDict([
+        ('item', [f('i-id', ':integer', (':key',)),
+                  f('i-input', ':string')]),
+        ('fold', [f('fold-id', ':integer', (':key',))]),
+        ('run', [f('run-id', ':integer', (':key',),
+                   'unique test run identifier')]),
+        ('parse', [f('parse-id', ':integer', (':key',),
+                     'unique parse identifier'),
+                   f('run-id', ':integer', (':key',),
+                     'test run for this parse'),
+                   f('i-id', ':integer', (':key',),
+                     'item parsed')]),
+        ('result', [f('parse-id', ':integer', (':key',),
+                      'parse for this result'),
+                    f('result-id', ':integer', (),
+                      'result identifier'),
+                    f('mrs', ':string', (),
+                      'MRS for this reading')])
+    ])
     tmp_dir = tmp_path.joinpath('test_write_schema')
     tmp_dir.mkdir()
-    tsdb.write_schema(tmp_dir, r)
-    orig = empty_testsuite.joinpath('relations')
+    tsdb.write_schema(str(tmp_dir), r)
+    orig = pathlib.Path(empty_testsuite).joinpath('relations')
     new = tmp_dir.joinpath('relations')
     assert orig.read_text() == new.read_text()
 
@@ -77,12 +79,12 @@ class TestDatabase():
         with pytest.raises(tsdb.TSDBError):
             dir = tmp_path.joinpath('not_a_testsuite')
             dir.mkdir()
-            tsdb.Database(dir)
+            tsdb.Database(str(dir))
         tsdb.Database(mini_testsuite)
 
     def test_path(self, mini_testsuite):
         db = tsdb.Database(mini_testsuite)
-        assert db.path == mini_testsuite
+        assert db.path == pathlib.Path(mini_testsuite)
 
     def test__getitem__(self, mini_testsuite, empty_testsuite):
         db = tsdb.Database(mini_testsuite)
@@ -137,7 +139,8 @@ def test_join():
 
 
 def test_make_record(empty_testsuite):
-    r = tsdb.read_schema(empty_testsuite.joinpath('relations'))
+    rel = pathlib.Path(empty_testsuite, 'relations')
+    r = tsdb.read_schema(rel)
     assert (tsdb.make_record({'i-input': 'one', 'i-id': 100}, r['item'])
             == (100, 'one'))
     assert tsdb.make_record({'i-id': 100}, r['item']) == (100, None)
@@ -192,7 +195,7 @@ def test_open(single_item_skeleton, gzipped_single_item_skeleton):
 
 
 def test_write(single_item_skeleton):
-    dir = single_item_skeleton
+    dir = pathlib.Path(single_item_skeleton)
     fields = tsdb.read_schema(dir)['item']
     path = dir.joinpath('item')
     tsdb.write(dir, 'item', [(0, 'The cat meows.')], fields)
@@ -224,7 +227,7 @@ def test_write(single_item_skeleton):
 def test_write_database(tmp_path, mini_testsuite, empty_alt_testsuite):
     tmp_ts = tmp_path.joinpath('test_write_database')
     db = tsdb.Database(mini_testsuite)
-    tsdb.write_database(db, tmp_ts)
+    tsdb.write_database(db, str(tmp_ts))
     assert tmp_ts.is_dir()
     assert tmp_ts.joinpath('relations').is_file()
     assert tmp_ts.joinpath('item').is_file()
@@ -234,14 +237,14 @@ def test_write_database(tmp_path, mini_testsuite, empty_alt_testsuite):
         '10@10@1\n'
         '20@20@0\n'
         '30@30@1\n')
-    tsdb.write_database(db, tmp_ts, names=['item'])
+    tsdb.write_database(db, str(tmp_ts), names=['item'])
     assert tmp_ts.joinpath('item').is_file()
     assert not tmp_ts.joinpath('parse').is_file()
     assert not tmp_ts.joinpath('result').is_file()
     # alt_schema drops i-wf field from mini_testsuite's schema
     alt_schema = tsdb.read_schema(empty_alt_testsuite)
-    tsdb.write_database(db, tmp_ts, names=['item'], schema=alt_schema)
-    alt_db = tsdb.Database(tmp_ts)
+    tsdb.write_database(db, str(tmp_ts), names=['item'], schema=alt_schema)
+    alt_db = tsdb.Database(str(tmp_ts))
     assert len(db.schema['item']) == 4
     assert len(alt_db.schema['item']) == 3
     assert tmp_ts.joinpath('item').read_text() == (

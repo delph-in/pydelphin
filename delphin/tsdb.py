@@ -49,6 +49,7 @@ from typing import (
 )
 import re
 from pathlib import Path
+from collections import OrderedDict
 from gzip import open as gzopen
 import tempfile
 import shutil
@@ -250,7 +251,7 @@ def _parse_schema(s: str) -> Schema:
             )
         elif line != '':
             raise TSDBSchemaError('invalid line in schema file: ' + line)
-    return dict(tables)
+    return OrderedDict(tables)
 
 
 def write_schema(path: util.PathLike,

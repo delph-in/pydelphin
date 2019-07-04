@@ -30,11 +30,13 @@ delphin.tdl
   .. autodata:: DIFF_LIST_LIST
   .. autodata:: DIFF_LIST_LAST
 
+
   Functions
   ---------
 
   .. autofunction:: iterparse
   .. autofunction:: format
+
 
   Classes
   -------
@@ -42,6 +44,7 @@ delphin.tdl
   The TDL entity classes are the objects returned by
   :func:`iterparse`, but they may also be used directly to build TDL
   structures, e.g., for serialization.
+
 
   Terms
   '''''
@@ -71,11 +74,13 @@ delphin.tdl
     :show-inheritance:
     :members:
 
+
   Conjunctions
   ''''''''''''
 
   .. autoclass:: Conjunction
     :members:
+
 
   Type and Instance Definitions
   '''''''''''''''''''''''''''''
@@ -89,6 +94,7 @@ delphin.tdl
     :show-inheritance:
     :members:
 
+
   Morphological Patterns
   ''''''''''''''''''''''
 
@@ -97,6 +103,20 @@ delphin.tdl
 
   .. autoclass:: WildCard
     :members:
+
+
+  Environments and File Inclusion
+  '''''''''''''''''''''''''''''''
+
+  .. autoclass:: TypeEnvironment
+     :members:
+
+  .. autoclass:: InstanceEnvironment
+     :members:
+
+  .. autoclass:: FileInclude
+     :members:
+
 
   Exceptions and Warnings
   -----------------------
