@@ -201,14 +201,22 @@ def test_write(single_item_skeleton):
     tsdb.write(dir, 'item', [(1, 'The wolf howls.')], fields, append=True)
     with tsdb.open(dir, 'item') as fh:
         assert list(fh) == ['0@The cat meows.\n', '1@The wolf howls.\n']
-
+    # cannot append and gzip at same time
+    with pytest.raises(NotImplementedError):
+        tsdb.write(dir, 'item', [], fields, gzip=True, append=True)
     tsdb.write(dir, 'item', [(0, 'The cat meows.')], fields, gzip=True)
     assert not path.with_suffix('').exists()
     assert path.with_suffix('.gz').exists()
+    # cannot append to existing gzipped file
+    with pytest.raises(NotImplementedError):
+        tsdb.write(dir, 'item', [], fields, append=True)
     tsdb.write(dir, 'item', [(0, 'The cat meows.')], fields)
-    assert not path.with_suffix('').exists()
-    assert path.with_suffix('.gz').exists()
+    assert path.with_suffix('').exists()
+    assert not path.with_suffix('.gz').exists()
     tsdb.write(dir, 'item', [(0, 'The cat meows.')], fields, gzip=False)
+    assert not path.with_suffix('.gz').exists()
+    assert path.with_suffix('').exists()
+    tsdb.write(dir, 'item', [], fields, gzip=True)
     assert not path.with_suffix('.gz').exists()
     assert path.with_suffix('').exists()
 

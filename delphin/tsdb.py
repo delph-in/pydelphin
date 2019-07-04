@@ -731,7 +731,7 @@ def write(dir: util.PathLike,
           records: Iterable[Record],
           fields: Fields,
           append: bool = False,
-          gzip: Optional[bool] = None,
+          gzip: bool = False,
           encoding: str = 'utf-8') -> None:
     """
     Write *records* to relation *name* in the database at *dir*.
@@ -748,7 +748,7 @@ def write(dir: util.PathLike,
 
     * Writing plain text or compressed data, as appropriate
 
-    * Appending or overwriting data, as appropriate
+    * Appending or overwriting data, as requested
 
     * Using the schema information to format fields
 
@@ -760,6 +760,12 @@ def write(dir: util.PathLike,
       avoid having inconsistent files (e.g., delete any existing
       `item` when writing `item.gz`)
 
+    Note that *append* cannot be used with *gzip* or with an existing
+    gzipped file and in such a case a :exc:`NotImplementedError` will
+    be raised. This may be allowed in the future, but as appending to
+    a gzipped file (in general) results in inefficient compression, it
+    is better to append to plain text and compress when done.
+
     Args:
         dir: path to the database directory
         name: name of the relation to write
@@ -767,8 +773,7 @@ def write(dir: util.PathLike,
         fields: iterable of :class:`Field` objects
         append: if `True`, append to rather than overwrite the file
         gzip: if `True` and the file is not empty, compress the file
-            with `gzip`; if `False`, do not compress; if `None`,
-            compress if overwriting an existing compressed file
+            with `gzip`; if `False`, do not compress
         encoding: character encoding of the file
     Example:
         >>> tsdb.write('my-profile',
@@ -783,11 +788,10 @@ def write(dir: util.PathLike,
         raise TSDBError('invalid test suite directory: {}'.format(dir))
 
     tx_path, gz_path, use_gz = _get_paths(dir, name)
-    if gzip is None:
-        gzip = use_gz
-    dest, other = (gz_path, tx_path) if gzip else (tx_path, gz_path)
+    if append and (gzip or use_gz):
+        raise NotImplementedError('cannot append to a gzipped file')
+
     mode = 'ab' if append else 'wb'
-    append_nonempty = append and dest.is_file() and dest.stat().st_size > 0
 
     with tempfile.NamedTemporaryFile(
             mode='w+b', suffix='.tmp',
@@ -798,7 +802,8 @@ def write(dir: util.PathLike,
                 (join(record, fields) + '\n').encode(encoding))
 
         # only gzip non-empty files
-        gzip = gzip and (f_tmp.tell() != 0 or append_nonempty)
+        gzip = gzip and f_tmp.tell() != 0
+        dest, other = (gz_path, tx_path) if gzip else (tx_path, gz_path)
 
         # now copy the temp file to the destination
         f_tmp.seek(0)
