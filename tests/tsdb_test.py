@@ -84,12 +84,17 @@ class TestDatabase():
         db = tsdb.Database(mini_testsuite)
         assert db.path == mini_testsuite
 
-    def test__getitem__(self, mini_testsuite):
+    def test__getitem__(self, mini_testsuite, empty_testsuite):
         db = tsdb.Database(mini_testsuite)
         items = db['item']
         assert len(list(items)) == 3
+        # relation undefined
         with pytest.raises(tsdb.TSDBError):
             db['not_a_relation']
+        # relation defined by file missing
+        db = tsdb.Database(empty_testsuite)
+        with pytest.raises(tsdb.TSDBError):
+            db['item']
 
 
 def test_escape():

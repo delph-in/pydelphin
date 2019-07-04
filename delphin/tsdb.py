@@ -739,7 +739,7 @@ def write(dir: util.PathLike,
     The simplest way to write data to a file would be something like
     the following:
 
-    >>> with open(os.path.join(db.dir, 'item'), 'w') as fh:
+    >>> with open(os.path.join(db.path, 'item'), 'w') as fh:
     ...     print('\\n'.join(map(tsdb.join, db['item'])), file=fh)
 
     This function improves on that method by doing the following:
@@ -901,7 +901,10 @@ def write_database(db: Database,
     for name in names:
         fields = schema[name]
         if name in db.schema:
-            relation = db[name]
+            try:
+                relation = db[name]
+            except (TSDBError, KeyError):
+                relation = []
             if remake_records:
                 relation = _remake_records(relation, db.schema[name], fields)
         else:
