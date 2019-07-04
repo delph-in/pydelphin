@@ -253,94 +253,176 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
     Args:
         destination (str): path of the new testsuite
         source (str): path to a source testsuite or a file containing
-            sentences; if not given and *in_place* is `False`,
-            sentences are read from stdin
+            sentences; if not given and *refresh* is `False`, sentences
+            are read from stdin
         schema (str): path to a relations file to use for the created
-            testsuite; if `None` and *source* is given, the schema of
-            the source testsuite is used
+            testsuite; if `None` and *source* is a test suite, the
+            schema of *source* is used
         where (str): TSQL condition to filter records by; ignored if
             *source* is not a testsuite
         delimiter (str): if given, split lines from *source* or stdin
             on the character *delimiter*; if *delimiter* is `"@"`,
             split using :func:`delphin.tsdb.split`; a header line
-            with field names is required
+            with field names is required; ignored when the data source
+            is not text lines
         refresh (bool): if `True`, rewrite the data at *destination*;
-            implies *full* is `True`; best combined with *schema* or
-            *gzip* (default: `False`)
+            implies *full* is `True`; ignored if *source* is not
+            `None`, best combined with *schema* or *gzip* (default:
+            `False`)
         skeleton (bool): if `True`, only write tsdb-core files
             (default: `False`)
         full (bool): if `True`, copy all data from the source
-            testsuite (requires *source* to be a testsuite path;
-            default: `False`)
+            testsuite; ignored if the data source is not a testsuite
+            or if *skeleton* is `True` (default: `False`)
         gzip (bool): if `True`, non-empty tables will be compressed
             with gzip
     """
     destination = Path(destination).expanduser()
-    # basic validation
-    if skeleton and full:
-        raise CommandError("'skeleton' is incompatible with 'full'")
-    elif refresh and (source or where or skeleton):
-        raise CommandError("'refresh' is incompatible with 'source', "
-                           "'where', and 'skeleton'")
-    if refresh:
-        source = destination
-        full = True
-    elif source is not None:
-        source = Path(source)
-    if full and (source is None or not source.is_dir()):
-        raise CommandError("'full' must be used with a source testsuite")
+    if source is not None:
+        source = Path(source).expanduser()
     if schema is not None:
-        schema = Path(schema).expanduser()
-    if schema is None and source is not None and source.is_dir():
-        schema = source.joinpath('relations')
-    if schema is None or not schema.is_file():
-        raise CommandError('invalid or missing relations file: {}'
-                           .format(schema))
-    # setup destination testsuite
-    if source != destination:
-        tsdb.initialize_database(destination, schema, files=(not skeleton))
-    dest = tsdb.Database(path=destination)
+        schema = tsdb.read_schema(schema)
+    old_relation_files = []
+
+    # work in-place on destination test suite
+    if source is None and refresh:
+        db = tsdb.Database(destination)
+        old_relation_files = list(db.schema)
+        tsdb.write_database(db, db.path, schema=schema, gzip=gzip)
+
     # input is sentences on stdin or a file of sentences
-    if source is None or source.is_file():
-        if source is None:
-            lines = sys.stdin.readlines()
-        else:
-            lines = source.read_text().splitlines()
-        if delimiter:
-            records = _delimiter_to_records(lines, delimiter,
-                                            dest.schema['item'])
-        else:
-            records = _lines_to_records(lines, dest.schema['item'])
-        tsdb.write(dest.path,
-                   'item',
-                   records,
-                   fields=dest.schema['item'],
-                   gzip=gzip)
+    elif source is None and not refresh:
+        _mkprof_from_lines(
+            destination, sys.stdin, schema, delimiter, gzip)
+    elif source.is_file():
+        with source.open() as fh:
+            _mkprof_from_lines(
+                destination, fh, schema, delimiter, gzip)
+
     # input is source testsuite
     elif source.is_dir():
-        src = tsdb.Database(source)
-        tables = list(dest.schema) if full else tsdb.TSDB_CORE_FILES
-        where = '' if where is None else 'where ' + where
-        for table in tables:
-            if table not in dest.schema:
-                continue
-            if where:
-                # filter the data, but use all if the query fails
-                # (e.g., if the filter and table cannot be joined)
-                try:
-                    records = tsql.select(
-                        '* from {} {}'.format(table, where), src)
-                except tsql.TSQLError:
-                    records = list(src[table])
-            else:
-                records = list(src[table])
-            if records:
-                tsdb.write(dest.path,
-                           table,
-                           records,
-                           dest.schema[table],
-                           gzip=gzip)
+        db = tsdb.Database(source)
+        old_relation_files = list(db.schema)
+        _mkprof_from_database(
+            destination, db, schema, where, full, gzip)
 
+    else:
+        raise CommandError('invalid source for mkprof: {!r}'.format(source))
+
+    _mkprof_cleanup(destination, skeleton, old_relation_files)
+    _mkprof_summarize(destination, tsdb.read_schema(destination))
+
+
+def _mkprof_from_lines(destination, stream, schema, delimiter, gzip):
+    if not schema:
+        raise CommandError(
+            'a schema is required to make a testsuite from text')
+
+    lineiter = iter(stream)
+    colnames, split = _make_split(delimiter, lineiter)
+
+    # setup destination testsuite
+    tsdb.initialize_database(destination, schema, files=True)
+
+    tsdb.write(destination,
+               'item',
+               _lines_to_records(lineiter, colnames, split, schema['item']),
+               fields=schema['item'],
+               gzip=gzip)
+
+
+def _lines_to_records(lineiter, colnames, split, fields):
+    i_ids = set()
+    for i, line in enumerate(lineiter, 1):
+        colvals = split(line)
+        if len(colvals) != len(colnames):
+            raise CommandError(
+                'line values do not match expected fields:\n'
+                '  fields: {}\n'
+                '  values: {}'.format(', '.join(colnames),
+                                      ', '.join(colvals)))
+        colmap = dict(zip(colnames, colvals))
+
+        if 'i-id' not in colmap:
+            colmap['i-id'] = i
+        if colmap['i-id'] in i_ids:
+            raise CommandError('duplicate i-id: {}'.format(colmap['i-id']))
+        i_ids.add(colmap['i-id'])
+
+        yield tsdb.make_record(colmap, fields)
+
+
+def _make_split(delimiter, lineiter):
+
+    if not delimiter:
+
+        def split(line):
+            return (0, line[1:]) if line.startswith('*') else (1, line)
+
+        colnames = ('i-wf', 'i-input')
+
+    else:
+        if delimiter == '@':
+            split = tsdb.split
+        else:
+
+            def split(line):
+                return line.split(delimiter)
+
+        colnames = split(next(lineiter))
+
+    return colnames, split
+
+
+def _mkprof_from_database(destination, db, schema, where, full, gzip):
+    if schema is None:
+        schema = db.schema
+
+    destination.mkdir(exist_ok=True)
+    tsdb.write_schema(destination, schema)
+
+    to_copy = set(schema if full else tsdb.TSDB_CORE_FILES)
+    where = '' if where is None else 'where ' + where
+
+    for table in schema:
+        if table not in to_copy or table not in db:
+            records = []
+        elif where:
+            # filter the data, but use all if the query fails
+            # (e.g., if the filter and table cannot be joined)
+            try:
+                records = tsql.select(
+                    '* from {} {}'.format(table, where), db)
+            except tsql.TSQLError:
+                records = list(db[table])
+        else:
+            records = list(db[table])
+        tsdb.write(destination,
+                   table,
+                   records,
+                   schema[table],
+                   gzip=gzip)
+
+
+def _mkprof_cleanup(destination, skeleton, old_files):
+    schema = tsdb.read_schema(destination)
+    to_keep = set(schema)
+    if skeleton:
+        to_keep = to_keep.intersection(tsdb.TSDB_CORE_FILES)
+    for name in set(schema).union(old_files):
+        tx_path = destination.joinpath(name).with_suffix('')
+        gz_path = destination.joinpath(name).with_suffix('.gz')
+        if (tx_path.is_file()
+            and (name not in to_keep
+                 or (skeleton and tx_path.stat().st_size == 0))):
+            tx_path.unlink()
+        if (gz_path.is_file()
+            and (name not in to_keep
+                 or (skeleton and gz_path.stat().st_size == 0))):
+            gz_path.unlink()
+
+
+def _mkprof_summarize(destination, schema):
     # summarize what was done
     isatty = sys.stdout.isatty()
 
@@ -348,7 +430,7 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
         return '\x1b[1;31m{}\x1b[0m'.format(s) if isatty else s
 
     fmt = '{:>8} bytes\t{}'
-    for filename in ['relations'] + list(dest.schema):
+    for filename in ['relations'] + list(schema):
         path = destination.joinpath(filename)
         if path.is_file():
             stat = path.stat()
@@ -357,36 +439,6 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
             stat = path.with_suffix('.gz').stat()
             print(fmt.format(stat.st_size, _red(filename + '.gz')))
 
-
-def _lines_to_records(lines, fields):
-    for i, line in enumerate(lines, 1):
-        i_wf, i_input = (0, line[1:]) if line.startswith('*') else (1, line)
-        colmap = {'i-id': i, 'i-wf': i_wf, 'i-input': i_input.strip()}
-        yield tsdb.make_record(colmap, fields)
-
-
-def _delimiter_to_records(lines, delimiter, fields):
-    split = tsdb.split if delimiter == '@' else _split(delimiter)
-    lineiter = iter(lines)
-    header = next(lineiter)
-    colnames = split(header)
-    for i, line in enumerate(lineiter, 1):
-        colvals = split(line)
-        if len(colvals) != len(colnames):
-            raise CommandError(
-                'delimited item line does not match the header:\n'
-                '  header: {}\n'
-                '  values: {}'.format(header, line))
-        colmap = dict(zip(colnames, colvals))
-        yield tsdb.make_record(colmap, fields)
-
-
-def _split(delimiter):
-
-    def split(line):
-        return line.split(delimiter)
-
-    return split
 
 ###############################################################################
 # PROCESS #####################################################################

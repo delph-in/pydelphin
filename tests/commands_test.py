@@ -107,21 +107,17 @@ def _bidi_convert(d, srcfmt, tgtfmt):
     convert(str(tgt), tgtfmt, tgtfmt)
 
 
-def test_mkprof(mini_testsuite, sentence_file, tmp_path, monkeypatch):
+def test_mkprof(mini_testsuite, empty_alt_testsuite,
+                sentence_file, tmp_path, monkeypatch):
     ts1 = tmp_path.joinpath('ts1')
     ts1.mkdir()
     ts0 = mini_testsuite
     sentence_file = str(sentence_file)
-    with pytest.raises(CommandError):
-        mkprof(ts1, source=ts0, skeleton=True, full=True)
-    with pytest.raises(CommandError):
-        mkprof(ts1, refresh=True, skeleton=True)
-    with pytest.raises(CommandError):
-        mkprof(ts1, source=ts0, refresh=True)
-    with pytest.raises(CommandError):
-        mkprof(ts1, source=sentence_file, full=True)
+
     with pytest.raises(CommandError):
         mkprof(ts1, source=sentence_file)
+    with pytest.raises(CommandError):
+        mkprof(ts1, source='not a test suite')
 
     relations = str(Path(mini_testsuite).joinpath('relations'))
 
@@ -135,6 +131,16 @@ def test_mkprof(mini_testsuite, sentence_file, tmp_path, monkeypatch):
     mkprof(ts1, source=ts0, full=True)
     mkprof(ts1, source=ts0, skeleton=True)
     mkprof(ts1, source=ts0, full=True, gzip=True)
+
+    mkprof(ts1, refresh=True, schema=empty_alt_testsuite.joinpath('relations'))
+    item = ts1.joinpath('item')
+    assert item.read_text() == (
+        '10@It rained.@1-feb-2018 15:00\n'
+        '20@Rained.@01-02-18 15:00:00\n'
+        '30@It snowed.@2018-2-1 (15:00:00)\n')
+    mkprof(ts1, refresh=True, gzip=True)
+    assert not item.with_suffix('').exists()
+    assert item.with_suffix('.gz').is_file()
 
 
 def test_process(mini_testsuite):
