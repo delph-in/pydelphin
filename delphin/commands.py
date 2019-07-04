@@ -332,6 +332,14 @@ def _mkprof_from_lines(destination, stream, schema, delimiter, gzip):
 
 
 def _lines_to_records(lineiter, colnames, split, fields):
+
+    with_i_id = with_i_length = False
+    for field in fields:
+        if field.name == 'i-id':
+            with_i_id = True
+        elif field.name == 'i-length':
+            with_i_length = True
+
     i_ids = set()
     for i, line in enumerate(lineiter, 1):
         colvals = split(line)
@@ -343,11 +351,16 @@ def _lines_to_records(lineiter, colnames, split, fields):
                                       ', '.join(colvals)))
         colmap = dict(zip(colnames, colvals))
 
-        if 'i-id' not in colmap:
-            colmap['i-id'] = i
-        if colmap['i-id'] in i_ids:
-            raise CommandError('duplicate i-id: {}'.format(colmap['i-id']))
-        i_ids.add(colmap['i-id'])
+        if with_i_id:
+            if 'i-id' not in colmap:
+                colmap['i-id'] = i
+            if colmap['i-id'] in i_ids:
+                raise CommandError('duplicate i-id: {}'
+                                   .format(colmap['i-id']))
+            i_ids.add(colmap['i-id'])
+
+        if with_i_length and 'i-length' not in colmap and 'i-input' in colmap:
+            colmap['i-length'] = len(colmap['i-input'].split())
 
         yield tsdb.make_record(colmap, fields)
 
