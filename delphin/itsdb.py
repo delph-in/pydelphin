@@ -27,10 +27,11 @@ import tempfile
 from datetime import datetime
 import logging
 import collections
+import itertools
 
 from delphin import util
 from delphin import tsdb
-from delphin.interface import Processor, Response, Result
+from delphin import interface
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
@@ -61,7 +62,7 @@ Transaction = List[Tuple[str, tsdb.ColumnMap]]
 
 class FieldMapper(object):
     """
-    A class for mapping responses to [incr tsdb()] fields.
+    A class for mapping between response objects and test suites.
 
     This class provides two methods for mapping responses to fields:
 
@@ -72,6 +73,11 @@ class FieldMapper(object):
     * :meth:`cleanup` -- returns any (table, data) tuples resulting
       from aggregated data over all runs, then clears this data
 
+    And one method for mapping test suites to responses:
+
+    * :meth:`collect` -- yield :class:`~delphin.interface.Response`
+      objects by collecting the relevant data from the test suite
+
     In addition, the :attr:`affected_tables` attribute should list
     the names of tables that become invalidated by using this
     FieldMapper to process a profile. Generally this is the list of
@@ -79,8 +85,10 @@ class FieldMapper(object):
     but it may also include those that rely on the previous set
     (e.g., treebanking preferences, etc.).
 
-    Alternative [incr tsdb()] schema can be handled by overriding
-    these two methods and the __init__() method.
+    Alternative [incr tsdb()] schemas can be handled by overriding
+    these three methods and the __init__() method. Note that
+    overriding :meth:`collect` is only necessary for mapping back from
+    test suites to responses.
 
     Attributes:
         affected_tables: list of tables that are affected by the
@@ -113,7 +121,7 @@ class FieldMapper(object):
             update fold score
         '''.split()
 
-    def map(self, response: Response) -> Transaction:
+    def map(self, response: interface.Response) -> Transaction:
         """
         Process *response* and return a list of (table, rowdata) tuples.
         """
@@ -123,7 +131,7 @@ class FieldMapper(object):
         parse_id = patch['parse-id']
         transaction.append(('parse', patch))
 
-        for result in response.results():  # type: Result
+        for result in response.results():  # type: interface.Result
             patch = self._map_result(result, parse_id)
             transaction.append(('result', patch))
 
@@ -139,7 +147,7 @@ class FieldMapper(object):
 
         return transaction
 
-    def _map_parse(self, response: Response) -> tsdb.ColumnMap:
+    def _map_parse(self, response: interface.Response) -> tsdb.ColumnMap:
         patch = {}  # type: tsdb.ColumnMap
         # custom remapping, cleanup, and filling in holes
         patch['i-id'] = response.get('keys', {}).get('i-id', -1)
@@ -165,7 +173,9 @@ class FieldMapper(object):
                 patch[key] = response[key]
         return patch
 
-    def _map_result(self, result: Result, parse_id: int) -> tsdb.ColumnMap:
+    def _map_result(self,
+                    result: interface.Result,
+                    parse_id: int) -> tsdb.ColumnMap:
         patch = {'parse-id': parse_id}  # type: tsdb.ColumnMap
         if 'flags' in result:
             patch['flags'] = util.SExpr.format(result['flags'])
@@ -198,6 +208,35 @@ class FieldMapper(object):
         self._last_run_id = -1
 
         return inserts
+
+    def collect(self, ts: 'TestSuite') -> Iterable[interface.Response]:
+        """
+        Map from test suites to response objects.
+
+        The data in the test suite must be ordered.
+
+        .. note::
+
+           This method stores the 'item', 'parse', and 'result' tables
+           in memory during operation, so it is not recommended when a
+           test suite is very large as it may exhaust the system's
+           available memory.
+        """
+        parse_map = {key: list(map(dict, grp))
+                     for key, grp
+                     in itertools.groupby(ts['parse'],
+                                          key=lambda row: row['i-id'])}
+        result_map = {key: list(map(dict, grp))
+                      for key, grp
+                      in itertools.groupby(ts['result'],
+                                           key=lambda row: row['parse-id'])}
+        for item in ts['item']:
+            d = dict(item)
+            for parse in parse_map.get(d['i-id'], []):
+                response = interface.Response(d)
+                response.update(parse)
+                response['results'] = result_map.get(parse['parse-id'], [])
+                yield response
 
 
 ##############################################################################
@@ -668,8 +707,18 @@ class TestSuite(tsdb.Database):
                 )
             table._sync_with_file()
 
+    def processed_items(
+            self,
+            fieldmapper: FieldMapper = None) -> Iterable[interface.Response]:
+        """
+        Iterate over the data as :class:`Response` objects.
+        """
+        if fieldmapper is None:
+            fieldmapper = FieldMapper()
+        yield from fieldmapper.collect(self)
+
     def process(self,
-                cpu: Processor,
+                cpu: interface.Processor,
                 selector: Tuple[str, str] = None,
                 source: tsdb.Database = None,
                 fieldmapper: FieldMapper = None,

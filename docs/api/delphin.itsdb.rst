@@ -58,7 +58,10 @@ to handle non-standard schemas, e.g., for machine translation
 workflows.
 
 .. autoclass:: FieldMapper
-   :members:
+
+   .. automethod:: map
+   .. automethod:: cleanup
+   .. automethod:: collect
 
 Utility Functions
 -----------------
