@@ -2,35 +2,6 @@
 
 """
 Classes and functions for parsing and inspecting TDL.
-
-This module makes it easy to inspect what is written on definitions in
-Type Description Language (TDL), but it doesn't interpret type
-hierarchies (such as by performing unification, subsumption
-calculations, or creating GLB types). That is, while it wouldn't be
-useful for creating a parser, it is useful if you want to statically
-inspect the types in a grammar and the constraints they apply.
-
-TDL was originally described in Krieger and Schäfer, 1994 [KS1994]_,
-but it describes many features not in use by the DELPH-IN variant,
-such as disjunction. Copestake, 2002 [COP2002]_ better describes the
-subset in use by DELPH-IN, but it has become outdated and its TDL
-syntax description is inaccurate in places, but it is still a great
-resource for understanding the interpretation of TDL grammar
-descriptions. The TdlRfc_ page of the `DELPH-IN Wiki`_ contains the
-most up-to-date description of the TDL syntax used by DELPH-IN
-grammars, including features such as documentation strings and regular
-expressions.
-
-.. [KS1994] Hans-Ulrich Krieger and Ulrich Schäfer.  TDL: a type
-  description language for constraint-based grammars. In Proceedings
-  of the 15th conference on Computational linguistics, volume 2, pages
-  893–899. Association for Computational Linguistics, 1994.
-
-.. [COP2002] Ann Copestake. Implementing typed feature structure
-  grammars, volume 110. CSLI publications Stanford, 2002.
-
-.. _TdlRfc: http://moin.delph-in.net/TdlRfc
-.. _`DELPH-IN Wiki`: http://moin.delph-in.net/
 """
 
 from typing import Tuple, Union, Generator
