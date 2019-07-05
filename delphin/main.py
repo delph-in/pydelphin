@@ -202,7 +202,7 @@ convert_parser.add_argument(
     'PATH',
     nargs='?',
     help=('file with representations to convert or testsuite directory '
-          'from which result:mrs will be selected; if not given, '
+          'from which result.mrs will be selected; if not given, '
           '<stdin> is read as though it were a file'))
 convert_parser.add_argument(
     '--list',
@@ -243,9 +243,9 @@ convert_parser.add_argument(
 convert_parser.add_argument(
     '--select',
     metavar='QUERY',
-    default='result:mrs',
+    default='result.mrs',
     help=('TSQL query for selecting MRS data when PATH points to '
-          'a testsuite directory (default: result:mrs)'))
+          'a testsuite directory (default: result.mrs)'))
 convert_parser.add_argument(
     '--show-status',
     action='store_true',
@@ -372,7 +372,7 @@ compare_parser.add_argument(
 compare_parser.add_argument(
     '--select',
     metavar='QUERY',
-    default='item:i-id item:i-input result:mrs',
+    default='item.i-id item.i-input result.mrs',
     help=('TSQL query for selecting (id, input, mrs) triples from '
           'TESTSUITE and GOLD (default: \'i-id i-input mrs\')'))
 
