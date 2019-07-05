@@ -14,12 +14,26 @@ import importlib
 import logging
 import warnings
 
+try:
+    from delphin import highlight as _delphin_hl
+    from pygments import highlight as _highlight
+    from pygments.formatters import Terminal256Formatter as _Formatter
+except ImportError:
+    simplemrs_highlight = None
+else:
+    _lexer = _delphin_hl.SimpleMRSLexer()
+    _formatter = _Formatter(style=_delphin_hl.MRSStyle)
+
+    def simplemrs_highlight(text):
+        return _highlight(text, _lexer, _formatter)
+
+
 from delphin import exceptions
 from delphin import tsdb, itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
 from delphin import util
-from delphin.exceptions import PyDelphinException
+from delphin.exceptions import PyDelphinException, PyDelphinWarning
 import delphin.codecs
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -205,12 +219,13 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
 
 
 def _colorize(text):
-    from pygments import highlight as hl
-    from pygments.formatters import Terminal256Formatter as Formatter
-    from delphin.extra.highlight import SimpleMRSLexer, MRSStyle
-    lexer = SimpleMRSLexer()
-    formatter = Formatter(style=MRSStyle)
-    return hl(text, lexer, formatter)
+    if simplemrs_highlight:
+        return simplemrs_highlight(text)
+    else:
+        warnings.warn(
+            'delphin.highlight or its dependencies are not installed',
+            PyDelphinWarning)
+        return text
 
 
 ###############################################################################

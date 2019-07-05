@@ -32,7 +32,7 @@ setup(
     author_email=about['__email__'],
     license=about['__license__'],
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
@@ -60,7 +60,8 @@ setup(
         # networkx 2.2 is not compatible with Python 2.7 (apparently) and 3.5
         'networkx >=2.0,<2.2',
         'requests',
-        'Pygments',
+        'delphin.highlight == 1.0.0',
+        'delphin-latex == 1.0.0',
     ],
     extras_require={
         'docs': docs_require,
