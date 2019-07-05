@@ -4,6 +4,7 @@ dist/
 .tox/
 .cache/
 .pytest_cache/
+.mypy_cache/
 PyDelphin.egg-info/
 docs/_build/
 docs/_templates/
