@@ -111,7 +111,7 @@ def test_parse_select_where():
 
 
 def test_select(mini_testsuite):
-    ts = itsdb.TestSuite(str(mini_testsuite))
+    ts = itsdb.TestSuite(mini_testsuite)
     assert list(tsql.select('i-input', ts)) == [
         ('It rained.',), ('Rained.',), ('It snowed.',)]
     assert list(tsql.select('i-input from item', ts)) == [
@@ -133,7 +133,7 @@ def test_select(mini_testsuite):
 
 
 def test_select_where(mini_testsuite):
-    ts = itsdb.TestSuite(str(mini_testsuite))
+    ts = itsdb.TestSuite(mini_testsuite)
     assert list(tsql.select('i-input where i-input ~ "It"', ts)) == [
         ('It rained.',), ('It snowed.',)]
     assert list(tsql.select('i-input where i-input ~ "It" or i-id = 20', ts)) == [

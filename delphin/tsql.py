@@ -542,7 +542,7 @@ def _join(selection: Selection,
 
     data = []  # type: List[tsdb.Record]
     if not selection.joined:
-        _merge_fields(selection, name, fields)
+        _merge_fields(selection, name, [], fields)
         data.extend(db.select_from(name, columns))
     else:
         on = []  # type: List[str]
@@ -567,13 +567,14 @@ def _join(selection: Selection,
                 data.extend(lrow + rrow
                             for rrow in right.get(keys, [rfill]))
 
-        _merge_fields(selection, name, fields)
+        _merge_fields(selection, name, on, fields)
 
     selection.data = data
 
 
 def _merge_fields(selection: Selection,
                   relationname: str,
+                  on: _Names,
                   fields: tsdb.Fields) -> None:
     offset = len(selection.fields)
     for i, field in enumerate(fields, offset):
@@ -581,6 +582,11 @@ def _merge_fields(selection: Selection,
         if field.name not in selection._field_index:
             selection._field_index[field.name] = i
         selection._field_index[relationname + '.' + field.name] = i
+    # also add qualified names for 'on' fields in case the joins
+    # happen in a strange order
+    for name in on:
+        i = selection._field_index[name]
+        selection._field_index[relationname + '.' + name] = i
     selection.joined.add(relationname)
 
 
