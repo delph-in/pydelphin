@@ -12,11 +12,8 @@ with open(os.path.join(base_dir, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 # thanks: https://snarky.ca/clarifying-pep-518/
-docs_require = [
-    'sphinx',
-    'sphinx-rtd-theme',
-    'sphinx_autodoc_typehints'
-]
+with open(os.path.join(base_dir, 'docs', 'requirements.txt')) as f:
+    docs_require = f.readlines()
 tests_require = [
     'pytest'
 ]
