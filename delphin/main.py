@@ -400,9 +400,10 @@ repp_parser.add_argument(
     '--trace', action='store_true',
     help='print each step that modifies an input string')
 
-subparser = parser.add_subparsers(title='commands')
+subparser = parser.add_subparsers(title='available subcommands', metavar='')
 subparser.add_parser(
     'convert',
+    help='Convert DELPH-IN Semantics representations',
     parents=[common_parser, convert_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=_redent("""
@@ -412,13 +413,15 @@ subparser.add_parser(
         """))
 subparser.add_parser(
     'select',
+    help='Select data from [incr tsdb()] test suites',
     parents=[common_parser, select_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=_redent("""
-        Select data from [incr tsdb()] testsuites.
+        Select data from [incr tsdb()] test suites.
         """))
 subparser.add_parser(
     'mkprof',
+    help='Create [incr tsdb()] test suites',
     parents=[common_parser, mkprof_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=_redent("""
@@ -442,6 +445,7 @@ subparser.add_parser(
     """))
 subparser.add_parser(
     'process',
+    help='Process [incr tsdb()] test suites using ACE',
     parents=[common_parser, process_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=_redent("""
@@ -460,7 +464,9 @@ subparser.add_parser(
             where i-wf != 2
     """))
 subparser.add_parser(
-    'compare', parents=[common_parser, compare_parser],
+    'compare',
+    help='Compare MRS results across test suites',
+    parents=[common_parser, compare_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=_redent("""
         Compare MRS results in test and gold [incr tsdb()] testsuites.
@@ -470,7 +476,9 @@ subparser.add_parser(
         testsuites and how many are shared.
     """))
 subparser.add_parser(
-    'repp', parents=[common_parser, repp_parser],
+    'repp',
+    help='Tokenize sentences using REPP',
+    parents=[common_parser, repp_parser],
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=_redent("""
         Tokenize sentences using a Regular Expression PreProcessor (REPP).
