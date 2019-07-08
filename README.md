@@ -22,11 +22,11 @@ neural semantic parsing ([Buys & Blunsom, 2017][]), and more.
 [Muszyńska, 2016]: http://www.aclweb.org/anthology/P/P16/P16-3014.pdf
 [Buys & Blunsom,  2017]: http://www.aclweb.org/anthology/P/P17/P17-1112.pdf
 
-Documentation, including tutorials and an API reference, is available here:
+Documentation, including guides and an API reference, is available here:
 http://pydelphin.readthedocs.io/
 
 New to PyDelphin? Want to see examples? Try the
-[walkthrough](https://pydelphin.readthedocs.io/en/latest/tutorials/walkthrough.html).
+[walkthrough](https://pydelphin.readthedocs.io/en/latest/guides/walkthrough.html).
 
 ## Installation and Upgrading
 
@@ -36,11 +36,11 @@ Get the latest release of PyDelphin from [PyPI][]:
 $ pip install pydelphin
 ```
 
-[PyPI]: https://pypi.python.org/pypi/pyDelphin
+[PyPI]: https://pypi.python.org/pypi/PyDelphin
 
 For more information about requirements, installing from source, and
 running unit tests, please see the
-[documentation](https://pydelphin.readthedocs.io/en/latest/tutorials/setup.html).
+[documentation](https://pydelphin.readthedocs.io/en/latest/guides/setup.html).
 
 API changes in new versions are documented in the
 [CHANGELOG](CHANGELOG.md), but for any unexpected changes please
@@ -62,8 +62,9 @@ Semantic Components and Interfaces:
 - [`delphin.predicate`][]: [Semantic Predicates](http://moin.delph-in.net/PredicateRfc)
 - [`delphin.scope`][]:     Underspecified scope
 - [`delphin.lnk`][]:       Lnk surface alignments
+- [`delphin.codecs`][]:    A wide variety of serialization codecs for MRS, EDS, and DMRS
 
-Grammar and Parse Inspection
+Grammar and Parse Inspection:
 - [`delphin.derivation`][]: [Derivation trees](http://moin.delph-in.net/ItsdbDerivations)
 - [`delphin.tdl`][]:        [Type-Description Language](http://moin.delph-in.net/TdlRfc)
 - [`delphin.tfs`][]:        Feature structures and type hierarchies
@@ -72,27 +73,33 @@ Tokenization:
 - [`delphin.repp`][]:   [Regular-Expression PreProcessor](http://moin.delph-in.net/ReppTop)
 - [`delphin.tokens`][]: [YY Token lattices](http://moin.delph-in.net/PetInput#YY_Input_Mode)
 
-Corpus Management and Processing
+Corpus Management and Processing:
 - [`delphin.itsdb`][]: [\[incr tsdb()\]](http://moin.delph-in.net/ItsdbTop) profiles
+- [`delphin.tsdb`][]: Low-level interface to test suite databases
 - [`delphin.tsql`][]:  [TSQL](http://moin.delph-in.net/TsqlRfc) test suite queries
 
-In addition, PyDelphin provides the following packages and tools for convenience:
+Interfaces with External Processors:
+- [`delphin.interface`][]: Structures for interacting with external processors
+- [`delphin.ace`][]:       Python wrapper for common tasks using [ACE](http://sweaglesw.org/linguistics/ace/)
+- [`delphin.web`][]:       Client for the [web API](http://moin.delph-in.net/ErgApi)
 
+In addition, some commands are available via the Python API or the command line:
 - [`delphin.commands`][]:        Functional or CLI interface to common tasks
-- [`delphin.interfaces.ace`][]:  Python wrapper for common tasks using [ACE](http://sweaglesw.org/linguistics/ace/)
-- [`delphin.interfaces.rest`][]: Client for the [web API](http://moin.delph-in.net/ErgApi)
-- [`delphin.extra.highlight`][]: [Pygments](http://pygments.org/)-based syntax highlighting (currently just for TDL and SimpleMRS)
-- [`delphin.extra.latex`][]:     Formatting for LaTeX (just DMRS)
+
+For convenience, some plugins are included, too:
+- [`delphin.highlight`][]:       [Pygments](http://pygments.org/)-based syntax highlighting (currently just for TDL and SimpleMRS)
+- [`delphin.codecs.dmrstikz`][]: Tikz-based formatting for DMRS (via the [`delphin-latex`](https://github.com/delph-in/delphin-latex) plugin
 
 
+[`delphin.codecs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.codecs.html
 [`delphin.commands`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.commands.html
 [`delphin.derivation`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.derivation.html
 [`delphin.dmrs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.dmrs.html
 [`delphin.eds`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.eds.html
-[`delphin.extra.highlight`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.extra.html#module-delphin.extra.highlight
-[`delphin.extra.latex`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.extra.html#module-delphin.extra.latex
-[`delphin.interfaces.ace`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.interfaces.ace.html
-[`delphin.interfaces.rest`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.interfaces.rest.html
+[`delphin.highlight`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.highlight.html
+[`delphin.codecs.dmrstikz`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.codecs.dmrstikz.html
+[`delphin.ace`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.ace.html
+[`delphin.web`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.web.html
 [`delphin.itsdb`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.itsdb.html
 [`delphin.lnk`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.lnk.html
 [`delphin.mrs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.mrs.html
