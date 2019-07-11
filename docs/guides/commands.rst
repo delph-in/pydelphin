@@ -148,7 +148,7 @@ profile using TSQL_ queries. For example, if you want to get the
 In many cases, the ``from`` clause of the query is not necessary, and
 the appropriate tables will be selected automatically.  Fields from
 multiple tables can be used and the tables containing them will be
-automatically :func:`joined <delphin.itsdb.join>`:
+automatically joined:
 
 .. code:: console
 

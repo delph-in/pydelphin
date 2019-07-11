@@ -49,7 +49,7 @@ the ``--upgrade`` flag to the command.
 
 .. note::
 
-  In general, it is a good idea to use virtual environments to keep
+  It is strongly recommended to use virtual environments to keep
   Python packages and dependencies confined to a specific
   environment. For more information, see here:
   https://packaging.python.org/tutorials/installing-packages/#creating-virtual-environments

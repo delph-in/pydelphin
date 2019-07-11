@@ -5,117 +5,149 @@ Walkthrough of PyDelphin Features
 This guide provides a tour of the main features offered by PyDelphin.
 
 
-ACE and HTTP Interfaces
------------------------
+ACE and Web Interfaces
+----------------------
 
 PyDelphin works with a number of data types, and a simple way to get
 some data to play with is to parse a sentence. PyDelphin doesn't parse
 things on its own, but it provides two interfaces to external
 processors: one for the `ACE <http://sweaglesw.org/linguistics/ace/>`_
-processor and another for the `HTTP-based "web API"
-<http://moin.delph-in.net/ErgApi>`_. I'll first show the web API
+processor and another for the `HTTP-based "Web API"
+<http://moin.delph-in.net/ErgApi>`_. I'll first show the Web API
 as it's the simplest for parsing a single sentence:
 
->>> from delphin.interfaces import rest
->>> response = rest.parse('Abrams chased Browne', params={'mrs': 'json'})
+>>> from delphin import web
+>>> response = web.parse('Abrams chased Browne', params={'mrs': 'json'})
 >>> response.result(0).mrs()
-<Mrs object (proper named chase proper named) at 139897112151488>
+<MRS object (proper_q named chase_v_1 proper_q named) at 139897112151488>
 
 The response object returned by interfaces is a basic dictionary that
 has been augmented with convenient access methods (such as `result()`
-and `mrs()` above). Note that the web API is platform-neutral, and is
+and `mrs()` above). Note that the Web API is platform-neutral, and is
 thus currently the only way to dynamically retrieve parses in PyDelphin
 on a Windows machine.
 
 .. seealso::
-  - Wiki for the HTTP ("RESTful") API: http://moin.delph-in.net/ErgApi
+  - Wiki for the Web API: http://moin.delph-in.net/ErgApi
   - Bottlenose server: https://github.com/delph-in/bottlenose
-  - :mod:`delphin.interfaces.rest` module
-  - :mod:`delphin.interfaces.ParseResponse` module
+  - :mod:`delphin.web` module
+  - :mod:`delphin.interface` module
 
 If you're on a Linux or Mac machine and have
 `ACE <http://sweaglesw.org/linguistics/ace/>`_ installed and a grammar
 image available, you can use the ACE interface, which is faster than
-the web API and returns more complete response information.
+the Web API and returns more complete response information.
 
->>> from delphin.interfaces import ace
->>> response = ace.parse('erg-1214-x86-64-0.9.27.dat', 'Abrams chased Browne')
+>>> from delphin import ace
+>>> response = ace.parse('~/grammars/erg-2018-x86-64-0.9.30.dat', 'Abrams chased Browne')
 NOTE: parsed 1 / 1 sentences, avg 2135k, time 0.01316s
 >>> response.result(0).mrs()
-<Mrs object (proper named chase proper named) at 139897048034552>
+<MRS object (proper_q named chase_v_1 proper_q named) at 139897048034552>
 
 .. seealso::
   - ACE: http://sweaglesw.org/linguistics/ace/
-  - :mod:`delphin.interfaces.ace` module
+  - :mod:`delphin.ace` module
   - :doc:`ace`
 
 I will use the `response` object from ACE to illustrate some other
 features below.
 
 
-\*MRS Inspection
-----------------
+Inspecting Semantic Structures
+------------------------------
 
 The original motivation for PyDelphin and the area with the most work
-is in modeling MRS representations.
+is in modeling DELPH-IN Semantics representations such as MRS.
 
->>> x = response.result(0).mrs()
->>> [ep.pred for ep in x.eps()]
+>>> m = response.result(0).mrs()
+>>> [ep.predicate for ep in m.rels]
 ['proper_q', 'named', '_chase_v_1', 'proper_q', 'named']
->>> x.variables()
+>>> list(m.variables)
 ['h0', 'e2', 'h4', 'x3', 'h5', 'h6', 'h7', 'h1', 'x9', 'h10', 'h11', 'h12', 'h13']
->>> x.nodeid('x3')
-10001
->>> x.ep(x.nodeid('x3'))
-<ElementaryPredication object (named (x3)) at 140597926475360>
->>> x.ep(x.nodeid('x3', quantifier=True))
-<ElementaryPredication object (proper_q (x3)) at 140597926475240>
->>> x.ep(x.nodeid('e2')).args
+>>> # get an EP by its ID (generally its intrinsic variable)
+>>> m['x3']
+<EP object (h7:named(CARG Abrams, ARG0 x3)) at 140709661206856>
+>>> # quantifier IDs generally just replace 'x' with 'q'
+>>> m['q3']
+<EP object (h4:proper_q(ARG0 x3, RSTR h5, BODY h6)) at 140709661206760>
+>>> # but if you want to be more careful you can do this...
+>>> qmap = m.quantifier_map()
+>>> m[qmap['x3']]
+<EP object (h4:proper_q(ARG0 x3, RSTR h5, BODY h6)) at 140709661206760>
+>>> m['e2'].args
 {'ARG0': 'e2', 'ARG1': 'x3', 'ARG2': 'x9'}
->>> [(hc.hi, hc.relation, hc.lo) for hc in x.hcons()]
+>>> [(hc.hi, hc.relation, hc.lo) for hc in m.hcons]
 [('h0', 'qeq', 'h1'), ('h5', 'qeq', 'h7'), ('h11', 'qeq', 'h13')]
 
 .. seealso::
   - Wiki of MRS topics: http://moin.delph-in.net/RmrsTop
-  - :mod:`delphin.mrs.xmrs` module
+  - :mod:`delphin.mrs` module
 
-Beyond the basic modeling of semantic structures, there are a number of
-additional functions for analyzing the structures, such as from the
-:mod:`delphin.mrs.compare` and :mod:`delphin.mrs.query` modules:
+Beyond the basic modeling of semantic structures, there are some
+semantic operations defined in the :mod:`delphin.mrs` module.
 
->>> from delphin.mrs import compare
->>> compare.isomorphic(x, x)
+>>> from delphin import mrs
+>>> mrs.is_isomorphic(m, m)
 True
->>> compare.isomorphic(x, response.result(1).mrs())
+>>> mrs.is_isomorphic(m, response.result(1).mrs())
 False
->>> from delphin.mrs import query
->>> query.select_eps(response.result(1).mrs(), pred='named')
-[<ElementaryPredication object (named (x3)) at 140244783534752>, <ElementaryPredication object (named (x9)) at 140244783534272>]
->>> x.args(10000)
-{'ARG0': 'x3', 'RSTR': 'h5', 'BODY': 'h6'}
->>> query.find_argument_target(x, 10000, 'RSTR')
-10001
->>> for sg in query.find_subgraphs_by_preds(x, ['named', 'proper_q'], connected=True):
-...     print(sg.nodeids())
-... 
-[10000, 10001]
-[10003, 10004]
+>>> mrs.has_intrinsic_variable_property(m)
+True
+>>> mrs.is_connected(m)
+True
 
 .. seealso::
   - MRS isomorphism wiki: http://moin.delph-in.net/MrsIsomorphism
-  - :mod:`delphin.mrs.compare` module
-  - :mod:`delphin.mrs.query` module
+
+Scoping semantic structures such as MRS and DMRS can make use of the
+:mod:`delphin.scope` module, which allows for inspection of the scope
+structures:
+
+>>> from delphin import scope
+>>> >>> for label, frag in scope.tree_fragments(m).items():
+...     print(label, [m[id].predicate for id in frag.ids], frag.qeqs)
+... 
+h0 [] {'h1': UnderspecifiedScope({'e2'}, {}, {})}
+h4 ['proper_q'] {'h7': UnderspecifiedScope({'x3'}, {}, {})}
+h10 ['proper_q'] {'h13': UnderspecifiedScope({'x9'}, {}, {})}
+
+.. seealso::
+  - :mod:`delphin.scope` module
 
 
-\*MRS Conversion
-----------------
+Converting Semantic Representations
+-----------------------------------
 
-Conversions between MRS and DMRS representations is seamless in
-PyDelphin, making it easy to convert between many formats (note that
-some outputs are abbreviated here):
+Conversions between MRS, DMRS, and EDS representations are a single
+function call in PyDelphin. The converted representation has its own
+data structures so it can be inspected and manipulated in a natural
+way for the respective formalism. Here is DMRS conversion from MRS:
 
->>> from delphin.mrs import simplemrs, mrx, dmrx
->>> print(simplemrs.dumps([x], pretty_print=True))
+>>> from delphin import dmrs
+>>> dmrs.from_mrs(m)
+<DMRS object (proper_q named _chase_v_1 proper_q named) at 140709655360704>
+
+And EDS conversion from MRS:
+
+>>> from delphin import eds
+>>> eds.from_mrs(m)
+<EDS object (proper_q named _chase_v_1 proper_q named) at 140709655349560>
+
+It is also possible to convert to MRS from DMRS.
+
+
+Serializing Semantic Representations
+------------------------------------
+
+The DELPH-IN community has designed many serialization formats of the
+semantic representations for various uses. For instance, the JSON
+formats are used in the Web API, and the PENMAN formats are sometimes
+used in machine learning applications. PyDelphin implements almost all
+of these formats, available in the :doc:`../api/delphin.codecs`
+namespace.
+
+>>> from delphin.codecs import simplemrs, mrx
+>>> print(simplemrs.encode(m, indent=True))
 [ TOP: h0
   INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
   RELS: < [ proper_q<0:6> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: sg IND: + ] RSTR: h5 BODY: h6 ]
@@ -124,29 +156,39 @@ some outputs are abbreviated here):
           [ proper_q<14:20> LBL: h10 ARG0: x9 RSTR: h11 BODY: h12 ]
           [ named<14:20> LBL: h13 ARG0: x9 CARG: "Browne" ] >
   HCONS: < h0 qeq h1 h5 qeq h7 h11 qeq h13 > ]
->>> print(mrx.dumps([x], pretty_print=True))
-<mrs-list>
+>>> print(mrx.encode(m, indent=True))
 <mrs cfrom="-1" cto="-1"><label vid="0" /><var sort="e" vid="2">
 [...]
 </mrs>
-</mrs-list>
->>> print(dmrx.dumps([x], pretty_print=True))
-<dmrs-list>
+
+To serialize a different representation you must convert it first:
+
+>>> d = dmrs.from_mrs(m)
+>>> from delphin.codecs import dmrx
+>>> print(dmrx.encode(d, indent=True))
 <dmrs cfrom="-1" cto="-1" index="10002">
 [...]
 </dmrs>
-</dmrs-list>
+>>> e = eds.from_mrs(m)
+>>> from delphin.codecs import eds as edsnative  # avoid name collision
+>>> print(edsnative.encode(e, indent=True))
+{e2:
+ _1:proper_q<0:6>[BV x3]
+ x3:named<0:6>("Abrams")[]
+ e2:_chase_v_1<7:13>[ARG1 x3, ARG2 x9]
+ _2:proper_q<14:20>[BV x9]
+ x9:named<14:20>("Browne")[]
+}
+
 
 .. seealso::
   - Wiki of MRS formats: http://moin.delph-in.net/MrsRfc
-  - :mod:`delphin.mrs.simplemrs` module
-  - :mod:`delphin.mrs.mrx` module
-  - :mod:`delphin.mrs.dmrx` module
+  - :doc:`../api/delphin.codecs` namespace
 
 Some formats are currently export-only:
 
->>> from delphin.mrs import prolog, simpledmrs
->>> print(prolog.dumps([x], pretty_print=True))
+>>> from delphin.codecs import mrsprolog
+>>> print(mrsprolog.encode(m, indent=True))
 psoa(h0,e2,
   [rel('proper_q',h4,
        [attrval('ARG0',x3),
@@ -167,121 +209,13 @@ psoa(h0,e2,
        [attrval('CARG','Browne'),
         attrval('ARG0',x9)])],
   hcons([qeq(h0,h1),qeq(h5,h7),qeq(h11,h13)]))
->>> print(simpledmrs.dumps([x], pretty_print=True))
-dmrs {
-  [top=10002 index=10002]
-  10000 [proper_q<0:6> x PERS=3 NUM=sg IND=+];
-  10001 [named<0:6>("Abrams") x PERS=3 NUM=sg IND=+];
-  10002 [_chase_v_1<7:13> e SF=prop TENSE=past MOOD=indicative PROG=- PERF=-];
-  10003 [proper_q<14:20> x PERS=3 NUM=sg IND=+];
-  10004 [named<14:20>("Browne") x PERS=3 NUM=sg IND=+];
-  10000:RSTR/H -> 10001;
-  10002:ARG1/NEQ -> 10001;
-  10002:ARG2/NEQ -> 10004;
-  10003:RSTR/H -> 10004;
-}
-
-.. seealso::
-  - :mod:`delphin.mrs.prolog` module
-  - :mod:`delphin.mrs.simpledmrs` module
-
-PyDelphin also handles basic conversion to Elementary Dependency
-Structures (EDS). The conversion is lossy, so it's not currently
-possible to convert from EDS to \*MRS. Unlike the export-only formats
-shown above, however, it is possible to read EDS data and convert to
-other EDS formats (see below).
-
->>> from delphin.mrs import eds
->>> print(eds.dumps([x], pretty_print=True))
-{e2:
- _1:proper_q<0:6>[BV x3]
- x3:named<0:6>("Abrams")[]
- e2:_chase_v_1<7:13>[ARG1 x3, ARG2 x9]
- _2:proper_q<14:20>[BV x9]
- x9:named<14:20>("Browne")[]
-}
-
-.. seealso::
-  - :mod:`delphin.mrs.eds` module
-
-MRS, DMRS, and EDS all support `to_dict()` and `from_dict()` methods,
-which make it easy to serialize to JSON.
-
->>> import json
->>> from delphin.mrs import Mrs, Dmrs
->>> print(json.dumps(Mrs.to_dict(x), indent=2))
-{
-  "relations": [
-    {
-      "label": "h4",
-      "predicate": "proper_q",
-[...]
-}
->>> print(json.dumps(Dmrs.to_dict(x), indent=2))
-{
-  "nodes": [
-    {
-      "nodeid": 10000,
-      "predicate": "proper_q",
-[...]
-}
->>> print(json.dumps(eds.Eds.from_xmrs(x).to_dict(), indent=2))
-{
-  "top": "e2",
-  "nodes": {
-    "_1": {
-      "label": "proper_q",
-      "edges": {
-        "BV": "x3"
-      },
-[...]
-}
-
-.. seealso::
-  - :class:`~delphin.mrs.xmrs.Mrs` class
-  - :class:`~delphin.mrs.xmrs.Dmrs` class
-  - :class:`~delphin.mrs.eds.Eds` class
-
-And finally the dependency representations (DMRS and EDS) have
-`to_triples()` and `from_triples()` methods, which aid in PENMAN
-serialization.
-
->>> from delphin.mrs import penman
->>> print(penman.dumps([x], model=Dmrs))
-(10002 / _chase_v_1
-       :lnk "<7:13>"
-       :ARG1-NEQ (10001 / named
-                        :lnk "<0:6>"
-                        :carg "Abrams"
-                        :RSTR-H-of (10000 / proper_q
-                                          :lnk "<0:6>"))
-       :ARG2-NEQ (10004 / named
-                        :lnk "<14:20>"
-                        :carg "Browne"
-                        :RSTR-H-of (10003 / proper_q
-                                          :lnk "<14:20>")))
->>> print(penman.dumps([x], model=eds.Eds))
-(e2 / _chase_v_1
-    :lnk "<7:13>"
-    :ARG1 (x3 / named
-              :lnk "<0:6>"
-              :carg "Abrams"
-              :BV-of (_1 / proper_q
-                         :lnk "<0:6>"))
-    :ARG2 (x9 / named
-              :lnk "<14:20>"
-              :carg "Browne"
-              :BV-of (_2 / proper_q
-                         :lnk "<14:20>")))
-
-.. seealso::
-  - :mod:`delphin.mrs.penman` module
 
 
 Tokens and Token Lattices
 -------------------------
 
-You can inspect the tokens as analyzed by the processor:
+The Response object from the interface can return both the initial
+(string-level tokenization) and internal (token-mapped) tokens:
 
 >>> response.tokens('initial')
 <delphin.tokens.YYTokenLattice object at 0x7f3c55abdd30>
@@ -323,16 +257,28 @@ PyDelphin has full support for reading and writing [incr tsdb()]
 testsuites:
 
 >>> from delphin import itsdb
->>> ts = itsdb.TestSuite('erg/tsdb/gold/mrs')
+>>> ts = itsdb.TestSuite('~/grammars/erg/tsdb/gold/mrs')
 >>> len(ts['item'])
 107
 >>> ts['item'][0]['i-input']
 'It rained.'
->>> ts.write(tables=itsdb.tsdb_core_files, path='mrs-skeleton')
+>>> # modify a test suite in-memory
+>>> ts['item'].update(0, {'i-input': 'It snowed.'})
+>>> ts['item'][0]['i-input']
+'It snowed.'
+>>> # TestSuite.commit() writes changes to disk
+>>> ts.commit()
+>>> # TestSuites can be parsed with a processor like ACE
+>>> from delphin import ace
+>>> with ace.ACEParser('~/grammars/erg-2018-x86-64-0.9.30.dat') as cpu:
+...     ts.process(cpu)
+... 
+NOTE: parsed 107 / 107 sentences, avg 4744k, time 2.93924s
 
 .. seealso::
   - [incr tsdb()] wiki: http://moin.delph-in.net/ItsdbTop
   - :mod:`delphin.itsdb` module
+  - :mod:`delphin.tsdb` module, for a low-level API
   - :doc:`itsdb`
 
 
@@ -340,16 +286,17 @@ TSQL Queries
 ------------
 
 Partial support of the Test Suite Query Language (TSQL) allows for
-easy selection of [incr tsdb()] TestSuite data.
+easy selection of [incr tsdb()] test suite data.
 
->>> from delphin import itsdb, tsql
->>> ts = itsdb.TestSuite('erg/tsdb/gold/mrs')
->>> next(tsql.select('i-id i-input where i-length > 5 && readings > 0', ts))
-[61, 'Abrams handed the cigarette to Browne.']
+>>> from delphin import tsql
+>>> selection = tsql.select('i-id i-input where i-length > 5 && readings > 0', ts)
+>>> next(iter(selection))
+(61, 'Abrams handed the cigarette to Browne.')
 
 .. seealso::
   - TSQL documentation: http://www.delph-in.net/tsnlp/ftp/manual/volume2.ps.gz
   - :mod:`delphin.tsql` module
+
 
 Regular Expression Preprocessors (REPP)
 ---------------------------------------
@@ -361,7 +308,7 @@ files. Unique to PyDelphin (I think) is the ability to trace through
 an application of the tokenization rules.
 
 >>> from delphin import repp
->>> r = repp.REPP.from_config('../../grammars/erg/pet/repp.set')
+>>> r = repp.REPP.from_config('~/grammars/erg/pet/repp.set')
 >>> for tok in r.tokenize("Abrams didn't chase Browne.").tokens:
 ...     print(tok.form, tok.lnk)
 ... 
@@ -409,7 +356,7 @@ not do any interpretation. It can be useful for static code analysis.
 
 >>> from delphin import tdl
 >>> lex = {}
->>> for event, obj, lineno in tdl.iterparse('erg/lexicon.tdl'):
+>>> for event, obj, lineno in tdl.iterparse('~/grammars/erg/lexicon.tdl'):
 ...     if event == 'TypeDefinition':
 ...         lex[obj.identifier] = obj
 ... 
@@ -452,8 +399,8 @@ of a grammar's semantic model, and is thus a useful way to ensure that
 grammar-external semantic representations are valid with respect to the
 grammar. PyDelphin supports the reading and inspection of SEM-Is.
 
->>> from delphin.mrs import semi
->>> s = semi.load('../../grammars/erg/etc/erg.smi')
+>>> from delphin import semi
+>>> s = semi.load('~/grammars/erg/etc/erg.smi')
 >>> list(s.variables)
 ['u', 'i', 'p', 'h', 'e', 'x']
 >>> list(s.roles)
@@ -462,17 +409,16 @@ grammar. PyDelphin supports the reading and inspection of SEM-Is.
 'u'
 >>> list(s.properties)
 ['bool', 'tense', 'mood', 'gender', 'number', 'person', 'pt', 'sf', '+', '-', 'tensed', 'untensed', 'subjunctive', 'indicative', 'm-or-f', 'n', 'sg', 'pl', '1', '2', '3', 'refl', 'std', 'zero', 'prop-or-ques', 'comm', 'past', 'pres', 'fut', 'm', 'f', 'prop', 'ques']
->>> s.properties['fut']
-<delphin.tfs.TypeHierarchyNode object at 0x7fd67b015948>
->>> s.properties['fut'].parents
-['tensed']
+>>> s.properties.children('tense')
+{'untensed', 'tensed'}
+>>> s.properties.descendants('tense')
+{'past', 'untensed', 'tensed', 'fut', 'pres'}
 >>> len(s.predicates)
 23403
->>> s.predicates['_cactus_n_1'].data
+>>> s.predicates['_cactus_n_1']
 [Synopsis([SynopsisRole(ARG0, x, {'IND': '+'}, False)])]
 >>> s.predicates.descendants('some_q')
-['_such+a_q', '_a_q', '_an+additional_q', '_another_q', '_many+a_q', '_some_q_indiv', '_what+a_q', '_some_q']
-
+{'_what+a_q', '_some_q_indiv', '_an+additional_q', '_another_q', '_many+a_q', '_a_q', '_some_q', '_such+a_q'}
 
 .. seealso::
   - The SEM-I wikis:
