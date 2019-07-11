@@ -85,15 +85,16 @@ values will be used.
 .. data:: HEADER
 
    The string to output before any of semantic representations are
-   serialized. For example, in :mod:`delphin.mrs.mrx`, the value of
-   `HEADER` is `<mrs-list>`, and in
-   :mod:`delphin.extra.dmrstikz_codec` it is an entire LaTeX preamble
-   followed by `\begin{document}`.
+   serialized. For example, in :mod:`delphin.codecs.mrx`, the value of
+   `HEADER` is `<mrs-list>`, and in the `delphin.codecs.dmrstikz`
+   module of the `delphin-latex
+   <https://github.com/delph-in/delphin-latex>`_ plugin it is an
+   entire LaTeX preamble followed by `\begin{document}`.
 
 .. data:: JOINER
 
    The string used to join multiple serialized semantic
-   representations. For example, in :mod:`delphin.mrs.mrsjson`, it is
+   representations. For example, in :mod:`delphin.codecs.mrsjson`, it is
    a comma (`,`) following JSON's syntax. Normally it is either an
    empty string, a space, or a newline, depending on the conventions
    for the format and if the `indent` argument is set.
@@ -101,8 +102,8 @@ values will be used.
 .. data:: FOOTER
 
    The string to output after all semantic representations have been
-   serialized. For example, in :mod:`delphin.mrs.mrx`, it is
-   `</mrs-list>`, and in :mod:`delphin.extra.dmrstikz_codec` it is
+   serialized. For example, in :mod:`delphin.codecs.mrx`, it is
+   `</mrs-list>`, and in `delphin.codecs.dmrstikz` it is
    `\end{document}`.
 
 
@@ -114,7 +115,7 @@ The deserialization functions :func:`load`, :func:`loads`, and
 interpreted semantic representation. Both :func:`load` and
 :func:`loads` expect full documents (including headers and footers,
 such as `<mrs-list>` and `</mrs-list>` around a
-:mod:`~delphin.mrs.mrx` serialization) and return lists of semantic
+:mod:`~delphin.codecs.mrx` serialization) and return lists of semantic
 structure objects. The :func:`decode` function expects single
 representations (without headers and footers) and returns a single
 semantic structure object.
@@ -175,7 +176,7 @@ a string or print to a file or stream. Both :func:`dump` and
 document. The :func:`encode` function only serializes a single
 semantic representation, which is generally useful when working with
 single representations, but is also useful when headers and footers
-are not desired (e.g., if you want the :mod:`~delphin.dmrs.dmrx`
+are not desired (e.g., if you want the :mod:`~delphin.codecs.dmrx`
 representation of a DMRS without `<dmrs-list>` and `</dmrs-list>`
 surrounding it).
 
@@ -246,20 +247,20 @@ not provide :func:`load`, :func:`loads`, or :func:`decode`. The module
 constants :data:`HEADER`, :data:`JOINER`, and :data:`FOOTER` are also
 optional. Here are some examples of variations in PyDelphin:
 
-* :mod:`delphin.mrs.indexedmrs` requires a `semi` positional argument.
+* :mod:`delphin.codecs.indexedmrs` requires a `semi` positional argument.
 
-* :mod:`delphin.mrs.mrsjson`, :mod:`delphin.dmrs.dmrsjson`, and
-  :mod:`delphin.eds.edsjson` introduce `to_dict()` and `from_dict()`
+* :mod:`delphin.codecs.mrsjson`, :mod:`delphin.codecs.dmrsjson`, and
+  :mod:`delphin.codecs.edsjson` introduce `to_dict()` and `from_dict()`
   functions in their public API as they may be generally useful.
 
-* :mod:`delphin.dmrs.dmrspenman` and :mod:`delphin.eds.edspenman`
+* :mod:`delphin.codecs.dmrspenman` and :mod:`delphin.codecs.edspenman`
   introduce `to_triples()` and `from_triples()` functions in their
   public API.
 
-* :mod:`delphin.eds.edsnative` allows a `show_status` keyword argument
+* :mod:`delphin.codecs.eds` allows a `show_status` keyword argument
   to turn on graph connectedness markers on serialization.
 
-* :mod:`delphin.mrs.mrsprolog` and :mod:`delphin.extra.dmrstikz_codec`
+* :mod:`delphin.codecs.mrsprolog` and `delphin.codecs.dmrstikz`
   are export-only codecs and do not provide :func:`load`,
   :func:`loads`, or :func:`decode` functions.
 
