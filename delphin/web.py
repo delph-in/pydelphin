@@ -84,7 +84,7 @@ class _HTTPResponse(interface.Response):
                 d['internal'] = self['internal']
             return d
         else:
-            return super().__getitem__(self, key)
+            return super().__getitem__(key)
 
     def get(self, key, default=None):
         try:
