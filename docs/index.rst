@@ -38,7 +38,6 @@ PyDelphin
   api/delphin.dmrs.rst
   api/delphin.eds.rst
   api/delphin.exceptions.rst
-  api/delphin.highlight.rst
   api/delphin.hierarchy.rst
   api/delphin.interface.rst
   api/delphin.itsdb.rst

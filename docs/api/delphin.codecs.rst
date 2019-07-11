@@ -35,7 +35,6 @@ DMRS:
    delphin.codecs.dmrx
    delphin.codecs.dmrsjson
    delphin.codecs.dmrspenman
-   delphin.codecs.dmrstikz
 
 EDS:
 

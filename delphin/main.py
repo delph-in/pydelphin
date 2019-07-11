@@ -50,13 +50,14 @@ def call_convert(args):
                  or (args.color == 'auto' and sys.stdout.isatty()))
         if color:
             try:
-                import pygments  # noqa: F401
+                import delphin.highlight  # noqa: F401
             except ImportError:
-                warnings.warn(
-                    'Pygments is not installed; '
-                    'output will not be highlighted.',
-                    PyDelphinWarning
-                )
+                # don't warn if color=auto
+                if args.color == 'always':
+                    warnings.warn(
+                        'delphin.highlight must be installed for '
+                        'syntax highlighting',
+                        PyDelphinWarning)
                 color = False
         print(convert(
             args.PATH,

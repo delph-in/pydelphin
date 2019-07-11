@@ -61,6 +61,13 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     The *source_fmt* and *target_fmt* arguments are downcased and
     hyphens are removed to normalize the codec name.
 
+    Note:
+
+        For syntax highlighting, `delphin.highlight`_ must be
+        installed, and it is only available for select target formats.
+
+        .. _delphin.highlight: https://github.com/delph-in/delphin.highlight
+
     Args:
         path (str, file): filename, testsuite directory, open file, or
             stream of input representations
@@ -222,9 +229,6 @@ def _colorize(text):
     if simplemrs_highlight:
         return simplemrs_highlight(text)
     else:
-        warnings.warn(
-            'delphin.highlight or its dependencies are not installed',
-            PyDelphinWarning)
         return text
 
 

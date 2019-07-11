@@ -74,7 +74,9 @@ both is `simplemrs`). Here is an example of converting :mod:`SimpleMRS
 
 As the default for ``--from`` and ``--to`` is ``simplemrs``, it can be
 used to easily "pretty-print" an MRS (if you execute this in a
-terminal, you'll notice syntax highlighting as well):
+terminal and have `delphin.highlight
+<https://github.com/delph-in/delphin.highlight>`_ installed, you'll
+notice syntax highlighting as well):
 
 .. code:: console
 

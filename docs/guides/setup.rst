@@ -21,20 +21,16 @@ PyDelphin works with Python 3.5 and higher, regardless of the
 platform. Certain features, however, may require additional
 dependencies or may be platform specific, as shown in the table below:
 
-===================================  ==================  ==================
-Module                               Dependencies        Notes
-===================================  ==================  ==================
-:mod:`delphin.extra.highlight`       Pygments_
-:mod:`delphin.extra.dmrstikz_codec`  `tikz-dependency`_  LaTeX package
-:mod:`delphin.interfaces.ace`        ACE_                Linux and Mac only
-:mod:`delphin.interfaces.rest`       requests_
+===================================  ============  ==================
+Module                               Dependencies  Notes
+===================================  ============  ==================
+:mod:`delphin.ace`                   ACE_          Linux and Mac only
+:mod:`delphin.web`                   requests_
 :func:`delphin.mrs.is_isomorphic`    NetworkX_
 :mod:`delphin.dmrs.dmrspenman`       Penman_
 :mod:`delphin.eds.edspenman`         Penman_
-===================================  ==================  ==================
+===================================  ============  ==================
 
-.. _Pygments: http://pygments.org/
-.. _tikz-dependency: https://ctan.org/pkg/tikz-dependency
 .. _ACE: http://sweaglesw.org/linguistics/ace/
 .. _requests: http://python-requests.org/
 .. _NetworkX: https://networkx.github.io/
