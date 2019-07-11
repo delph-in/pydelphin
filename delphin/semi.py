@@ -106,7 +106,7 @@ def load(source, encoding='utf-8'):
     Returns:
         The SemI defined by *source*
     """
-    path = Path(source)
+    path = Path(source).expanduser()
     data = _read_file(path, path.parent, encoding)
     return SemI(**data)
 
