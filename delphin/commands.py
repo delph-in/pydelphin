@@ -135,7 +135,7 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
                 next(iter(source_codec.loads(r[0], **kwargs)), None)
                 for r in tsql.select(select, db)
             ]
-        elif path.is_file():
+        else:
             xs = list(source_codec.load(path, **kwargs))
 
     # convert if source representation != target representation
