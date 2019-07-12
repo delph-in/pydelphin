@@ -16,8 +16,8 @@ processor and another for the `HTTP-based "Web API"
 <http://moin.delph-in.net/ErgApi>`_. I'll first show the Web API
 as it's the simplest for parsing a single sentence:
 
->>> from delphin import web
->>> response = web.parse('Abrams chased Browne', params={'mrs': 'json'})
+>>> from delphin.web import client
+>>> response = client.parse('Abrams chased Browne', params={'mrs': 'json'})
 >>> response.result(0).mrs()
 <MRS object (proper_q named chase_v_1 proper_q named) at 139897112151488>
 

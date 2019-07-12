@@ -4,15 +4,9 @@ delphin.web
 
 .. automodule:: delphin.web
 
-   Client Functions
-   ----------------
+.. toctree::
+   :maxdepth: 1
 
-   .. autofunction:: parse
-   .. autofunction:: parse_from_iterable
+   delphin.web.client
+   delphin.web.server
 
-   Client Class
-   ------------
-
-   .. autoclass:: Client
-      :show-inheritance:
-      :members:
