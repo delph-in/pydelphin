@@ -21,18 +21,22 @@ PyDelphin works with Python 3.5 and higher, regardless of the
 platform. Certain features, however, may require additional
 dependencies or may be platform specific, as shown in the table below:
 
-===================================  ============  ==================
-Module                               Dependencies  Notes
-===================================  ============  ==================
+===================================  ============  ============================
+Module or Function                   Dependencies  Notes
+===================================  ============  ============================
 :mod:`delphin.ace`                   ACE_          Linux and Mac only
-:mod:`delphin.web`                   requests_
+:mod:`delphin.web.client`            requests_     Install with ``[web]`` extra
+:mod:`delphin.web.server`            Falcon_       Install with ``[web]`` extra
 :func:`delphin.mrs.is_isomorphic`    NetworkX_
 :mod:`delphin.dmrs.dmrspenman`       Penman_
 :mod:`delphin.eds.edspenman`         Penman_
-===================================  ============  ==================
+===================================  ============  ============================
+
+See `Installing from PyPI`_ for information about installing with "extras".
 
 .. _ACE: http://sweaglesw.org/linguistics/ace/
 .. _requests: http://python-requests.org/
+.. _Falcon: https://falcon.readthedocs.io/
 .. _NetworkX: https://networkx.github.io/
 .. _Penman: https://github.com/goodmami/penman
 
@@ -45,7 +49,15 @@ Install the latest releast from PyPI using :command:`pip`::
   $ pip install pydelphin
 
 If you already have PyDelphin installed, you can upgrade it by adding
-the ``--upgrade`` flag to the command.
+the ``--upgrade`` flag to the command. If you need an extra feature,
+such as `delphin.web`, install with the extras in brackets after the
+project name. For instance::
+
+  $ pip install pydelphin[web]
+
+Without the extra, the code will still be installed but its
+dependencies will not. The rest of PyDelphin will work but those
+features may raise :exc:`ImportError`\ s.
 
 .. note::
 
@@ -89,9 +101,10 @@ There are some extra dependencies that can be activated with certain
 install parameters. You only need to install with one of the following
 commands, depending on your needs::
 
-  $ pip install ~/path/to/pydelphin[test]  # unit testing
-  $ pip install ~/path/to/pydelphin[doc]   # building documentation
-  $ pip install ~/path/to/pydelphin[dev]   # both of the above
+  $ pip install ~/path/to/pydelphin[test]      # unit testing
+  $ pip install ~/path/to/pydelphin[doc]       # building documentation
+  $ pip install ~/path/to/pydelphin[dev]       # both of the above
+  $ pip install ~/path/to/pydelphin[doc,test]  # same as [dev]
 
 For development, you may also want to use :command:`pip`\ 's `-e`
 option to install PyDelphin as "editable", meaning it installs the

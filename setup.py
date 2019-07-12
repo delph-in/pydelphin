@@ -51,16 +51,17 @@ setup(
         'delphin.mrs',
         'delphin.eds',
         'delphin.dmrs',
+        'delphin.web',
     ],
     install_requires=[
         'penman==0.6.2',
         'networkx==2.3',
-        'requests',
     ],
     extras_require={
         'docs': docs_require,
         'tests': tests_require,
-        'dev': docs_require + tests_require
+        'dev': docs_require + tests_require,
+        'web': ['requests', 'falcon==2.0.0'],
     },
     entry_points={
         'console_scripts': [

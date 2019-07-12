@@ -9,8 +9,11 @@ servers that implement the DELPH-IN Web API described here:
 
     http://moin.delph-in.net/ErgApi
 
-Note:
-  Requires `requests` (https://pypi.python.org/pypi/requests)
+.. note::
+
+   Requires `requests` (https://pypi.python.org/pypi/requests). This
+   dependency is satisified if you install PyDelphin with the
+   ``[dev]`` extra (see :doc:`../guides/setup`).
 
 Basic access is available via the :func:`parse`,
 :func:`parse_from_iterable`, :func:`generate`, and
