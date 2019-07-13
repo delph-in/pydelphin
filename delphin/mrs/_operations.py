@@ -37,7 +37,7 @@ def is_connected(m: mrs.MRS) -> bool:
             value = hcmap.get(value, value)  # resolve qeq if any
             if value in g:
                 g[id].add(value)
-                g[value].add(iv)
+                g[value].add(id)
     return ids.issubset(util._bfs(g))
 
 
