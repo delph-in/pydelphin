@@ -5,7 +5,7 @@ DELPH-IN Web API Server
 
 
 import pathlib
-import urllib.parse as urlparse
+import urllib.parse
 import datetime
 import json
 import functools
@@ -44,15 +44,16 @@ def configure(api, parser=None, generator=None, testsuites=None):
         parser: a path to a grammar or a :class:`ParseServer` instance
         generator: a path to a grammar or a :class:`GenerationServer`
             instance
-        testsuites: iterable of test suite descriptions with a unique
-            `name` and a `path`.
+        testsuites: mapping of collection names to lists of test suite
+            entries
     Example:
         >>> server.configure(
         ...     api,
         ...     parser='~/grammars/erg-2018-x86-64-0.9.30.dat',
-        ...     testsuites=[
-        ...         {'name': 'mrs',
-        ...          'path': '~/grammars/erg/tsdb/gold/mrs'}])
+        ...     testsuites={
+        ...         'gold': [
+        ...             {'name': 'mrs',
+        ...              'path': '~/grammars/erg/tsdb/gold/mrs'}]})
     """
     if parser is not None:
         if isinstance(parser, (str, pathlib.Path)):
@@ -65,10 +66,13 @@ def configure(api, parser=None, generator=None, testsuites=None):
         api.add_route('/generate', generator)
 
     if testsuites is not None:
-        testsuites = TestSuiteResource(testsuites)
-        api.add_route('/testsuites', testsuites)
-        api.add_route('/testsuites/{name}', testsuites, suffix='name')
-        api.add_route('/testsuites/{name}/{table}', testsuites, suffix='table')
+        for collection, entries in testsuites.items():
+            collection = '/' + urllib.parse.quote(collection)
+            resource = TestSuiteResource(entries)
+            api.add_route(collection, resource)
+            api.add_route(collection + '/{name}', resource, suffix='name')
+            api.add_route(
+                collection + '/{name}/{table}', resource, suffix='table')
 
     api.req_options.strip_url_path_trailing_slash = True
     api.req_options.media_handlers['application/json'] = _json_handler
@@ -202,7 +206,7 @@ class TestSuiteResource(object):
         self.index = {entry['name']: entry for entry in testsuites}
 
     def on_get(self, req, resp):
-        quote = urlparse.quote
+        quote = urllib.parse.quote
         base = req.uri
         data = []
         for entry in self.testsuites:
@@ -218,7 +222,7 @@ class TestSuiteResource(object):
         except KeyError:
             raise falcon.HTTPNotFound()
         ts = itsdb.TestSuite(entry['path'])
-        quote = urlparse.quote
+        quote = urllib.parse.quote
         base = req.uri
         resp.media = {tablename: '/'.join([base, quote(tablename)])
                       for tablename in ts.schema}

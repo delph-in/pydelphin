@@ -35,9 +35,11 @@ such as the following example:
        application,
        parser='~/grammars/erg-2018-x86-64-0.9.30.dat',
        generator='~/grammars/erg-2018-x86-64-0.9.30.dat',
-       testsuites=[
-           {'name': 'mrs', 'path': '~/grammars/erg/tsdb/gold/mrs'}
-       ]
+       testsuites={
+           'gold': [
+               {'name': 'mrs', 'path': '~/grammars/erg/tsdb/gold/mrs'}
+	   ]
+       }
    )
 
 You can then run a local instance using, for instance, `gunicorn`_:
