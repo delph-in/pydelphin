@@ -71,7 +71,34 @@ def has_intrinsic_variable_property(m: mrs.MRS) -> bool:
 
 def is_well_formed(m: mrs.MRS) -> bool:
     return (is_connected(m)
-            and has_intrinsic_variable_property(m))
+            and has_intrinsic_variable_property(m)
+            and _plausibly_scopes(m))
+
+
+def _plausibly_scopes(m: mrs.MRS) -> bool:
+    scopes = m.scopes()
+    hcmap = {hc.hi: hc.lo for hc in m.hcons}
+    if m.top not in hcmap:
+        return False
+    seen = set()
+    # using m.arguments(scopal=True) might be begging the question
+    for id, args in m.arguments(types='h').items():
+        for handle in args.values():
+            if handle == m[id].label:
+                return False
+            elif handle in hcmap:
+                if (handle in seen
+                        or hcmap[handle] in seen
+                        or hcmap[handle] not in scopes):
+                    return False
+                seen.add(hcmap[handle])
+            elif handle in scopes and handle in seen:
+                return False
+            seen.add(handle)
+    for hi, lo in hcmap.items():
+        if hi not in seen and lo not in scopes:
+            return False
+    return True
 
 
 def is_isomorphic(m1: mrs.MRS,
