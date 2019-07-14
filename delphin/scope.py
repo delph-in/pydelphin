@@ -104,7 +104,7 @@ class UnderspecifiedScope(tuple):
             lheqs = {}
         if qeqs is None:
             qeqs = {}
-        return super().__new__(cls, (set(ids), lheqs, qeqs))
+        return super().__new__(cls, (set(ids), dict(lheqs), dict(qeqs)))
 
     ids = property(
         itemgetter(0), doc='set of ids of predicates in the immediate scope')
@@ -114,7 +114,7 @@ class UnderspecifiedScope(tuple):
         itemgetter(2), doc='indirectly lower scopes')
 
     def __repr__(self):
-        return 'UnderspecifiedScope({!r}, {!r}, {!r})'.format(*self, id(self))
+        return 'UnderspecifiedScope({!r}, {!r}, {!r})'.format(*self)
 
     def __contains__(self, id):
         return (id in self.ids
