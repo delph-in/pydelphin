@@ -261,13 +261,18 @@ def representatives(x: ScopingSemanticStructure, ranker=None) -> ScopeMap:
     and returns a rank which is used to to sort the representatives
     for each scope. As the id alone is probably not enough information
     for useful sorting, it is helpful to create a function configured
-    for the input semantic structure *x*, as is done with
-    :func:`make_representative_priority`. If *ranker* is not given or
-    is `None`, :func:`make_representative_priority` is called on *x*
-    to make a default ranker.
+    for the input semantic structure *x*. If *ranker* is `None`,
+    representatives are sorted according to the following criteria:
+
+    1. Prefer predications that are quantifiers or are quantified
+
+    2. Prefer surface predicates over abstract predicates
+
+    3. Finally, prefer prefer those appearing first in *x*
 
     Args:
         x: an MRS or a DMRS
+        ranker: a function that maps an EP to a rank for sorting
     Example:
         >>> sent = 'The new chef whose soup accidentally spilled quit.'
         >>> m = ace.parse(erg, sent).result(0).mrs()
@@ -294,25 +299,25 @@ def representatives(x: ScopingSemanticStructure, ranker=None) -> ScopeMap:
                 reps[label].append(id)
 
     if ranker is None:
-        ranker = make_representative_priority(x)
+        ranker = _make_representative_priority(x)
     for label in reps:
         reps[label].sort(key=ranker)
 
     return reps
 
 
-def make_representative_priority(x: ScopingSemanticStructure):
+def _make_representative_priority(x: ScopingSemanticStructure):
     """
     Create a function to sort scope representatives in *x*.
 
     This is the default representative ranking policy used by
     PyDelphin with the following (ordered) criteria:
 
-    * Prefer predications that are quantifiers or are quantified
+    1. Prefer predications that are quantifiers or are quantified
 
-    * Prefer surface predicates over abstract predicates
+    2. Prefer surface predicates over abstract predicates
 
-    * Finally, prefer prefer those appearing first in *x*
+    3. Finally, prefer prefer those appearing first in *x*
     """
     qs = set()
     for p, q in x.quantifier_map().items():
