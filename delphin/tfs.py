@@ -170,6 +170,7 @@ class TypedFeatureStructure(FeatureStructure):
 
     @property
     def type(self):
+        """The type assigned to the feature structure."""
         return self._type
 
     @type.setter

@@ -70,6 +70,20 @@ def has_intrinsic_variable_property(m: mrs.MRS) -> bool:
 
 
 def is_well_formed(m: mrs.MRS) -> bool:
+    """
+    Return `True` if MRS *m* is well-formed.
+
+    A well-formed MRS meets the following criteria:
+
+    - is connected
+    - has the intrinsic variable property
+    - plausibly scopes
+
+    The final criterion is a heuristic for determining if the MRS
+    scopes by checking if handle constraints and scopal arguments have
+    any immediate violations (e.g., a scopal argument selecting the
+    label of its EP).
+    """
     return (is_connected(m)
             and has_intrinsic_variable_property(m)
             and _plausibly_scopes(m))

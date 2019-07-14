@@ -505,6 +505,7 @@ class Table(tsdb.Relation):
         return self.fields[self.column_index(name)]
 
     def clear(self) -> None:
+        """Clear the table of all rows."""
         self._rows.clear()
         self._volatile_index = 0
 
@@ -650,6 +651,7 @@ class TestSuite(tsdb.Database):
 
     @property
     def in_transaction(self) -> bool:
+        """Return `True` is there are uncommitted changes."""
         data = self._data
         return any(data[name]._in_transaction
                    for name in self.schema
@@ -665,7 +667,24 @@ class TestSuite(tsdb.Database):
                 self.path, name, self.schema[name], self.encoding)
         return self._data[name]
 
-    def select_from(self, name: str, columns: Iterable[str]):
+    def select_from(self, name: str, columns: Iterable[str] = None):
+        """
+        Select fields given by *names* from each row in table *name*.
+
+        If no field names are given, all fields are returned.
+
+        Yields:
+            Row
+        Examples:
+            >>> next(ts.select_from('item'))
+            Row(10, 'unknown', 'formal', 'none', 1, 'S', 'It rained.', ...)
+            >>> next(ts.select_from('item', ('i-id')))
+            Row(10)
+            >>> next(ts.select_from('item', ('i-id', 'i-input')))
+            Row(10, 'It rained.')
+        """
+        if not columns:
+            columns = []
         return self[name].select(*columns)
 
     def reload(self) -> None:
