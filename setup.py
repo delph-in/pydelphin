@@ -61,7 +61,7 @@ setup(
         'docs': docs_require,
         'tests': tests_require,
         'dev': docs_require + tests_require,
-        'web': ['requests', 'falcon==2.0.0'],
+        'web': ['requests==2.22.0', 'falcon==2.0.0'],
     },
     entry_points={
         'console_scripts': [
