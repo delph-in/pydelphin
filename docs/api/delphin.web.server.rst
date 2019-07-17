@@ -99,5 +99,5 @@ Server Application Classes
    :show-inheritance:
    :members:
 
-.. autoclass:: TestSuiteResource
+.. autoclass:: TestSuiteServer
    :members:

@@ -68,7 +68,7 @@ def configure(api, parser=None, generator=None, testsuites=None):
     if testsuites is not None:
         for collection, entries in testsuites.items():
             collection = '/' + urllib.parse.quote(collection)
-            resource = TestSuiteResource(entries)
+            resource = TestSuiteServer(entries)
             api.add_route(collection, resource)
             api.add_route(collection + '/{name}', resource, suffix='name')
             api.add_route(
@@ -196,7 +196,7 @@ def _make_response(inp, ace_response, params):
     return response
 
 
-class TestSuiteResource(object):
+class TestSuiteServer(object):
     """
     A server for a collection of test suites.
     """
