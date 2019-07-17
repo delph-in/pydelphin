@@ -12,8 +12,8 @@ the DELPH-IN Web API DELPH-IN Web API described here:
 .. note::
 
    Requires Falcon (https://falcon.readthedocs.io/). This dependency
-   is satisified if you install PyDelphin with the ``[dev]`` extra
-   (see :doc:`../guides/setup`).
+   is satisfied if you install PyDelphin with the ``[web]`` extra (see
+   :doc:`../guides/setup`).
 
 In addition to the parsing API, this module also provides support for
 generation and for browsing [incr tsdb()] test suites.  In order to
