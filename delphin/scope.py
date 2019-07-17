@@ -244,9 +244,9 @@ def tree_fragments(x: ScopingSemanticStructure,
     return fragments
 
 
-def representatives(x: ScopingSemanticStructure, ranker=None) -> ScopeMap:
+def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
     """
-    Find the scope representatives in *x* sorted by *ranker*.
+    Find the scope representatives in *x* sorted by *priority*.
 
     When predications share a scope, generally one takes another as a
     non-scopal argument. For instance, the ERG analysis of a phrase
@@ -257,11 +257,11 @@ def representatives(x: ScopingSemanticStructure, ranker=None) -> ScopeMap:
     within their scope as an argument (as `_book_n_of` above does not)
     are scope representatives.
 
-    The *ranker* argument is a function that takes a predication id
+    The *priority* argument is a function that takes a predication id
     and returns a rank which is used to to sort the representatives
     for each scope. As the id alone is probably not enough information
     for useful sorting, it is helpful to create a function configured
-    for the input semantic structure *x*. If *ranker* is `None`,
+    for the input semantic structure *x*. If *priority* is `None`,
     representatives are sorted according to the following criteria:
 
     1. Prefer predications that are quantifiers or are quantified
@@ -272,7 +272,7 @@ def representatives(x: ScopingSemanticStructure, ranker=None) -> ScopeMap:
 
     Args:
         x: an MRS or a DMRS
-        ranker: a function that maps an EP to a rank for sorting
+        priority: a function that maps an EP to a rank for sorting
     Example:
         >>> sent = 'The new chef whose soup accidentally spilled quit.'
         >>> m = ace.parse(erg, sent).result(0).mrs()
@@ -283,9 +283,9 @@ def representatives(x: ScopingSemanticStructure, ranker=None) -> ScopeMap:
         >>> # there are 2 representatives for scope h7
         >>> scope.representatives(m)['h7']
         ['e16', 'x3']
-        >>> # normalize the order with the *ranker* parameter
+        >>> # normalize the order with the *priority* parameter
         >>> rp = make_representative_priority(m)
-        >>> scope.representatives(m, ranker=rp)['h7']
+        >>> scope.representatives(m, priority=rp)['h7']
         ['x3', 'e16']
     """
     fragments = tree_fragments(x, prune=False)
@@ -298,10 +298,10 @@ def representatives(x: ScopingSemanticStructure, ranker=None) -> ScopeMap:
             if len(nsargs.get(id, set()).intersection(uscope.ids)) == 0:
                 reps[label].append(id)
 
-    if ranker is None:
-        ranker = _make_representative_priority(x)
+    if priority is None:
+        priority = _make_representative_priority(x)
     for label in reps:
-        reps[label].sort(key=ranker)
+        reps[label].sort(key=priority)
 
     return reps
 

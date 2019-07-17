@@ -8,7 +8,7 @@ from delphin import scope
 from delphin import dmrs
 
 
-def from_mrs(m):
+def from_mrs(m, representative_priority=None):
     """
     Create a DMRS by converting from MRS *m*.
 
@@ -18,13 +18,15 @@ def from_mrs(m):
 
     Args:
         m: the input MRS
+        representative_priority: a function for ranking candidate
+            representative nodes; see :func:`scope.representatives`
     Returns:
         DMRS
     Raises:
         DMRSError when conversion fails.
     """
     hcmap = {hc.hi: hc for hc in m.hcons}
-    reps = scope.representatives(m)
+    reps = scope.representatives(m, priority=representative_priority)
     # EP id to node id map; create now to keep ids consistent
     id_to_nid = {ep.id: i for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)}
     iv_to_nid = {ep.iv: id_to_nid[ep.id]

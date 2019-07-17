@@ -11,7 +11,8 @@ from delphin import eds
 from delphin import util
 
 
-def from_mrs(m, predicate_modifiers=False, unique_ids=True):
+def from_mrs(m, predicate_modifiers=False, unique_ids=True,
+             representative_priority=None):
     """
     Create an EDS by converting from MRS *m*.
 
@@ -28,6 +29,8 @@ def from_mrs(m, predicate_modifiers=False, unique_ids=True):
         unique_ids: if `True`, recompute node identifiers to be unique
             by the LKB's method; note that ids from *m* should already
             be unique by PyDelphin's method
+        representative_priority: a function for ranking candidate
+            representative nodes; see :func:`scope.representatives`
     Returns:
         EDS
     Raises:
@@ -35,7 +38,7 @@ def from_mrs(m, predicate_modifiers=False, unique_ids=True):
     """
     # EP id to node id map; create now to keep ids consistent
     hcmap = {hc.hi: hc for hc in m.hcons}
-    reps = scope.representatives(m)
+    reps = scope.representatives(m, priority=representative_priority)
 
     top = _mrs_get_top(m.top, hcmap, reps)
     deps = _mrs_args_to_basic_deps(m, hcmap, reps)
