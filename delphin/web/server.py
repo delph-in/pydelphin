@@ -14,14 +14,17 @@ import falcon
 from falcon import media
 
 from delphin import ace
+from delphin import derivation
 from delphin import dmrs
 from delphin import eds
 from delphin.codecs import (
+    simplemrs,
     mrsjson,
     dmrsjson,
     edsjson,
 )
 from delphin import itsdb
+from delphin import tokens
 
 
 def configure(api, parser=None, generator=None, testsuites=None):
@@ -199,11 +202,21 @@ def _make_response(inp, ace_response, params):
 class TestSuiteServer(object):
     """
     A server for a collection of test suites.
+
+    Args:
+        testsuites: list of test suite descriptions
+        transforms: mapping of table names to lists of (column,
+            transform) pairs.
     """
 
-    def __init__(self, testsuites):
+    def __init__(self, testsuites, transforms=None):
         self.testsuites = testsuites
         self.index = {entry['name']: entry for entry in testsuites}
+        if transforms is None:
+            transforms = FIELD_TRANSFORMS
+        elif not transforms:
+            transforms = []
+        self.transforms = dict(transforms)
 
     def on_get(self, req, resp):
         quote = urllib.parse.quote
@@ -234,9 +247,48 @@ class TestSuiteServer(object):
         except KeyError:
             raise falcon.HTTPNotFound()
         ts = itsdb.TestSuite(entry['path'])
-        rows = ts[table]
-        resp.media = [list(row) for row in rows]
+        table_ = ts[table]
+
+        limit = req.get_param_as_int('limit', default=len(table_))
+        page = req.get_param_as_int('page', default=1)
+        rowslice = slice((page - 1) * limit, page * limit)
+
+        rows = []
+        transforms = [(table_.column_index(colname), transform)
+                      for colname, transform
+                      in self.transforms.get(table, [])]
+        for row in table_[rowslice]:
+            row = list(row)
+            for colidx, transform in transforms:
+                row[colidx] = transform(row[colidx])
+            rows.append(row)
+
+        resp.media = rows
         resp.status = falcon.HTTP_OK
+
+
+# default field transformers
+
+def _transform_tokens(s):
+    return tokens.YYTokenLattice.from_string(s).to_list()
+
+
+def _transform_mrs(s):
+    return mrsjson.to_dict(simplemrs.decode(s))
+
+
+def _transform_derivation(s):
+    return derivation.from_string(s).to_dict()
+
+
+FIELD_TRANSFORMS = [
+    ('parse', [
+        ('p-input', _transform_tokens),
+        ('p-tokens', _transform_tokens)]),
+    ('result', [
+        ('mrs', _transform_mrs),
+        ('derivation', _transform_derivation)]),
+]
 
 
 # override default JSON handler so it can serialize datetime
