@@ -267,8 +267,8 @@ def to_dict(mrs, properties=True, lnk=True):
 
     def _var(v):
         d = {'type': variable.type(v)}
-        if properties and mrs.properties(v):
-            d['properties'] = mrs.properties(v)
+        if properties and mrs.variables.get(v):
+            d['properties'] = dict(mrs.variables[v])
         return d
 
     d = dict(

@@ -315,7 +315,7 @@ def _encode_mrs(m, properties, lnk, indent):
 
     delim = '\n  ' if indent else ' '
     if properties:
-        varprops = {v: m.properties(v) for v in m.variables}
+        varprops = dict(m.variables)
     else:
         varprops = {}
     parts = [

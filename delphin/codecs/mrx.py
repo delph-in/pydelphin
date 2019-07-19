@@ -394,7 +394,7 @@ def _encode_mrs(m, properties, lnk):
         m = MRS.from_xmrs(m)
 
     if properties:
-        varprops = {v: m.properties(v) for v in m.variables}
+        varprops = dict(m.variables)
     else:
         varprops = {}
     attributes = {}

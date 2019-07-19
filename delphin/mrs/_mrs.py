@@ -175,6 +175,17 @@ class MRS(scope.ScopingSemanticStructure):
         lnk: surface alignment
         surface: surface string
         identifier: a discourse-utterance identifier
+    Attributes:
+        top: The top scope handle.
+        index: The top variable.
+        rels: The list of EPs (alias of
+            :attr:`~delphin.sembase.SemanticStructure.predications`).
+        hcons: The list of handle constraints.
+        icons: The list of individual constraints.
+        variables: A mapping of variables to property maps.
+        lnk: The surface alignment for the whole MRS.
+        surface: The surface string represented by the MRS.
+        identifier: A discourse-utterance identifier.
     """
 
     __slots__ = ('hcons', 'icons', 'variables')
@@ -208,7 +219,6 @@ class MRS(scope.ScopingSemanticStructure):
 
     @property
     def rels(self):
-        """Alias for :attr:`predications`."""
         return self.predications
 
     def __eq__(self, other):
@@ -223,8 +233,15 @@ class MRS(scope.ScopingSemanticStructure):
 
     # SemanticStructure methods
 
-    def properties(self, var):
-        """Return the properties associated with variable *var*."""
+    def properties(self, id):
+        """
+        Return the properties associated with EP *id*.
+
+        Note that this function returns properties associated with the
+        intrinsic variable of the EP whose id is *id*. To get the
+        properties of a variable directly, use :attr:`variables`.
+        """
+        var = self[id].iv
         return self.variables[var]
 
     def is_quantifier(self, id):
