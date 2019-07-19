@@ -64,10 +64,16 @@ class EP(Predication):
             args = {}
         # EPs formally do not have identifiers but they are very useful
         # note that the ARG0 may be unspecified, so use a default
-        id = args.get(INTRINSIC_ROLE, '_0')
+        iv = args.get(INTRINSIC_ROLE, '_0')
+        type, vid = variable.split(iv)
+        if type == '_':
+            type = None
         if RESTRICTION_ROLE in args:
-            id = _QUANTIFIER_TYPE + variable.split(id)[1]
-        super().__init__(id, predicate, lnk, surface, base)
+            id = _QUANTIFIER_TYPE + vid
+        else:
+            id = iv
+
+        super().__init__(id, predicate, type, lnk, surface, base)
         self.label = label
         self.args = args
         self.base = base

@@ -50,7 +50,7 @@ class Node(Predication):
         base: base form
     """
 
-    __slots__ = ('type', 'properties', 'carg')
+    __slots__ = ('properties', 'carg')
 
     def __init__(self,
                  id: int,
@@ -64,8 +64,7 @@ class Node(Predication):
         if not isinstance(id, int):
             raise TypeError('node id must be of type int')
         id = id
-        super().__init__(id, predicate, lnk, surface, base)
-        self.type = type
+        super().__init__(id, predicate, type, lnk, surface, base)
         if not properties:
             properties = {}
         self.properties = properties

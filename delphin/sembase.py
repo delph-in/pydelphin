@@ -76,25 +76,28 @@ class Predication(LnkMixin):
     identifiers and, if specified, different surface alignments.
     """
 
-    __slots__ = ('id', 'predicate', 'base')
+    __slots__ = ('id', 'predicate', 'type', 'base')
 
     def __init__(self,
                  id: Identifier,
                  predicate: str,
+                 type: Union[str, None],
                  lnk: Lnk,
                  surface,
                  base):
         super().__init__(lnk, surface)
         self.id = id
         self.predicate = predicate
+        self.type = type
         self.base = base
 
     def __repr__(self):
-        return '<{} object ({}:{}{}) at {}>'.format(
+        return '<{} object ({}:{}{}{}) at {}>'.format(
             self.__class__.__name__,
             self.id,
             self.predicate,
             str(self.lnk),
+            '[{}]'.format(self.type or '?'),
             id(self))
 
 

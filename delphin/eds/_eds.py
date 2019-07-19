@@ -45,7 +45,7 @@ class Node(Predication):
         base: base form
     """
 
-    __slots__ = ('type', 'edges', 'properties', 'carg')
+    __slots__ = ('edges', 'properties', 'carg')
 
     def __init__(self,
                  id: int,
@@ -63,9 +63,8 @@ class Node(Predication):
         if not properties:
             properties = {}
 
-        super().__init__(id, predicate, lnk, surface, base)
+        super().__init__(id, predicate, type, lnk, surface, base)
 
-        self.type = type
         self.edges = edges
         self.properties = properties
         self.carg = carg
