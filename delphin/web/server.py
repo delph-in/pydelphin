@@ -11,7 +11,6 @@ import json
 import functools
 
 import falcon
-from falcon import media
 
 from delphin import ace
 from delphin import derivation
@@ -300,7 +299,7 @@ def _datetime_default(obj):
         raise TypeError(type(obj))
 
 
-_json_handler = media.JSONHandler(
+_json_handler = falcon.media.JSONHandler(
     dumps=functools.partial(json.dumps, default=_datetime_default),
     loads=json.loads
 )
