@@ -70,6 +70,7 @@ class EP(Predication):
             type = None
         if RESTRICTION_ROLE in args:
             id = _QUANTIFIER_TYPE + vid
+            type = None
         else:
             id = iv
 

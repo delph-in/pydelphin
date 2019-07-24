@@ -62,12 +62,15 @@ def _mrs_to_nodes(m, id_to_nid):
     nodes = []
     for ep in m.rels:
         node_id = id_to_nid[ep.id]
-        iv = ep.iv
-        properties = None if ep.is_quantifier() else m.properties(ep.iv)
+        properties, type = None, None
+        if not ep.is_quantifier():
+            iv = ep.iv
+            properties = m.properties(iv)
+            type = variable.type(iv)
         nodes.append(
             dmrs.Node(node_id,
                       ep.predicate,
-                      variable.type(iv),
+                      type,
                       properties,
                       ep.carg,
                       ep.lnk,

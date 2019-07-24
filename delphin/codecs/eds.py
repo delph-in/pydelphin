@@ -10,10 +10,10 @@ Example:
 ::
 
   {e18:
-   _1:_the_q<0:3>{x PERS 3, NUM sg, IND +}[BV x3]
+   _1:_the_q<0:3>[BV x3]
    e8:_new_a_1<4:7>{e SF prop, TENSE untensed, MOOD indicative, PROG bool, PERF -}[ARG1 x3]
    x3:_chef_n_1<8:12>{x PERS 3, NUM sg, IND +}[]
-   _2:def_explicit_q<13:18>{x PERS 3, NUM sg}[BV x10]
+   _2:def_explicit_q<13:18>[BV x10]
    e14:poss<13:18>{e SF prop, TENSE untensed, MOOD indicative, PROG -, PERF -}[ARG1 x10, ARG2 x3]
    x10:_soup_n_1<19:23>{x PERS 3, NUM sg}[]
    e15:_accidental_a_1<24:36>{e SF prop, TENSE untensed, MOOD indicative, PROG -, PERF -}[ARG1 e16]

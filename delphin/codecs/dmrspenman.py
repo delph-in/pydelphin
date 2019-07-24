@@ -23,6 +23,8 @@ Example:
       :pers 3
       :num sg
       :ind +
+      :RSTR-H-of (q1 / _the_q
+        :lnk "<0:3>")
       :ARG1-EQ-of (e2 / _new_a_1
         :lnk "<4:7>"
         :cvarsort e
@@ -45,11 +47,7 @@ Example:
           :pers 3
           :num sg
           :RSTR-H-of (q4 / def_explicit_q
-            :lnk "<13:18>"
-            :cvarsort x)))
-      :RSTR-H-of (q1 / _the_q
-        :lnk "<0:3>"
-        :cvarsort x)
+            :lnk "<13:18>")))
       :MOD-EQ-of (e8 / _spill_v_1
         :lnk "<37:44>"
         :cvarsort e

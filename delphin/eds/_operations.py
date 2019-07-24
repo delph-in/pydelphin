@@ -107,12 +107,17 @@ def _mrs_args_to_basic_deps(m, hcmap, reps):
 def _mrs_to_nodes(m, edges):
     nodes = []
     for ep in m.rels:
+        properties, type = None, None
+        if not ep.is_quantifier():
+            iv = ep.iv
+            properties = m.properties(iv)
+            type = variable.type(iv)
         nodes.append(
             eds.Node(ep.id,
                      ep.predicate,
-                     variable.type(ep.iv),
+                     type,
                      edges.get(ep.id, {}),
-                     m.properties(ep.iv),
+                     properties,
                      ep.carg,
                      ep.lnk,
                      ep.surface,

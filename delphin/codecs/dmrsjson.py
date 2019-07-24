@@ -14,86 +14,84 @@ Example:
     "index": 10009,
     "nodes": [
       {
-        "sortinfo": {"cvarsort": "x"},
-        "lnk": {"from": 0, "to": 3},
         "nodeid": 10000,
-        "predicate": "_the_q"
+        "predicate": "_the_q",
+        "lnk": {"from": 0, "to": 3}
       },
       {
-        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "bool", "SF": "prop", "TENSE": "untensed"},
-        "lnk": {"from": 4, "to": 7},
         "nodeid": 10001,
-        "predicate": "_new_a_1"
+        "predicate": "_new_a_1",
+        "sortinfo": {"SF": "prop", "TENSE": "untensed", "MOOD": "indicative", "PROG": "bool", "PERF": "-", "cvarsort": "e"},
+        "lnk": {"from": 4, "to": 7}
       },
       {
-        "sortinfo": {"cvarsort": "x", "IND": "+", "NUM": "sg", "PERS": "3"},
-        "lnk": {"from": 8, "to": 12},
         "nodeid": 10002,
-        "predicate": "_chef_n_1"
+        "predicate": "_chef_n_1",
+        "sortinfo": {"PERS": "3", "NUM": "sg", "IND": "+", "cvarsort": "x"},
+        "lnk": {"from": 8, "to": 12}
       },
       {
-        "sortinfo": {"cvarsort": "x"},
-        "lnk": {"from": 13, "to": 18},
         "nodeid": 10003,
-        "predicate": "def_explicit_q"
+        "predicate": "def_explicit_q",
+        "lnk": {"from": 13, "to": 18}
       },
       {
-        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "untensed"},
-        "lnk": {"from": 13, "to": 18},
         "nodeid": 10004,
-        "predicate": "poss"
+        "predicate": "poss",
+        "sortinfo": {"SF": "prop", "TENSE": "untensed", "MOOD": "indicative", "PROG": "-", "PERF": "-", "cvarsort": "e"},
+        "lnk": {"from": 13, "to": 18}
       },
       {
-        "sortinfo": {"cvarsort": "x", "NUM": "sg", "PERS": "3"},
-        "lnk": {"from": 19, "to": 23},
         "nodeid": 10005,
-        "predicate": "_soup_n_1"
+        "predicate": "_soup_n_1",
+        "sortinfo": {"PERS": "3", "NUM": "sg", "cvarsort": "x"},
+        "lnk": {"from": 19, "to": 23}
       },
       {
-        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "untensed"},
-        "lnk": {"from": 24, "to": 36},
         "nodeid": 10006,
-        "predicate": "_accidental_a_1"
+        "predicate": "_accidental_a_1",
+        "sortinfo": {"SF": "prop", "TENSE": "untensed", "MOOD": "indicative", "PROG": "-", "PERF": "-", "cvarsort": "e"},
+        "lnk": {"from": 24, "to": 36}
       },
       {
-        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "past"},
-        "lnk": {"from": 37, "to": 44},
         "nodeid": 10007,
-        "predicate": "_spill_v_1"
+        "predicate": "_spill_v_1",
+        "sortinfo": {"SF": "prop", "TENSE": "past", "MOOD": "indicative", "PROG": "-", "PERF": "-", "cvarsort": "e"},
+        "lnk": {"from": 37, "to": 44}
       },
       {
-        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "past"},
-        "lnk": {"from": 45, "to": 49},
         "nodeid": 10008,
-        "predicate": "_quit_v_1"
+        "predicate": "_quit_v_1",
+        "sortinfo": {"SF": "prop", "TENSE": "past", "MOOD": "indicative", "PROG": "-", "PERF": "-", "cvarsort": "e"},
+        "lnk": {"from": 45, "to": 49}
       },
       {
-        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "past"},
-        "lnk": {"from": 50, "to": 53},
         "nodeid": 10009,
-        "predicate": "_and_c"
+        "predicate": "_and_c",
+        "sortinfo": {"SF": "prop", "TENSE": "past", "MOOD": "indicative", "PROG": "-", "PERF": "-", "cvarsort": "e"},
+        "lnk": {"from": 50, "to": 53}
       },
       {
-        "sortinfo": {"cvarsort": "e", "PERF": "-", "MOOD": "indicative", "PROG": "-", "SF": "prop", "TENSE": "past"},
-        "lnk": {"from": 54, "to": 59},
         "nodeid": 10010,
-        "predicate": "_leave_v_1"
+        "predicate": "_leave_v_1",
+        "sortinfo": {"SF": "prop", "TENSE": "past", "MOOD": "indicative", "PROG": "-", "PERF": "-", "cvarsort": "e"},
+        "lnk": {"from": 54, "to": 59}
       }
     ],
     "links": [
-      {"from": 10007, "to": 10005, "post": "NEQ", "rargname": "ARG1"},
-      {"from": 10000, "to": 10002, "post": "H", "rargname": "RSTR"},
-      {"from": 10003, "to": 10005, "post": "H", "rargname": "RSTR"},
-      {"from": 10008, "to": 10002, "post": "NEQ", "rargname": "ARG1"},
-      {"from": 10009, "to": 10008, "post": "EQ", "rargname": "ARG1"},
-      {"from": 10009, "to": 10010, "post": "EQ", "rargname": "ARG2"},
-      {"from": 10010, "to": 10002, "post": "NEQ", "rargname": "ARG1"},
-      {"from": 10004, "to": 10005, "post": "EQ", "rargname": "ARG1"},
-      {"from": 10004, "to": 10002, "post": "NEQ", "rargname": "ARG2"},
-      {"from": 10006, "to": 10007, "post": "EQ", "rargname": "ARG1"},
-      {"from": 10001, "to": 10002, "post": "EQ", "rargname": "ARG1"},
-      {"from": 10010, "to": 10008, "post": "EQ", "rargname": "MOD"},
-      {"from": 10007, "to": 10002, "post": "EQ", "rargname": "MOD"}
+      {"from": 10000, "to": 10002, "rargname": "RSTR", "post": "H"},
+      {"from": 10001, "to": 10002, "rargname": "ARG1", "post": "EQ"},
+      {"from": 10003, "to": 10005, "rargname": "RSTR", "post": "H"},
+      {"from": 10004, "to": 10005, "rargname": "ARG1", "post": "EQ"},
+      {"from": 10004, "to": 10002, "rargname": "ARG2", "post": "NEQ"},
+      {"from": 10006, "to": 10007, "rargname": "ARG1", "post": "EQ"},
+      {"from": 10007, "to": 10005, "rargname": "ARG1", "post": "NEQ"},
+      {"from": 10008, "to": 10002, "rargname": "ARG1", "post": "NEQ"},
+      {"from": 10009, "to": 10008, "rargname": "ARG1", "post": "EQ"},
+      {"from": 10009, "to": 10010, "rargname": "ARG2", "post": "EQ"},
+      {"from": 10010, "to": 10002, "rargname": "ARG1", "post": "NEQ"},
+      {"from": 10007, "to": 10002, "rargname": "MOD", "post": "EQ"},
+      {"from": 10010, "to": 10008, "rargname": "MOD", "post": "EQ"}
     ]
   }
 """

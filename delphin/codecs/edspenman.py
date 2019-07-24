@@ -24,11 +24,7 @@ Example:
       :num sg
       :ind +
       :BV-of (_1 / _the_q
-        :lnk "<0:3>"
-        :type x
-        :pers 3
-        :num sg
-        :ind +)
+        :lnk "<0:3>")
       :ARG1-of (e8 / _new_a_1
         :lnk "<4:7>"
         :type e
@@ -51,10 +47,7 @@ Example:
           :pers 3
           :num sg
           :BV-of (_2 / def_explicit_q
-            :lnk "<13:18>"
-            :type x
-            :pers 3
-            :num sg)
+            :lnk "<13:18>")
           :ARG1-of (e16 / _spill_v_1
             :lnk "<37:44>"
             :type e

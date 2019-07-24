@@ -12,7 +12,7 @@ Example:
   <dmrs cfrom="-1" cto="-1" index="10009" top="10008">
     <node cfrom="0" cto="3" nodeid="10000">
       <realpred lemma="the" pos="q" />
-      <sortinfo cvarsort="x" />
+      <sortinfo />
     </node>
     <node cfrom="4" cto="7" nodeid="10001">
       <realpred lemma="new" pos="a" sense="1" />
@@ -24,7 +24,7 @@ Example:
     </node>
     <node cfrom="13" cto="18" nodeid="10003">
       <gpred>def_explicit_q</gpred>
-      <sortinfo cvarsort="x" />
+      <sortinfo />
     </node>
     <node cfrom="13" cto="18" nodeid="10004">
       <gpred>poss</gpred>
@@ -54,39 +54,11 @@ Example:
       <realpred lemma="leave" pos="v" sense="1" />
       <sortinfo MOOD="indicative" PERF="-" PROG="-" SF="prop" TENSE="past" cvarsort="e" />
     </node>
-    <link from="10001" to="10002">
-      <rargname>ARG1</rargname>
-      <post>EQ</post>
-    </link>
     <link from="10000" to="10002">
       <rargname>RSTR</rargname>
       <post>H</post>
     </link>
-    <link from="10009" to="10010">
-      <rargname>ARG2</rargname>
-      <post>EQ</post>
-    </link>
-    <link from="10009" to="10008">
-      <rargname>ARG1</rargname>
-      <post>EQ</post>
-    </link>
-    <link from="10007" to="10005">
-      <rargname>ARG1</rargname>
-      <post>NEQ</post>
-    </link>
-    <link from="10010" to="10002">
-      <rargname>ARG1</rargname>
-      <post>NEQ</post>
-    </link>
-    <link from="10008" to="10002">
-      <rargname>ARG1</rargname>
-      <post>NEQ</post>
-    </link>
-    <link from="10004" to="10002">
-      <rargname>ARG2</rargname>
-      <post>NEQ</post>
-    </link>
-    <link from="10004" to="10005">
+    <link from="10001" to="10002">
       <rargname>ARG1</rargname>
       <post>EQ</post>
     </link>
@@ -94,15 +66,43 @@ Example:
       <rargname>RSTR</rargname>
       <post>H</post>
     </link>
+    <link from="10004" to="10005">
+      <rargname>ARG1</rargname>
+      <post>EQ</post>
+    </link>
+    <link from="10004" to="10002">
+      <rargname>ARG2</rargname>
+      <post>NEQ</post>
+    </link>
     <link from="10006" to="10007">
       <rargname>ARG1</rargname>
       <post>EQ</post>
     </link>
-    <link from="10010" to="10008">
+    <link from="10007" to="10005">
+      <rargname>ARG1</rargname>
+      <post>NEQ</post>
+    </link>
+    <link from="10008" to="10002">
+      <rargname>ARG1</rargname>
+      <post>NEQ</post>
+    </link>
+    <link from="10009" to="10008">
+      <rargname>ARG1</rargname>
+      <post>EQ</post>
+    </link>
+    <link from="10009" to="10010">
+      <rargname>ARG2</rargname>
+      <post>EQ</post>
+    </link>
+    <link from="10010" to="10002">
+      <rargname>ARG1</rargname>
+      <post>NEQ</post>
+    </link>
+    <link from="10007" to="10002">
       <rargname>MOD</rargname>
       <post>EQ</post>
     </link>
-    <link from="10007" to="10002">
+    <link from="10010" to="10008">
       <rargname>MOD</rargname>
       <post>EQ</post>
     </link>
