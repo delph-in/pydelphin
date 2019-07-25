@@ -256,7 +256,7 @@ convert_parser.add_argument(
     action='store_true',
     help='(--to=eds* only) attempt to join disconnected graphs')
 convert_parser.add_argument(
-    '--sem-i',
+    '--sem-i', '--semi',
     dest='semi',
     metavar='PATH',
     help='(--to=indexedmrs only) path to a SEM-I')
