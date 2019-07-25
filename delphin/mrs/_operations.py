@@ -75,9 +75,9 @@ def is_well_formed(m: mrs.MRS) -> bool:
 
     A well-formed MRS meets the following criteria:
 
-    - is connected
-    - has the intrinsic variable property
-    - plausibly scopes
+    - :func:`is_connected`
+    - :func:`has_intrinsic_variable_property`
+    - :func:`plausibly_scopes`
 
     The final criterion is a heuristic for determining if the MRS
     scopes by checking if handle constraints and scopal arguments have
@@ -89,8 +89,21 @@ def is_well_formed(m: mrs.MRS) -> bool:
             and _plausibly_scopes(m))
 
 
-def _plausibly_scopes(m: mrs.MRS) -> bool:
-    scopes = m.scopes()
+def plausibly_scopes(m: mrs.MRS) -> bool:
+    """
+    Quickly test if MRS *m* can plausibly resolve a scopal reading.
+
+    This tests a number of things:
+
+        - Is the MRS's top qeq to a label
+        - Do any EPs scope over themselves
+        - Do multiple EPs use the handle constraint
+        - Is the lo handle of a qeq not actually a label
+        - Are any qeqs not selected by an EP
+
+    It does not test for transitive scopal plausibility.
+    """
+    scope_labels = set(ep.label for ep in m.rels)
     hcmap = {hc.hi: hc.lo for hc in m.hcons}
     if m.top not in hcmap:
         return False
@@ -100,16 +113,16 @@ def _plausibly_scopes(m: mrs.MRS) -> bool:
             if handle == m[id].label:
                 return False
             elif handle in hcmap:
-                if (handle in seen
-                        or hcmap[handle] in seen
-                        or hcmap[handle] not in scopes):
+                if handle in seen:
+                    return False
+                if hcmap[handle] not in scope_labels:
                     return False
                 seen.add(hcmap[handle])
-            elif handle in scopes and handle in seen:
+            elif handle in scope_labels and handle in seen:
                 return False
             seen.add(handle)
     for hi, lo in hcmap.items():
-        if hi not in seen and lo not in scopes:
+        if hi not in seen or lo not in scope_labels:
             return False
     return True
 
