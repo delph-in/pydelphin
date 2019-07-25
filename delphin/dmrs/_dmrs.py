@@ -61,9 +61,7 @@ class Node(Predication):
                  lnk: Lnk = None,
                  surface=None,
                  base=None):
-        if not isinstance(id, int):
-            raise TypeError('node id must be of type int')
-        id = id
+        id = int(id)
         super().__init__(id, predicate, type, lnk, surface, base)
         if not properties:
             properties = {}
@@ -116,10 +114,8 @@ class Link(object):
     __slots__ = ('start', 'end', 'role', 'post')
 
     def __init__(self, start: int, end: int, role: str, post: str):
-        if not (isinstance(start, int) and isinstance(end, int)):
-            raise TypeError('start and end node ids must be of type int')
-        self.start = start
-        self.end = end
+        self.start = int(start)
+        self.end = int(end)
         self.role = role
         self.post = post
 
@@ -176,6 +172,11 @@ class DMRS(scope.ScopingSemanticStructure):
                  identifier=None):
 
         top, links = _normalize_top_and_links(top, links)
+
+        if top:
+            top = int(top)
+        if index:
+            index = int(index)
 
         super().__init__(top, index, nodes, lnk, surface, identifier)
 
