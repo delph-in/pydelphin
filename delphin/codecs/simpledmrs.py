@@ -8,6 +8,7 @@ Example:
 * *The new chef whose soup accidentally spilled quit and left.*
 
 ::
+
   dmrs {
     ["The new chef whose soup accidentally spilled quit and left." top=10008 index=10009]
     10000 [_the_q<0:3>];

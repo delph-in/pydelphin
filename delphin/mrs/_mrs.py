@@ -97,12 +97,10 @@ class EP(Predication):
 
     @property
     def iv(self):
-        """The intrinsic variable (namely, the value of `ARG0`)."""
         return self.args.get(INTRINSIC_ROLE, None)
 
     @property
     def carg(self):
-        """The constant argument (namely, the value of `CARG`)."""
         return self.args.get(CONSTANT_ROLE, None)
 
     def is_quantifier(self):
@@ -128,12 +126,20 @@ class HCons(Constraint):
     def __new__(cls, hi: str, relation: str, lo: str):
         return super().__new__(cls, hi, relation, lo)
 
-    hi = property(
-        itemgetter(0), doc='the higher-scoped handle')
-    relation = property(
-        itemgetter(1), doc='the constraint relation')
-    lo = property(
-        itemgetter(2), doc='the lower-scoped handle')
+    @property
+    def hi(self):
+        """The higher-scoped handle."""
+        return self[0]
+
+    @property
+    def relation(self):
+        """The constraint relation."""
+        return self[1]
+
+    @property
+    def lo(self):
+        """The lower-scoped handle."""
+        return self[2]
 
     @classmethod
     def qeq(cls, hi, lo):
@@ -155,17 +161,20 @@ class ICons(Constraint):
     def __new__(cls, left: str, relation: str, right: str):
         return super().__new__(cls, left, relation, right)
 
-    left = property(
-        itemgetter(0), doc='the intrinsic variable of the constraining EP')
-    relation = property(
-        itemgetter(1), doc='the constraint relation')
-    right = property(
-        itemgetter(2), doc='the intrinsic variable of the constrained EP')
+    @property
+    def left(self):
+        """The intrinsic variable of the constraining EP."""
+        return self[0]
 
+    @property
+    def relation(self):
+        """The constraint relation."""
+        return self[1]
 
-# class MRSFragment(object):
-#     def finalize(self):
-#         pass
+    @property
+    def right(self):
+        """The intrinsic variable of the constrained EP."""
+        return self[2]
 
 
 class MRS(scope.ScopingSemanticStructure):
@@ -182,6 +191,7 @@ class MRS(scope.ScopingSemanticStructure):
         lnk: surface alignment
         surface: surface string
         identifier: a discourse-utterance identifier
+
     Attributes:
         top: The top scope handle.
         index: The top variable.

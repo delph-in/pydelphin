@@ -152,6 +152,16 @@ class DMRS(scope.ScopingSemanticStructure):
         surface: surface string
         identifier: a discourse-utterance identifier
 
+    Attributes:
+        top: The scopal top node.
+        index: The non-scopal top node.
+        nodes: The list of Nodes (alias of
+            :attr:`~delphin.sembase.SemanticStructure.predications`).
+        links: The list of Links.
+        lnk: The surface alignment for the whole MRS.
+        surface: The surface string represented by the MRS.
+        identifier: A discourse-utterance identifier.
+
     Example:
 
     >>> rain = Node(10000, '_rain_v_1', type='e')
@@ -184,7 +194,6 @@ class DMRS(scope.ScopingSemanticStructure):
 
     @property
     def nodes(self):
-        """Alias of :attr:`predications`."""
         return self.predications
 
     def __eq__(self, other):
