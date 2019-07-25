@@ -11,14 +11,11 @@ delphin.scope
       :show-inheritance:
       :members:
 
-   .. autoclass:: UnderspecifiedScope(ids, lheqs=None, qeqs=None)
-      :members:
-
    Module Functions
    ----------------
 
    .. autofunction:: conjoin
-   .. autofunction:: tree_fragments
+   .. autofunction:: descendants
    .. autofunction:: representatives
 
    Exceptions

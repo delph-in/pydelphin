@@ -51,10 +51,10 @@ def _mrs_get_top(top, hcmap, reps, id_to_nid):
     if top in hcmap:
         lbl = hcmap[top].lo
         rep = reps[lbl][0]
-        top = id_to_nid[rep]
+        top = id_to_nid[rep.id]
     elif top in reps:
         rep = reps[top][0]
-        top = id_to_nid[rep]
+        top = id_to_nid[rep.id]
     return top
 
 
@@ -100,18 +100,18 @@ def _mrs_to_links(m, hcmap, reps, iv_to_nid, id_to_nid):
             elif tgt in hcmap:
                 lo = hcmap[tgt].lo
                 tgt = reps[lo][0]
-                end = id_to_nid[tgt]
+                end = id_to_nid[tgt.id]
                 post = dmrs.H_POST
             # other (e.g., BODY, dropped arguments, etc.)
             else:
                 continue
             links.append(dmrs.Link(start, end, role, post))
     # MOD/EQ links for shared labels without argumentation
-    for label, ids in reps.items():
-        if len(ids) > 1:
-            end = id_to_nid[ids[0]]
-            for src in ids[1:]:
-                start = id_to_nid[src]
+    for label, eps in reps.items():
+        if len(eps) > 1:
+            end = id_to_nid[eps[0].id]
+            for src in eps[1:]:
+                start = id_to_nid[src.id]
                 links.append(
                     dmrs.Link(start, end, dmrs.BARE_EQ_ROLE, dmrs.EQ_POST))
     return links

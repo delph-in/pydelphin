@@ -107,12 +107,18 @@ Scoping semantic structures such as MRS and DMRS can make use of the
 structures:
 
 >>> from delphin import scope
->>> >>> for label, frag in scope.tree_fragments(m).items():
-...     print(label, [m[id].predicate for id in frag.ids], frag.qeqs)
+>>> _response = ace.parse(grm, "Kim didn't think that Sandy left.")
+>>> descendants = scope.descendants(_response.result(0).mrs())
+>>> for id, ds in descendants.items():
+...     print(m[id].predicate, [d.predicate for d in ds])
 ... 
-h0 [] {'h1': UnderspecifiedScope({'e2'}, {}, {})}
-h4 ['proper_q'] {'h7': UnderspecifiedScope({'x3'}, {}, {})}
-h10 ['proper_q'] {'h13': UnderspecifiedScope({'x9'}, {}, {})}
+proper_q ['named']
+named []
+neg ['_think_v_1', '_leave_v_1']
+_think_v_1 ['_leave_v_1']
+_leave_v_1 []
+proper_q ['named']
+named []
 
 .. seealso::
   - :mod:`delphin.scope` module

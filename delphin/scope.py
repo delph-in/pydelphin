@@ -51,13 +51,12 @@ QEQ = 'qeq'              # equality modulo quantifiers (hole-to-label)
 # Types
 ScopeLabel = str
 ScopeRelation = str
-ScopeMap = Mapping[ScopeLabel, Predications]
+ScopeMap = Dict[ScopeLabel, Predications]
+DescendantMap = Dict[Identifier, List[Predication]]
 ScopalRoleArgument = Tuple[Role, ScopeRelation, Identifier]
 ScopalArgumentStructure = Mapping[Identifier, List[ScopalRoleArgument]]
 # Regarding literal types, see: https://www.python.org/dev/peps/pep-0563/
-UnderspecifiedFragments = Mapping[ScopeLabel, 'UnderspecifiedScope']
 ScopeEqualities = Iterable[Tuple[ScopeLabel, ScopeLabel]]
-ScopeConstraints = Iterable[Tuple[ScopeLabel, ScopeRelation, ScopeLabel]]
 
 
 # Exceptions
@@ -67,62 +66,6 @@ class ScopeError(PyDelphinException):
 
 
 # Classes
-
-class UnderspecifiedScope(tuple):
-    """
-    Quantifier scope with underspecified constraints.
-
-    This class serves as the nodes in the scope tree fragments used by
-    MRS (and transformations of DMRS). It combines three data
-    structures:
-
-    * the ids of predications in the immediate scope
-
-    * a mapping of labels to :class:`UnderspecifiedScope` objects for
-      scopes directly under the current scope
-
-    * a mapping of labels to :class:`UnderspecifiedScope` objects for
-      scopes qeq from the current scope
-
-    This class is not meant to be instantiated directly, but rather is
-    used in the return value of functions such as
-    :func:`tree_fragments`.
-
-    Attributes:
-        ids: ids of predications in the immediate scope
-        lheqs: mapping of labels to underspecified scopes directly
-            under the current scope
-        qeqs: mapping of labels to underspecified scopes qeq from
-            the current scope
-    """
-
-    __slots__ = ()
-
-    def __new__(cls,
-                ids: Container[Identifier],
-                lheqs: UnderspecifiedFragments = None,
-                qeqs: UnderspecifiedFragments = None):
-        if lheqs is None:
-            lheqs = {}
-        if qeqs is None:
-            qeqs = {}
-        return super().__new__(cls, (set(ids), dict(lheqs), dict(qeqs)))
-
-    ids = property(
-        itemgetter(0), doc='set of ids of predicates in the immediate scope')
-    lheqs = property(
-        itemgetter(1), doc='directly lower scopes')
-    qeqs = property(
-        itemgetter(2), doc='indirectly lower scopes')
-
-    def __repr__(self):
-        return 'UnderspecifiedScope({!r}, {!r}, {!r})'.format(*self)
-
-    def __contains__(self, id):
-        return (id in self.ids
-                or any(id in lower for lower in self.lheqs.values())
-                or any(id in lower for lower in self.qeqs.values()))
-
 
 class ScopingSemanticStructure(SemanticStructure):
     """
@@ -203,42 +146,53 @@ def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
     return scopemap
 
 
-def tree_fragments(x: ScopingSemanticStructure,
-                   prune=True) -> UnderspecifiedFragments:
+def descendants(x: ScopingSemanticStructure,
+                scopes: ScopeMap = None) -> DescendantMap:
     """
-    Return a mapping of scope labels to underspecified tree fragments.
-
-    Each fragment is an :class:`UnderspecifiedScope` object.
-
-    By default the top-level mapping only includes the fragments that
-    are not specified as being under another scope. By setting the
-    *prune* parameter to `False` all scope labels are included in the
-    mapping, which may be helpful for applications needing direct
-    access to lower scopes.
+    Return a mapping of predication ids to their scopal descendants.
 
     Args:
-        x: an MRS or DMRS
-        prune: if `True` only include top-level scopes in the mapping
+        x: an MRS or a DMRS
+        scopes: a mapping of scope labels to predications
+    Returns:
+       A mapping of predication ids to lists of predications that are
+       scopal descendants.
+    Example:
+        >>> m = mrs.MRS(...)  # Kim didn't think that Sandy left.
+        >>> descendants = scope.descendants(m)
+        >>> for id, ds in descendants.items():
+        ...     print(m[id].predicate, [d.predicate for d in ds])
+        ... 
+        proper_q ['named']
+        named []
+        neg ['_think_v_1', '_leave_v_1']
+        _think_v_1 ['_leave_v_1']
+        _leave_v_1 []
+        proper_q ['named']
+        named []
+
     """
-    scopes = x.scopes()
-    fragments = {x.top: UnderspecifiedScope([])}
-    for label, ps in scopes.items():
-        fragments[label] = UnderspecifiedScope(ps)
+    if scopes is None:
+        _, scopes = x.scopes()
+    scargs = x.scopal_arguments(scopes=scopes)
+    descs = {}  # type: DescendantMap
+    for p in x.predications:
+        _descendants(descs, p.id, scargs, scopes)
+    return descs
 
-    nested = set()
-    for src, rel, tgt in x.scope_constraints():
-        if rel == LHEQ:
-            fragments[src].lheqs[tgt] = fragments[tgt]
-            nested.add(tgt)
-        elif rel == QEQ:
-            fragments[src].qeqs[tgt] = fragments[tgt]
-            nested.add(tgt)
 
-    if prune:
-        for label in nested:
-            del fragments[label]
-
-    return fragments
+def _descendants(descs: DescendantMap,
+                 id: Identifier,
+                 scargs: ScopalArgumentStructure,
+                 scopes: ScopeMap) -> None:
+    if id in descs:
+        return
+    descs[id] = []
+    for role, relation, label in scargs[id]:
+        for p in scopes.get(label, []):
+            descs[id].append(p)
+            _descendants(descs, p.id, scargs, scopes)
+            descs[id].extend(descs[p.id])
 
 
 def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
@@ -254,18 +208,27 @@ def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
     within their scope as an argument (as `_book_n_of` above does not)
     are scope representatives.
 
-    The *priority* argument is a function that takes a predication id
+    *priority* is a function that takes a :class:`Predication` object
     and returns a rank which is used to to sort the representatives
-    for each scope. As the id alone is probably not enough information
-    for useful sorting, it is helpful to create a function configured
-    for the input semantic structure *x*. If *priority* is `None`,
-    representatives are sorted according to the following criteria:
+    for each scope. As the predication alone might not contain enough
+    information for useful sorting, it can be helpful to create a
+    function configured for the input semantic structure *x*. If
+    *priority* is `None`, representatives are sorted according to the
+    following criteria:
 
-    1. Prefer predications that are quantifiers or are quantified
+    1. Prefer predications that are quantifiers or instances (type 'x')
 
-    2. Prefer surface predicates over abstract predicates
+    2. Prefer eventualities (type 'e') over other types
 
-    3. Finally, prefer prefer those appearing first in *x*
+    3. Prefer tensed over untensed eventualities
+
+    4. Finally, prefer prefer those appearing first in *x*
+
+    The definition of "tensed" vs "untensed" eventualities is
+    grammar-specific, but it is used by several large grammars. If a
+    grammar does something different, criterion (3) is ignored.
+    Criterion (4) is not linguistically motivated but is used as a
+    final disambiguator to ensure consistent results.
 
     Args:
         x: an MRS or a DMRS
@@ -274,26 +237,38 @@ def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
         >>> sent = 'The new chef whose soup accidentally spilled quit.'
         >>> m = ace.parse(erg, sent).result(0).mrs()
         >>> # in this example there are 4 EPs in scope h7
-        >>> print('  '.join('{}:{}'.format(id, m[id].predicate)
-        ...                 for id in m.scopes()['h7']))
-        e8:_new_a_1  x3:_chef_n_1  e15:_accidental_a_1  e16:_spill_v_1
+        >>> _, scopes = m.scopes()
+        >>> [ep.predicate for ep in scopes['h7']]
+        ['_new_a_1', '_chef_n_1', '_accidental_a_1', '_spill_v_1']
         >>> # there are 2 representatives for scope h7
-        >>> scope.representatives(m)['h7']
-        ['e16', 'x3']
-        >>> # normalize the order with the *priority* parameter
-        >>> rp = make_representative_priority(m)
-        >>> scope.representatives(m, priority=rp)['h7']
-        ['x3', 'e16']
+        >>> reps = scope.representatives(m)['h7']
+        >>> [ep.predicate for ep in reps]
+        ['_chef_n_1', '_spill_v_1']
     """
-    fragments = tree_fragments(x, prune=False)
-    nsargs = {src: set(roleargs.values())
-              for src, roleargs in x.arguments(scopal=False).items()}
+    _, scopes = x.scopes()
+    #fragments = tree_fragments(x, prune=False)
+    ns_args = {src: set(arg for _, arg in roleargs)
+               for src, roleargs in x.arguments(types='xeipu').items()}
+    # compute descendants, but only keep ids
+    descs = {id: set(d.id for d in ds)
+             for id, ds in descendants(x, scopes).items()}
 
-    reps = {label: [] for label in fragments}
-    for label, uscope in fragments.items():
-        for id in uscope.ids:
-            if len(nsargs.get(id, set()).intersection(uscope.ids)) == 0:
-                reps[label].append(id)
+    reps = {label: [] for label in scopes}  # type: ScopeMap
+    for label, scope in scopes.items():
+        if len(scope) == 1:
+            reps[label] = scope
+        else:
+            for predication in scope:
+                others = [p.id for p in scope if p is not predication]
+                args = ns_args[predication.id]
+                # check if args are in the immediate scope
+                if args.intersection(others):
+                    continue
+                # check if args are in scope descendants
+                if any(args.intersection(descs[id]) for id in others):
+                    continue
+                # tests passed; predication is a candidate representative
+                reps[label].append(predication)
 
     if priority is None:
         priority = _make_representative_priority(x)
@@ -303,32 +278,32 @@ def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
     return reps
 
 
+_UNTENSED_VALUES = {
+    '',
+    'untensed',
+}
+
+
 def _make_representative_priority(x: ScopingSemanticStructure):
     """
     Create a function to sort scope representatives in *x*.
-
-    This is the default representative ranking policy used by
-    PyDelphin with the following (ordered) criteria:
-
-    1. Prefer predications that are quantifiers or are quantified
-
-    2. Prefer surface predicates over abstract predicates
-
-    3. Finally, prefer prefer those appearing first in *x*
     """
-    qs = set()
-    for p, q in x.quantifier_map().items():
-        if q:
-            qs.update((p, q))
     index = {p.id: i for i, p in enumerate(x.predications, 1)}
 
-    def representative_priority(id: Identifier):
-        if id in qs:
+    def representative_priority(p: Predication):
+        id = p.id
+        type = p.type
+
+        if x.is_quantifier(id) or type == 'x':
             rank = 0
-        elif predicate.is_abstract(x[id].predicate):
-            rank = 2
+        elif type == 'e':
+            tense = x.properties(id).get('TENSE', '').lower()
+            if tense in _UNTENSED_VALUES:
+                rank = 2
+            else:
+                rank = 1
         else:
-            rank = 1
+            rank = 3
         return rank, index[id]
 
     return representative_priority

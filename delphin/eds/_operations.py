@@ -67,9 +67,9 @@ def from_mrs(m, predicate_modifiers=False, unique_ids=True,
 def _mrs_get_top(top, hcmap, reps):
     if top in hcmap:
         lbl = hcmap[top].lo
-        top = reps[lbl][0]
+        top = reps[lbl][0].id
     elif top in reps:
-        top = reps[top][0]
+        top = reps[top][0].id
     return top
 
 
@@ -88,13 +88,13 @@ def _mrs_args_to_basic_deps(m, hcmap, reps):
                 # qeq
                 if tgt in hcmap:
                     lbl = hcmap[tgt].lo
-                    tgt = reps[lbl][0]
+                    tgt = reps[lbl][0].id
                 # label arg
                 elif tgt in reps:
-                    tgt = reps[tgt][0]
+                    tgt = reps[tgt][0].id
                 # regular arg
-                    tgt = iv_to_id[tgt]
                 elif tgt in ivmap:
+                    tgt = ivmap[tgt][0].id
                 # other (e.g., BODY, dropped arguments, etc.)
                 else:
                     continue
@@ -188,17 +188,17 @@ def find_predicate_modifiers(e, m, representatives=None):
 
     addl = {}
     if len(components) > 1:
-        for label, ids in representatives.items():
-            if len(ids) > 1:
-                first = ids[0]
-                joined = set([ccmap[first]])
-                for other in ids[1:]:
-                    occ = ccmap[other]
-                    type = variable.type(m[other].args.get(role, 'u0'))
+        for label, eps in representatives.items():
+            if len(eps) > 1:
+                first = eps[0]
+                joined = set([ccmap[first.id]])
+                for other in eps[1:]:
+                    occ = ccmap[other.id]
+                    type = variable.type(other.args.get(role, 'u0'))
                     needs_edge = occ not in joined
                     edge_available = type.lower() == 'u'
                     if needs_edge and edge_available:
-                        addl.setdefault(other, {})[role] = first
+                        addl.setdefault(other.id, {})[role] = first.id
                         joined.add(occ)
     return addl
 
