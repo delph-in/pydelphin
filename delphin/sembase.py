@@ -1,5 +1,5 @@
 
-from typing import Mapping, Tuple, Dict, Union, Iterable
+from typing import Mapping, Tuple, List, Dict, Union, Iterable
 
 from delphin.lnk import Lnk, LnkMixin
 # Default modules need to import the PyDelphin version
@@ -11,7 +11,9 @@ from delphin.__about__ import __version__  # noqa: F401
 # Identifiers are node ids in DMRS and EDS, or variables in MRS
 # including handles and underspecified variables
 Identifier = Union[str, int]
-ArgumentStructure = Mapping[Identifier, Mapping[str, Identifier]]
+Role = str
+RoleArgument = Tuple[Role, Identifier]
+ArgumentStructure = Mapping[Identifier, List[RoleArgument]]
 PropertyMap = Mapping[str, str]
 
 
@@ -118,7 +120,8 @@ class Constraint(tuple):
 
 Predications = Iterable[Predication]
 Constraints = Iterable[Constraint]
-
+MaybePredication = Union[Predication, None]
+PredicationPair = Tuple[MaybePredication, MaybePredication]
 
 class SemanticStructure(LnkMixin):
     """
@@ -171,8 +174,19 @@ class SemanticStructure(LnkMixin):
     def __getitem__(self, id):
         return self._pidx[id]
 
-    def arguments(self, types=None) -> ArgumentStructure:
-        """Return a mapping of the argument structure."""
+    def arguments(self, types=None, expressed=None) -> ArgumentStructure:
+        """
+        Return a mapping of the argument structure.
+
+        Args:
+            types: an iterable of predication types to include
+            expressed: if `True`, only include arguments to expressed
+                predications; if `False`, only include those
+                unexpressed; if `None`, include both
+        Returns:
+            A mapping of predication ids to lists of (role, target)
+            pairs for outgoing arguments for the predication.
+        """
         raise NotImplementedError()
 
     def properties(self, id: Identifier) -> PropertyMap:
@@ -183,12 +197,18 @@ class SemanticStructure(LnkMixin):
         """Return `True` if *id* represents a quantifier."""
         raise NotImplementedError()
 
-    def quantifier_map(self) -> Dict[Identifier, Identifier]:
+    def quantification_pairs(self) -> List[PredicationPair]:
         """
-        Return a mapping of predication ids to quantifier ids.
+        Return a list of (Quantifiee, Quantifier) pairs.
 
-        The id of every non-quantifier predication will appear as a
-        key in the mapping and its value will the id of its quantifier
-        if it has one, otherwise the value will be `None`.
+        Both the Quantifier and Quantifiee are :class:`Predication`
+        objects, unless they do not quantify or are not quantified by
+        anything, in which case they are `None`. In well-formed and
+        complete structures, the quantifiee will never be `None`.
+
+        Example:
+            >>> [(p.predicate, q.predicate)
+            ...  for p, q in m.quantification_pairs()]
+            [('_dog_n_1', '_the_q'), ('_bark_v_1', None)]
         """
         raise NotImplementedError()

@@ -22,12 +22,11 @@ class TestNode():
             Node()
         with pytest.raises(TypeError):
             Node(1)
-        with pytest.raises(TypeError):
-            Node('1', '_dog_n_1')
         Node(1, '_dog_n_1')
         Node(1, '_dog_n_1', type='x')
         Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'})
         Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'}, carg='Dog')
+        Node('1', '_dog_n_1')
 
     def test__eq__(self):
         n = Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'})
@@ -57,11 +56,9 @@ class TestLink():
             Link(1, 2)
         with pytest.raises(TypeError):
             Link(1, 2, 'ARG1')
-        with pytest.raises(TypeError):
-            Link('1', 2, 'ARG1', 'EQ')
-        with pytest.raises(TypeError):
-            Link(1, '2', 'ARG1', 'EQ')
         Link(1, 2, 'ARG1', 'EQ')
+        Link('1', 2, 'ARG1', 'EQ')
+        Link(1, '2', 'ARG1', 'EQ')
 
     def test__eq__(self):
         link1 = Link(1, 2, 'ARG1', 'EQ')

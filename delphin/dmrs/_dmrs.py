@@ -207,68 +207,139 @@ class DMRS(scope.ScopingSemanticStructure):
         return any(link.role == RESTRICTION_ROLE
                    for link in self.links if link.start == id)
 
-    def quantifier_map(self):
-        qmap = {node.id: None for node in self.nodes}
+    def quantification_pairs(self):
+        qs = set()
+        qmap = {}
         for link in self.links:
             if link.role == RESTRICTION_ROLE:
-                qmap[link.end] = link.start
-        return qmap
-
-    # ScopingSemanticStructure methods
-
-    def arguments(self, types=None, scopal=None):
-        args = {}
-        id_to_type = {}
+                qs.add(link.start)
+                qmap[link.end] = self[link.start]
+        pairs = []
+        # first pair non-quantifiers to their quantifier, if any
         for node in self.nodes:
-            args[node.id] = {}
-            id_to_type[node.id] = node.type
-        _scposts = (H_POST, HEQ_POST)
+            if node.id not in qs:
+                pairs.append((node, qmap.get(node.id)))
+        # for MRS any unpaired quantifiers are added here, but in DMRS
+        # I'm not sure what an unpaired quantifier would look like;
+        # its link.end must point to something
+        return pairs
+
+    def arguments(self, types=None, expressed=None):
+        """
+        Return a mapping of the argument structure.
+
+        When *types* is used, any DMRS Links with :attr:`Link.attr`
+        set to :data:`H_POST` or :data:`HEQ_POST` are considered to
+        have a type of `'h'`, so one can exclude scopal arguments by
+        omitting `'h'` on *types*. Otherwise an argument's type is the
+        :attr:`Node.type` of the link's target.
+
+        Args:
+            types: an iterable of predication types to include
+            expressed: if `True`, only include arguments to expressed
+                predications; if `False`, only include those
+                unexpressed; if `None`, include both
+        Returns:
+            A mapping of predication ids to lists of (role, target)
+            pairs for outgoing arguments for the predication.
+        """
+
+        args = {node.id: [] for node in self.nodes}
+
+        id_to_type = {}
+        for link in self.links:
+            if link.post in (H_POST, HEQ_POST):
+                id_to_type[link.start] = variable.HANDLE
+            else:
+                id_to_type[link.start] = node.type
 
         for link in self.links:
-            if link.role == BARE_EQ_ROLE:  # not an argument
+            # MOD/EQ links are not arguments
+            if link.role == BARE_EQ_ROLE:
                 continue
+            # ignore undesired argument types
             if types and id_to_type.get(link.end) not in types:
                 continue
-            if scopal is not None and scopal != (link.post in _scposts):
+            # currently DMRS cannot encode unexpressed arguments
+            if expressed is not None and not expressed:
                 continue
-            # all tests passed
-            args[link.start][link.role] = link.end
+            args[link.start].append((link.role, link.end))
 
         return args
 
+    # ScopingSemanticStructure methods
+
     def scopes(self):
-        vfac, h = variable.VariableFactory(starting_vid=0), variable.HANDLE
-        prescopes = {vfac.new(h): []}  # implicit top; top never has nodes
+        """
+        Return a tuple containing the top label and the scope map.
+
+        Note that the top label is different from :attr:`top`, which
+        the top node's id. If :attr:`top` does not select a top node,
+        the `None` is returned for the top label.
+
+        The scope map is a dictionary mapping scope labels to the
+        lists of predications sharing a scope.
+        """
+
+        h = variable.HANDLE
+        vfac = variable.VariableFactory(starting_vid=0)
+
         id_to_lbl = {node.id: vfac.new(h) for node in self.nodes}
-        prescopes.update((label, [id]) for id, label in id_to_lbl.items())
+
         leqs = [(id_to_lbl[link.start], id_to_lbl[link.end])
-                for link in self.links if link.post == EQ_POST]
-        return scope.conjoin(prescopes, leqs)
+                for link in self.links
+                if link.post == EQ_POST]
+        prescopes = {_id_to_lbl[node.id]: [node] for node in self.nodes}
 
-    def scope_constraints(self, scopes=None):
-        if scopes is None:
-            scopes = self.scopes()
-
-        id_to_lbl = {}
+        scopes = scope.conjoin(prescopes, leqs)
         top = None
-        for label, ids in scopes.items():
-            if not ids:
-                top = label  # top is the only scope with no nodes
-            else:
-                for id in ids:
-                    id_to_lbl[id] = label
+        if self.top is not None:
+            top_node = self[self.top]
+            top = next((label for label, nodes in scopes.items()
+                        if top_node in nodes),
+                       None)
 
-        if top:
-            cons = [(top, scope.QEQ, id_to_lbl[self.top])]
+        return top, scopes
+
+    def scopal_arguments(self, scopes=None):
+        """
+        Return a mapping of the scopal argument structure.
+
+        The return value maps node ids to lists of scopal arguments as
+        (role, scope_relation, target) triples. If *scopes* is given,
+        the target is the scope label, otherwise it is the target
+        node's id. Only links with a :attr:`Link.role` value are
+        considered, so ``MOD/EQ`` links are not included as scopal
+        arguments.
+
+        Args:
+            scopes: mapping of scope labels to lists of predications
+        Example:
+            >>> d = DMRS(...)  # for "It doesn't rain.
+            >>> d.scopal_arguments()
+            {10000: [('ARG1', 'qeq', 10001)]}
+            >>> top, scopes = d.scopes()
+            >>> d.scopal_arguments(scopes=scopes)
+            {10000: [('ARG1', 'qeq', 'h2')]}
+        """
+        id_to_lbl = {}
+        if scopes is not None:
+            for label, nodes in scopes.items():
+                for node in nodes:
+                    id_to_lbl[node.id] = label
+
         for link in self.links:
-            hi = id_to_lbl[link.start]
-            lo = id_to_lbl[link.end]
             if link.post == HEQ_POST:
-                cons.append((hi, scope.LHEQ, lo))
+                relation = scope.LHEQ
             elif link.post == H_POST:
-                cons.append((hi, scope.QEQ, lo))
+                relation = scope.QEQ
+            else:
+                continue
+            # get the label if scopes was given
+            target = id_to_lbl.get(link.end, link.end)
+            scargs[link.start].append((link.role, relation, label))
 
-        return cons
+        return scargs
 
 
 def _normalize_top_and_links(top, links):

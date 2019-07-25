@@ -255,88 +255,94 @@ class MRS(scope.ScopingSemanticStructure):
         """Return `True` if *var* is the bound variable of a quantifier."""
         return RESTRICTION_ROLE in self[id].args
 
-    def quantifier_map(self):
-        """
-        Return a mapping of predication ids to quantifier ids.
-
-        The id of every non-quantifier predication will appear as a
-        key in the mapping and its value will the id of its quantifier
-        if it has one, otherwise the value will be `None`.
-
-        This method only considers the bound variables of quantifiers
-        and does not check that quantified EPs are in the scope of
-        their quantifiers' restrictions. For well-formed MRSs this
-        will not be a problem.
-        """
-        qs = []
-        iv_to_id = {}
-        qmap = {}
+    def quantification_pairs(self):
+        qmap = {ep.iv: ep
+                for ep in self.rels
+                if ep.is_quantifier()}
+        pairs = []
+        # first pair non-quantifiers to their quantifier, if any
         for ep in self.rels:
-            if ep.is_quantifier():
-                qs.append(ep)
-            else:
-                iv_to_id[ep.iv] = ep.id
-                qmap[ep.id] = None
-        for ep in qs:
-            id = iv_to_id.get(ep.iv)
-            if id is not None:
-                qmap[id] = ep.id
-        return qmap
+            if not ep.is_quantifier():
+                pairs.append((ep, qmap.get(ep.iv)))
+        # then unpaired quantifiers, if any
+        for _, q in pairs:
+            if q is not None:
+                del qmap[q.iv]
+        for q in qmap.values():
+            pairs.append((None, q))
+        return pairs
+
+    def arguments(self, types=None, expressed=None):
+        ivs = {ep.iv for ep in self.rels}
+        args = {}
+
+        for ep in self.rels:
+            id = ep.id
+            args[id] = []
+            for role, value in ep.args.items():
+                # only outgoing arguments
+                if role in (INTRINSIC_ROLE, CONSTANT_ROLE):
+                    continue
+                # ignore undesired argument types
+                if types is not None and variable.type(value) not in types:
+                    continue
+                # only include expressed/unexpressed if requested
+                if expressed is not None and (value in ivs) != expressed:
+                    continue
+                args[id].append((role, value))
+
+        return args
 
     # ScopingSemanticStructure methods
 
-    def arguments(self, types=None, scopal=None):
-        if scopal is None:
-            restricted_set = set(self.variables)
-        elif scopal:
-            restricted_set = set(ep.label for ep in self.rels)
-            restricted_set.update(hc.hi for hc in self.hcons)
-        else:
-            restricted_set = set(ep.iv for ep in self.rels)
-        args = {}
+    def scopes(self):
+        """
+        Return a tuple containing the top label and the scope map.
+
+        Note that the top label is different from :attr:`top`, which
+        is the handle that is qeq to the top scope's label. If
+        :attr:`top` does not select a top scope, the `None` is
+        returned for the top label.
+
+        The scope map is a dictionary mapping scope labels to the
+        lists of predications sharing a scope.
+        """
+        scopes = {}
+        for ep in self.rels:
+            scopes.setdefault(ep.label, []).append(ep)
+        top = next((hc.lo for hc in self.hcons if hc.hi == self.top),
+                   self.top)
+        if top not in scopes:
+            top = None
+        return top, scopes
+
+    def scopal_arguments(self, scopes=None):
+        if scopes is None:
+            # just the set of labels is enough
+            scopes = {ep.label for ep in self.rels}
+        hcmap = {hc.hi: hc for hc in self.hcons}
+        scargs = {}
+
         for ep in self.rels:
             id = ep.id
-            args[id] = {}
+            scargs[id] = []
             for role, value in ep.args.items():
-                if (role not in (INTRINSIC_ROLE, CONSTANT_ROLE)
-                        and (types is None or variable.type(value) in types)
-                        and (value in restricted_set)):
-                    args[id][role] = value
-        return args
-
-    def scope_constraints(self, scopes=None):
-        # ivs = {ep.iv for ep in self.rels}
-        hcmap = {hc.hi: hc for hc in self.hcons}
-        labels = {ep.label for ep in self.rels}
-        argstr = self.arguments(types='h')
-        cons = []
-
-        if self.top in hcmap:
-            hc = hcmap[self.top]
-            cons.append((self.top, hc.relation, hc.lo))
-
-        for id, scargs in argstr.items():
-            label = self[id].label
-            for role, value in scargs.items():
-                if value in hcmap:
+                # only outgoing arguments
+                if role in (INTRINSIC_ROLE, CONSTANT_ROLE):
+                    continue
+                # value is a label
+                if value in scopes:
+                    scargs[id].append((role, scope.LHEQ, value))
+                # value is a hole corresponding to an hcons
+                elif value in hcmap:
                     hc = hcmap[value]
-                    cons.append((label, hc.relation, hc.lo))
-                elif value in labels:
-                    cons.append((label, scope.LHEQ, value))
-                # elif value in ivs:
-                #     label2 = self[value].label
-                #     if label != label2:
-                #         cons.append((label2, scope.OUTSCOPES, label))
-        return cons
+                    # should the label be validated?
+                    scargs[id].append((role, hc.relation, hc.lo))
+                # ignore non-scopal arguments
+                else:
+                    continue
 
-    def scopes(self):
-        """Return a mapping of scope labels to EPs sharing that scope."""
-        scopes = {}
-        if self.top:
-            scopes[self.top] = []  # top never has nodes
-        for ep in self.rels:
-            scopes.setdefault(ep.label, []).append(ep.id)
-        return scopes
+        return scargs
 
 
 # Helper functions

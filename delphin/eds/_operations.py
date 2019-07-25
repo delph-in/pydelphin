@@ -74,15 +74,17 @@ def _mrs_get_top(top, hcmap, reps):
 
 
 def _mrs_args_to_basic_deps(m, hcmap, reps):
-    qmap = m.quantifier_map()
-    iv_to_id = {m[p_id].iv: p_id for p_id in qmap}
+    ivmap = {p.iv: (p, q)
+             for p, q in m.quantification_pairs()
+             if p is not None}
     edges = {}
 
     for src, roleargs in m.arguments().items():
-        if src in qmap:
+        if src in ivmap:
+            p, q = ivmap[src]
             # non-quantifier EPs
             edges[src] = {}
-            for role, tgt in roleargs.items():
+            for role, tgt in roleargs:
                 # qeq
                 if tgt in hcmap:
                     lbl = hcmap[tgt].lo
@@ -91,15 +93,15 @@ def _mrs_args_to_basic_deps(m, hcmap, reps):
                 elif tgt in reps:
                     tgt = reps[tgt][0]
                 # regular arg
-                elif tgt in iv_to_id:
                     tgt = iv_to_id[tgt]
+                elif tgt in ivmap:
                 # other (e.g., BODY, dropped arguments, etc.)
                 else:
                     continue
                 edges[src][role] = tgt
             # add BV if the EP has a quantifier
-            if qmap[src]:
-                edges[qmap[src]] = {eds.BOUND_VARIABLE_ROLE: src}
+            if q is not None:
+                edges[q.id] = {eds.BOUND_VARIABLE_ROLE: src}
 
     return edges
 

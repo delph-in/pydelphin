@@ -143,10 +143,19 @@ class EDS(SemanticStructure):
         """
         return BOUND_VARIABLE_ROLE in self[id].edges
 
-    def quantifier_map(self):
-        qmap = {node.id: None for node in self.nodes}
+    def quantification_pairs(self):
+        qs = set()
+        qmap = {}
         for src, roleargs in self.arguments().items():
-            for role, tgt in roleargs.items():
+            for role, tgt in roleargs:
                 if role == BOUND_VARIABLE_ROLE:
-                    qmap[tgt] = src
-        return qmap
+                    qs.add(src)
+                    qmap[tgt] = self[src]
+        pairs = []
+        # first pair non-quantifiers to their quantifier, if any
+        for node in self.nodes:
+            if node.id not in qs:
+                pairs.append((node, qmap.get(node.id)))
+        # for MRS any unpaired quantifiers are added here, but in EDS
+        # I'm not sure what an unpaired quantifier would look like
+        return pairs

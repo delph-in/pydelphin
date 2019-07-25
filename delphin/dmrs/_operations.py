@@ -84,7 +84,7 @@ def _mrs_to_links(m, hcmap, reps, iv_to_nid, id_to_nid):
     # links from arguments
     for src, roleargs in m.arguments().items():
         start = id_to_nid[src]
-        for role, tgt in roleargs.items():
+        for role, tgt in roleargs:
             # non-scopal arguments
             if tgt in iv_to_nid:
                 end = iv_to_nid[tgt]

@@ -39,7 +39,8 @@ image available, you can use the ACE interface, which is faster than
 the Web API and returns more complete response information.
 
 >>> from delphin import ace
->>> response = ace.parse('~/grammars/erg-2018-x86-64-0.9.30.dat', 'Abrams chased Browne')
+>>> grm = '~/grammars/erg-2018-x86-64-0.9.30.dat'
+>>> response = ace.parse(grm, 'Abrams chased Browne')
 NOTE: parsed 1 / 1 sentences, avg 2135k, time 0.01316s
 >>> response.result(0).mrs()
 <MRS object (proper_q named chase_v_1 proper_q named) at 139897048034552>
@@ -71,11 +72,13 @@ is in modeling DELPH-IN Semantics representations such as MRS.
 >>> m['q3']
 <EP object (h4:proper_q(ARG0 x3, RSTR h5, BODY h6)) at 140709661206760>
 >>> # but if you want to be more careful you can do this...
->>> qmap = m.quantifier_map()
->>> m[qmap['x3']]
+>>> qmap = {p.iv: q for p, q in m.quantification_pairs()}
+>>> qmap['x3']
 <EP object (h4:proper_q(ARG0 x3, RSTR h5, BODY h6)) at 140709661206760>
+>>> # EP arguments are available on the EPs
 >>> m['e2'].args
 {'ARG0': 'e2', 'ARG1': 'x3', 'ARG2': 'x9'}
+>>> # While HCONS are available on the MRS
 >>> [(hc.hi, hc.relation, hc.lo) for hc in m.hcons]
 [('h0', 'qeq', 'h1'), ('h5', 'qeq', 'h7'), ('h11', 'qeq', 'h13')]
 

@@ -33,7 +33,7 @@ def is_connected(m: mrs.MRS) -> bool:
     # arguments may link EPs with IVs or labels (or qeq) as targets
     hcmap = {hc.hi: hc.lo for hc in m.hcons}
     for id, roleargs in m.arguments().items():
-        for role, value in roleargs.items():
+        for role, value in roleargs:
             value = hcmap.get(value, value)  # resolve qeq if any
             if value in g:
                 g[id].add(value)
@@ -95,9 +95,8 @@ def _plausibly_scopes(m: mrs.MRS) -> bool:
     if m.top not in hcmap:
         return False
     seen = set()
-    # using m.arguments(scopal=True) might be begging the question
-    for id, args in m.arguments(types='h').items():
-        for handle in args.values():
+    for id, roleargs in m.arguments(types='h').items():
+        for _, handle in roleargs:
             if handle == m[id].label:
                 return False
             elif handle in hcmap:
@@ -146,27 +145,30 @@ def is_isomorphic(m1: mrs.MRS,
 
 
 def _make_mrs_digraph(x, dg, properties):
-    # scope labels (may be targets of arguments or hcons)
-    for label, ids in x.scopes().items():
-        dg.add_edges_from((label, x[id].iv, {'sig': 'eq-scope'})
-                          for id in ids)
-    # predicate-argument structure
     for ep in x.rels:
-        iv, pred, args = ep.iv, ep.predicate, ep.args
+        # optimization: retrieve early to avoid successive lookup
+        lbl = ep.label
+        iv = ep.iv
+        props = x.properties(iv)
+        args = ep.args
+        carg = ep.carg
+        # scope labels (may be targets of arguments or hcons)
+        dg.add_edge(lbl, iv, sig='eq-scope')
+        # predicate-argument structure
+        s = predicate.normalize(ep.predicate)
+        if carg is not None:
+            s += '({})'.format(carg)
         if ep.is_quantifier():
             iv += '(bound)'  # make sure node id is unique
-        s = predicate.normalize(pred)
-        if mrs.CONSTANT_ROLE in args:
-            s += '({})'.format(args[mrs.CONSTANT_ROLE])
-        if properties and not ep.is_quantifier():
-            props = x.variables[iv]
-            s += '{{{}}}'.format('|'.join(
-                '{}={}'.format(prop.upper(), props[prop].lower())
-                for prop in sorted(props, key=sembase.property_priority)))
+        elif properties and props:
+            proplist = []
+            for prop in sorted(props, key=sembase.property_priority):
+                val = props[prop]
+                proplist.append('{}={}'.format(prop.upper(), val.lower()))
+            s += '{' + '|'.join(proplist) + '}'
         dg.add_node(iv, sig=s)
         dg.add_edges_from((iv, args[role], {'sig': role})
-                          for role in sorted(args, key=sembase.role_priority)
-                          if role != mrs.CONSTANT_ROLE)
+                          for role in args if role != mrs.CONSTANT_ROLE)
     # hcons
     dg.add_edges_from((hc.hi, hc.lo, {'sig': hc.relation})
                       for hc in x.hcons)
@@ -233,14 +235,18 @@ def from_dmrs(d):
     qeq = mrs.HCons.qeq
     vfac = variable.VariableFactory(starting_vid=0)
 
-    top, scopes, id_to_lbl, id_to_iv = _dmrs_build_maps(d, vfac)
+    # do d.scopes() once to avoid potential errors if label generation
+    # is ever non-deterministic
+    top, scopes = d.scopes()
+    ns_args = d.arguments(types='xeipu')
+    sc_args = d.scopal_arguments(scopes=scopes)
+
+    id_to_lbl, id_to_iv = _dmrs_build_maps(d, scopes, vfac)
+    # for index see https://github.com/delph-in/pydelphin/issues/214
     index = None if not d.index else id_to_iv[d.index]
-    ns_args = d.arguments(scopal=False)
-    sc_args = d.arguments(scopal=True)
-    sc_cons = {(c[0], c[2]): c[1] for c in d.scope_constraints(scopes)}
 
     hcons = [qeq(top, id_to_lbl[d.top])]
-    icons = None
+    icons = None  # see https://github.com/delph-in/pydelphin/issues/220
 
     rels = []
     for node in d.nodes:
@@ -248,15 +254,13 @@ def from_dmrs(d):
         label = id_to_lbl[id]
         args = {mrs.INTRINSIC_ROLE: id_to_iv[id]}
 
-        for role, tgt in ns_args[id].items():
+        for role, tgt in ns_args[id]:
             args[role] = id_to_iv[tgt]
 
-        for role, tgt in sc_args[id].items():
-            tgt_label = id_to_lbl[tgt]
-            sc_rel = sc_cons.get((label, tgt_label))
-            if sc_rel == scope.LHEQ:
+        for role, relation, tgt_label in sc_args[id]:
+            if relation == scope.LHEQ:
                 args[role] = tgt_label
-            elif sc_rel == scope.QEQ:
+            elif relation == scope.QEQ:
                 hole = vfac.new(variable.HANDLE)
                 args[role] = hole
                 hcons.append(qeq(hole, tgt_label))
@@ -289,22 +293,20 @@ def from_dmrs(d):
         identifier=d.identifier)
 
 
-def _dmrs_build_maps(d, vfac):
-    top = None
-    scopes = d.scopes()
+def _dmrs_build_maps(d, scopes, vfac):
     id_to_lbl = {}
-    for label, ids in scopes.items():
-        if not ids:
-            top = label  # top never has nodes
+    for label, nodes in scopes.items():
         vfac.index[variable.id(label)] = label  # prevent vid reuse
-        id_to_lbl.update((id, label) for id in ids)
+        id_to_lbl.update((node.id, label) for node in nodes)
 
     id_to_iv = {}
-    for p, q in d.quantifier_map().items():
-        node = d[p]
-        iv = vfac.new(node.type, node.properties)
-        id_to_iv[p] = iv
-        if q is not None:
-            id_to_iv[q] = iv
+    for node, q in d.quantification_pairs():
+        if node is not None:
+            iv = vfac.new(node.type, node.properties)
+            id_to_iv[node.id] = iv
+            if q is not None:
+                id_to_iv[q.id] = iv
+        else:
+            pass  # ignore unpaired quantifiers (ill-formed)
 
-    return top, scopes, id_to_lbl, id_to_iv
+    return id_to_lbl, id_to_iv

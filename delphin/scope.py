@@ -23,14 +23,14 @@ whereby a single node is selected from a conjunction to represent the
 conjunction as a whole.
 """
 
-from typing import Mapping, Iterable, Tuple, Container
-from operator import itemgetter
+from typing import Mapping, Iterable, List, Tuple, Dict, Container
 
 from delphin.lnk import Lnk
 from delphin import predicate
 from delphin.sembase import (
     Identifier,
-    ArgumentStructure,
+    Role,
+    Predication,
     Predications,
     SemanticStructure
 )
@@ -52,6 +52,8 @@ QEQ = 'qeq'              # equality modulo quantifiers (hole-to-label)
 ScopeLabel = str
 ScopeRelation = str
 ScopeMap = Mapping[ScopeLabel, Predications]
+ScopalRoleArgument = Tuple[Role, ScopeRelation, Identifier]
+ScopalArgumentStructure = Mapping[Identifier, List[ScopalRoleArgument]]
 # Regarding literal types, see: https://www.python.org/dev/peps/pep-0563/
 UnderspecifiedFragments = Mapping[ScopeLabel, 'UnderspecifiedScope']
 ScopeEqualities = Iterable[Tuple[ScopeLabel, ScopeLabel]]
@@ -149,32 +151,27 @@ class ScopingSemanticStructure(SemanticStructure):
         super().__init__(top, predications, lnk, surface, identifier)
         self.index = index
 
-    def arguments(self, types=None, scopal: bool = None) -> ArgumentStructure:
+    def scopal_arguments(self, scopes=None) -> ScopalArgumentStructure:
         """
-        Return a mapping of the argument structure.
+        Return a mapping of the scopal argument structure.
+
+        Unlike :meth:`SemanticStructure.arguments`, the list of
+        arguments is a 3-tuple including the scopal relation: (role,
+        scope_relation, scope_label).
 
         Args:
-            types: a container of predication or variable types that
-                may be targets
-            scopal: if `True`, only include scopal arguments; if
-                `False`, only include non-scopal arguments; if
-                unspecified or `None`, include both
+            scopes: mapping of scope labels to lists of predications
         """
         raise NotImplementedError()
 
-    def scope_constraints(self) -> ScopeConstraints:
+    def scopes(self) -> Tuple[ScopeLabel, ScopeMap]:
         """
-        Return a list of expanded scope constraints.
+        Return a tuple containing the top label and the scope map.
 
-        This list goes beyond the usual qeq constraints and includes
-        immediate-outscopes and general outscopes constraints encoded
-        in the arguments of predications.
-        """
-        raise NotImplementedError()
+        The top label is the label of the top scope in the scope map.
 
-    def scopes(self) -> ScopeMap:
-        """
-        Return a mapping of scope labels to nodes sharing the scope.
+        The scope map is a dictionary mapping scope labels to the
+        lists of predications sharing a scope.
         """
         raise NotImplementedError()
 
@@ -197,12 +194,12 @@ def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
         >>> {lbl: [p.id for p in ps] for lbl, ps in conjoined.items()}
         {'h1': ['e2'], 'h2': ['x4', 'e6']}
     """
-    scopemap = {}
+    scopemap = {}  # type: ScopeMap
     for component in _connected_components(list(scopes), leqs):
-        rep = next(iter(component))
-        scopemap[rep] = []
+        chosen_label = next(iter(component))
+        scopemap[chosen_label] = []
         for label in component:
-            scopemap[rep].extend(scopes[label])
+            scopemap[chosen_label].extend(scopes[label])
     return scopemap
 
 
