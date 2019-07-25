@@ -103,7 +103,7 @@ def call_select(args):
         args.TESTSUITE)
     try:
         for row in rows:
-            print(tsdb.encode(row))
+            print(tsdb.join(row))
     except (BrokenPipeError):
         logging.info('broken pipe')
 
