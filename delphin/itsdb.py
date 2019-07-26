@@ -190,17 +190,18 @@ class FieldMapper(object):
         """
         inserts = []
 
-        last_run = self._runs[self._last_run_id]
-        if 'end' not in last_run:
-            last_run['end'] = datetime.now()
+        if self._last_run_id != -1:
+            last_run = self._runs[self._last_run_id]
+            if 'end' not in last_run:
+                last_run['end'] = datetime.now()
 
-        for run_id in sorted(self._runs):
-            run = self._runs[run_id]
-            d = {'run-id': run.get('run-id', -1)}
-            for key in self._run_keys:
-                if key in run:
-                    d[key] = run[key]
-            inserts.append(('run', d))
+            for run_id in sorted(self._runs):
+                run = self._runs[run_id]
+                d = {'run-id': run.get('run-id', -1)}
+                for key in self._run_keys:
+                    if key in run:
+                        d[key] = run[key]
+                inserts.append(('run', d))
 
         # reset for next task
         self._parse_id = -1
