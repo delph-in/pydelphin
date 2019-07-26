@@ -273,7 +273,7 @@ def _select(projection: _Names,
         _join(selection, db, name, columns, 'inner')
 
     if condition:
-        cond = _process_condition_function(condition, selection._field_index)
+        cond = _process_condition_function(condition, selection)
         selection.data = list(filter(cond, selection.data))
 
     selection.projection = proj
@@ -479,14 +479,16 @@ def _process_condition_fields(
 
 def _process_condition_function(
         condition: _Condition,
-        field_index: tsdb.FieldIndex) -> _FilterFunction:
+        selection: Selection) -> _FilterFunction:
+    field_index = selection._field_index
+    fields = selection.fields
     # conditions are something like:
     #  ('==', ('i-id', 11))
     op, body = condition
     if op in ('and', 'or'):
         conditions = []
         for cond in body:  # type: _Condition
-            _func = _process_condition_function(cond, field_index)
+            _func = _process_condition_function(cond, selection)
             conditions.append(_func)
         _func = all if op == 'and' else any
 
@@ -494,7 +496,7 @@ def _process_condition_function(
             return _func(cond(row) for cond in conditions)
 
     elif op == 'not':
-        nfunc = _process_condition_function(body, field_index)
+        nfunc = _process_condition_function(body, selection)
 
         def func(row):
             return not nfunc(row)
@@ -502,21 +504,27 @@ def _process_condition_function(
     elif op == '~':
 
         def func(row):
-            val = row[field_index[body[0]]]
-            return re.search(body[1], val)
+            index = field_index[body[0]]
+            field = fields[index]
+            value = tsdb.cast(field.datatype, row[index])
+            return re.search(body[1], value)
 
     elif op == '!~':
 
         def func(row):
-            val = row[field_index[body[0]]]
-            return not re.search(body[1], val)
+            index = field_index[body[0]]
+            field = fields[index]
+            value = tsdb.cast(field.datatype, row[index])
+            return not re.search(body[1], value)
 
     else:
         compare = _operator_functions[op]
 
         def func(row):
-            idx = field_index[body[0]]
-            return compare(row[idx], body[1])
+            index = field_index[body[0]]
+            field = fields[index]
+            value = tsdb.cast(field.datatype, row[index])
+            return compare(value, body[1])
 
     return func
 
@@ -548,7 +556,7 @@ def _join(selection: Selection,
     data = []  # type: List[tsdb.Record]
     if not selection.joined:
         _merge_fields(selection, name, [], fields)
-        data.extend(db.select_from(name, columns))
+        data.extend(db.select_from(name, columns, cast=False))
     else:
         on = []  # type: List[str]
         if selection is not None:
@@ -561,12 +569,12 @@ def _join(selection: Selection,
             raise TSQLError('no shared keys for joining')
 
         right = {}  # type: Dict[Tuple[tsdb.Value, ...], tsdb.Record]
-        for keys, row in zip(db.select_from(name, on),
-                             db.select_from(name, cols)):
+        for keys, row in zip(db.select_from(name, on, cast=True),
+                             db.select_from(name, cols, cast=False)):
             right.setdefault(tuple(keys), []).append(tuple(row))
 
         rfill = tuple([None] * len(fields))
-        for keys, lrow in zip(selection.select(*on), selection):
+        for keys, lrow in zip(selection.select(*on, cast=True), selection):
             keys = tuple(keys)
             if how == 'left' or keys in right:
                 data.extend(lrow + rrow

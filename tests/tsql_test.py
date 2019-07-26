@@ -123,10 +123,12 @@ def test_select(mini_testsuite):
     assert list(tsql.select('i-input from item result', ts)) == [
         ('It rained.',), ('It snowed.',)]
     assert list(tsql.select('i-id i-input', ts)) == [
+        ('10', 'It rained.'), ('20', 'Rained.'), ('30', 'It snowed.')]
+    assert list(tsql.select('i-id i-input', ts, record_class=itsdb.Row)) == [
         (10, 'It rained.'), (20, 'Rained.'), (30, 'It snowed.')]
     res = ts['result']
     assert list(tsql.select('i-id mrs', ts)) == [
-        (10, res[0]['mrs']), (30, res[1]['mrs'])]
+        ('10', res[0]['mrs']), ('30', res[1]['mrs'])]
     with pytest.raises(tsql.TSQLSyntaxError):
         tsql.select('*', ts)
     # assert list(tsql.select('* from item', ts, cast=True)) == list(ts['item'])
