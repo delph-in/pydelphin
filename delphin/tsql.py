@@ -607,7 +607,6 @@ _qid = r'{id}\.{id}'.format(id=_id)  # qualified id: "table.column"
 
 _TSQLLexer = util.Lexer(
     tokens=[
-        (r'info|set|retrieve|select|insert', 'QUERY:a query type'),
         (r'from', 'FROM:from'),
         (r'where', 'WHERE:where'),
         (r'report', 'REPORT:report'),
@@ -632,7 +631,6 @@ _TSQLLexer = util.Lexer(
     error_class=TSQLSyntaxError)
 
 
-_QUERY      = _TSQLLexer.tokentypes.QUERY
 _FROM       = _TSQLLexer.tokentypes.FROM
 _WHERE      = _TSQLLexer.tokentypes.WHERE
 _REPORT     = _TSQLLexer.tokentypes.REPORT
