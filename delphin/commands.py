@@ -255,7 +255,7 @@ def select(query: str, path: util.PathLike, record_class=None):
 # MKPROF ######################################################################
 
 def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
-           refresh=False, skeleton=False, full=False, gzip=False):
+           refresh=False, skeleton=False, full=False, gzip=False, quiet=False):
     """
     Create [incr tsdb()] profiles or skeletons.
 
@@ -295,6 +295,7 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
             or if *skeleton* is `True` (default: `False`)
         gzip (bool): if `True`, non-empty tables will be compressed
             with gzip
+        quiet (bool): if `True`, don't print summary information
     """
     destination = Path(destination).expanduser()
     if source is not None:
@@ -329,7 +330,9 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
         raise CommandError('invalid source for mkprof: {!r}'.format(source))
 
     _mkprof_cleanup(destination, skeleton, old_relation_files)
-    _mkprof_summarize(destination, tsdb.read_schema(destination))
+
+    if not quiet:
+        _mkprof_summarize(destination, tsdb.read_schema(destination))
 
 
 def _mkprof_from_lines(destination, stream, schema, delimiter, gzip):
