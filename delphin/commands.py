@@ -10,6 +10,7 @@ within Python.
 
 import sys
 from pathlib import Path
+import tempfile
 import importlib
 import logging
 import warnings
@@ -491,9 +492,9 @@ def process(grammar, testsuite, source=None, select=None,
         ==========  =========================
         Task        Default value of *select*
         ==========  =========================
-        Parsing     `item:i-input`
-        Transfer    `result:mrs`
-        Generation  `result:mrs`
+        Parsing     `item.i-input`
+        Transfer    `result.mrs`
+        Generation  `result.mrs`
         ==========  =========================
 
     Args:
@@ -540,18 +541,20 @@ def process(grammar, testsuite, source=None, select=None,
     if result_id is not None:
         select += ' where result-id == {}'.format(result_id)
 
-    source = itsdb.TestSuite(source)
     target = itsdb.TestSuite(testsuite)
     column, tablename, condition = _interpret_selection(select, source)
-    table = itsdb.Table(
-        source[tablename].fields,
-        tsql.select(
-            '* from {} {}'.format(tablename, condition),
-            source,
-            cast=False))
 
-    with processor(grammar, cmdargs=options) as cpu:
-        target.process(cpu, ':' + column, source=table, gzip=gzip)
+    with tempfile.TemporaryDirectory() as dir:
+        # use a temporary test suite directory for filtered inputs
+        mkprof(dir, source=source, where=condition,
+               full=True, gzip=True, quiet=True)
+        tmp = itsdb.TestSuite(dir)
+
+        with processor(grammar, cmdargs=options) as cpu:
+            target.process(cpu,
+                           selector=(tablename, column),
+                           source=tmp,
+                           gzip=gzip)
 
 
 def _interpret_selection(select, source):
@@ -559,18 +562,19 @@ def _interpret_selection(select, source):
     projection = queryobj['projection']
     if projection == '*' or len(projection) != 1:
         raise CommandError("'select' must return a single column")
-    tablename, _, column = projection[0].rpartition(':')
+    tablename, _, column = projection[0].rpartition('.')
     if not tablename:
-        # query could be 'i-input from item' instead of 'item:i-input'
-        if len(queryobj['tables']) == 1:
-            tablename = queryobj['tables'][0]
+        # query could be 'i-input from item' instead of 'item.i-input'
+        if len(queryobj['relations']) == 1:
+            tablename = queryobj['relations'][0]
         # otherwise guess
         else:
+            schema = tsdb.read_schema(source)
             tablename = next(
-                table for table in source.schema
-                if any(f.name == column for f in source.schema[table]))
+                table for table in schema
+                if any(f.name == column for f in schema[table]))
     try:
-        condition = select[select.index(' where ') + 1:]
+        condition = select[select.index(' where ') + 7:]
     except ValueError:
         condition = ''
     return column, tablename, condition
