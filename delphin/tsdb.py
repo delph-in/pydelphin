@@ -344,17 +344,26 @@ class Database(object):
     def __len__(self):
         return len(self.schema)
 
-    def select_from(self, name: str, columns: Iterable[str] = None):
+    def select_from(self, name: str,
+                    columns: Iterable[str] = None,
+                    cast: bool = False):
         """
         Yield values for *columns* from relation *name*.
         """
+        fields = self.schema[name]
         if columns is None:
-            columns = list(self.schema[name])
-        index = make_field_index(self.schema[name])
+            columns = [f.name for f in fields]
+        index = make_field_index(fields)
         indices = [index[column] for column in columns]
         records = self[name]
         for record in records:
-            yield tuple(record[idx] for idx in indices)
+            if cast:
+                # _cast is a copy of the function cast()
+                data = tuple(_cast(fields[idx].datatype, record[idx])
+                             for idx in indices)
+            else:
+                data = tuple(record[idx] for idx in indices)
+            yield data
         records.close()
 
 
@@ -552,6 +561,11 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
         return raw_value
     else:
         raise TSDBError('invalid datatype: {}'.format(datatype))
+
+
+# some functions may use 'cast' as keyword parameter, so this lets
+# those get to the original function
+_cast = cast
 
 
 def _parse_datetime(s: str) -> datetime:

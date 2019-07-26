@@ -557,11 +557,14 @@ class Table(tsdb.Relation):
                           values,
                           field_index=self._field_index)
 
-    def select(self, *names: str) -> Iterator[Row]:
+    def select(self, *names: str, cast: bool = True) -> Iterator[Row]:
         """
         Select fields given by *names* from each row in the table.
 
         If no field names are given, all fields are returned.
+
+        If *cast* is `False`, simple tuples of raw data are returned
+        instead of :class:`Row` objects.
 
         Yields:
             Row
@@ -572,14 +575,18 @@ class Table(tsdb.Relation):
             Row(10)
             >>> next(table.select('i-id', 'i-input'))
             Row(10, 'It rained.')
+            >>> next(table.select('i-id', 'i-input'), cast=False)
+            ('10', 'It rained.')
         """
         indices = tuple(map(self._field_index.__getitem__, names))
         fields = tuple(map(self.fields.__getitem__, indices))
         field_index = tsdb.make_field_index(fields)
         with tsdb.open(self.dir, self.name, encoding=self.encoding) as fh:
             for _, row in self._enum_rows(fh):
-                data = [row.data[i] for i in indices]
-                yield Row(fields, data, field_index=field_index)
+                data = tuple(row.data[i] for i in indices)
+                if cast:
+                    data = Row(fields, data, field_index=field_index)
+                yield data
 
     def _enum_rows(self,
                    fh: IO[str],
@@ -668,11 +675,17 @@ class TestSuite(tsdb.Database):
                 self.path, name, self.schema[name], self.encoding)
         return self._data[name]
 
-    def select_from(self, name: str, columns: Iterable[str] = None):
+    def select_from(self,
+                    name: str,
+                    columns: Iterable[str] = None,
+                    cast: bool = True):
         """
         Select fields given by *names* from each row in table *name*.
 
         If no field names are given, all fields are returned.
+
+        If *cast* is `False`, simple tuples of raw data are returned
+        instead of :class:`Row` objects.
 
         Yields:
             Row
@@ -683,10 +696,12 @@ class TestSuite(tsdb.Database):
             Row(10)
             >>> next(ts.select_from('item', ('i-id', 'i-input')))
             Row(10, 'It rained.')
+            >>> next(ts.select_from('item', ('i-id', 'i-input'), cast=False))
+            ('10', 'It rained.')
         """
         if not columns:
             columns = []
-        return self[name].select(*columns)
+        return self[name].select(*columns, cast=cast)
 
     def reload(self) -> None:
         """Discard temporary changes and reload the database from disk."""

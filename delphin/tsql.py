@@ -163,7 +163,9 @@ class Selection(tsdb.Relation):
         else:
             return self.select(*self.projection)
 
-    def select(self, *names: str) -> Iterator[tsdb.Record]:
+    def select(self,
+               *names: str,
+               cast: bool = False) -> Iterator[tsdb.Record]:
         if not names:
             indices = list(range(len(self.fields)))
         else:
@@ -171,8 +173,11 @@ class Selection(tsdb.Relation):
         fields = [self.fields[idx] for idx in indices]
         index = tsdb.make_field_index(fields)
         cls = self.record_class
-        for row in self.data:
-            data = tuple(row[idx] for idx in indices)
+        for record in self.data:
+            data = tuple(record[idx] for idx in indices)
+            if cast:
+                data = tuple(tsdb.cast(field.datatype, value)
+                             for field, value in zip(fields, data))
             yield cls(fields, data, field_index=index)
 
 
