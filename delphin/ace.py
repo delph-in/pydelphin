@@ -77,7 +77,7 @@ from datetime import datetime
 import locale
 
 from delphin import interface
-from delphin.util import SExpr
+from delphin import util
 from delphin.__about__ import __version__ as pydelphin_version
 from delphin.exceptions import PyDelphinException
 # Default modules need to import the PyDelphin version
@@ -673,7 +673,12 @@ def _make_response(lines, run):
 
 def _sexpr_data(line):
     while line:
-        expr = SExpr.parse(line)
+        try:
+            expr = util.SExpr.parse(line)
+        except IndexError:
+            expr = util.SExprResult(
+                (':error', 'incomplete output from ACE; likely ACE was killed'),
+                '')
         if len(expr.data) != 2:
             logging.error('Malformed output from ACE: {}'.format(line))
             break
