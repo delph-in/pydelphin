@@ -202,10 +202,9 @@ class ACEProcess(interface.Processor):
             s = next_line()
             if s == '' and poll() is not None:
                 logging.info(
-                    'Process closed unexpectedly; attempting to reopen'
+                    'Process closed unexpectedly; giving up.'
                 )
                 self.close()
-                self._open()
                 break
             # The 'run' note should appear when the process is opened, but
             # handle it here to avoid potential deadlocks if it gets buffered
@@ -264,6 +263,10 @@ class ACEProcess(interface.Processor):
     def _tsdb_receive(self):
         lines = self._result_lines()
         response, lines = _make_response(lines, self.run_info)
+        # now it should be safe to reopen a closed process (if necessary)
+        if self._p.poll() is not None:
+            logging.info('Attempting to restart ACE.')
+            self._open()
         line = ' '.join(lines)  # ACE 0.9.24 on Mac puts superfluous newlines
         response = _tsdb_response(response, line)
         return response
@@ -677,7 +680,7 @@ def _sexpr_data(line):
             expr = util.SExpr.parse(line)
         except IndexError:
             expr = util.SExprResult(
-                (':error', 'incomplete output from ACE; likely ACE was killed'),
+                (':error', 'incomplete output from ACE'),
                 '')
         if len(expr.data) != 2:
             logging.error('Malformed output from ACE: {}'.format(line))
