@@ -365,7 +365,7 @@ def _lines_to_records(lineiter, colnames, split, fields):
 
     i_ids = set()
     for i, line in enumerate(lineiter, 1):
-        colvals = split(line)
+        colvals = split(line.rstrip('\n'))
         if len(colvals) != len(colnames):
             raise CommandError(
                 'line values do not match expected fields:\n'
