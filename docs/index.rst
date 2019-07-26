@@ -21,6 +21,7 @@ PyDelphin
 
   guides/setup.rst
   guides/walkthrough.rst
+  guides/semantics.rst
   guides/ace.rst
   guides/commands.rst
   guides/itsdb.rst

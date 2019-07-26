@@ -85,6 +85,7 @@ is in modeling DELPH-IN Semantics representations such as MRS.
 .. seealso::
   - Wiki of MRS topics: http://moin.delph-in.net/RmrsTop
   - :mod:`delphin.mrs` module
+  - :doc:`semantics`
 
 Beyond the basic modeling of semantic structures, there are some
 semantic operations defined in the :mod:`delphin.mrs` module.
