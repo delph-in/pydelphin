@@ -597,22 +597,28 @@ class Table(tsdb.Relation):
         indices = range(*_slice.indices(len(self._rows)))
         fields = self.fields
         field_index = self._field_index
-        rows = self._rows
-        i = 0
-        # first rows covered by the file
-        for i, line in enumerate(fh):
-            if i in indices:
-                row = rows[i]
-                if row is None:
+
+        file_exhausted = False
+        for i, row in enumerate(self._rows):
+            # always read next line until EOF to keep in sync
+            if not file_exhausted:
+                try:
+                    line = next(fh)
+                except StopIteration:
+                    file_exhausted = True
+                    line = None
+            # now skip if it's not a requested index
+            if i not in indices:
+                continue
+            # proceed only if we have a row in memory or on disk
+            if row is None:
+                if line is not None:
                     row = Row(fields,
                               tsdb.split(line),
                               field_index=field_index)
-                yield (i, row)
-        # then any uncommitted rows
-        for j in range(i, len(rows)):
-            row = rows[j]
-            if j in indices and row is not None:
-                yield (j, row)
+                else:
+                    continue
+            yield (i, row)
 
 
 class TestSuite(tsdb.Database):
@@ -815,29 +821,34 @@ class TestSuite(tsdb.Database):
                 .format(tsdb.join(keys), len(response['results']))
             )
             for tablename, data in fieldmapper.map(response):
-                _add_row(self[tablename], data, buffer_size)
+                _add_row(self, tablename, data, buffer_size)
 
         for tablename, data in fieldmapper.cleanup():
-            _add_row(self[tablename], data, buffer_size)
+            _add_row(self, tablename, data, buffer_size)
 
         tsdb.write_database(self, self.path, gzip=gzip)
 
 
-def _add_row(table: Table,
+def _add_row(ts: TestSuite,
+             name: str,
              data: Dict,
              buffer_size: int) -> None:
     """
     Prepare and append a Row into its Table; flush to disk if necessary.
     """
-    fields = table.fields
+    fields = ts.schema[name]
     # remove any keys that aren't relation fields
     for invalid_key in set(data).difference([f.name for f in fields]):
         del data[invalid_key]
 
-    table.append(tsdb.make_record(data, fields))
+    ts[name].append(tsdb.make_record(data, fields))
 
-    if len(table) - table._persistent_count > buffer_size:
-        table.commit()
+    num_changes = 0
+    for _name in ts:
+        table = ts[_name]
+        num_changes += len(table) - table._persistent_count
+    if num_changes > buffer_size:
+        ts.commit()
 
 
 ##############################################################################

@@ -53,6 +53,7 @@ class TestTestSuite(object):
         assert not t.in_transaction
         item[-1:] = []
         assert t.in_transaction
+        item.append((10, 'Dogs bark.'))
         t.commit()
         item.clear()
         assert t.in_transaction
