@@ -86,7 +86,7 @@ def is_well_formed(m: mrs.MRS) -> bool:
     """
     return (is_connected(m)
             and has_intrinsic_variable_property(m)
-            and _plausibly_scopes(m))
+            and plausibly_scopes(m))
 
 
 def plausibly_scopes(m: mrs.MRS) -> bool:
@@ -107,7 +107,7 @@ def plausibly_scopes(m: mrs.MRS) -> bool:
     hcmap = {hc.hi: hc.lo for hc in m.hcons}
     if m.top not in hcmap:
         return False
-    seen = set()
+    seen = set([m.top])
     for id, roleargs in m.arguments(types='h').items():
         for _, handle in roleargs:
             if handle == m[id].label:

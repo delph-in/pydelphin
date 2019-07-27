@@ -22,6 +22,7 @@ from delphin.mrs._operations import (
     is_connected,
     has_intrinsic_variable_property,
     is_well_formed,
+    plausibly_scopes,
     is_isomorphic,
     compare_bags,
     from_dmrs)
@@ -41,6 +42,7 @@ __all__ = [
     'is_connected',
     'has_intrinsic_variable_property',
     'is_well_formed',
+    'plausibly_scopes',
     'is_isomorphic',
     'compare_bags',
     'from_dmrs',

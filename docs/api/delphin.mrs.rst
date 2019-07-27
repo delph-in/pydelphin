@@ -63,6 +63,7 @@ delphin.mrs
    .. autofunction:: is_connected
    .. autofunction:: has_intrinsic_variable_property
    .. autofunction:: is_well_formed
+   .. autofunction:: plausibly_scopes
    .. autofunction:: is_isomorphic
    .. autofunction:: compare_bags
    .. autofunction:: from_dmrs
