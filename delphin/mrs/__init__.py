@@ -21,6 +21,8 @@ from delphin.mrs._mrs import (
 from delphin.mrs._operations import (
     is_connected,
     has_intrinsic_variable_property,
+    has_complete_intrinsic_variables,
+    has_unique_intrinsic_variables,
     is_well_formed,
     plausibly_scopes,
     is_isomorphic,
@@ -41,6 +43,8 @@ __all__ = [
     'ICons',
     'is_connected',
     'has_intrinsic_variable_property',
+    'has_complete_intrinsic_variables',
+    'has_unique_intrinsic_variables',
     'is_well_formed',
     'plausibly_scopes',
     'is_isomorphic',

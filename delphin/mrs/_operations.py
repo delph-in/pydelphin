@@ -45,28 +45,37 @@ def has_intrinsic_variable_property(m: mrs.MRS) -> bool:
     """
     Return `True` if *m* satisfies the intrinsic variable property.
 
-    An MRS has the intrinsic variable property when:
+    An MRS has the intrinsic variable property when it passes the
+    following:
 
-    * Every non-quantifier EP has an argument for the intrinsic role
-      (i.e., specifies an `ARG0`)
-
-    * Every intrinsic variable is unique to a non-quantifier EP
+    - :func:`has_complete_intrinsic_variables`
+    - :func:`has_unique_intrinsic_variables`
 
     Note that for quantifier EPs, `ARG0` is overloaded to mean "bound
     variable". Each quantifier should have an `ARG0` that is the
     intrinsic variable of exactly one non-quantifier EP, but this
     function does not check for that.
     """
-    seen = set()
-    for ep in m.rels:
-        if not ep.is_quantifier():
-            iv = ep.iv
-            if iv is None:
-                return False  # EP does not have an intrinsic variable
-            elif iv in seen:  # intrinsic variable is not unique
-                return False
-            seen.add(iv)
-    return True
+    return (has_complete_intrinsic_variables(m)
+            and has_unique_intrinsic_variables(m))
+
+
+def has_complete_intrinsic_variables(m: mrs.MRS) -> bool:
+    """
+    Return `True` if all non-quantifier EPs have intrinsic variables.
+    """
+    return all(ep.iv is not None
+               for ep in m.rels
+               if not ep.is_quantifier())
+
+
+def has_unique_intrinsic_variables(m: mrs.MRS) -> bool:
+    """
+    Return `True` if all intrinsic variables are unique to their EPs.
+    """
+    ivs = [ep.iv for ep in m.rels
+           if not ep.is_quantifier() and ep.iv is not None]
+    return len(set(ivs)) == len(ivs)
 
 
 def is_well_formed(m: mrs.MRS) -> bool:

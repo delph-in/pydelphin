@@ -62,6 +62,8 @@ delphin.mrs
 
    .. autofunction:: is_connected
    .. autofunction:: has_intrinsic_variable_property
+   .. autofunction:: has_complete_intrinsic_variables
+   .. autofunction:: has_unique_intrinsic_variables
    .. autofunction:: is_well_formed
    .. autofunction:: plausibly_scopes
    .. autofunction:: is_isomorphic
