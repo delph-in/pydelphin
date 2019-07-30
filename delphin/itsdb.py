@@ -135,6 +135,10 @@ class FieldMapper(object):
             patch = self._map_result(result, parse_id)
             transaction.append(('result', patch))
 
+        for edge in response.get('chart', []):
+            patch = self._map_edge(edge, parse_id)
+            transaction.append(('edge', patch))
+
         if 'run' in response:
             run_id = response['run'].get('run-id', -1)
             # check if last run was not closed properly
@@ -183,6 +187,22 @@ class FieldMapper(object):
             if key in result:
                 patch[key] = result[key]
         return patch
+
+    def _map_edge(self,
+                  edge: tsdb.ColumnMap,
+                  parse_id: int) -> tsdb.ColumnMap:
+        edge['parse-id'] = parse_id
+        daughters = edge.get('e-daughters')
+        if daughters:
+            edge['e-daughters'] = util.SExpr.format(daughters)
+        else:
+            edge['e-daughters'] = None
+        alternates = edge.get('e-alternates')
+        if alternates:
+            edge['e-alternates'] = util.SExpr.format(alternates)
+        else:
+            edge['e-alternates'] = None
+        return edge
 
     def cleanup(self) -> Transaction:
         """
