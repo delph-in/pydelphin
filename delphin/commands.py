@@ -494,8 +494,8 @@ def _mkprof_summarize(destination, schema):
 # PROCESS #####################################################################
 
 def process(grammar, testsuite, source=None, select=None,
-            generate=False, transfer=False, options=None,
-            all_items=False, result_id=None, gzip=False):
+            generate=False, transfer=False, full_forest=False,
+            options=None, all_items=False, result_id=None, gzip=False):
     """
     Process (e.g., parse) a [incr tsdb()] profile.
 
@@ -538,8 +538,10 @@ def process(grammar, testsuite, source=None, select=None,
     grammar = Path(grammar).expanduser()
     testsuite = Path(testsuite).expanduser()
 
-    if generate and transfer:
-        raise CommandError("'generate' is incompatible with 'transfer'")
+    kwargs = {}
+    if sum(1 if mode else 0 for mode in (generate, transfer, full_forest)) > 1:
+        raise CommandError("'generate', 'transfer', and 'full-forest' "
+                           "are mutually exclusive")
     if source is None:
         source = testsuite
     if select is None:
@@ -549,6 +551,8 @@ def process(grammar, testsuite, source=None, select=None,
     elif transfer:
         processor = ace.ACETransferer
     else:
+        if full_forest:
+            kwargs['full_forest'] = True
         if not all_items:
             select += ' where i-wf != 2'
         processor = ace.ACEParser
@@ -564,7 +568,7 @@ def process(grammar, testsuite, source=None, select=None,
                full=True, gzip=True, quiet=True)
         tmp = itsdb.TestSuite(dir)
 
-        with processor(grammar, cmdargs=options) as cpu:
+        with processor(grammar, cmdargs=options, **kwargs) as cpu:
             target.process(cpu,
                            selector=(tablename, column),
                            source=tmp,

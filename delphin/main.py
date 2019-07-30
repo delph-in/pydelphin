@@ -129,6 +129,7 @@ def call_process(args):
         select=args.select,
         generate=args.generate,
         transfer=args.transfer,
+        full_forest=args.full_forest,
         options=shlex.split(args.options),
         all_items=args.all_items,
         result_id=args.p,
@@ -353,6 +354,10 @@ process_grp1.add_argument(
 process_grp1.add_argument(
     '-t', '--transfer', action='store_true',
     help='transfer mode (--source is strongly encouraged)'
+)
+process_grp1.add_argument(
+    '--full-forest', action='store_true',
+    help='full-forest parsing mode (record the full parse chart)'
 )
 process_parser.add_argument(
     '-p', metavar='RID',
