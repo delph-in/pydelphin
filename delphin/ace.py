@@ -348,6 +348,14 @@ class ACEParser(ACEProcess):
     task = 'parse'
     _termini = [re.compile(r'^$'), re.compile(r'^$')]
 
+    def __init__(self, grm, cmdargs=None, executable=None, env=None,
+                 tsdbinfo=True, full_forest=False, **kwargs):
+        if full_forest:
+            tsdbinfo=True
+            self._cmdargs.append('--itsdb-forest')
+        super().__init__(grm, cmdargs=cmdargs, executable=executable, env=env,
+                         tsdbinfo=tsdbinfo, **kwargs)
+
     def _validate_input(self, datum):
         # valid input for parsing is non-empty
         # (this relies on an empty string evaluating to False)
@@ -710,6 +718,11 @@ def _tsdb_response(response, line):
                     else:
                         res[reskey[1:]] = resval
                 response['results'].append(res)
+        elif key == ':chart':
+            response['chart'] = chart = []
+            for edge in val:
+                chart.append({edgekey[1:]: edgeval
+                              for edgekey, edgeval in edge})
         elif isinstance(val, str):
             response[key[1:]] = val.strip()
         else:
