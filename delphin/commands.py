@@ -421,7 +421,7 @@ def _mkprof_from_database(destination, db, schema, where, full, gzip):
     where = '' if where is None else 'where ' + where
 
     for table in schema:
-        if table not in to_copy or table not in db:
+        if table not in to_copy or _no_such_relation(db, table):
             records = []
         elif where:
             # filter the data, but use all if the query fails
@@ -438,6 +438,20 @@ def _mkprof_from_database(destination, db, schema, where, full, gzip):
                    records,
                    schema[table],
                    gzip=gzip)
+
+
+def _no_such_relation(db, name):
+    """
+    Return True if the relation *name* is not defined in *db* or does
+    not exist, otherwise False.
+    """
+    if name not in db:
+        return True
+    try:
+        tsdb.get_path(db.path, name)
+    except tsdb.TSDBError:
+        return True
+    return False
 
 
 def _mkprof_cleanup(destination, skeleton, old_files):
