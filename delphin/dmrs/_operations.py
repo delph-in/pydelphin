@@ -95,7 +95,7 @@ def _mrs_to_links(m, hcmap, reps, iv_to_nid, id_to_nid):
             # scopal arguments
             elif tgt in reps and len(reps[tgt]) > 0:
                 tgt = reps[tgt][0]
-                end = id_to_nid[tgt]
+                end = id_to_nid[tgt.id]
                 post = dmrs.HEQ_POST
             elif tgt in hcmap:
                 lo = hcmap[tgt].lo
