@@ -101,6 +101,10 @@ class ACEProcess(interface.Processor):
     override the :meth:`receive` method to interpret the task-specific
     response formats.
 
+    Note that not all arguments to this class are used by every
+    subclass; the documentation for each subclass specifies which are
+    available.
+
     Args:
         grm (str): path to a compiled grammar image
         cmdargs (list, optional): a list of command-line arguments
@@ -113,6 +117,8 @@ class ACEProcess(interface.Processor):
         tsdbinfo (bool): if `True` and ACE's version is compatible,
             all information ACE reports for [incr tsdb()] processing
             is gathered and returned in the response
+        full_forest (bool): if `True` and *tsdbinfo* is `True`, output
+            the full chart for each parse result
     """
 
     #: The name of the task performed by the processor (`'parse'`,
@@ -124,7 +130,7 @@ class ACEProcess(interface.Processor):
     _termini = []
 
     def __init__(self, grm, cmdargs=None, executable=None, env=None,
-                 tsdbinfo=True, **kwargs):
+                 tsdbinfo=True, full_forest=False):
         self.grm = str(Path(grm).expanduser())
 
         self.cmdargs = cmdargs or []
@@ -141,6 +147,8 @@ class ACEProcess(interface.Processor):
         if tsdbinfo and ace_version >= (0, 9, 24):
             self.cmdargs.extend(['--tsdb-stdout', '--report-labels'])
             self.receive = self._tsdb_receive
+            if full_forest:
+                self._cmdargs.append('--itsdb-forest')
         else:
             self.receive = self._default_receive
         self.env = env or os.environ
@@ -347,14 +355,6 @@ class ACEParser(ACEProcess):
     task = 'parse'
     _termini = [re.compile(r'^$'), re.compile(r'^$')]
 
-    def __init__(self, grm, cmdargs=None, executable=None, env=None,
-                 tsdbinfo=True, full_forest=False, **kwargs):
-        if full_forest:
-            tsdbinfo=True
-            self._cmdargs.append('--itsdb-forest')
-        super().__init__(grm, cmdargs=cmdargs, executable=executable, env=env,
-                         tsdbinfo=tsdbinfo, **kwargs)
-
     def _validate_input(self, datum):
         # valid input for parsing is non-empty
         # (this relies on an empty string evaluating to False)
@@ -374,29 +374,15 @@ class ACETransferer(ACEProcess):
     """
     A class for managing transfer requests with ACE.
 
-    Note that currently the `tsdbinfo` parameter must be set to `False`
-    as ACE is not yet able to provide detailed information for
-    transfer results.
-
     See :class:`ACEProcess` for initialization parameters.
     """
 
     task = 'transfer'
     _termini = [re.compile(r'^$')]
 
-    def __init__(self, grm, cmdargs=None, executable=None, env=None,
-                 tsdbinfo=False, **kwargs):
-        # disallow --tsdb-stdout
-        if tsdbinfo:
-            raise ValueError(
-                'tsdbinfo=True is not available for ACETransferer'
-            )
-        if '--tsdb-stdout' in (cmdargs or []):
-            cmdargs.remove('--tsdb-stdout')
-        ACEProcess.__init__(
-            self, grm, cmdargs=cmdargs, executable=executable, env=env,
-            tsdbinfo=False, **kwargs
-        )
+    def __init__(self, grm, cmdargs=None, executable=None, env=None):
+        super().__init__(grm, cmdargs=cmdargs, executable=executable, env=env,
+                         tsdbinfo=False, full_forest=False)
 
     def _validate_input(self, datum):
         return _possible_mrs(datum)
@@ -418,6 +404,11 @@ class ACEGenerator(ACEProcess):
     task = 'generate'
     _cmdargs = ['-e', '--tsdb-notes']
     _termini = [re.compile(r'NOTE: tsdb parse: ')]
+
+    def __init__(self, grm, cmdargs=None, executable=None, env=None,
+                 tsdbinfo=True):
+        super().__init__(grm, cmdargs=cmdargs, executable=executable, env=env,
+                         tsdbinfo=tsdbinfo, full_forest=False)
 
     def _validate_input(self, datum):
         return _possible_mrs(datum)
