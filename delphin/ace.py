@@ -78,7 +78,6 @@ import locale
 
 from delphin import interface
 from delphin import util
-from delphin.__about__ import __version__ as pydelphin_version
 from delphin.exceptions import PyDelphinException
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -171,7 +170,7 @@ class ACEProcess(interface.Processor):
         self.run_infos.append({
             'run-id': self._run_id,
             'application': 'ACE {} via PyDelphin v{}'.format(
-                '.'.join(map(str, self.ace_version)), pydelphin_version),
+                '.'.join(map(str, self.ace_version)), __version__),
             'environment': ' '.join(self.cmdargs),
             'user': getuser(),
             'host': gethostname(),
