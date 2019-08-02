@@ -170,26 +170,24 @@ def _make_mrs_digraph(x, dg, properties):
     for ep in x.rels:
         # optimization: retrieve early to avoid successive lookup
         lbl = ep.label
-        iv = ep.iv
-        props = x.properties(iv)
+        id = ep.id
+        props = x.variables.get(ep.iv)
         args = ep.args
         carg = ep.carg
         # scope labels (may be targets of arguments or hcons)
-        dg.add_edge(lbl, iv, sig='eq-scope')
+        dg.add_edge(lbl, id, sig='eq-scope')
         # predicate-argument structure
         s = predicate.normalize(ep.predicate)
         if carg is not None:
             s += '({})'.format(carg)
-        if ep.is_quantifier():
-            iv += '(bound)'  # make sure node id is unique
         elif properties and props:
             proplist = []
             for prop in sorted(props, key=sembase.property_priority):
                 val = props[prop]
                 proplist.append('{}={}'.format(prop.upper(), val.lower()))
             s += '{' + '|'.join(proplist) + '}'
-        dg.add_node(iv, sig=s)
-        dg.add_edges_from((iv, args[role], {'sig': role})
+        dg.add_node(id, sig=s)
+        dg.add_edges_from((id, args[role], {'sig': role})
                           for role in args if role != mrs.CONSTANT_ROLE)
     # hcons
     dg.add_edges_from((hc.hi, hc.lo, {'sig': hc.relation})
