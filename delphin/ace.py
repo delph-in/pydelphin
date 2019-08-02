@@ -361,7 +361,7 @@ class ACEParser(ACEProcess):
     def _validate_input(self, datum):
         # valid input for parsing is non-empty
         # (this relies on an empty string evaluating to False)
-        return datum.strip()
+        return isinstance(datum, str) and datum.strip()
 
     def _default_receive(self):
         lines = self._result_lines()
