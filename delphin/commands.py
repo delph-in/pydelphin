@@ -495,7 +495,8 @@ def _mkprof_summarize(destination, schema):
 
 def process(grammar, testsuite, source=None, select=None,
             generate=False, transfer=False, full_forest=False,
-            options=None, all_items=False, result_id=None, gzip=False):
+            options=None, all_items=False, result_id=None, gzip=False,
+            stderr=None):
     """
     Process (e.g., parse) a [incr tsdb()] profile.
 
@@ -532,6 +533,7 @@ def process(grammar, testsuite, source=None, select=None,
             `result-id`
         gzip (bool): if `True`, non-empty tables will be compressed
             with gzip
+        stderr (file): stream for ACE's stderr
     """
     from delphin import ace
 
@@ -539,6 +541,7 @@ def process(grammar, testsuite, source=None, select=None,
     testsuite = Path(testsuite).expanduser()
 
     kwargs = {}
+    kwargs['stderr'] = stderr
     if sum(1 if mode else 0 for mode in (generate, transfer, full_forest)) > 1:
         raise CommandError("'generate', 'transfer', and 'full-forest' "
                            "are mutually exclusive")

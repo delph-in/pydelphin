@@ -119,6 +119,7 @@ class ACEProcess(interface.Processor):
             is gathered and returned in the response
         full_forest (bool): if `True` and *tsdbinfo* is `True`, output
             the full chart for each parse result
+        stderr (file): stream used for ACE's stderr
     """
 
     #: The name of the task performed by the processor (`'parse'`,
@@ -130,7 +131,7 @@ class ACEProcess(interface.Processor):
     _termini = []
 
     def __init__(self, grm, cmdargs=None, executable=None, env=None,
-                 tsdbinfo=True, full_forest=False):
+                 tsdbinfo=True, full_forest=False, stderr=None):
         self.grm = str(Path(grm).expanduser())
 
         self.cmdargs = cmdargs or []
@@ -154,6 +155,7 @@ class ACEProcess(interface.Processor):
         self.env = env or os.environ
         self._run_id = -1
         self.run_infos = []
+        self._stderr = stderr
         self._open()
 
     @property
@@ -171,6 +173,7 @@ class ACEProcess(interface.Processor):
             [self.executable, '-g', self.grm] + self._cmdargs + self.cmdargs,
             stdin=PIPE,
             stdout=PIPE,
+            stderr=self._stderr,
             env=self.env,
             universal_newlines=True
         )
@@ -444,7 +447,8 @@ class ACEGenerator(ACEProcess):
         return response
 
 
-def compile(cfg_path, out_path, executable=None, env=None, log=None):
+def compile(cfg_path, out_path, executable=None, env=None,
+            stdout=None, stderr=None):
     """
     Use ACE to compile a grammar.
 
@@ -456,21 +460,21 @@ def compile(cfg_path, out_path, executable=None, env=None, log=None):
             `None`, the `ace` command will be used
         env (dict, optional): environment variables to pass to the ACE
             subprocess
-        log (file, optional): if given, the file, opened for writing,
-            or stream to write ACE's stdout and stderr compile messages
+        stdout (file, optional): stream used for ACE's stdout
+        stderr (file, optional): stream used for ACE's stderr
     """
     cfg_path = str(Path(cfg_path).expanduser())
     out_path = str(Path(out_path).expanduser())
     try:
         check_call(
             [(executable or 'ace'), '-g', cfg_path, '-G', out_path],
-            stdout=log, stderr=log, close_fds=True,
+            stdout=stdout, stderr=stderr, close_fds=True,
             env=(env or os.environ)
         )
     except (CalledProcessError, OSError):
         logging.error(
             'Failed to compile grammar with ACE. See {}'
-            .format(log.name if log is not None else '<stderr>')
+            .format(getattr(stderr, 'name', '<stderr>'))
         )
         raise
 
