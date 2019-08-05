@@ -54,8 +54,9 @@ from gzip import open as gzopen
 import tempfile
 import shutil
 from datetime import datetime
+import warnings
 
-from delphin.exceptions import PyDelphinException
+from delphin.exceptions import PyDelphinException, PyDelphinWarning
 from delphin import util
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -116,6 +117,10 @@ class TSDBError(PyDelphinException):
 
 class TSDBSchemaError(TSDBError):
     """Raised when there is an error processing a TSDB schema."""
+
+
+class TSDBWarning(PyDelphinWarning):
+    """Raised when encountering possibly invalid TSDB data."""
 
 
 #############################################################################
@@ -594,7 +599,12 @@ def _parse_datetime(s: str) -> datetime:
     if m is not None:
         s = _date_fix(m)
 
-    return datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
+    try:
+        dt = datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        warnings.warn('Invalid date field: {!r}'.format(s), TSDBWarning)
+        dt = None
+    return dt
 
 
 def _date_fix(mo):
