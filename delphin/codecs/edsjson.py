@@ -251,7 +251,7 @@ def to_dict(eds, properties=True, lnk=True):
 
 def from_dict(d):
     """
-    Decode a dictionary, as from :meth:`to_dict`, into an EDS object.
+    Decode a dictionary, as from :func:`to_dict`, into an EDS object.
     """
     top = d.get('top')
     nodes = []

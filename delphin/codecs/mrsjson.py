@@ -286,7 +286,7 @@ def to_dict(mrs, properties=True, lnk=True):
 
 def from_dict(d):
     """
-    Decode a dictionary, as from `to_dict()`, into an MRS object.
+    Decode a dictionary, as from :func:`to_dict`, into an MRS object.
     """
 
     def _lnk(o):

@@ -229,16 +229,16 @@ def encode(d, properties=True, lnk=True, indent=False):
                       indent=indent)
 
 
-def to_dict(dmrs, properties=True, lnk=True):
+def to_dict(d, properties=True, lnk=True):
     """
-    Encode *dmrs* as a dictionary suitable for JSON serialization.
+    Encode DMRS *d* as a dictionary suitable for JSON serialization.
     """
     # attempt to convert if necessary
-    # if not isinstance(dmrs, DMRS):
-    #     dmrs = DMRS.from_xmrs(dmrs)
+    # if not isinstance(d, DMRS):
+    #     d = DMRS.from_xmrs(d)
 
     nodes = []
-    for node in dmrs.nodes:
+    for node in d.nodes:
         n = dict(nodeid=node.id,
                  predicate=node.predicate)
         if properties and node.sortinfo:
@@ -254,24 +254,24 @@ def to_dict(dmrs, properties=True, lnk=True):
                 n['base'] = node.base
         nodes.append(n)
     links = []
-    for link in dmrs.links:
+    for link in d.links:
         links.append({
             'from': link.start, 'to': link.end,
             'rargname': link.role, 'post': link.post
         })
-    d = dict(nodes=nodes, links=links)
-    if dmrs.top is not None:  # could be 0
-        d['top'] = dmrs.top
-    if dmrs.index:
-        d['index'] = dmrs.index
+    data = dict(nodes=nodes, links=links)
+    if d.top is not None:  # could be 0
+        data['top'] = d.top
+    if d.index:
+        data['index'] = d.index
     if lnk:
-        if dmrs.lnk:
-            d['lnk'] = {'from': dmrs.cfrom, 'to': dmrs.cto}
-        if dmrs.surface:
-            d['surface'] = dmrs.surface
-    if dmrs.identifier is not None:
-        d['identifier'] = dmrs.identifier
-    return d
+        if d.lnk:
+            data['lnk'] = {'from': d.cfrom, 'to': d.cto}
+        if d.surface:
+            data['surface'] = d.surface
+    if d.identifier is not None:
+        data['identifier'] = d.identifier
+    return data
 
 
 def from_dict(d):

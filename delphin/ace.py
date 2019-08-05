@@ -1,62 +1,7 @@
 
 """
 An interface for the ACE processor.
-
-This module provides classes and functions for managing interactive
-communication with an open
-`ACE <http://sweaglesw.org/linguistics/ace/>`_ process.
-
-Note:
-  ACE is required for the functionality in this module, but it is not
-  included with PyDelphin. Pre-compiled binaries are available for
-  Linux and MacOS: http://sweaglesw.org/linguistics/ace/
-
-  For installation instructions, see:
-  http://moin.delph-in.net/AceInstall
-
-The :class:`ACEParser`, :class:`ACETransferer`, and
-:class:`ACEGenerator` classes are used for parsing, transferring, and
-generating with ACE. All are subclasses of :class:`ACEProcess`, which
-connects to ACE in the background, sends it data via its stdin, and
-receives responses via its stdout. Responses from ACE are interpreted
-so the data is more accessible in Python.
-
-Warning:
-  Instantiating :class:`ACEParser`, :class:`ACETransferer`, or
-  :class:`ACEGenerator` opens ACE in a subprocess, so take care to
-  close the process (:meth:`ACEProcess.close`) when finished or,
-  alternatively, instantiate the class in a context manager.
-
-Interpreted responses are stored in a dictionary-like
-:class:`~delphin.interface.Response` object. When queried as a
-dictionary, these objects return the raw response strings. When
-queried via its methods, the PyDelphin models of the data are
-returned.  The response objects may contain a number of
-:class:`~delphin.interface.Result` objects. These objects similarly
-provide raw-string access via dictionary keys and PyDelphin-model
-access via methods. Here is an example of parsing a sentence with
-:class:`ACEParser`:
-
-    >>> with ACEParser('erg-1214-x86-64-0.9.24.dat') as parser:
-    ...     response = parser.interact('Cats sleep.')
-    ...     print(response.result(0)['mrs'])
-    ...     print(response.result(0).mrs())
-    ... 
-    [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ] RELS: < [ udef_q<0:4> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: pl IND: + ] RSTR: h5 BODY: h6 ]  [ _cat_n_1<0:4> LBL: h7 ARG0: x3 ]  [ _sleep_v_1<5:11> LBL: h1 ARG0: e2 ARG1: x3 ] > HCONS: < h0 qeq h1 h5 qeq h7 > ]
-    <Xmrs object (udef cat sleep) at 139880862399696>
-
-Functions exist for non-interactive communication with ACE:
-:func:`parse` and :func:`parse_from_iterable` open and close an
-:class:`ACEParser` instance; :func:`transfer` and
-:func:`transfer_from_iterable` open and close an :class:`ACETransferer`
-instance; and :func:`generate` and :func:`generate_from_iterable` open
-and close an :class:`ACEGenerator` instance. Note that these functions
-open a new ACE subprocess every time they are called, so if you have
-many items to process, it is more efficient to use
-:func:`parse_from_iterable`, :func:`transfer_from_iterable`, or
-:func:`generate_from_iterable` than the single-item versions, or to
-interact with the :class:`ACEProcess` subclass instances directly.
-""" # noqa
+"""
 
 import logging
 import os

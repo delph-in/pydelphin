@@ -182,9 +182,9 @@ def decode(s):
     return from_triples(penman.decode(s).triples())
 
 
-def encode(eds, properties=True, lnk=True, indent=False):
+def encode(e, properties=True, lnk=True, indent=False):
     """
-    Serialize a EDS object to a EDS-PENMAN string.
+    Serialize the EDS object *e* to an EDS-PENMAN string.
 
     Args:
         e: a EDS object
@@ -195,7 +195,7 @@ def encode(eds, properties=True, lnk=True, indent=False):
     Returns:
         a EDS-PENMAN-serialization of the EDS object
     """
-    triples = to_triples(eds, properties=properties, lnk=lnk)
+    triples = to_triples(e, properties=properties, lnk=lnk)
     g = penman.PENMANCodec().triples_to_graph(triples)
     return penman.encode(g, indent=indent)
 

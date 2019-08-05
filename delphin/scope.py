@@ -2,25 +2,6 @@
 
 """
 Structures and operations for quantifier scope in DELPH-IN semantics.
-
-While the predicate-argument structure of a semantic representation is
-a directed-acyclic graph, the quantifier scope is a tree overlayed on
-the edges of that graph. In a fully scope-resolved structure, there is
-one tree spanning the entire graph, but in underspecified
-representations like MRS, there are multiple subtrees that span the
-graph nodes but are not all connected together. The components are
-then connected via qeq constraints which specify a partial ordering
-for the tree such that quantifiers may float in between the nodes
-connected by qeqs.
-
-Each node in the scope tree (called a *scopal position*) may encompass
-multiple nodes in the predicate-argument graph. Nodes that share a
-scopal position are said to be in a *conjunction*.
-
-The dependency representations EDS and DMRS develop the idea of scope
-representatives (called *representative nodes* or sometimes *heads*),
-whereby a single node is selected from a conjunction to represent the
-conjunction as a whole.
 """
 
 from typing import Mapping, Iterable, List, Tuple, Dict, Container
@@ -71,15 +52,18 @@ class ScopingSemanticStructure(SemanticStructure):
     """
     A semantic structure that encodes quantifier scope.
 
-    This is a base class for semantic representations that distinguish
-    scopal and non-scopal arguments, namely :class:`~delphin.mrs.MRS`
-    and :class:`~delphin.dmrs.DMRS`. In addition to the attributes and
-    methods of the :class:`~delphin.sembase.SemanticStructure` class,
-    it also includes an :attr:`index` which indicates the non-scopal
-    top of the structure. It also describes methods that allow one to
-    retrieve scopal and non-scopal arguments separately, and a method
-    to retrieve a mapping of scope labels to node identifiers sharing
-    the labels.
+    This is a base class for semantic representations, namely
+    :class:`~delphin.mrs.MRS` and :class:`~delphin.dmrs.DMRS`, that
+    distinguish scopal and non-scopal arguments. In addition to the
+    attributes and methods of the
+    :class:`~delphin.sembase.SemanticStructure` class, it also
+    includes an :attr:`index` which indicates the non-scopal top of
+    the structure, :meth:`scopes` for describing the labeled scopes of
+    a structure, and :meth:`scopal_arguments` for describing the
+    arguments that select scopes.
+
+    Attributes:
+        index: The non-scopal top of the structure.
     """
 
     __slots__ = ('index',)

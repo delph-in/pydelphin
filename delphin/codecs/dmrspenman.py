@@ -203,24 +203,24 @@ def encode(d, properties=True, lnk=True, indent=False):
     return penman.encode(g, indent=indent)
 
 
-def to_triples(dmrs, properties=True, lnk=True):
+def to_triples(d, properties=True, lnk=True):
     """
-    Encode *dmrs* as triples suitable for PENMAN serialization.
+    Encode *d* as triples suitable for PENMAN serialization.
     """
     # attempt to convert if necessary
-    # if not isinstance(dmrs, DMRS):
-    #     dmrs = DMRS.from_xmrs(dmrs)
+    # if not isinstance(d, DMRS):
+    #     d = DMRS.from_xmrs(d)
 
     idmap = {}
-    quantifiers = {node.id for node in dmrs.nodes
-                   if dmrs.is_quantifier(node.id)}
-    for i, node in enumerate(dmrs.nodes, 1):
+    quantifiers = {node.id for node in d.nodes
+                   if d.is_quantifier(node.id)}
+    for i, node in enumerate(d.nodes, 1):
         if node.id in quantifiers:
             idmap[node.id] = 'q' + str(i)
         else:
             idmap[node.id] = '{}{}'.format(node.type or '_', i)
     # sort the nodes so the top node appears first
-    nodes = sorted(dmrs.nodes, key=lambda n: dmrs.top != n.id)
+    nodes = sorted(d.nodes, key=lambda n: d.top != n.id)
     triples = []
     for node in nodes:
         _id = idmap[node.id]
@@ -236,9 +236,9 @@ def to_triples(dmrs, properties=True, lnk=True):
                 value = node.properties[key]
                 triples.append((_id, key.lower(), value))
 
-    # if dmrs.top is not None:
-    #     triples.append((None, 'top', dmrs.top))
-    for link in dmrs.links:
+    # if d.top is not None:
+    #     triples.append((None, 'top', d.top))
+    for link in d.links:
         start = idmap[link.start]
         end = idmap[link.end]
         relation = '{}-{}'.format(link.role.upper(), link.post)
@@ -248,7 +248,7 @@ def to_triples(dmrs, properties=True, lnk=True):
 
 def from_triples(triples):
     """
-    Decode triples into a DMRS object.
+    Decode triples, as from :func:`to_triples`, into a DMRS object.
     """
     top = lnk = surface = identifier = None
     nids, nd, edges = [], {}, []

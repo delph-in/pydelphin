@@ -50,11 +50,9 @@ delphin.mrs
       :members:
 
    .. autoclass:: HCons
-      :show-inheritance:
       :members:
 
    .. autoclass:: ICons
-      :show-inheritance:
       :members:
 
    Module Functions
