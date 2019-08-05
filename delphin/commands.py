@@ -736,7 +736,7 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
             [simplemrs.decode(row[2]) for row in testrows],
             [simplemrs.decode(row[2]) for row in goldrows])
         yield {'id': key,
-               'input': i_inputs[key],
+               'input': i_inputs.get(key),
                'test': test_unique,
                'shared': shared,
                'gold': gold_unique}
