@@ -15,12 +15,14 @@ interacting with tools in the DELPH-IN ecosystem. PyDelphin's goal is
 to lower the barriers to making use of DELPH-IN resources to help
 users quickly build applications or perform experiments, and it has
 been successfully used for research into machine translation (e.g.,
-[Goodman, 2018][]), sentence chunking ([Muszyńska, 2016][]),
-neural semantic parsing ([Buys & Blunsom, 2017][]), and more.
+[Goodman, 2018][]), sentence chunking ([Muszyńska, 2016][]), neural
+semantic parsing ([Buys & Blunsom, 2017][]), natural language
+generation ([Hajdik et al., 2019][]), and more.
 
 [Goodman, 2018]: https://goodmami.org/static/goodman-dissertation.pdf
-[Muszyńska, 2016]: http://www.aclweb.org/anthology/P/P16/P16-3014.pdf
-[Buys & Blunsom,  2017]: http://www.aclweb.org/anthology/P/P17/P17-1112.pdf
+[Muszyńska, 2016]: https://www.aclweb.org/anthology/P16-3014
+[Buys & Blunsom,  2017]: https://www.aclweb.org/anthology/P17-1112
+[Hajdik et al., 2019]: https://www.aclweb.org/anthology/N19-1235
 
 Documentation, including guides and an API reference, is available here:
 http://pydelphin.readthedocs.io/
@@ -89,10 +91,6 @@ Core Components and Command Line Interface:
 - [`delphin.hierarchy`][]:  Multiple-inheritance hierarchies
 - [`delphin.exceptions`][]: PyDelphin's basic exception classes
 
-For convenience, some plugins are included, too:
-- [`delphin.highlight`][]:       [Pygments](http://pygments.org/)-based syntax highlighting (currently just for TDL and SimpleMRS)
-- [`delphin.codecs.dmrstikz`][]: Tikz-based formatting for DMRS (via the [`delphin-latex`](https://github.com/delph-in/delphin-latex) plugin)
-
 
 [`delphin.codecs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.codecs.html
 [`delphin.commands`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.commands.html
@@ -101,8 +99,6 @@ For convenience, some plugins are included, too:
 [`delphin.eds`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.eds.html
 [`delphin.exceptions`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.exceptions.html
 [`delphin.hierarchy`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.hierarchy.html
-[`delphin.highlight`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.highlight.html
-[`delphin.codecs.dmrstikz`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.codecs.dmrstikz.html
 [`delphin.interface`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.interface.html
 [`delphin.ace`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.ace.html
 [`delphin.web`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.web.html
@@ -125,16 +121,12 @@ For convenience, some plugins are included, too:
 
 ## Other Information
 
-### Contributors
+### Acknowledgments
 
-PyDelphin is developed and maintained by several contributors:
-
-- [Michael Wayne Goodman](https://github.com/goodmami/) (primary author)
-- [T.J. Trimble](https://github.com/dantiston/) (packaging, derivations, ACE)
-- [Guy Emerson](https://github.com/guyemerson/) (MRS)
-- [Alex Kuhnle](https://github.com/AlexKuhnle/) (MRS, ACE)
-- [Francis Bond](https://github.com/fcbond/) (LaTeX export)
-- [Angie McMillan-Major](https://github.com/mcmillanmajora/) (maintainer)
+Thanks to PyDelphin's
+[contributors](https://github.com/delph-in/pydelphin/graphs/contributors)
+and all who've participated by filing issues and feature
+requests. Also thanks to the users of PyDelphin!
 
 ### Related Software
 
