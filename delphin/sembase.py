@@ -103,23 +103,9 @@ class Predication(LnkMixin):
             id(self))
 
 
-class Constraint(tuple):
-
-    __slots__ = ()
-
-    def __new__(cls, lhs: Identifier, relation: str, rhs: Identifier):
-        return super().__new__(cls, (lhs, relation, rhs))
-
-    def __repr__(self):
-        return '<{0} object ({1[0]!s} {1[1]!s} {1[2]!s}) at {2}>'.format(
-            self.__class__.__name__, self, id(self)
-        )
-
-
 # Structure types
 
 Predications = Iterable[Predication]
-Constraints = Iterable[Constraint]
 MaybePredication = Union[Predication, None]
 PredicationPair = Tuple[MaybePredication, MaybePredication]
 

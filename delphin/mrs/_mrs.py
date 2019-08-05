@@ -4,10 +4,7 @@ from operator import itemgetter
 
 from delphin.lnk import Lnk
 from delphin import variable
-from delphin.sembase import (
-    Predication,
-    Constraint
-)
+from delphin import sembase
 from delphin import scope
 
 
@@ -19,7 +16,7 @@ CONSTANT_ROLE    = 'CARG'
 _QUANTIFIER_TYPE = 'q'
 
 
-class EP(Predication):
+class EP(sembase.Predication):
     """
     An MRS elementary predication (EP).
 
@@ -110,7 +107,23 @@ class EP(Predication):
         return RESTRICTION_ROLE in self.args
 
 
-class HCons(Constraint):
+class _Constraint(tuple):
+    """
+    A generic constraint between two parts of a semantic structure.
+    """
+
+    __slots__ = ()
+
+    def __new__(cls, lhs, relation, rhs):
+        return super().__new__(cls, (lhs, relation, rhs))
+
+    def __repr__(self):
+        return '<{0} object ({1[0]!s} {1[1]!s} {1[2]!s}) at {2}>'.format(
+            self.__class__.__name__, self, id(self)
+        )
+
+
+class HCons(_Constraint):
     """
     A relation between two handles.
 
@@ -146,7 +159,7 @@ class HCons(Constraint):
         return cls(hi, scope.QEQ, lo)
 
 
-class ICons(Constraint):
+class ICons(_Constraint):
     """
     Individual Constraint: A relation between two variables.
 
