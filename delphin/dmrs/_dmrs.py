@@ -298,7 +298,7 @@ class DMRS(scope.ScopingSemanticStructure):
         leqs = [(id_to_lbl[link.start], id_to_lbl[link.end])
                 for link in self.links
                 if link.post == EQ_POST]
-        prescopes = {_id_to_lbl[node.id]: [node] for node in self.nodes}
+        prescopes = {id_to_lbl[node.id]: [node] for node in self.nodes}
 
         scopes = scope.conjoin(prescopes, leqs)
         top = None
@@ -337,6 +337,7 @@ class DMRS(scope.ScopingSemanticStructure):
                 for node in nodes:
                     id_to_lbl[node.id] = label
 
+        scargs = {node.id: [] for node in self.nodes}
         for link in self.links:
             if link.post == HEQ_POST:
                 relation = scope.LHEQ
