@@ -5,198 +5,87 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+## [v1.0.0][]
+
+This is the largest release of PyDelphin yet, with over a year of work
+and several years of ideas worked in. The changes are so numerous that
+a normal CHANGELOG entry would only make it harder to understand what
+is different, and so many changes are breaking that it would be
+counterproductive to mark those that break backward
+compatibility. Rather, users should treat PyDelphin v1.0.0 as an
+entirely new API (that is, assume the entire API is incompatible with
+the previous version). And yet, there are rather few new features
+introduced in this release.
+
+Two goals of this release are to fix design decisions that users had
+found less than ideal, and to improve the codebase's maintainability
+for the future. As part of the first goal, the package hierarchy has
+been flattened (e.g., the `dmrs` package is no longer under `mrs`) and
+the semantic representations are given their own data structures
+instead of being converted to an intermediate representation. As part
+of the second goal, `delphin` was made a namespace package,
+[PEP-8](https://www.python.org/dev/peps/pep-0008/) style conventions
+were applied throughout, and every part of the public API was
+documented.
+
 ### Python Versions
 
 * Removed Python 2.7 support (#115)
 * Removed Python 3.4 support (#213)
 
-### Added
+### Main API Changes
 
-* `delphin.dmrs` package (see *Moved or Renamed*):
-  - `CVARSORT`
-  - `DMRSSyntaxError`
-  - `EQ_POST`
-  - `H_POST`
-  - `HEQ_POST`
-  - `NEQ_POST`
-  - `RESTRICTION_ROLE`
-* `delphin.dmrs.dmrsjson`
-* `delphin.dmrs.dmrspenman`
-* `delphin.eds` package (see *Moved or Renamed*):
-  - `BOUND_VARIABLE_ROLE`
-  - `EDSSyntaxError`
-  - `PREDICATE_MODIFIER_ROLE`
-* `delphin.eds.edsjson`
-* `delphin.eds.edsnative`
-* `delphin.eds.edspenman`
-* `delphin.exceptions.PyDelphinSyntaxError`
-* `delphin.hierarchy`
-* `delphin.lnk`
-* `delphin.lnk.Lnk.default()`
-* `delphin.lnk.LnkError`
-* `delphin.dmrs`
-* `delphin.dmrs.DMRSSyntaxError`
-* `delphin.mrs.indexedmrs`
-* `delphin.mrs.mrsjson`
-* `delphin.mrs.MRSSyntaxError`
-* `delphin.predicate`
-* `delphin.predicate.PredicateError`
-* `delphin.predicate.create()` -- replaces `Pred.realpred()`
-* `delphin.predicate.is_surface()`
-* `delphin.predicate.is_abstract()`
-* `delphin.scope`
-* `delphin.sembase`:
-  - `property_priority()`
-  - `Predication`
-  - `SemantictStructure`
-  - `ScopingSemanticStructure`
-* `delphin.semi`
-  - `TOP_TYPE`
-  - `STRING_TYPE`
-  - `SemI.find_synopsis()`
-  - `SemIError`
-  - `SemISyntaxError`
-  - `SemIWarning`
-  - `Synopsis`
-  - `SynopsisRole`
-* `delphin.tfs.TypeHierarchyError`
-* `delphin.tfs.TypeHierarchy`:
-  - equality comparison
-  - key access on typename returns list of supertypes for that type
-  - `top`
-  - `items()`
-  - `update()` -- incorporate subhierarchies
-* `delphin.tfs.TypeHierarchyNode`
-* `delphin.util.LookaheadLexer`
-* `delphin.util.Lexer`
-* `delphin.variable`
-  - `hierarchy`
-  - `INDIVIDUAL`
-  - `INSTANCE_OR_HANDLE`
-  - `EVENTUALITY`
-  - `INSTANCE`
-  - `is_valid()`
-* `delphin.mrs.vpm.VPMSyntaxError`
-
-### Moved or Renamed
-
-* `delphin.exceptions.ItsdbError` to `delphin.itsdb.ITSDBError`
-* `delphin.exceptions.REPPError` to `delphin.repp.REPPError`
-* `delphin.exceptions.TdlError` to `delphin.tdl.TDLError`
-* `delphin.exceptions.TdlParsingError` to `delphin.tdl.TDLSyntaxError`
-* `delphin.exceptions.TdlWarning` to `delphin.tdl.TDLWarning`
-* `delphin.exceptions.TSQLSyntaxError` to `delphin.tsql.TSQLSyntaxError`
-* `delphin.extra.highlight.TdlLexer` to `delphin.extra.highlight.TDLLexer`
-* `delphin.interfaces.ace.AceProcessError` to
-  `delphin.interfaces.ace.ACEProcessError`
-* `delphin.mrs.components.Lnk` to `delphin.lnk.Lnk`
-* `delphin.mrs.components._LnkMixin` to `delphin.lnk.LnkMixin`
-* `delphin.mrs.components.split_pred_string()` to `delphin.predicate.split()`
-* `delphin.mrs.components.normalize_pred_string()` to
-  `delphin.predicate.normalize()`
-* `delphin.mrs.components.is_valid_pred_string()` to
-  `delphin.predicate.is_valid()`
-* `delphin.mrs.components.var_re` to `delphin.variable.variable_re`
-* `delphin.mrs.components.var_sort` to `delphin.variable.type`
-  (`delphin.variable.sort` is an alias)
-* `delphin.mrs.components.var_id` to `delphin.variable.id`
-* `delphin.mrs.components.sort_vid_split` to `delphin.variable.split`
-* `delphin.mrs.components._VarGenerator` to `delphin.variable.VariableFactory`
-* `delphin.mrs.config.UNKNOWNSORT` to `delphin.variable.UNKNOWN`
-* `delphin.mrs.config.HANDLESORT` to `delphin.variable.HANDLE`
-* `delphin.mrs.Dmrs` to `delphin.dmrs.DMRS`
-* `delphin.mrs.Dmrs.from_dict()` to `delphin.dmrs.dmrsjson.from_dict()`
-* `delphin.mrs.Dmrs.to_dict()` to `delphin.dmrs.dmrsjson.to_dict()`
-* `delphin.mrs.Dmrs.from_triples()` to `delphin.dmrs.dmrspenman.from_triples()`
-* `delphin.mrs.Dmrs.to_triples()` to `delphin.dmrs.dmrspenman.to_triples()`
-* `delphin.mrs.dmrx` to `delphin.dmrs.dmrx`
-* `delphin.mrs.eds` to `delphin.eds` and `delphin.eds.edsnative`
-* `delphin.mrs.eds.Eds` to `delphin.eds.EDS`
-* `delphin.mrs.eds.Eds.from_dict()` to `delphin.eds.edsjson.from_dict()`
-* `delphin.mrs.eds.Eds.to_dict()` to `delphin.eds.edsjson.to_dict()`
-* `delphin.mrs.eds.Eds.from_triples()` to `delphin.eds.edspenman.from_triples()`
-* `delphin.mrs.eds.Eds.to_triples()` to `delphin.eds.edspenman.to_triples()`
-* `delphin.mrs.Mrs` to `delphin.mrs.MRS`
-* `delphin.mrs.Mrs.from_dict()` to `delphin.mrs.mrsjson.from_dict()`
-* `delphin.mrs.Mrs.to_dict()` to `delphin.mrs.mrsjson.to_dict()`
-* `delphin.mrs.penman` to `delphin.dmrs.dmrspenman` and `delphin.eds.edspenman`
-* `delphin.mrs.prolog` to `delphin.mrs.mrsprolog`
-* `delphin.mrs.semi` to `delphin.semi`
-* `delphin.mrs.simpledmrs` to `delphin.dmrs.simpledmrs`
-* `delphin.mrs.util.rargname_sortkey()` to `delphin.sembase.role_priority()`
-* `delphin.mrs.vpm` to `delphin.vpm`
-
-### Removed
-
-* `delphin.commands.convert` `pretty_print` parameter
-* `delphin.derivation.UdfNode.basic_entity()`
-* `delphin.derivation.UdfNode.lexical_type()`
-* `delphin.exceptions.XmrsError`
-* `delphin.exceptions.XmrsSerializationError`
-* `delphin.exceptions.XmrsDeserializationError`
-* `delphin.exceptions.XmrsStructureError`
-* `delphin.exceptions.XmrsWarning`
-* `delphin.itsdb.ItsdbProfile`
-* `delphin.itsdb.ItsdbSkeleton`
-* `delphin.itsdb.apply_rows()`
-* `delphin.itsdb.default_value()`
-* `delphin.itsdb.filter_rows()`
-* `delphin.itsdb.get_relations()`
-* `delphin.itsdb.make_skeleton()`
-* `delphin.mrs.components`
-* `delphin.mrs.convert()`
-* `delphin.mrs.path`
-* `delphin.mrs.penman`
-* `delphin.mrs.query`
-* `delphin.mrs.semi.Predicate`
-* `delphin.mrs.semi.Property`
-* `delphin.mrs.semi.Role`
-* `delphin.mrs.semi.TOP`
-* `delphin.mrs.semi.Variable`
-* `delphin.mrs.simplemrs.load()`, the `strict` parameter
-* `delphin.mrs.simplemrs.loads()`, the `strict` parameter
-* `delphin.mrs.util`
-* `delphin.mrs.xmrs.Rmrs`
-* `delphin.tdl.parse()`
-* `delphin.tdl.lex()`
-* `delphin.tdl.tokenize()`
-* `delphin.tdl.TdlDefinition`
-* `delphin.tdl.TdlConsList`
-* `delphin.tdl.TdlDiffList`
-* `delphin.tdl.TdlType`
-* `delphin.tdl.TdlInflRule`
-* `delphin._exceptions`
-
-### Changed
-
-* `delphin.commands.convert` add `--sem-i` parameter
-* `delphin.extra.highlight` add docstrings and wild-card to TDL highlighter
-* `delphin.extra.latex` update to work with new DMRS class
-* `delphin.interfaces.ace` no longer raise `ValueError` when grammar file does
-  not exist; the `ACEProcessError` now handles this
-* `delphin.lnk.Lnk` can have an unspecified state (via the `Lnk.default()`
-  classmethod) where `str(lnk) == ''` so we don't have to check for `None`
-* `delphin.semi.load()` takes an `encoding` parameter
-* `delphin.semi` dictionary schema removes empty/default values; changes
-  structure of predicate synopses
-* `delphin.semi` warns when a type is redefined
-* `delphin.tfs` -- errors raise `TypeHierarchyError` instead of `ValueError`
-* `delphin.tfs` nodes in the hierarchy are now TypeHierarchyNodes and may
-  contain arbitrary data in addition to the parents and children
-* `delphin.mrs.vpm` raises `VPMSyntaxError` on bad inputs instead of
-  `AssertionError`
-* MRS/DMRS/EDS serialization codecs now use the harmonized module layout (#3):
-  - `delphin.dmrs.dmrsjson` (new)
-  - `delphin.dmrs.dmrspenman`
-  - `delphin.dmrs.dmrx`
-  - `delphin.dmrs.simpledmrs` (now read/write)
-  - `delphin.eds.edsnative` (now separate from `eds` module)
-  - `delphin.eds.edsjson` (new)
-  - `delphin.eds.edspenman`
-  - `delphin.mrs.mrsjson` (new)
-  - `delphin.mrs.mrsprolog` (write-only)
-  - `delphin.mrs.mrx`
-  - `delphin.mrs.simplemrs`
+* Semantics
+  - There is no more intermediate `Xmrs` data structure
+  - MRS, DMRS, and EDS are independent data structures but they
+    implement common interfaces
+  - A new `delphin.scope` module defines scope operations
+  - DMRS and EDS are moved to the `delphin.dmrs` and `delphin.eds`
+    packages, respectively
+  - All unshared semantic components (EPs, Nodes, etc.) are defined by
+    their respective packages (`delphin.mrs.EP`, `delphin.dmrs.Node`,
+    `delphin.eds.Node`, etc.)
+  - Abstract classes are defined in `delphin.sembase` and `delphin.scope`
+  - Shared components get their own modules (`delphin.lnk`,
+    `delphin.predicate`, etc.)
+* Serialization
+  - All serialization codecs for semantics representations are now
+    under `delphin.codecs`, which is a namespace package
+  - These implement a common "Codec API" which allows additional
+    codecs to be installed as plugins
+* Test Suite Databases
+  - Low-level operations are defined in `delphin.tsdb`
+  - SQL-database-like operations are defined in `delphin.itsdb`
+  - The incremental API of `delphin.itsdb.TestSuite` is simplified;
+    Rows are now immutable, Tables are always backed by files (either
+    named or temporary), and writing to disk only happens via the
+    `TestSuite.commit()` method
+  - Table joins for complex queries are now entirely handled by
+    `delphin.tsql`
+  - Filter and Applicator functionality is removed, but the filtering
+    is handled better by `delphin.tsql`
+* Interfaces
+  - Common interface classes are now in `delphin.interface`
+  - The ACE interface is moved up to `delphin.ace`
+  - `delphin.ace` now supports full-forest parsing
+  - The web interface is no longer called "RESTful" (because it's far
+    from it) and is moved to `delphin.web.client`
+  - A web server is implemented at `delphin.web.server`
+* Hierarchies
+  - A new `delphin.hierarchy` module for multiple-inheritance
+    hierarchies
+  - The hierarchy implementation is used for `delphin.semi` and
+    `delphin.tfs` for computing subsumption and type compatibility
+* Other Removals Not Listed Above
+  - `delphin.mrs` submodules: `compare`, `components`, `config`,
+    `path`, `query`, `util`; some functions are moved to `delphin.mrs`
+  - `delphin.extra`, but functionality is available as plugins:
+    - [`delphin-latex`](https://github.com/delph-in/delphin-latex)
+    - [`delphin.highlight`](https://github.com/delph-in/delphin.highlight)
+  - `delphin.sh` script
+  - `tox`-based testing
+  - Various methods and function parameters may be removed; please
+    consult the API documentation
 
 
 ## [v0.9.2][]
@@ -1082,6 +971,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.0.0]: ../../releases/tag/v1.0.0
 [v0.9.2]: ../../releases/tag/v0.9.2
 [v0.9.1]: ../../releases/tag/v0.9.1
 [v0.9.0]: ../../releases/tag/v0.9.0
