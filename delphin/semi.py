@@ -1,19 +1,6 @@
 
 """
 Semantic Interface (SEM-I)
-
-Semantic interfaces (SEM-Is) describe the inventory of semantic
-components in a grammar, including variables, properties, roles, and
-predicates. This information can be used for validating semantic
-structures or for filling out missing information in incomplete
-representations.
-
-.. seealso::
-  The following DELPH-IN wikis contain more information:
-
-  - Technical specifications: http://moin.delph-in.net/SemiRfc
-  - Overview and usage: http://moin.delph-in.net/RmrsSemi
-
 """
 
 import re

@@ -3,7 +3,6 @@
 DELPH-IN Web API Server
 """
 
-
 import pathlib
 import urllib.parse
 import datetime

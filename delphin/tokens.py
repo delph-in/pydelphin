@@ -1,4 +1,8 @@
 
+"""
+YY tokens and token lattices.
+"""
+
 import re
 from collections import namedtuple
 

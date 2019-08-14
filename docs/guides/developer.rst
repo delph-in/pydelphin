@@ -71,6 +71,7 @@ The ``delphin`` package of PyDelphin is, as of version 1.0.0, a
 which means that it is possible to create plugins under the `delphin`
 namespace.
 
+
 Plugin Names
 ''''''''''''
 
@@ -80,6 +81,7 @@ named ``delphin.{name}`` (e.g., `delphin.highlight
 more than one module or the plugin name doesn't strictly coincide with
 the project name, use ``delphin-{{name}}`` (e.g., `delphin-latex
 <https://github.com/delph-in/delphin-latex>`_).
+
 
 Project Structure
 '''''''''''''''''
@@ -104,6 +106,7 @@ a package rather than a module, it could be a subdirectory of
 ``delphin/`` with an ``__init__.py`` file inside of it. Packages and
 modules under ``delphin/`` should not conflict with existing names in
 PyDelphin.
+
 
 Plugin Versions
 '''''''''''''''
@@ -157,6 +160,7 @@ please file an `issue
 <https://github.com/delph-in/pydelphin/pull/new>`_ to request the
 merge.
 
+
 Module Dependencies
 -------------------
 
@@ -203,7 +207,7 @@ least test the codecs to changes they make.
   - :mod:`delphin.tfs` [`hierarchy`]
   - :mod:`delphin.tokens` [`lnk`]
   - :mod:`delphin.vpm` [`variable`]
-  - :mod:`delphin.web` [`interface`]
+  - :mod:`delphin.web.client` [`interface`]
 
 * Tier 3
 
@@ -221,6 +225,7 @@ least test the codecs to changes they make.
 * Tier 5
 
   - `delphin.codecs` [`dmrs`, `eds`, `mrs`, ...] (see :doc:`../api/delphin.codecs`)
+  - :mod:`delphin.web.server` [`ace`, `codecs`, `derivation`, `dmrs`, `eds`, `itsdb`, `tokens`]
 
 * Tier 6
 

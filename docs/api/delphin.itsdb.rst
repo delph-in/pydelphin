@@ -9,15 +9,27 @@ delphin.itsdb
 
 .. automodule:: delphin.itsdb
 
-   The typical test suite contains these files:
 
-   ::
+   .. note::
+
+      This module implements high-level structures and operations on
+      top of TSDB test suites. For the basic, low-level functionality,
+      see :mod:`delphin.tsdb`. For complex queries of the databases,
+      see :mod:`delphin.tsql`.
+
+   [incr tsdb()] is a tool built on top of TSDB databases for the
+   purpose of profiling and comparing grammar versions using test
+   suites. This module is named after that tool as it also builds
+   higher-level operations on top of TSDB test suites but it has a
+   much narrower scope. The aim of this module is to assist users with
+   creating, processing, or manipulating test suites.
+
+   The typical test suite contains these files::
 
      testsuite/
        analysis  fold             item-set   parse       relations  run    tree
        decision  item             output     phenomenon  result     score  update
        edge      item-phenomenon  parameter  preference  rule       set
-
 
 
 Test Suite Classes

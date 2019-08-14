@@ -2,20 +2,6 @@
 
 """
 [incr tsdb()] Test Suites
-
-.. note::
-
-  This module implements high-level structures and operations on top
-  of TSDB test suites. For the basic, low-level functionality, see
-  :mod:`delphin.tsdb`. For complex queries of the databases, see
-  :mod:`delphin.tsql`.
-
-[incr tsdb()] is a tool built on top of TSDB databases for the purpose
-of profiling and comparing grammar versions using test suites. This
-module is named after that tool as it also builds higher-level
-operations on top of TSDB test suites but it has a much narrower
-scope. The aim of this module is to assist users with creating,
-processing, or manipulating test suites.
 """
 
 from typing import (

@@ -1,4 +1,8 @@
 
+"""
+Basic classes and functions for semantic representations.
+"""
+
 from typing import Mapping, Tuple, List, Dict, Union, Iterable
 
 from delphin.lnk import Lnk, LnkMixin

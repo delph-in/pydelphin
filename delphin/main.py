@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Entry-point for the 'delphin' command.
+"""
+
 import sys
 import os
 import importlib

@@ -4,6 +4,17 @@ delphin.interface
 
 .. automodule:: delphin.interface
 
+   This module manages the communication between data providers,
+   namely processors like `ACE
+   <http://sweaglesw.org/linguistics/ace/>`_ or remote services like
+   the `DELPH-IN Web API <http://moin.delph-in.net/ErgApi>`_, and user
+   code or storage backends, namely [incr tsdb()] :doc:`test suites
+   <delphin.itsdb>`. An interface sends requests to a provider, then
+   receives and interprets the response.
+
+   The interface may also detect and deserialize supported DELPH-IN
+   formats if the appropriate modules are available.
+
    .. autoclass:: Processor
       :members:
 

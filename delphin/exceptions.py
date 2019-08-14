@@ -1,4 +1,8 @@
 
+"""
+Basic exception and warning classes for PyDelphin.
+"""
+
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 

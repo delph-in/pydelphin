@@ -4,6 +4,11 @@ delphin.commands
 
 .. automodule:: delphin.commands
 
+   The public functions in this module largely mirror the front-end
+   subcommands provided by the `delphin` command, with some small
+   changes to argument names or values to be better-suited to being
+   called from within Python.
+
    convert
    -------
 

@@ -2,45 +2,6 @@
 
 """
 Test Suite Database (TSDB) Primitives
-
-.. note::
-
-  This module implements the basic, low-level functionality for
-  working with TSDB databases. For higher-level views and uses of
-  these databases, see :mod:`delphin.itsdb`. For complex queries of
-  the databases, see :mod:`delphin.tsql`.
-
-TSDB databases are plain-text file-based relational databases
-minimally consisting of a directory with a file, called `relations`,
-containing the database's schema (see `Schemas`_). Every relation, or
-table, in the database has its own file, which may be `gzipped
-<https://en.wikipedia.org/wiki/Gzip>`_ to save space. The relations
-have a simple format with columns delimited by ``@`` and records
-delimited by newlines. This makes them easy to inspect at the command
-line with standard Unix tools such as ``cut`` and ``awk`` (but gzipped
-relations need to be decompressed or piped from a tool such as
-``zcat``).
-
-This module handles the technical details of reading and writing TSDB
-databases, including:
-
-- parsing database schemas
-
-- transparently opening either the plain-text or gzipped relations on
-  disk, as appropriate
-
-- escaping and unescaping reserved characters in the data
-
-- pairing columns with their schema descriptions
-
-- casting types (such as ``:integer``, ``:date``, etc.)
-
-Additionally, this module provides very basic abstractions of
-databases and relations as the :class:`Database` and :class:`Relation`
-classes, respectively. These serve as base classes for the more
-featureful :class:`delphin.itsdb.TestSuite` and
-:class:`delphin.itsdb.Table` classes, but may be useful as they are
-for simple needs.
 """
 
 from typing import (
