@@ -45,8 +45,9 @@ running unit tests, please see the
 [documentation](https://pydelphin.readthedocs.io/en/latest/guides/setup.html).
 
 API changes in new versions are documented in the
-[CHANGELOG](CHANGELOG.md), but for any unexpected changes please
-[file an issue](https://github.com/delph-in/pydelphin/issues).
+[CHANGELOG](https://github.com/delph-in/pydelphin/blob/develop/CHANGELOG.md),
+but for any unexpected changes please [file an
+issue](https://github.com/delph-in/pydelphin/issues).
 
 ## Features
 
@@ -139,7 +140,6 @@ requests. Also thanks to the users of PyDelphin!
   - \[incr tsdb()\]: http://www.delph-in.net/itsdb/
   - gDelta: https://github.com/ned2/gdelta
   - Typediff: https://github.com/ned2/typediff
-  - gTest: https://github.com/goodmami/gtest
 * Software libraries and repositories
   - LOGON: http://moin.delph-in.net/LogonTop
   - pydmrs: https://github.com/delph-in/pydmrs

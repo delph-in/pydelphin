@@ -5,6 +5,8 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+(no unreleased changes yet)
+
 ## [v1.0.0][]
 
 This is the largest release of PyDelphin yet, with over a year of work
