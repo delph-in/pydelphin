@@ -254,21 +254,21 @@ class DMRS(scope.ScopingSemanticStructure):
         """
 
         args = {node.id: [] for node in self.nodes}
-
-        id_to_type = {}
-        for link in self.links:
-            if link.post in (H_POST, HEQ_POST):
-                id_to_type[link.start] = variable.HANDLE
-            else:
-                id_to_type[link.start] = node.type
+        H = variable.HANDLE
 
         for link in self.links:
             # MOD/EQ links are not arguments
             if link.role == BARE_EQ_ROLE:
                 continue
             # ignore undesired argument types
-            if types and id_to_type.get(link.end) not in types:
-                continue
+            if types:
+                if link.post in (H_POST, HEQ_POST):
+                    if H not in types:
+                        continue
+                else:
+                    node = self[link.end]
+                    if node.type is None or node.type not in types:
+                        continue
             # currently DMRS cannot encode unexpressed arguments
             if expressed is not None and not expressed:
                 continue

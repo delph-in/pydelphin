@@ -68,22 +68,43 @@ class TestLink():
         assert link1 != Link(1, 2, 'ARG1', 'NEQ')
 
 
-def test_empty_DMRS():
-    d = DMRS()
-    assert d.top is None
-    assert d.index is None
-    assert d.nodes == []
-    assert d.links == []
+class TestDMRS():
+    def test__init__(self, dogs_bark):
+        d = DMRS()
+        assert d.top is None
+        assert d.index is None
+        assert d.nodes == []
+        assert d.links == []
 
+        d = DMRS(**dogs_bark)
+        assert d.top == 10000
+        assert d.index == 10000
+        assert len(d.nodes) == 3
+        assert d.nodes[0].predicate == '_bark_v_1_rel'
+        assert d.nodes[1].predicate == 'udef_q_rel'
+        assert d.nodes[2].predicate == '_dog_n_1_rel'
+        assert len(d.links) == 2
+        assert d.links[0].role == 'ARG1'
+        assert d.links[1].role == 'RSTR'
 
-def test_basic_DMRS(dogs_bark):
-    d = DMRS(**dogs_bark)
-    assert d.top == 10000
-    assert d.index == 10000
-    assert len(d.nodes) == 3
-    assert d.nodes[0].predicate == '_bark_v_1_rel'
-    assert d.nodes[1].predicate == 'udef_q_rel'
-    assert d.nodes[2].predicate == '_dog_n_1_rel'
-    assert len(d.links) == 2
-    assert d.links[0].role == 'ARG1'
-    assert d.links[1].role == 'RSTR'
+    def test_arguments(self, dogs_bark):
+        d = DMRS()
+        assert d.arguments() == {}
+        assert d.arguments('h') == {}
+
+        d = DMRS(**dogs_bark)
+        assert d.arguments() == {
+            10000: [('ARG1', 10002)],
+            10001: [('RSTR', 10002)],
+            10002: []
+        }
+        assert d.arguments('h') == {
+            10000: [],
+            10001: [('RSTR', 10002)],
+            10002: []
+        }
+        assert d.arguments('xei') == {
+            10000: [('ARG1', 10002)],
+            10001: [],
+            10002: []
+        }

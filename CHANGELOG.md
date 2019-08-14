@@ -5,7 +5,9 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
-(no unreleased changes yet)
+### Fixed
+
+* `delphin.dmrs.DMRS.arguments()` no longer raises a NameError (#247)
 
 ## [v1.0.0][]
 
