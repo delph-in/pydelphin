@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from operator import itemgetter
 import warnings
-from collections import Sequence, Mapping
+from collections import abc
 from itertools import zip_longest
 
 from delphin.predicate import normalize as normalize_predicate
@@ -359,10 +359,10 @@ class Synopsis(tuple):
         if len(args) > len(self):
             return False  # some arg won't be in the synopsis
         # normalize input
-        if isinstance(args, Sequence):
+        if isinstance(args, abc.Sequence):
             vartypes = (v.lower() if v else None for v in args)
             roleargs = list(zip_longest([], vartypes, self))
-        elif isinstance(args, Mapping):
+        elif isinstance(args, abc.Mapping):
             name_to_roles = {d.name: d for d in self}
             roleargs = []
             for role in set(args).union(name_to_roles):
