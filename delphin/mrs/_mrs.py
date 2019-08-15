@@ -221,16 +221,18 @@ class MRS(scope.ScopingSemanticStructure):
     __slots__ = ('hcons', 'icons', 'variables')
 
     def __init__(self,
-                 top: str,
-                 index: str,
-                 rels: Iterable[EP],
-                 hcons: Iterable[HCons],
+                 top: str = None,
+                 index: str = None,
+                 rels: Iterable[EP] = None,
+                 hcons: Iterable[HCons] = None,
                  icons: Iterable[ICons] = None,
                  variables: Mapping[str, Mapping[str, str]] = None,
                  lnk: Lnk = None,
                  surface=None,
                  identifier=None):
 
+        if rels is None:
+            rels = []
         _uniquify_ids(rels)
 
         super().__init__(top, index, rels, lnk, surface, identifier)
