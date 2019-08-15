@@ -291,7 +291,7 @@ class DMRS(scope.ScopingSemanticStructure):
         """
 
         h = variable.HANDLE
-        vfac = variable.VariableFactory(starting_vid=0)
+        vfac = variable.VariableFactory(starting_vid=1)
 
         id_to_lbl = {node.id: vfac.new(h) for node in self.nodes}
 

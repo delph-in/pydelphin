@@ -242,3 +242,36 @@ def test_isomorphic():
     assert mrs.is_isomorphic(x2, x2)  # identity
 
 
+def test_from_dmrs(dogs_bark):
+    from delphin import dmrs
+    m = mrs.MRS(**dogs_bark)
+    d = dmrs.DMRS(
+        top=10002,
+        index=10002,
+        nodes=[
+            dmrs.Node(10000, 'udef_q'),
+            dmrs.Node(10001, '_dog_n_1', type='x',
+                      properties={'NUM': 'pl'}),
+            dmrs.Node(10002, '_bark_v_1', type='e',
+                      properties={'TENSE': 'pres'})],
+        links=[
+            dmrs.Link(10000, 10001, 'RSTR', 'H'),
+            dmrs.Link(10002, 10001, 'ARG1', 'NEQ')])
+    _m = mrs.from_dmrs(d)
+
+    # Issue #248
+    print([ep.label for ep in _m.rels])
+    assert all([_m.top != ep.label for ep in _m.rels])
+    assert _m.top in set(hc.hi for hc in _m.hcons)
+    # ensure equivalency
+    assert mrs.is_isomorphic(m, _m)
+
+    # try with no hook
+    d.top = None
+    d.index = None
+    # it won't be isomorphic, just check for errors
+    _m = mrs.from_dmrs(d)
+    assert _m.top is None
+    assert _m.index is None
+    assert len(_m.rels) == 3
+    assert len(_m.hcons) == 1

@@ -252,12 +252,14 @@ def from_dmrs(d):
     Raises:
         MRSError when conversion fails.
     """
+    H = variable.HANDLE
     qeq = mrs.HCons.qeq
     vfac = variable.VariableFactory(starting_vid=0)
+    top = vfac.new(H) if d.top is not None else None
 
     # do d.scopes() once to avoid potential errors if label generation
     # is ever non-deterministic
-    top, scopes = d.scopes()
+    _top, scopes = d.scopes()
     ns_args = d.arguments(types='xeipu')
     sc_args = d.scopal_arguments(scopes=scopes)
 
@@ -265,7 +267,10 @@ def from_dmrs(d):
     # for index see https://github.com/delph-in/pydelphin/issues/214
     index = None if not d.index else id_to_iv[d.index]
 
-    hcons = [qeq(top, id_to_lbl[d.top])]
+    hcons = []
+    if top is not None:
+        hcons.append(qeq(top, _top))
+
     icons = None  # see https://github.com/delph-in/pydelphin/issues/220
 
     rels = []
@@ -281,7 +286,7 @@ def from_dmrs(d):
             if relation == scope.LHEQ:
                 args[role] = tgt_label
             elif relation == scope.QEQ:
-                hole = vfac.new(variable.HANDLE)
+                hole = vfac.new(H)
                 args[role] = hole
                 hcons.append(qeq(hole, tgt_label))
             else:
@@ -291,7 +296,7 @@ def from_dmrs(d):
             args[mrs.CONSTANT_ROLE] = node.carg
 
         if d.is_quantifier(id) and mrs.BODY_ROLE not in args:
-            args[mrs.BODY_ROLE] = vfac.new(variable.HANDLE)
+            args[mrs.BODY_ROLE] = vfac.new(H)
 
         rels.append(
             mrs.EP(node.predicate,

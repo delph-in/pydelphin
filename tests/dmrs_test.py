@@ -87,6 +87,13 @@ class TestDMRS():
         assert d.links[0].role == 'ARG1'
         assert d.links[1].role == 'RSTR'
 
+        # make sure the old way of marking top still works
+        dogs_bark2 = dict(dogs_bark)
+        dogs_bark2['links'].append(dmrs.Link(0, dogs_bark['top'], None, 'H'))
+        del dogs_bark2['top']
+        d2 = dmrs.DMRS(**dogs_bark2)
+        assert d.top == d2.top
+
     def test_arguments(self, dogs_bark):
         d = dmrs.DMRS()
         assert d.arguments() == {}
