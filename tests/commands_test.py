@@ -80,9 +80,9 @@ def test_convert(dir_with_mrs, mini_testsuite, ace_output, ace_tsdb_stdout,
     convert(ex, 'simplemrs', 'simpledmrs')
     _bidi_convert(dir_with_mrs, 'simplemrs', 'dmrs-json')
     _bidi_convert(dir_with_mrs, 'simplemrs', 'dmrs-penman')
-    _bidi_convert(dir_with_mrs, 'simplemrs', 'eds')
-    _bidi_convert(dir_with_mrs, 'simplemrs', 'eds-json')
-    _bidi_convert(dir_with_mrs, 'simplemrs', 'eds-penman')
+    convert(ex, 'simplemrs', 'eds')
+    convert(ex, 'simplemrs', 'eds-json')
+    convert(ex, 'simplemrs', 'eds-penman')
     with open(ex) as fh:
         convert(fh, 'simplemrs', 'simplemrs')
     with monkeypatch.context() as m:
@@ -102,9 +102,7 @@ def _bidi_convert(d, srcfmt, tgtfmt):
     src = pathlib.Path(d, 'ex.mrs')
     tgt = pathlib.Path(d, 'ex.out')
     tgt.write_text(convert(str(src), srcfmt, tgtfmt))
-    # below I intend to convert tgtfmt -> tgtfmt
-    # because EDS -> non-EDS doesn't work
-    convert(str(tgt), tgtfmt, tgtfmt)
+    convert(str(tgt), tgtfmt, srcfmt)
 
 
 def test_mkprof(mini_testsuite, empty_alt_testsuite,
