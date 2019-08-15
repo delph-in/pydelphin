@@ -347,7 +347,7 @@ class DMRS(scope.ScopingSemanticStructure):
                 continue
             # get the label if scopes was given
             target = id_to_lbl.get(link.end, link.end)
-            scargs[link.start].append((link.role, relation, label))
+            scargs[link.start].append((link.role, relation, target))
 
         return scargs
 

@@ -108,3 +108,25 @@ class TestDMRS():
             10001: [],
             10002: []
         }
+
+    def test_scopal_arguments(self, dogs_bark):
+        d = dmrs.DMRS()
+        assert d.scopal_arguments() == {}
+
+        d = dmrs.DMRS(**dogs_bark)
+        assert d.scopal_arguments() == {
+            10000: [],
+            10001: [('RSTR', 'qeq', 10002)],
+            10002: []
+        }
+
+        _, scopes = d.scopes()
+        scopemap = {}
+        for lbl, nodes in scopes.items():
+            for node in nodes:
+                scopemap[node.id] = lbl
+        assert d.scopal_arguments(scopes=scopes) == {
+            10000: [],
+            10001: [('RSTR', 'qeq', scopemap[10002])],
+            10002: []
+        }
