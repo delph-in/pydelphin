@@ -1,16 +1,7 @@
 
 import pytest
 
-from delphin.mrs import (
-    EP,
-    HCons,
-    MRS,
-    # is_connected,
-    # has_intrinsic_variable_property,
-    # is_well_formed,
-    is_isomorphic,
-    # compare_bags
-)
+from delphin import mrs
 from delphin.codecs import simplemrs
 
 
@@ -19,13 +10,13 @@ def dogs_bark():
     return {
         'top': 'h0',
         'index': 'e2',
-        'rels': [EP('_bark_v_1', 'h1',
+        'rels': [mrs.EP('_bark_v_1', 'h1',
                     args={'ARG0': 'e2', 'ARG1': 'x4'}),
-                 EP('udef_q', 'h3',
+                 mrs.EP('udef_q', 'h3',
                     args={'ARG0': 'x4', 'RSTR': 'h5', 'BODY': 'h7'}),
-                 EP('_dog_n_1', 'h6', args={'ARG0': 'x4'})],
-        'hcons': [HCons.qeq('h0', 'h1'),
-                  HCons.qeq('h5', 'h6')],
+                 mrs.EP('_dog_n_1', 'h6', args={'ARG0': 'x4'})],
+        'hcons': [mrs.HCons.qeq('h0', 'h1'),
+                  mrs.HCons.qeq('h5', 'h6')],
         'variables': {
             'e2': {'TENSE': 'pres'},
             'x4': {'NUM': 'pl'}}}
@@ -44,43 +35,53 @@ def dogs_bark():
 class TestEP():
     def test__init__(self):
         with pytest.raises(TypeError):
-            EP()
+            mrs.EP()
         with pytest.raises(TypeError):
-            EP('_dog_n_1')
-        EP('_dog_n_1', 'h3')
+            mrs.EP('_dog_n_1')
+        mrs.EP('_dog_n_1', 'h3')
 
     def test__eq__(self):
-        ep = EP('_dog_n_1', 'h3')
-        assert ep == EP('_dog_n_1', 'h3')
-        assert ep != EP('_dog_n_2', 'h3')
-        assert ep != EP('_dog_n_1', 'h4')
-        ep = EP('_chase_v_1', 'h1', {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
-        assert ep == EP('_chase_v_1', 'h1',
+        ep = mrs.EP('_dog_n_1', 'h3')
+        assert ep == mrs.EP('_dog_n_1', 'h3')
+        assert ep != mrs.EP('_dog_n_2', 'h3')
+        assert ep != mrs.EP('_dog_n_1', 'h4')
+        ep = mrs.EP('_chase_v_1', 'h1', {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
+        assert ep == mrs.EP('_chase_v_1', 'h1',
                         {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
-        assert ep != EP('_chase_v_2', 'h1',
+        assert ep != mrs.EP('_chase_v_2', 'h1',
                         {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
-        assert ep != EP('_chase_v_1', 'h2',
+        assert ep != mrs.EP('_chase_v_1', 'h2',
                         {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
-        assert ep != EP('_chase_v_1', 'h2',
+        assert ep != mrs.EP('_chase_v_1', 'h2',
                         {'ARG0': 'e2', 'ARG1': 'x6', 'ARG2': 'x4'})
-        assert ep != EP('_chase_v_1', 'h2')
+        assert ep != mrs.EP('_chase_v_1', 'h2')
 
-def test_basic_MRS(dogs_bark):
-    m = MRS(**dogs_bark)
-    assert m.top == 'h0'
-    assert m.index == 'e2'
-    assert len(m.rels) == 3
-    assert len(m.hcons) == 2
-    assert len(m.icons) == 0
-    assert m.variables == {
-        'h0': {},
-        'h1': {},
-        'e2': {'TENSE': 'pres'},
-        'h3': {},
-        'x4': {'NUM': 'pl'},
-        'h5': {},
-        'h6': {},
-        'h7': {}}
+
+class TestMRS():
+    def test__init__(self, dogs_bark):
+        m = mrs.MRS()
+        assert m.top is None
+        assert m.index is None
+        assert len(m.rels) == 0
+        assert len(m.hcons) == 0
+        assert len(m.icons) == 0
+        assert m.variables == {}
+
+        m = mrs.MRS(**dogs_bark)
+        assert m.top == 'h0'
+        assert m.index == 'e2'
+        assert len(m.rels) == 3
+        assert len(m.hcons) == 2
+        assert len(m.icons) == 0
+        assert m.variables == {
+            'h0': {},
+            'h1': {},
+            'e2': {'TENSE': 'pres'},
+            'h3': {},
+            'x4': {'NUM': 'pl'},
+            'h5': {},
+            'h6': {},
+            'h7': {}}
 
 
 # empty
@@ -223,19 +224,21 @@ x2 = simplemrs.decode('''
 
 
 def test_isomorphic():
-    assert is_isomorphic(m1, m1)  # identity
-    assert is_isomorphic(m1, m1b)  # diff Lnk only
-    assert not is_isomorphic(m1, m1c)  # diff TENSE value
-    assert is_isomorphic(m1, m1c, properties=False)
-    assert not is_isomorphic(m1, m1d)  # unlinked LTOP
-    assert not is_isomorphic(m1, m1e)  # equated LTOP
-    assert not is_isomorphic(m1, m1f)  # same structure, diff pred
-    assert not is_isomorphic(m1, m1g)  # diff arity
+    assert mrs.is_isomorphic(m1, m1)  # identity
+    assert mrs.is_isomorphic(m1, m1b)  # diff Lnk only
+    assert not mrs.is_isomorphic(m1, m1c)  # diff TENSE value
+    assert mrs.is_isomorphic(m1, m1c, properties=False)
+    assert not mrs.is_isomorphic(m1, m1d)  # unlinked LTOP
+    assert not mrs.is_isomorphic(m1, m1e)  # equated LTOP
+    assert not mrs.is_isomorphic(m1, m1f)  # same structure, diff pred
+    assert not mrs.is_isomorphic(m1, m1g)  # diff arity
     # be aware if the next ones take a long time to resolve
-    assert is_isomorphic(pathological1, pathological1)
-    assert not is_isomorphic(pathological1, pathological2)
-    # test for normalized forms being treated as equivalent by is_isomorphic
+    assert mrs.is_isomorphic(pathological1, pathological1)
+    assert not mrs.is_isomorphic(pathological1, pathological2)
+    # test for normalized forms being treated as equivalent by mrs.is_isomorphic
     assert x1 == x2  # generally a stricter test than isomorphism
-    assert is_isomorphic(x1, x2)  # if normalized
-    assert is_isomorphic(x1, x1)  # identity
-    assert is_isomorphic(x2, x2)  # identity
+    assert mrs.is_isomorphic(x1, x2)  # if normalized
+    assert mrs.is_isomorphic(x1, x1)  # identity
+    assert mrs.is_isomorphic(x2, x2)  # identity
+
+
