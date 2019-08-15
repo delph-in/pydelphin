@@ -65,7 +65,8 @@ this:
     envlist = py35,py36,py37
 
     [testenv]
-    deps = pytest
+    usedevelop = True
+    extras = tests
     commands = pytest
 
 But this config is no longer distributed with PyDelphin. To run the
