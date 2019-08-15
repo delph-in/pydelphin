@@ -5,9 +5,21 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+(no unreleased changes yet)
+
+## [v1.0.1][]
+
+Resolves some bugs related to DMRS-to-MRS conversion.
+
 ### Fixed
 
 * `delphin.dmrs.DMRS.arguments()` no longer raises a NameError (#247)
+* `delphin.dmrs.DMRS.scopal_arguments()` returns correct labels (#249)
+* `delphin.mrs.from_dmrs()` assigns the correct top handle (#248)
+
+### Changed
+
+* `delphin.mrs.MRS` can now be instantiated with an empty structure
 
 ## [v1.0.0][]
 
@@ -975,6 +987,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.0.1]: ../../releases/tag/v1.0.1
 [v1.0.0]: ../../releases/tag/v1.0.0
 [v0.9.2]: ../../releases/tag/v0.9.2
 [v0.9.1]: ../../releases/tag/v0.9.1
