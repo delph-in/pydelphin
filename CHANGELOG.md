@@ -7,6 +7,20 @@ these changes are prefixed with "**BREAKING**"
 
 (no unreleased changes yet)
 
+## [v1.0.2][]
+
+Resolves a REPP processing bug and improves REPP performance.
+
+### Fixed
+
+* `delphin.repp.REPP` no longer raises an IndexError when the
+  replacement does not use all group references (#250)
+
+### Changed
+
+* `delphin.repp.REPP` no longer recomputes alignments for unchanged
+  strings, boosting performance 2-3x.
+
 ## [v1.0.1][]
 
 Resolves some bugs related to DMRS-to-MRS conversion.
@@ -987,6 +1001,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.0.2]: ../../releases/tag/v1.0.2
 [v1.0.1]: ../../releases/tag/v1.0.1
 [v1.0.0]: ../../releases/tag/v1.0.0
 [v0.9.2]: ../../releases/tag/v0.9.2
