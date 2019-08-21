@@ -37,6 +37,12 @@ def test_REPP():
     assert x.startmap.tolist() == [1, 0,-1,-1,-1,-1,-2,-2,-3,-3,-3,-3,-4]
     assert x.endmap.tolist()   == [0,-1,-1,-1,-1,-2,-2,-3,-3,-3,-3,-4,-5]
 
+    # From issue #250
+    x = r.from_string(r'!(b)(a)	B\2r').apply('baba')
+    assert x.string == 'BarBar'
+    assert x.startmap.tolist() == [1, 0,-1,-2,-1,-2,-3,-2]
+    assert x.endmap.tolist()   == [0, 1, 0,-1, 0,-1,-2,-3]
+
     x = r.from_string(r"!wo(n't)	will \1").apply("I won't go")
     assert x.string == "I will n't go"
     assert x.startmap.tolist() == [1,0,0,0,-1,-2,-3,-4,-3,-3,-3,-3,-3,-3,-3]

@@ -109,66 +109,105 @@ class _REPPRule(_REPPOperation):
         self.pattern = pattern
         self.replacement = replacement
         self._re = re.compile(pattern)
-        backrefs, literals = parse_template(replacement, self._re)
-        self._backrefs = dict(backrefs)
-        self._segments = literals
+
+        groups, literals = parse_template(replacement, self._re)
+        # if a literal is None then it has a group, so make this
+        # easier to iterate over by making pairs of (literal, None) or
+        # (None, group)
+        group_map = dict(groups)
+        self._segments = [(literal, group_map.get(i))
+                          for i, literal in enumerate(literals)]
+
         # Get "trackable" capture groups; i.e., those that are
         # transparent for characterization. For PET behavior, these
         # must appear in strictly increasing order with no gaps
-        self._groupstack = []
-        for i, backref in enumerate(backrefs):
-            _, grpidx = backref
-            if i + 1 != grpidx:
+        self._last_trackable = -1  # index of trackable segment, not group id
+        last_trackable_group = 0
+        for i, group in groups:
+            if group == last_trackable_group + 1:
+                self._last_trackable = i
+                last_trackable_group = group
+            else:
                 break
-            self._groupstack.append(grpidx)
 
     def __str__(self):
         return '!{}\t\t{}'.format(self.pattern, self.replacement)
 
     def _apply(self, s, active):
         ms = list(self._re.finditer(s))
+
         if ms:
-            pos = 0  # current position in original string
+            pos = 0  # current position in the original string
             shift = 0  # current original/target length difference
             parts = []
             smap = array('i', [0])
             emap = array('i', [0])
+
             for m in ms:
-                cgs = list(reversed(self._groupstack))  # make a copy
-                lb = m.start()
-                rb = m.start(cgs[-1]) if cgs else m.end()
-                if pos < m.start():
-                    _copy_part(s[pos:m.start()], shift, parts, smap, emap)
-                pos = m.start()
-                for i, seg in enumerate(self._segments):
-                    if seg is None and cgs:
-                        grpidx = cgs.pop()
-                        assert self._backrefs[i] == grpidx
-                        seg = m.group(grpidx)
-                        _copy_part(seg, shift, parts, smap, emap)
-                        # adjust for the next segment
-                        lb = m.end(grpidx)
-                        rb = m.start(cgs[-1]) if cgs else m.end()
-                        pos += len(seg)
+                start = m.start()
+                if pos < start:
+                    _copy_part(s[pos:start], shift, parts, smap, emap)
+
+                for literal, start, end, tracked in self._itersegments(m):
+                    if tracked:
+                        _copy_part(literal, shift, parts, smap, emap)
                     else:
-                        if seg is None:
-                            seg = m.group(i)
-                        w = rb - lb  # segment width
-                        _insert_part(seg, w, shift, parts, smap, emap)
-                        pos += w
-                        shift = pos - sum(map(len, parts))
+                        width = end - start
+                        _insert_part(literal, width, shift, parts, smap, emap)
+                        shift += width - len(literal)
+
+                pos = m.end()
+
             if pos < len(s):
                 _copy_part(s[pos:], shift, parts, smap, emap)
             smap.append(shift)
             emap.append(shift - 1)
             o = ''.join(parts)
             applied = True
+
         else:
             o = s
             smap = _zeromap(o)
             emap = _zeromap(o)
             applied = False
+
         yield REPPStep(s, o, self, applied, smap, emap)
+
+    def _itermatches(self, ms):
+        """Yield pairs of the last affected position and a match."""
+        last_pos = 0
+        for m in ms:
+            yield (last_pos, m)
+            last_pos = m.end()
+
+    def _itersegments(self, m):
+        """Yield tuples of (replacement, start, end, tracked)."""
+        start = m.start()
+
+        # first yield segments that might be trackable
+        tracked = self._segments[:self._last_trackable + 1]
+        if tracked:
+            spans = {group: m.span(group)
+                     for literal, group in tracked
+                     if literal is None}
+            end = m.start(1)  # if literal before tracked group
+            for literal, group in tracked:
+                if literal is None:
+                    start, end = spans[group]
+                    yield (m.group(group), start, end, True)
+                    start = end
+                    if group + 1 in spans:
+                        end = spans[group + 1][0]
+                else:
+                    yield (literal, start, end, False)
+
+        # then group all remaining segments together
+        remaining = self._segments[self._last_trackable + 1:]
+        if remaining:
+            literal = ''.join(
+                m.group(group) if literal is None else literal
+                for literal, group in remaining)
+            yield (literal, start, m.end(), False)
 
 
 class _REPPGroup(_REPPOperation):
@@ -471,7 +510,8 @@ def _mergemap(map1, map2):
     """
     merged = array('i', [0] * len(map2))
     for i, shift in enumerate(map2):
-        merged[i] = shift + map1[i + shift]
+        newshift = shift + map1[i + shift]
+        merged[i] = newshift
     return merged
 
 
@@ -483,9 +523,12 @@ def _copy_part(s, shift, parts, smap, emap):
 
 def _insert_part(s, w, shift, parts, smap, emap):
     parts.append(s)
-    smap.extend(range(shift, shift - len(s), -1))
-    newshift = shift + (w - len(s))
-    emap.extend(range(shift + w - 1, newshift - 1, -1))
+    a = shift
+    b = a - len(s)
+    smap.extend(range(a, b, -1))
+    a = shift + w - 1
+    b = a - len(s)
+    emap.extend(range(a, b, -1))
 
 
 def _tokenize(result, pattern):
