@@ -74,8 +74,9 @@ class _REPPOperation(object):
         for step in self._apply(s, active):
             if step.applied or verbose:
                 yield step
-            startmap = _mergemap(startmap, step.startmap)
-            endmap = _mergemap(endmap, step.endmap)
+            if step.applied:
+                startmap = _mergemap(startmap, step.startmap)
+                endmap = _mergemap(endmap, step.endmap)
         if step is not None:
             s = step.output
         yield REPPResult(s, startmap, endmap)
