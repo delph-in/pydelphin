@@ -38,6 +38,14 @@ def test_basic_len_change():
     assert x.endmap.tolist()  == [0,0,0,-1,-1,-1,-2,-3]
 
 
+def test_empty_replacement_issue_252():
+    # https://github.com/delph-in/pydelphin/issues/252
+    x = r.from_string(r'!a	').apply('ab')
+    assert x.string == 'b'
+    assert x.startmap.tolist() == [1,1,1]
+    assert x.endmap.tolist() == [0,1,0]
+
+
 def test_single_capturing_group():
     x = r.from_string(r'!(\w+)	[\1]').apply('abc def')
     assert x.string == '[abc] [def]'

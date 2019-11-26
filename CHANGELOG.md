@@ -5,7 +5,9 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
-(no unreleased changes yet)
+### Fixed
+
+* REPP now computes alignments even when substitution inserts nothing (#252)
 
 ## [v1.0.2][]
 

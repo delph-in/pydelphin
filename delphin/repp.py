@@ -148,13 +148,18 @@ class _REPPRule(_REPPOperation):
                 if pos < start:
                     _copy_part(s[pos:start], shift, parts, smap, emap)
 
-                for literal, start, end, tracked in self._itersegments(m):
-                    if tracked:
-                        _copy_part(literal, shift, parts, smap, emap)
-                    else:
-                        width = end - start
-                        _insert_part(literal, width, shift, parts, smap, emap)
-                        shift += width - len(literal)
+                if self._segments:
+                    for literal, start, end, tracked in self._itersegments(m):
+                        if tracked:
+                            _copy_part(literal, shift, parts, smap, emap)
+                        else:
+                            width = end - start
+                            _insert_part(literal, width, shift, parts,
+                                         smap, emap)
+                            shift += width - len(literal)
+                else:
+                    # the replacement is empty (match is deleted)
+                    shift += m.end() - start
 
                 pos = m.end()
 
