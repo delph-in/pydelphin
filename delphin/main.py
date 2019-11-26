@@ -26,6 +26,10 @@ from delphin.commands import (
 from delphin.__about__ import __version__
 
 
+logging.basicConfig()  # just use defaults here
+logger = logging.getLogger(__name__)  # for this module
+
+
 _CODECS = util.namespace_modules(delphin.codecs)
 
 
@@ -40,8 +44,11 @@ def main():
         args.verbosity = 0
         sys.stdout.close()
         sys.stdout = open(os.devnull, 'w')
+    else:
+        args.verbosity = min(args.verbosity, 3)
 
-    logging.basicConfig(level=50 - (args.verbosity * 10))
+    logging.getLogger('delphin').setLevel(
+        logging.ERROR - (args.verbosity * 10))
 
     args.func(args)
 
@@ -109,7 +116,7 @@ def call_select(args):
         for row in rows:
             print(tsdb.join(row))
     except (BrokenPipeError):
-        logging.info('broken pipe')
+        logger.info('broken pipe')
 
 
 def call_mkprof(args):

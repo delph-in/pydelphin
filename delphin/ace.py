@@ -28,6 +28,9 @@ from delphin.exceptions import PyDelphinException
 from delphin.__about__ import __version__  # noqa: F401
 
 
+logger = logging.getLogger(__name__)
+
+
 # do this right away to avoid some encoding issues
 locale.setlocale(locale.LC_ALL, '')
 encoding = locale.getpreferredencoding(False)
@@ -156,7 +159,7 @@ class ACEProcess(interface.Processor):
         while i < end:
             s = next_line()
             if s == '' and poll() is not None:
-                logging.info(
+                logger.info(
                     'Process closed unexpectedly; giving up.'
                 )
                 self.close()
@@ -193,7 +196,7 @@ class ACEProcess(interface.Processor):
             self._p.stdin.write((datum.rstrip() + '\n'))
             self._p.stdin.flush()
         except (IOError, OSError):  # ValueError if file was closed manually
-            logging.info(
+            logger.info(
                 'Attempted to write to a closed process; attempting to reopen'
             )
             self._open()
@@ -220,7 +223,7 @@ class ACEProcess(interface.Processor):
         response, lines = _make_response(lines, self.run_info)
         # now it should be safe to reopen a closed process (if necessary)
         if self._p.poll() is not None:
-            logging.info('Attempting to restart ACE.')
+            logger.info('Attempting to restart ACE.')
             self._open()
         line = ' '.join(lines)  # ACE 0.9.24 on Mac puts superfluous newlines
         response = _tsdb_response(response, line)
@@ -288,7 +291,7 @@ class ACEProcess(interface.Processor):
             if line.startswith('NOTE: tsdb run:'):
                 self._read_run_info(line)
             else:
-                logging.debug('ACE cleanup: {}'.format(line.rstrip()))
+                logger.debug('ACE cleanup: {}'.format(line.rstrip()))
         retval = self._p.wait()
         return retval
 
@@ -417,7 +420,7 @@ def compile(cfg_path, out_path, executable=None, env=None,
             env=(env or os.environ)
         )
     except (CalledProcessError, OSError):
-        logging.error(
+        logger.error(
             'Failed to compile grammar with ACE. See {}'
             .format(getattr(stderr, 'name', '<stderr>'))
         )
@@ -566,7 +569,7 @@ def _ace_version(executable):
         version = re.search(r'ACE version ([.0-9]+)', out).group(1)
         version = tuple(map(int, version.split('.')))
     except (CalledProcessError, OSError):
-        logging.error('Failed to get ACE version number.')
+        logger.error('Failed to get ACE version number.')
         raise
     return version
 
@@ -589,7 +592,7 @@ def _possible_mrs(s):
     if start != -1 and end != -1:
         # only log if taking a substring
         if start != 0 and end != len(s):
-            logging.debug('Possible MRS found at <%d:%d>: %s', start, end, s)
+            logger.debug('Possible MRS found at <%d:%d>: %s', start, end, s)
             s = s[start:end]
         return s
     else:
@@ -630,7 +633,7 @@ def _sexpr_data(line):
                 (':error', 'incomplete output from ACE'),
                 '')
         if len(expr.data) != 2:
-            logging.error('Malformed output from ACE: {}'.format(line))
+            logger.error('Malformed output from ACE: {}'.format(line))
             break
         line = expr.remainder.lstrip()
         yield expr.data

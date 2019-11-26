@@ -35,6 +35,9 @@ import delphin.codecs
 from delphin.__about__ import __version__  # noqa: F401
 
 
+logger = logging.getLogger(__name__)
+
+
 # EXCEPTIONS ##################################################################
 
 class CommandError(exceptions.PyDelphinException):
@@ -170,7 +173,7 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
         try:
             s = target_codec.encode(x, **kwargs)
         except (PyDelphinException, KeyError, IndexError):
-            logging.exception('could not convert representation')
+            logger.exception('could not convert representation')
         else:
             parts.append(s)
 

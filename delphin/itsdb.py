@@ -22,6 +22,9 @@ from delphin import interface
 from delphin.__about__ import __version__  # noqa: F401
 
 
+logger = logging.getLogger(__name__)
+
+
 ##############################################################################
 # Module variables
 
@@ -822,7 +825,7 @@ class TestSuite(tsdb.Database):
             keys = [row[name] for name in key_names]
             keys_dict = dict(zip(key_names, keys))
             response = cpu.process_item(datum, keys=keys_dict)
-            logging.info(
+            logger.info(
                 'Processed item {:>16}  {:>8} results'
                 .format(tsdb.join(keys), len(response['results']))
             )
