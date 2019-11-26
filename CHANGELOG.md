@@ -5,9 +5,14 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+### Added
+
+* `delphin.repp.REPPWarning` class
+
 ### Fixed
 
 * REPP now computes alignments even when substitution inserts nothing (#252)
+* REPP now uses the `regex` library if available (#253)
 
 ## [v1.0.2][]
 

@@ -11,11 +11,18 @@ with open(os.path.join(base_dir, "delphin", "__about__.py")) as f:
 with open(os.path.join(base_dir, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+repp_requires = ['regex==2019.11.1']
+
 # thanks: https://snarky.ca/clarifying-pep-518/
-with open(os.path.join(base_dir, 'docs', 'requirements.txt')) as f:
-    docs_require = f.readlines()
-tests_require = [
-    'pytest'
+doc_requirements = os.path.join(base_dir, 'docs', 'requirements.txt')
+if os.path.isfile(doc_requirements):
+    with open(doc_requirements) as f:
+        docs_require = f.readlines()
+else:
+    docs_require = []
+
+tests_require = repp_requires + [
+    'pytest',
 ]
 
 setup(
@@ -67,6 +74,7 @@ setup(
             'twine >= 1.11.0'
         ],
         'web': ['requests==2.22.0', 'falcon==2.0.0'],
+        'repp': repp_requires,
     },
     entry_points={
         'console_scripts': [

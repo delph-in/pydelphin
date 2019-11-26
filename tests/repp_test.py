@@ -1,4 +1,12 @@
 
+import pytest
+# The regex library should be used if available; if not, tests may
+# need to be skipped.
+try:
+    import regex
+except ImportError:
+    regex = None
+
 from delphin import repp
 from delphin.lnk import Lnk
 
@@ -77,6 +85,14 @@ def test_len_change_with_capturing_group():
     assert x.tokens[2].lnk == Lnk.charspan(4,7)
     assert x.tokens[3].form == 'go'
     assert x.tokens[3].lnk == Lnk.charspan(8,10)
+
+
+@pytest.mark.skipif(regex is None, reason='regex library is not available')
+def test_local_inline_flags():
+    rpp = r.from_string(r'!a((?i)b)a	c')
+    assert rpp.apply('aba').string == 'c'
+    assert rpp.apply('aBa').string == 'c'
+    assert rpp.apply('AbA').string == 'AbA'
 
 
 def test_basic_external_group_active():

@@ -4,21 +4,42 @@
 Regular Expression Preprocessor (REPP)
 """
 
-import re
 from sre_parse import parse_template
 from pathlib import Path
 from array import array
 from collections import namedtuple
+import warnings
+
+# use regex library if available; otherwise warn
+try:
+    import regex as re
+    re.DEFAULT_VERSION = re.V1
+    _regex_available = True
+except ImportError:
+    import re
+    _regex_available = False
 
 from delphin.tokens import YYToken, YYTokenLattice
 from delphin.lnk import Lnk
-from delphin.exceptions import PyDelphinException
+from delphin.exceptions import PyDelphinException, PyDelphinWarning
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
 
 class REPPError(PyDelphinException):
     """Raised when there is an error in tokenizing with REPP."""
+
+
+class REPPWarning(PyDelphinWarning):
+    """Issued when REPP may not behave as expected."""
+
+
+if not _regex_available:
+    warnings.warn(
+        "The 'regex' library is not installed, so some regular expression "
+        "features may not work as expected. Install PyDelphin with the "
+        "[repp] extra to include the 'regex' library.",
+        REPPWarning)
 
 
 class REPPStep(namedtuple(
@@ -108,7 +129,7 @@ class _REPPRule(_REPPOperation):
     def __init__(self, pattern, replacement):
         self.pattern = pattern
         self.replacement = replacement
-        self._re = re.compile(pattern)
+        self._re = _compile(pattern)
 
         groups, literals = parse_template(replacement, self._re)
         # if a literal is None then it has a group, so make this
@@ -501,6 +522,21 @@ class REPP(object):
         if active is None:
             active = self.active
         return self.group.tokenize(s, pattern=pattern, active=active)
+
+
+def _compile(pattern):
+    try:
+        return re.compile(pattern)
+    except re.error:
+        if _regex_available and '[' in pattern or ']' in pattern:
+            warnings.warn(
+                "Possible unescaped brackets in {!r}; "
+                "attempting to parse in compatibility mode"
+                .format(pattern),
+                REPPWarning)
+            return re.compile(pattern, flags=re.V0)
+        else:
+            raise
 
 
 def _zeromap(s):
