@@ -585,7 +585,7 @@ def _interpret_selection(select, source):
 
 
 def repp(source, config=None, module=None, active=None,
-         format=None, trace_level=0):
+         format=None, color=False, trace_level=0):
     """
     Tokenize with a Regular Expression PreProcessor (REPP).
 
@@ -603,12 +603,19 @@ def repp(source, config=None, module=None, active=None,
             are used; incompatible with *config* (default: `None`)
         format (str): the output format (`"yy"`, `"string"`, `"line"`,
             or `"triple"`; default: `"yy"`)
+        color (bool): apply syntax highlighting if `True` (default:
+            `False`)
         trace_level (int): if `0` no trace info is printed; if `1`,
-            applied rules are printed, if greather than `1`, both
+            applied rules are printed, if greater than `1`, both
             applied and unapplied rules (in order) are printed
             (default: `0`)
     """
-    from delphin.repp import REPP
+    from delphin.repp import REPP, REPPResult, REPPStep
+
+    if color:
+        highlight = util.make_highlighter('diff')
+    else:
+        highlight = str
 
     if config is not None and module is not None:
         raise CommandError("cannot specify both 'config' and 'module'")
@@ -621,46 +628,50 @@ def repp(source, config=None, module=None, active=None,
     else:
         r = REPP()  # just tokenize
 
+    def _repp(line):
+        line = line.rstrip('\n')
+        if trace_level > 0:
+            for step in r.trace(line, verbose=True):
+                if isinstance(step, REPPResult):
+                    print('Done:{}'.format(step.string))
+                elif hasattr(step.operation, 'pattern'):
+                    if step.applied:
+                        print('Applied:', step.operation)
+                        print(highlight(
+                            '-{}\n+{}'.format(step.input, step.output)))
+                    elif trace_level > 1:
+                        print('Did not apply:', step.operation)
+        else:
+            step = r.apply(line)
+        res = r.tokenize_result(step)
+        if format == 'yy':
+            print(res)
+        elif format == 'string':
+            print(' '.join(t.form for t in res.tokens))
+        elif format == 'line':
+            for t in res.tokens:
+                print(t.form)
+            print()
+        elif format == 'triple':
+            for t in res.tokens:
+                if t.lnk.type == Lnk.CHARSPAN:
+                    cfrom, cto = t.lnk.data
+                else:
+                    cfrom, cto = -1, -1
+                print(
+                    '({}, {}, {})'
+                    .format(cfrom, cto, t.form)
+                )
+            print()
+
     if hasattr(source, 'read'):
         for line in source:
-            _repp(r, line, format, trace_level)
+            _repp(line)
     else:
         source = Path(source).expanduser()
         with source.open(encoding='utf-8') as fh:
             for line in fh:
-                _repp(r, line, format, trace_level)
-
-
-def _repp(r, line, format, trace_level):
-    if trace_level > 0:
-        for step in r.trace(line.rstrip('\n'), verbose=True):
-            if not hasattr(step, 'applied'):
-                print('Done:{}'.format(step.string))
-                continue
-            if step.applied or trace_level > 1:
-                print('{}:{!s}\n   In:{}\n  Out:{}'.format(
-                    'Applied' if step.applied else 'Did not apply',
-                    step.operation, step.input, step.output))
-    res = r.tokenize(line.rstrip('\n'))
-    if format == 'yy':
-        print(res)
-    elif format == 'string':
-        print(' '.join(t.form for t in res.tokens))
-    elif format == 'line':
-        for t in res.tokens:
-            print(t.form)
-        print()
-    elif format == 'triple':
-        for t in res.tokens:
-            if t.lnk.type == Lnk.CHARSPAN:
-                cfrom, cto = t.lnk.data
-            else:
-                cfrom, cto = -1, -1
-            print(
-                '({}, {}, {})'
-                .format(cfrom, cto, t.form)
-            )
-        print()
+                _repp(line)
 
 
 ###############################################################################

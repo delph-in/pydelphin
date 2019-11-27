@@ -14,11 +14,17 @@ these changes are prefixed with "**BREAKING**"
   result of rule application
 * `delphin.util.make_highlighter()` to handle getting Pygments
   highlighters
+* `--color` option and `color` parameter for the `repp` command
 
 ### Fixed
 
 * REPP now computes alignments even when substitution inserts nothing (#252)
 * REPP now uses the `regex` library if available (#253)
+
+### Changed
+
+* The default logging for the main script is now `ERROR` (was:
+  `WARNING`)
 
 
 ## [v1.0.2][]

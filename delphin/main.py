@@ -55,7 +55,7 @@ def main():
 
 def call_convert(args):
     if args.list:
-        _list_codecs(args.verbosity > 1)
+        _list_codecs(args.verbosity > 0)
     else:
         color = (args.color == 'always'
                  or (args.color == 'auto' and sys.stdout.isatty()))
@@ -149,7 +149,7 @@ def call_process(args):
 
 def call_compare(args):
     template = '{id}\t<{test},{shared},{gold}>'
-    if args.verbosity > 1:
+    if args.verbosity > 0:
         template += '\t{input}'
     for result in compare(
             args.TESTSUITE,
@@ -159,13 +159,26 @@ def call_compare(args):
 
 
 def call_repp(args):
+    color = (args.color == 'always'
+             or (args.color == 'auto' and sys.stdout.isatty()))
+    if color:
+        try:
+            import pygments
+        except ImportError:
+            # don't warn if color=auto
+            if args.color == 'always':
+                warnings.warn(
+                    'Pygments must be installed for diff highlighting',
+                    PyDelphinWarning)
+            color = False
     return repp(
         args.FILE or sys.stdin,
         config=args.config,
         module=args.m,
         active=args.a,
         format=args.format,
-        trace_level=(args.trace and args.verbosity) or 0)
+        color=color,
+        trace_level=1 if args.trace else 0)
 
 
 # Helper definitions
@@ -199,7 +212,7 @@ common_parser.add_argument(
     '--verbose',
     action='count',
     dest='verbosity',
-    default=1,
+    default=0,
     help='increase verbosity')
 common_parser.add_argument(
     '-q',
@@ -413,6 +426,11 @@ repp_parser.add_argument(
     choices=('string', 'line', 'triple', 'yy'),
     default='yy',
     help='output token format')
+repp_parser.add_argument(
+    '--color',
+    metavar='WHEN',
+    default='auto',
+    help='(auto|always|never) use ANSI color (default: auto)')
 repp_parser.add_argument(
     '--trace', action='store_true',
     help='print each step that modifies an input string')

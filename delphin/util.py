@@ -491,4 +491,14 @@ def make_highlighter(fmt):
                     delphin.highlight.SimpleMRSLexer(),
                     _formatter(style=delphin.highlight.MRSStyle))
 
+    elif fmt == 'diff':
+        from pygments.lexers.diff import DiffLexer
+
+        def highlight(text):
+            # this seems to append a newline, so remove it
+            return pygments.highlight(
+                text,
+                DiffLexer(),
+                _formatter()).rstrip('\n')
+
     return highlight
