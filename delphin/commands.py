@@ -10,20 +10,6 @@ import importlib
 import logging
 import warnings
 
-try:
-    from delphin import highlight as _delphin_hl
-    from pygments import highlight as _highlight
-    from pygments.formatters import Terminal256Formatter as _Formatter
-except ImportError:
-    simplemrs_highlight = None
-else:
-    _lexer = _delphin_hl.SimpleMRSLexer()
-    _formatter = _Formatter(style=_delphin_hl.MRSStyle)
-
-    def simplemrs_highlight(text):
-        return _highlight(text, _lexer, _formatter)
-
-
 from delphin import exceptions
 from delphin import tsdb, itsdb, tsql
 from delphin.lnk import Lnk
@@ -98,6 +84,11 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     # normalize codec names
     source_fmt = source_fmt.replace('-', '').lower()
     target_fmt = target_fmt.replace('-', '').lower()
+
+    if color and target_fmt in ('simplemrs', 'simple-mrs'):
+        highlight = util.make_highlighter('simplemrs')
+    else:
+        highlight = str
 
     source_codec = _get_codec(source_fmt)
     target_codec = _get_codec(target_fmt)
@@ -177,10 +168,7 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
         else:
             parts.append(s)
 
-    output = header + joiner.join(parts) + footer
-
-    if color and target_fmt in ('simplemrs', 'simple-mrs'):
-        output = _colorize(output)
+    output = highlight(header + joiner.join(parts) + footer)
 
     return output
 
@@ -222,13 +210,6 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
             src_rep.upper(), tgt_rep.upper()))
 
     return converter
-
-
-def _colorize(text):
-    if simplemrs_highlight:
-        return simplemrs_highlight(text)
-    else:
-        return text
 
 
 ###############################################################################

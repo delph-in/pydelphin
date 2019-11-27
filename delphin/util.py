@@ -467,3 +467,28 @@ def namespace_modules(ns):
     """Return the name to fullname mapping of modules in package *ns*."""
     return {name: '{}.{}'.format(ns.__name__, name)
             for _, name, _ in pkgutil.iter_modules(ns.__path__)}
+
+
+def make_highlighter(fmt):
+    try:
+        import pygments
+        from pygments.formatters import Terminal256Formatter as _formatter
+    except ImportError:
+        return str
+
+    highlight = str  # backoff function
+
+    if fmt == 'simplemrs':
+        try:
+            import delphin.highlight
+        except ImportError:
+            pass
+        else:
+
+            def highlight(text):
+                return pygments.highlight(
+                    text,
+                    delphin.highlight.SimpleMRSLexer(),
+                    _formatter(style=delphin.highlight.MRSStyle))
+
+    return highlight

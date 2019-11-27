@@ -12,6 +12,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.repp.DEFAULT_TOKENIZER` module variable
 * `delphin.repp.REPP.tokenize_result()` method to tokenize using the
   result of rule application
+* `delphin.util.make_highlighter()` to handle getting Pygments
+  highlighters
 
 ### Fixed
 
