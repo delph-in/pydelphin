@@ -4,7 +4,7 @@
 Structures and operations for quantifier scope in DELPH-IN semantics.
 """
 
-from typing import Mapping, Iterable, List, Tuple, Dict
+from typing import (Optional, Mapping, Iterable, List, Tuple, Dict)
 
 from delphin.lnk import Lnk
 from delphin.sembase import (
@@ -31,8 +31,8 @@ QEQ = 'qeq'              # equality modulo quantifiers (hole-to-label)
 # Types
 ScopeLabel = str
 ScopeRelation = str
-ScopeMap = Dict[ScopeLabel, Predications]
-DescendantMap = Dict[Identifier, List[Predication]]
+ScopeMap = Mapping[ScopeLabel, Predications]
+DescendantMap = Mapping[Identifier, List[Predication]]
 ScopalRoleArgument = Tuple[Role, ScopeRelation, Identifier]
 ScopalArgumentStructure = Mapping[Identifier, List[ScopalRoleArgument]]
 # Regarding literal types, see: https://www.python.org/dev/peps/pep-0563/
@@ -68,10 +68,10 @@ class ScopingSemanticStructure(SemanticStructure):
     __slots__ = ('index',)
 
     def __init__(self,
-                 top: Identifier,
-                 index: Identifier,
-                 predications: Predications,
-                 lnk: Lnk,
+                 top: Optional[Identifier],
+                 index: Optional[Identifier],
+                 predications: Optional[Predications],
+                 lnk: Optional[Lnk],
                  surface,
                  identifier):
         super().__init__(top, predications, lnk, surface, identifier)
@@ -120,7 +120,7 @@ def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
         >>> {lbl: [p.id for p in ps] for lbl, ps in conjoined.items()}
         {'h1': ['e2'], 'h2': ['x4', 'e6']}
     """
-    scopemap = {}  # type: ScopeMap
+    scopemap = {}  # type: Dict[ScopeLabel, List[Predication]]
     for component in _connected_components(list(scopes), leqs):
         chosen_label = next(iter(component))
         scopemap[chosen_label] = []
@@ -158,13 +158,13 @@ def descendants(x: ScopingSemanticStructure,
     if scopes is None:
         _, scopes = x.scopes()
     scargs = x.scopal_arguments(scopes=scopes)
-    descs = {}  # type: DescendantMap
+    descs = {}  # type: Dict[Identifier, List[Predication]]
     for p in x.predications:
         _descendants(descs, p.id, scargs, scopes)
     return descs
 
 
-def _descendants(descs: DescendantMap,
+def _descendants(descs: Dict[Identifier, List[Predication]],
                  id: Identifier,
                  scargs: ScopalArgumentStructure,
                  scopes: ScopeMap) -> None:
@@ -235,10 +235,12 @@ def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
     descs = {id: set(d.id for d in ds)
              for id, ds in descendants(x, scopes).items()}
 
-    reps = {label: [] for label in scopes}  # type: ScopeMap
+    reps = {
+        label: [] for label in scopes
+    }  # type: Dict[ScopeLabel, List[Predication]]
     for label, scope in scopes.items():
         if len(scope) == 1:
-            reps[label] = scope
+            reps[label].extend(scope)
         else:
             for predication in scope:
                 others = [p.id for p in scope if p is not predication]
