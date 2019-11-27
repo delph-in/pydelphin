@@ -5,7 +5,7 @@ Test Suite Database (TSDB) Primitives
 """
 
 from typing import (
-    Union, Iterable, Sequence, Mapping, Tuple, List, Set, Optional,
+    Union, Iterable, Sequence, Mapping, Dict, Tuple, List, Set, Optional,
     Generator, IO
 )
 import re
@@ -65,7 +65,7 @@ _MONTHS = {
 Value = Union[str, int, float, datetime, None]
 Record = Sequence[Value]
 Relation = Iterable[Record]
-ColumnMap = Mapping[str, Value]  # e.g., a partial Record
+ColumnMap = Dict[str, Value]  # e.g., a partial Record
 
 
 #############################################################################
@@ -143,7 +143,7 @@ class Field(object):
 
 
 Fields = Sequence[Field]
-FieldIndex = Mapping[str, int]
+FieldIndex = Dict[str, int]
 Schema = Mapping[str, Fields]
 SchemaLike = Union[Schema, util.PathLike]
 
@@ -456,7 +456,7 @@ def make_record(colmap: ColumnMap, fields: Fields) -> Record:
         colmap: mapping of column names to values
         fields: iterable of :class:`Field` objects
     Returns:
-        A list of column values
+        A tuple of column values
     """
     return tuple(colmap.get(f.name, None) for f in fields)
 
@@ -534,7 +534,7 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
 _cast = cast
 
 
-def _parse_datetime(s: str) -> datetime:
+def _parse_datetime(s: str) -> Union[datetime, None]:
     if re.match(r':?(today|now)', s):
         return datetime.now()
 
@@ -561,11 +561,10 @@ def _parse_datetime(s: str) -> datetime:
         s = _date_fix(m)
 
     try:
-        dt = datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
+        return datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         warnings.warn('Invalid date field: {!r}'.format(s), TSDBWarning)
-        dt = None
-    return dt
+        return None
 
 
 def _date_fix(mo):
@@ -767,6 +766,8 @@ def write(dir: util.PathLike,
         ...            item_records,
         ...            schema['item'])
     """
+    dir = Path(dir).expanduser()
+
     if encoding is None:
         encoding = 'utf-8'
 
@@ -840,9 +841,9 @@ def initialize_database(path: util.PathLike,
 
 def write_database(db: Database,
                    path: util.PathLike,
-                   names: Optional[Iterable[str]] = None,
+                   names: Iterable[str] = None,
                    schema: SchemaLike = None,
-                   gzip: Optional[bool] = None,
+                   gzip: bool = False,
                    encoding: str = 'utf-8') -> None:
     """
     Write TSDB database *db* to *path*.
@@ -870,8 +871,7 @@ def write_database(db: Database,
         schema: the destination database schema; if `None` use the
             schema of *db*
         gzip: if `True`, compress all non-empty files; if `False`, do
-            not compress; if `None` compress if overwriting an
-            existing compressed file
+            not compress
         encoding: character encoding for the database files
     """
     path = Path(path).expanduser()
@@ -891,15 +891,14 @@ def write_database(db: Database,
 
     for name in names:
         fields = schema[name]
+        relation = []  # type: Iterable[Record]
         if name in db.schema:
             try:
                 relation = db[name]
             except (TSDBError, KeyError):
-                relation = []
+                pass
             if remake_records:
                 relation = _remake_records(relation, db.schema[name], fields)
-        else:
-            relation = []
         write(path,
               name,
               relation,

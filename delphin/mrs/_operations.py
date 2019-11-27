@@ -3,11 +3,11 @@
 Operations on MRS structures
 """
 
-from typing import Iterable
+from typing import Iterable, Dict, Set
 
 from delphin import variable
 from delphin import predicate
-from delphin import sembase
+from delphin.sembase import Identifier, property_priority
 from delphin import scope
 from delphin import mrs
 from delphin import util
@@ -22,7 +22,7 @@ def is_connected(m: mrs.MRS) -> bool:
     arguments (including qeqs), or label equalities.
     """
     ids = {ep.id for ep in m.rels}
-    g = {id: set() for id in ids}
+    g = {id: set() for id in ids}  # type: Dict[Identifier, Set[Identifier]]
     # first establish links from labels and intrinsic variables to EPs
     for ep in m.rels:
         id, lbl, iv = ep.id, ep.label, ep.iv
@@ -182,7 +182,7 @@ def _make_mrs_digraph(x, dg, properties):
             s += '({})'.format(carg)
         elif properties and props:
             proplist = []
-            for prop in sorted(props, key=sembase.property_priority):
+            for prop in sorted(props, key=property_priority):
                 val = props[prop]
                 proplist.append('{}={}'.format(prop.upper(), val.lower()))
             s += '{' + '|'.join(proplist) + '}'

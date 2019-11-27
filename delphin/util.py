@@ -3,7 +3,7 @@
 Utility functions.
 """
 
-from typing import Union
+from typing import (Union, Iterable, Iterator, Tuple)
 from pathlib import Path
 import warnings
 import pkgutil
@@ -196,21 +196,18 @@ class _SExprParser(object):
                 stack[-1].append(_SExpr_unescape_symbol(m.group(0)))
                 i += len(m.group(0))
 
-
-# attach an additional method for convenience
-def _format_SExpr(d):
-    if isinstance(d, tuple) and len(d) == 2:
-        return '({} . {})'.format(d[0], d[1])
-    elif isinstance(d, (tuple, list)):
-        return '({})'.format(' '.join(map(_format_SExpr, d)))
-    elif isinstance(d, str):
-        return d
-    else:
-        return repr(d)
+    def format(self, d):
+        if isinstance(d, tuple) and len(d) == 2:
+            return '({} . {})'.format(d[0], d[1])
+        elif isinstance(d, (tuple, list)):
+            return '({})'.format(' '.join(map(self.format, d)))
+        elif isinstance(d, str):
+            return d
+        else:
+            return repr(d)
 
 
 SExpr = _SExprParser()
-SExpr.format = _format_SExpr
 
 
 class LookaheadIterator(object):
@@ -290,6 +287,9 @@ class LookaheadIterator(object):
             self._buffer_fill(n + 1)
             datum = buffer[n]
         return datum
+
+
+_Token = Tuple[int, str, int, int, int]
 
 
 class LookaheadLexer(LookaheadIterator):
@@ -392,10 +392,10 @@ class Lexer(object):
         e.__str__ = lambda self, desc=desc: desc.get(self.name, self.name)
         self.tokentypes = e
 
-    def lex(self, lineiter):
+    def lex(self, lineiter: Iterable[str]) -> LookaheadLexer:
         return LookaheadLexer(self.prelex(lineiter), self._errcls)
 
-    def prelex(self, lineiter):
+    def prelex(self, lineiter: Iterable[str]) -> Iterator[_Token]:
         """
         Lex the input string
 

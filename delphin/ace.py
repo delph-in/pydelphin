@@ -3,6 +3,8 @@
 An interface for the ACE processor.
 """
 
+from typing import (
+    Any, Iterator, Iterable, Mapping, Dict, List, Tuple, Pattern, IO)
 import logging
 import os
 from pathlib import Path
@@ -70,16 +72,17 @@ class ACEProcess(interface.Processor):
         stderr (file): stream used for ACE's stderr
     """
 
-    #: The name of the task performed by the processor (`'parse'`,
-    #: `'transfer'`, or `'generate'`). This is useful when a function,
-    #: such as :meth:`delphin.itsdb.TestSuite.process`, accepts any
-    #: :class:`ACEProcess` instance.
-    task = None
-    _cmdargs = []
-    _termini = []
+    _cmdargs = []  # type: List[str]
+    _termini = []  # type: List[Pattern[str]]
 
-    def __init__(self, grm, cmdargs=None, executable=None, env=None,
-                 tsdbinfo=True, full_forest=False, stderr=None):
+    def __init__(self,
+                 grm: util.PathLike,
+                 cmdargs: List[str] = None,
+                 executable: util.PathLike = None,
+                 env: Mapping[str, str] = None,
+                 tsdbinfo: bool = True,
+                 full_forest: bool = False,
+                 stderr: IO[Any] = None):
         self.grm = str(Path(grm).expanduser())
 
         self.cmdargs = cmdargs or []
@@ -95,28 +98,28 @@ class ACEProcess(interface.Processor):
             self.cmdargs.append('--tsdb-notes')
         if tsdbinfo and ace_version >= (0, 9, 24):
             self.cmdargs.extend(['--tsdb-stdout', '--report-labels'])
-            self.receive = self._tsdb_receive
+            setattr(self, 'receive', self._tsdb_receive)
             if full_forest:
                 self._cmdargs.append('--itsdb-forest')
         else:
-            self.receive = self._default_receive
+            setattr(self, 'receive', self._default_receive)
         self.env = env or os.environ
         self._run_id = -1
-        self.run_infos = []
+        self.run_infos = []  # type: List[Dict[str, Any]]
         self._stderr = stderr
         self._open()
 
     @property
-    def ace_version(self):
+    def ace_version(self) -> Tuple[int, ...]:
         """The version of the specified ACE binary."""
         return _ace_version(self.executable)
 
     @property
-    def run_info(self):
+    def run_info(self) -> Dict[str, Any]:
         """Contextual information about the the running process."""
         return self.run_infos[-1]
 
-    def _open(self):
+    def _open(self) -> None:
         self._p = Popen(
             [self.executable, '-g', self.grm] + self._cmdargs + self.cmdargs,
             stdin=PIPE,
@@ -146,7 +149,7 @@ class ACEProcess(interface.Processor):
         self.close()
         return False  # don't try to handle any exceptions
 
-    def _result_lines(self, termini=None):
+    def _result_lines(self, termini: List[Pattern[str]] = None) -> List[str]:
         poll = self._p.poll
         next_line = self._p.stdout.readline
 
@@ -175,14 +178,14 @@ class ACEProcess(interface.Processor):
                     i += 1
         return [line for line in lines if line != '']
 
-    def _read_run_info(self, line):
+    def _read_run_info(self, line: str) -> None:
         assert line.startswith('NOTE: tsdb run:')
         for key, value in _sexpr_data(line[15:].lstrip()):
             if key == ':application':
                 continue  # PyDelphin sets 'application'
             self.run_info[key.lstrip(':')] = value
 
-    def send(self, datum):
+    def send(self, datum: str) -> None:
         """
         Send *datum* (e.g. a sentence or MRS) to ACE.
 
@@ -203,7 +206,7 @@ class ACEProcess(interface.Processor):
             self._p.stdin.write((datum.rstrip() + '\n'))
             self._p.stdin.flush()
 
-    def receive(self):
+    def receive(self) -> interface.Response:
         """
         Return the stdout response from ACE.
 
@@ -215,10 +218,10 @@ class ACEProcess(interface.Processor):
         """
         raise NotImplementedError()
 
-    def _default_receive(self):
+    def _default_receive(self) -> interface.Response:
         raise NotImplementedError()
 
-    def _tsdb_receive(self):
+    def _tsdb_receive(self) -> interface.Response:
         lines = self._result_lines()
         response, lines = _make_response(lines, self.run_info)
         # now it should be safe to reopen a closed process (if necessary)
@@ -229,7 +232,7 @@ class ACEProcess(interface.Processor):
         response = _tsdb_response(response, line)
         return response
 
-    def interact(self, datum):
+    def interact(self, datum: str) -> interface.Response:
         """
         Send *datum* to ACE and return the response.
 
@@ -260,7 +263,9 @@ class ACEProcess(interface.Processor):
         result['input'] = datum
         return result
 
-    def process_item(self, datum, keys=None):
+    def process_item(self,
+                     datum: str,
+                     keys: Dict[str, Any] = None) -> interface.Response:
         """
         Send *datum* to ACE and return the response with context.
 
@@ -281,7 +286,7 @@ class ACEProcess(interface.Processor):
             response['task'] = self.task
         return response
 
-    def close(self):
+    def close(self) -> int:
         """
         Close the ACE process and return the process's exit code.
         """
@@ -295,6 +300,9 @@ class ACEProcess(interface.Processor):
         retval = self._p.wait()
         return retval
 
+    def _validate_input(self, datum: str) -> str:
+        raise NotImplementedError()
+
 
 class ACEParser(ACEProcess):
     """
@@ -306,7 +314,7 @@ class ACEParser(ACEProcess):
     task = 'parse'
     _termini = [re.compile(r'^$'), re.compile(r'^$')]
 
-    def _validate_input(self, datum):
+    def _validate_input(self, datum: str):
         # valid input for parsing is non-empty
         # (this relies on an empty string evaluating to False)
         return isinstance(datum, str) and datum.strip()
@@ -395,8 +403,12 @@ class ACEGenerator(ACEProcess):
         return response
 
 
-def compile(cfg_path, out_path, executable=None, env=None,
-            stdout=None, stderr=None):
+def compile(cfg_path: util.PathLike,
+            out_path: util.PathLike,
+            executable: util.PathLike = None,
+            env: Mapping[str, str] = None,
+            stdout: IO[Any] = None,
+            stderr: IO[Any] = None) -> None:
     """
     Use ACE to compile a grammar.
 
@@ -427,7 +439,10 @@ def compile(cfg_path, out_path, executable=None, env=None,
         raise
 
 
-def parse_from_iterable(grm, data, **kwargs):
+def parse_from_iterable(
+        grm: util.PathLike,
+        data: Iterable[str],
+        **kwargs: Any) -> Iterator[interface.Response]:
     """
     Parse each sentence in *data* with ACE using grammar *grm*.
 
@@ -447,7 +462,9 @@ def parse_from_iterable(grm, data, **kwargs):
             yield parser.interact(datum)
 
 
-def parse(grm, datum, **kwargs):
+def parse(grm: util.PathLike,
+          datum: str,
+          **kwargs: Any) -> interface.Response:
     """
     Parse sentence *datum* with ACE using grammar *grm*.
 
@@ -464,7 +481,10 @@ def parse(grm, datum, **kwargs):
     return next(parse_from_iterable(grm, [datum], **kwargs))
 
 
-def transfer_from_iterable(grm, data, **kwargs):
+def transfer_from_iterable(
+        grm: util.PathLike,
+        data: Iterable[str],
+        **kwargs: Any) -> Iterator[interface.Response]:
     """
     Transfer from each MRS in *data* with ACE using grammar *grm*.
 
@@ -481,7 +501,9 @@ def transfer_from_iterable(grm, data, **kwargs):
             yield transferer.interact(datum)
 
 
-def transfer(grm, datum, **kwargs):
+def transfer(grm: util.PathLike,
+             datum: str,
+             **kwargs: Any) -> interface.Response:
     """
     Transfer from the MRS *datum* with ACE using grammar *grm*.
 
@@ -496,7 +518,10 @@ def transfer(grm, datum, **kwargs):
     return next(transfer_from_iterable(grm, [datum], **kwargs))
 
 
-def generate_from_iterable(grm, data, **kwargs):
+def generate_from_iterable(
+        grm: util.PathLike,
+        data: Iterable[str],
+        **kwargs: Any) -> Iterator[interface.Response]:
     """
     Generate from each MRS in *data* with ACE using grammar *grm*.
 
@@ -513,7 +538,9 @@ def generate_from_iterable(grm, data, **kwargs):
             yield generator.interact(datum)
 
 
-def generate(grm, datum, **kwargs):
+def generate(grm: util.PathLike,
+             datum: str,
+             **kwargs: Any) -> interface.Response:
     """
     Generate from the MRS *datum* with ACE using *grm*.
 
@@ -562,19 +589,22 @@ _ace_argparser.add_argument('--yy-rules', action='store_true')
 _ace_argparser.add_argument('--max-words', type=int)
 
 
-def _ace_version(executable):
-    version = (0, 9, 0)  # initial public release
+def _ace_version(executable: str) -> Tuple[int, ...]:
+    # 0.9.0 is the initial public release of ACE
+    version = (0, 9, 0)  # type: Tuple[int, ...]
     try:
         out = check_output([executable, '-V'], universal_newlines=True)
-        version = re.search(r'ACE version ([.0-9]+)', out).group(1)
-        version = tuple(map(int, version.split('.')))
     except (CalledProcessError, OSError):
         logger.error('Failed to get ACE version number.')
         raise
+    else:
+        match = re.search(r'ACE version ([.0-9]+)', out)
+        if match is not None:
+            version = tuple(map(int, match.group(1).split('.')))
     return version
 
 
-def _possible_mrs(s):
+def _possible_mrs(s: str) -> str:
     start, end = -1, -1
     depth = 0
     for i, c in enumerate(s):
@@ -596,10 +626,10 @@ def _possible_mrs(s):
             s = s[start:end]
         return s
     else:
-        return False
+        return ''
 
 
-def _make_response(lines, run):
+def _make_response(lines, run) -> Tuple[interface.Response, List[str]]:
     response = interface.Response({
         'NOTES': [],
         'WARNINGS': [],
@@ -624,7 +654,7 @@ def _make_response(lines, run):
     return response, content_lines
 
 
-def _sexpr_data(line):
+def _sexpr_data(line: str) -> Iterator[Dict[str, Any]]:
     while line:
         try:
             expr = util.SExpr.parse(line)
@@ -639,7 +669,8 @@ def _sexpr_data(line):
         yield expr.data
 
 
-def _tsdb_response(response, line):
+def _tsdb_response(response: interface.Response,
+                   line: str) -> interface.Response:
     for key, val in _sexpr_data(line):
         if key == ':p-input':
             response.setdefault('tokens', {})['initial'] = val.strip()

@@ -3,6 +3,7 @@
 DELPH-IN Web API Server
 """
 
+from typing import Optional, Type
 import pathlib
 import urllib.parse
 import datetime
@@ -11,6 +12,7 @@ import functools
 
 import falcon
 
+from delphin import interface
 from delphin import ace
 from delphin import derivation
 from delphin import dmrs
@@ -90,7 +92,7 @@ class ProcessorServer(object):
         instead.
     """
 
-    processor_class = None
+    processor_class = None  # type: Optional[Type[interface.Processor]]
 
     def __init__(self, grammar, *args, **kwargs):
         self.grammar = grammar

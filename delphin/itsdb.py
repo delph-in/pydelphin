@@ -118,6 +118,7 @@ class FieldMapper(object):
 
         patch = self._map_parse(response)
         parse_id = patch['parse-id']
+        assert isinstance(parse_id, int)
         transaction.append(('parse', patch))
 
         for result in response.results():  # type: interface.Result
@@ -519,7 +520,7 @@ class Table(tsdb.Relation):
         self._rows.clear()
         self._volatile_index = 0
 
-    def append(self, row: Row) -> None:
+    def append(self, row: tsdb.Record) -> None:
         """
         Add *row* to the end of the table.
 
@@ -529,7 +530,7 @@ class Table(tsdb.Relation):
         """
         self.extend([row])
 
-    def extend(self, rows: Rows) -> None:
+    def extend(self, rows: Iterable[tsdb.Record]) -> None:
         """
         Add each row in *rows* to the end of the table.
 
@@ -566,7 +567,7 @@ class Table(tsdb.Relation):
                           values,
                           field_index=self._field_index)
 
-    def select(self, *names: str, cast: bool = True) -> Iterator[Row]:
+    def select(self, *names: str, cast: bool = True) -> Iterator[tsdb.Record]:
         """
         Select fields given by *names* from each row in the table.
 
@@ -594,8 +595,9 @@ class Table(tsdb.Relation):
             for _, row in self._enum_rows(fh):
                 data = tuple(row.data[i] for i in indices)
                 if cast:
-                    data = Row(fields, data, field_index=field_index)
-                yield data
+                    yield Row(fields, data, field_index=field_index)
+                else:
+                    yield data
 
     def _enum_rows(self,
                    fh: IO[str],
@@ -772,7 +774,7 @@ class TestSuite(tsdb.Database):
                 selector: Tuple[str, str] = None,
                 source: tsdb.Database = None,
                 fieldmapper: FieldMapper = None,
-                gzip: bool = None,
+                gzip: bool = False,
                 buffer_size: int = 1000) -> None:
         """
         Process each item in a [incr tsdb()] test suite.
@@ -801,6 +803,7 @@ class TestSuite(tsdb.Database):
             >>> ts.process(ace_generator, 'result:mrs', source=ts2)
         """
         if selector is None:
+            assert isinstance(cpu.task, str)
             input_table, input_column = _default_task_selectors[cpu.task]
         else:
             input_table, input_column = selector

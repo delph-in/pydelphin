@@ -17,7 +17,7 @@ try:
     re.DEFAULT_VERSION = re.V1
     _regex_available = True
 except ImportError:
-    import re
+    import re  # type: ignore
     _regex_available = False
 
 from delphin.tokens import YYToken, YYTokenLattice

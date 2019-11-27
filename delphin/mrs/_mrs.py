@@ -234,7 +234,7 @@ class MRS(scope.ScopingSemanticStructure):
             rels = []
         _uniquify_ids(rels)
 
-        super().__init__(top, index, rels, lnk, surface, identifier)
+        super().__init__(top, index, list(rels), lnk, surface, identifier)
 
         if hcons is None:
             hcons = []

@@ -46,8 +46,6 @@ class Client(interface.Processor):
         instead.
     """
 
-    task = None
-
     def __init__(self, server):
         self.server = server
 

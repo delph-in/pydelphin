@@ -55,7 +55,7 @@ class Selection(tsdb.Relation):
         """
         The results of a 'select' query.
         """
-        self.fields = []  # type: tsdb.Fields
+        self.fields = []  # type: List[tsdb.Field]
         self._field_index = {}  # type: tsdb.FieldIndex
         self.data = []  # type: tsdb.Relation
         self.projection = None
@@ -475,7 +475,7 @@ def _join(selection: Selection,
         if not on:
             raise TSQLError('no shared keys for joining')
 
-        right = {}  # type: Dict[Tuple[tsdb.Value, ...], tsdb.Record]
+        right = {}  # type: Dict[Tuple[tsdb.Value, ...], List[tsdb.Record]]
         for keys, row in zip(db.select_from(name, on, cast=True),
                              db.select_from(name, cols, cast=False)):
             right.setdefault(tuple(keys), []).append(tuple(row))
@@ -604,7 +604,7 @@ def _parse_select(querystring: str) -> dict:
             'condition': condition}
 
 
-def _parse_select_projection(lexer: util.Lexer) -> List[str]:
+def _parse_select_projection(lexer: util.LookaheadLexer) -> List[str]:
     typ, col_id = lexer.choice_type(_STAR, _QID, _ID)
     projection = []
     if typ in (_QID, _ID):
@@ -616,7 +616,7 @@ def _parse_select_projection(lexer: util.Lexer) -> List[str]:
     return projection
 
 
-def _parse_select_from(lexer: util.Lexer) -> List[str]:
+def _parse_select_from(lexer: util.LookaheadLexer) -> List[str]:
     relations = []
     if lexer.accept_type(_FROM):
         relation = lexer.expect_type(_ID)
@@ -626,7 +626,8 @@ def _parse_select_from(lexer: util.Lexer) -> List[str]:
     return relations
 
 
-def _parse_select_where(lexer: util.Lexer) -> Optional[_Condition]:
+def _parse_select_where(
+        lexer: util.LookaheadLexer) -> Optional[_Condition]:
     conditions = []  # type: List[_Condition]
     while lexer.accept_type(_WHERE):
         conditions.append(_parse_condition_disjunction(lexer))
@@ -638,7 +639,8 @@ def _parse_select_where(lexer: util.Lexer) -> Optional[_Condition]:
     return condition
 
 
-def _parse_condition_disjunction(lexer: util.Lexer) -> _Condition:
+def _parse_condition_disjunction(
+        lexer: util.LookaheadLexer) -> _Condition:
     conds = []
     while True:
         conds.append(_parse_condition_conjunction(lexer))
@@ -654,7 +656,8 @@ def _parse_condition_disjunction(lexer: util.Lexer) -> _Condition:
         return ('or', list(conds))
 
 
-def _parse_condition_conjunction(lexer: util.Lexer) -> _Condition:
+def _parse_condition_conjunction(
+        lexer: util.LookaheadLexer) -> _Condition:
     conds = []  # type: List[_Condition]
     while True:
         typ, token = lexer.choice_type(_NOT, _LPAREN, _QID, _ID)
@@ -677,7 +680,9 @@ def _parse_condition_conjunction(lexer: util.Lexer) -> _Condition:
         return ('and', list(conds))
 
 
-def _parse_condition_statement(column: str, lexer: util.Lexer) -> _Comparison:
+def _parse_condition_statement(
+        column: str,
+        lexer: util.LookaheadLexer) -> _Comparison:
     op = lexer.expect_type(_OP)
     if op == '=':
         op = '=='  # normalize = to == (I think these are equivalent)
