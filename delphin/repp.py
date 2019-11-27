@@ -9,6 +9,7 @@ from pathlib import Path
 from array import array
 from collections import namedtuple
 import warnings
+import logging
 
 # use regex library if available; otherwise warn
 try:
@@ -24,6 +25,13 @@ from delphin.lnk import Lnk
 from delphin.exceptions import PyDelphinException, PyDelphinWarning
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
+
+
+logger = logging.getLogger(__name__)
+
+
+#: The tokenization pattern used if none is given in a REPP module.
+DEFAULT_TOKENIZER = r'[ \t]+'
 
 
 class REPPError(PyDelphinException):
@@ -81,11 +89,16 @@ class _REPPOperation(object):
         raise NotImplementedError()
 
     def apply(self, s, active=None):
-        for step in self.trace(s, active=active):
-            pass
+        logger.info('apply(%r)', s)
+        for step in self._trace(s, active, False):
+            pass  # we only care about the last step
         return step
 
     def trace(self, s, active=None, verbose=False):
+        logger.info('trace(%r)', s)
+        yield from self._trace(s, active, verbose)
+
+    def _trace(self, s, active, verbose):
         startmap = _zeromap(s)
         endmap = _zeromap(s)
         # initial boundaries
@@ -102,13 +115,18 @@ class _REPPOperation(object):
             s = step.output
         yield REPPResult(s, startmap, endmap)
 
-    def tokenize(self, s, pattern=r'[ \t]+', active=None):
+    def tokenize(self, s, pattern=DEFAULT_TOKENIZER, active=None):
+        logger.info('tokenize(%r, %r)', s, pattern)
         res = self.apply(s, active=active)
+        return self.tokenize_result(res, pattern=pattern)
+
+    def tokenize_result(self, result, pattern=DEFAULT_TOKENIZER):
+        logger.info('tokenize_result(%r, %r)', result, pattern)
         tokens = [
             YYToken(id=i, start=i, end=i+1,
                     lnk=Lnk.charspan(tok[0], tok[1]),
                     form=tok[2])
-            for i, tok in enumerate(_tokenize(res, pattern))
+            for i, tok in enumerate(_tokenize(result, pattern))
         ]
         return YYTokenLattice(tokens)
 
@@ -155,6 +173,8 @@ class _REPPRule(_REPPOperation):
         return '!{}\t\t{}'.format(self.pattern, self.replacement)
 
     def _apply(self, s, active):
+        logger.debug(' %s', self)
+
         ms = list(self._re.finditer(s))
 
         if ms:
@@ -260,6 +280,7 @@ class _REPPGroup(_REPPOperation):
                 yield step
                 o = step.output
                 applied |= step.applied
+
         yield REPPStep(s, o, self, applied, _zeromap(o), _zeromap(o))
 
 
@@ -270,7 +291,11 @@ class _REPPGroupCall(_REPPOperation):
 
     def _apply(self, s, active):
         if active is not None and self.name in active:
+            logger.info('>%s', self.name)
             yield from self.modules[self.name]._apply(s, active)
+            logger.debug('>%s (done)', self.name)
+        else:
+            logger.debug('>%s (inactive)', self.name)
 
 
 class _REPPIterativeGroup(_REPPGroup):
@@ -278,6 +303,7 @@ class _REPPIterativeGroup(_REPPGroup):
         return 'Internal group #{}'.format(self.name)
 
     def _apply(self, s, active):
+        logger.debug('>%s', self.name)
         o = s
         applied = False
         prev = None
@@ -289,6 +315,7 @@ class _REPPIterativeGroup(_REPPGroup):
                     o = step.output
                     applied |= step.applied
             yield REPPStep(s, o, self, applied, _zeromap(o), _zeromap(o))
+        logger.debug('>%s (done)', self.name)
 
 
 class REPP(object):
@@ -516,12 +543,26 @@ class REPP(object):
         """
         if pattern is None:
             if self.tokenize_pattern is None:
-                pattern = r'[ \t]+'
+                pattern = DEFAULT_TOKENIZER
             else:
                 pattern = self.tokenize_pattern
         if active is None:
             active = self.active
         return self.group.tokenize(s, pattern=pattern, active=active)
+
+    def tokenize_result(self, result, pattern=DEFAULT_TOKENIZER):
+        """
+        Tokenize the result of rule application.
+
+        Args:
+            result: a :class:`REPPResult` object
+            pattern (str, optional): the regular expression pattern on
+                which to split tokens; defaults to `[ \t]+`
+        Returns:
+            a :class:`~delphin.tokens.YYTokenLattice` containing the
+            tokens and their characterization information
+        """
+        return self.group.tokenize_result(result, pattern=pattern)
 
 
 def _compile(pattern):
@@ -530,10 +571,11 @@ def _compile(pattern):
     except re.error:
         if _regex_available and '[' in pattern or ']' in pattern:
             warnings.warn(
-                "Possible unescaped brackets in {!r}; "
-                "attempting to parse in compatibility mode"
-                .format(pattern),
+                'Invalid regex in REPP; see warning log for details.',
                 REPPWarning)
+            logger.warn("Possible unescaped brackets in %r; "
+                        "attempting to parse in compatibility mode",
+                        pattern)
             return re.compile(pattern, flags=re.V0)
         else:
             raise

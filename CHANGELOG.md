@@ -7,12 +7,17 @@ these changes are prefixed with "**BREAKING**"
 
 ### Added
 
+* `[repp]` installation extra
 * `delphin.repp.REPPWarning` class
+* `delphin.repp.DEFAULT_TOKENIZER` module variable
+* `delphin.repp.REPP.tokenize_result()` method to tokenize using the
+  result of rule application
 
 ### Fixed
 
 * REPP now computes alignments even when substitution inserts nothing (#252)
 * REPP now uses the `regex` library if available (#253)
+
 
 ## [v1.0.2][]
 

@@ -32,6 +32,12 @@ delphin.repp
 .. _this issue: https://github.com/delph-in/erg/issues/17
 
 
+Module Constants
+----------------
+
+.. autodata:: DEFAULT_TOKENIZER
+
+
 Classes
 -------
 
