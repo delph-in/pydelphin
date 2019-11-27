@@ -291,7 +291,7 @@ class Database(object):
         self.encoding = encoding
 
     @property
-    def path(self) -> util.PathLike:
+    def path(self) -> Path:
         """The database directory's path."""
         return self._path
 
@@ -312,7 +312,7 @@ class Database(object):
 
     def select_from(self, name: str,
                     columns: Iterable[str] = None,
-                    cast: bool = False):
+                    cast: bool = False) -> Generator[Record, None, None]:
         """
         Yield values for *columns* from relation *name*.
         """
@@ -488,8 +488,8 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
     returned, regardless of the *datatype*. However, when *datatype*
     is `:integer` and *raw_value* is `'-1'` (the default value for
     most `:integer` columns), `-1` is returned instead of `None`. This
-    means that :func:`cast` the inverse of :func:`format` except for
-    integer values of `-1`, some date formats, and coded defaults.
+    means that :func:`cast` is the inverse of :func:`format` except
+    for integer values of `-1`, some date formats, and coded defaults.
 
     Supported datatypes:
 

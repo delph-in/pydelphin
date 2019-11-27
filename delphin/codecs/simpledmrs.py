@@ -141,7 +141,7 @@ _SimpleDMRSLexer = Lexer(
         (r';', 'SEMICOLON:;'),
         (r'(--|->)', 'ARROW:a link arrow'),
         (r'[^\s"\'()\/:;<=>[\]{}]+', 'SYMBOL:a symbol'),
-        (r'[^\s]',  'UNEXPECTED')
+        (r'[^\s]', 'UNEXPECTED')
     ],
     error_class=DMRSSyntaxError)
 
