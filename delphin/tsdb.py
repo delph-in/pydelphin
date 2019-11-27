@@ -369,12 +369,31 @@ def unescape(string: str) -> str:
         string (str): TSDB-escaped string
     Returns:
         The string with escape sequences replaced
+
     """
-    # str.replace()... is about 3-4x faster than re.sub() here
-    return (string
-            .replace('\\\\', '\\')  # must be done first
-            .replace('\\n', '\n')
-            .replace('\\s', FIELD_DELIMITER))
+    # unescape cannot use multiple str.replace() calls because of
+    # examples like '\\\\s' which turn into '@' instead of '\\s'
+    chars = []  # type: List[str]
+    esc = False
+    for c in string:
+        if esc:
+            if c == '\\':
+                chars.append('\\')
+            elif c == 's':
+                chars.append('@')
+            elif c == 'n':
+                chars.append('\n')
+            else:
+                raise TSDBError('invalid escape sequence: \\' + c)
+            esc = False
+        elif c == '\\':
+            esc = True
+        else:
+            chars.append(c)
+    if esc:
+        raise TSDBError(
+            'invalid escape at end-of-string: {!r}'.format(string))
+    return ''.join(chars)
 
 
 def split(line: str,

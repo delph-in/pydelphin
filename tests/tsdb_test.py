@@ -106,6 +106,7 @@ def test_escape():
     assert tsdb.escape('a\nb') == 'a\\nb'
     assert tsdb.escape('a\\b') == 'a\\\\b'
     assert tsdb.escape(' a b ') == ' a b '
+    assert tsdb.escape('a\\s\\nb') == 'a\\\\s\\\\nb'
 
 
 def test_unescape():
@@ -115,6 +116,11 @@ def test_unescape():
     assert tsdb.unescape('a\\nb') == 'a\nb'
     assert tsdb.unescape('a\\\\b') == 'a\\b'
     assert tsdb.unescape(' a b ') == ' a b '
+    assert tsdb.unescape('a\\\\s\\\\nb') == 'a\\s\\nb'
+    with pytest.raises(tsdb.TSDBError):
+        tsdb.unescape('a\\qb')  # invalid escape sequence
+    with pytest.raises(tsdb.TSDBError):
+        tsdb.unescape('a\\')  # invalid escape sequence
 
 
 def test_split(empty_testsuite):
@@ -123,8 +129,8 @@ def test_split(empty_testsuite):
     assert tsdb.split(u'あ') == (u'あ',)
     assert tsdb.split('one@two') == ('one', 'two')
     assert tsdb.split('one@@three') == ('one', None, 'three')
-    assert (tsdb.split('one\\s@\\\\two\\nabc\\x')
-            == ('one@', '\\two\nabc\\x'))
+    assert (tsdb.split('one\\s@\\\\two\\nabc')
+            == ('one@', '\\two\nabc'))
     rels = tsdb.read_schema(empty_testsuite)
     assert tsdb.split('10@one', fields=rels['item']) == (10, 'one')
 

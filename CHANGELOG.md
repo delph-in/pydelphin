@@ -20,6 +20,8 @@ these changes are prefixed with "**BREAKING**"
 
 * REPP now computes alignments even when substitution inserts nothing (#252)
 * REPP now uses the `regex` library if available (#253)
+* `delphin.tsdb.unescape()` doesn't incorrectly parse `\\` followed by
+  `s` or `n` (#257)
 
 ### Changed
 
