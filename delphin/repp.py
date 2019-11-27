@@ -123,7 +123,7 @@ class _REPPOperation(object):
     def tokenize_result(self, result, pattern=DEFAULT_TOKENIZER):
         logger.info('tokenize_result(%r, %r)', result, pattern)
         tokens = [
-            YYToken(id=i, start=i, end=i+1,
+            YYToken(id=i, start=i, end=(i + 1),
                     lnk=Lnk.charspan(tok[0], tok[1]),
                     form=tok[2])
             for i, tok in enumerate(_tokenize(result, pattern))

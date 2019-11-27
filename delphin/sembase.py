@@ -3,7 +3,7 @@
 Basic classes and functions for semantic representations.
 """
 
-from typing import Mapping, Tuple, List, Dict, Union, Iterable
+from typing import Mapping, Tuple, List, Union, Iterable
 
 from delphin.lnk import Lnk, LnkMixin
 # Default modules need to import the PyDelphin version
@@ -112,6 +112,7 @@ class Predication(LnkMixin):
 Predications = Iterable[Predication]
 MaybePredication = Union[Predication, None]
 PredicationPair = Tuple[MaybePredication, MaybePredication]
+
 
 class SemanticStructure(LnkMixin):
     """

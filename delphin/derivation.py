@@ -507,7 +507,8 @@ def _to_udf(obj, indent, level, udx=False):
                 entity = '^' + entity
             if obj.type:
                 entity = '{}@{}'.format(entity, obj.type)
-        dtrs = [_to_udf(dtr, indent, level+1, udx) for dtr in obj.daughters]
+        dtrs = [_to_udf(dtr, indent, (level + 1), udx)
+                for dtr in obj.daughters]
         dtrs = delim.join([''] + dtrs)  # empty first item to force indent
         if obj.id is None:
             return '({}{})'.format(entity, dtrs)

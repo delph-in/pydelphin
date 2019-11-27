@@ -144,7 +144,8 @@ class _SExprParser(object):
         stack = [[]]
         while i < n:
             c = s[i]
-            if c.isdigit() or c == '-' and s[i+1].isdigit():  # numbers
+            # numbers
+            if c.isdigit() or c == '-' and s[i + 1].isdigit():
                 j = i + 1
                 while s[j].isdigit():
                     j += 1
@@ -171,7 +172,8 @@ class _SExprParser(object):
                         j += 2
                     else:
                         j += 1
-                stack[-1].append(_SExpr_unescape_string(s[i+1:j]))
+                stack[-1].append(
+                    _SExpr_unescape_string(s[i + 1 : j]))  # noqa: E203
                 i = j + 1
             elif c == '(':
                 stack.append([])
@@ -181,7 +183,7 @@ class _SExprParser(object):
                 if len(xs) == 3 and xs[1] == '.':
                     xs = tuple(xs[::2])
                 if len(stack) == 0:
-                    return SExprResult(xs, s[i+1:])
+                    return SExprResult(xs, s[i + 1 :])  # noqa: E203
                 else:
                     stack[-1].append(xs)
                 i += 1

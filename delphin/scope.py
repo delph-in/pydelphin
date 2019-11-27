@@ -4,10 +4,9 @@
 Structures and operations for quantifier scope in DELPH-IN semantics.
 """
 
-from typing import Mapping, Iterable, List, Tuple, Dict, Container
+from typing import Mapping, Iterable, List, Tuple, Dict
 
 from delphin.lnk import Lnk
-from delphin import predicate
 from delphin.sembase import (
     Identifier,
     Role,
@@ -146,7 +145,7 @@ def descendants(x: ScopingSemanticStructure,
         >>> descendants = scope.descendants(m)
         >>> for id, ds in descendants.items():
         ...     print(m[id].predicate, [d.predicate for d in ds])
-        ... 
+        ...
         proper_q ['named']
         named []
         neg ['_think_v_1', '_leave_v_1']
@@ -230,7 +229,6 @@ def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
         ['_chef_n_1', '_spill_v_1']
     """
     _, scopes = x.scopes()
-    #fragments = tree_fragments(x, prune=False)
     ns_args = {src: set(arg for _, arg in roleargs)
                for src, roleargs in x.arguments(types='xeipu').items()}
     # compute descendants, but only keep ids

@@ -163,7 +163,7 @@ def call_repp(args):
              or (args.color == 'auto' and sys.stdout.isatty()))
     if color:
         try:
-            import pygments
+            import pygments  # noqa: F401
         except ImportError:
             # don't warn if color=auto
             if args.color == 'always':

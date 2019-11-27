@@ -178,7 +178,7 @@ def from_triples(triples):
             continue
         elif src not in nd:
             if top is None:
-                top=src
+                top = src
             nids.append(src)
             nd[src] = {'pred': None, 'lnk': None, 'type': None,
                        'props': {}, 'carg': None}
@@ -217,4 +217,3 @@ def from_triples(triples):
         surface=surface,
         identifier=identifier
     )
-

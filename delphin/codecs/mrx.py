@@ -445,4 +445,3 @@ def _tostring(e, indent, offset):
             string)
 
     return string.strip()
-

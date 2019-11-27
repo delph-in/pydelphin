@@ -1,6 +1,5 @@
 
 from typing import Iterable, Mapping
-from operator import itemgetter
 
 from delphin.lnk import Lnk
 from delphin import variable

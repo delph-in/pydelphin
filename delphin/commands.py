@@ -15,7 +15,7 @@ from delphin import tsdb, itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
 from delphin import util
-from delphin.exceptions import PyDelphinException, PyDelphinWarning
+from delphin.exceptions import PyDelphinException
 import delphin.codecs
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -610,7 +610,7 @@ def repp(source, config=None, module=None, active=None,
             applied and unapplied rules (in order) are printed
             (default: `0`)
     """
-    from delphin.repp import REPP, REPPResult, REPPStep
+    from delphin.repp import REPP, REPPResult
 
     if color:
         highlight = util.make_highlighter('diff')
