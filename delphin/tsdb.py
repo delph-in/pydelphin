@@ -5,8 +5,8 @@ Test Suite Database (TSDB) Primitives
 """
 
 from typing import (
-    Union, Iterable, Sequence, Mapping, Dict, Tuple, List, Set, Optional,
-    Generator, IO
+    Union, Iterator, Iterable, Sequence, Mapping, Dict, Tuple, List, Set,
+    Optional, Generator, IO, cast as typing_cast
 )
 import re
 from pathlib import Path
@@ -66,7 +66,7 @@ RawValue = Union[str, None]
 RawRecord = Sequence[RawValue]
 Value = Union[str, int, float, datetime, None]
 Record = Sequence[Value]
-Relation = Iterable[Record]
+Records = Iterable[Record]
 ColumnMap = Dict[str, Value]  # e.g., a partial Record
 
 
@@ -250,6 +250,34 @@ def _format_schema(schema: Schema) -> str:
 #############################################################################
 # Basic Database Classes
 
+
+class Relation(Records):
+    """
+    A Relation is essentially an iterable of records.
+    """
+    def __init__(self,
+                 dir: util.PathLike,
+                 name: str,
+                 fields: Optional[Fields],
+                 encoding: str = 'utf-8'):
+        self.dir = Path(dir).expanduser()
+        self.name = name
+        self.fields = fields
+        self.encoding = encoding
+        self._generator = (split(line, fields=fields)
+                           for line in open(self.dir, name,
+                                            encoding=self.encoding))
+
+    def __next__(self) -> Record:
+        return next(self._generator)
+
+    def __iter__(self) -> Iterator[Record]:
+        yield from self._generator
+
+    def close(self) -> None:
+        self._generator.close()
+
+
 class Database(object):
     """
     A basic abstraction of a TSDB database.
@@ -297,14 +325,13 @@ class Database(object):
         """The database directory's path."""
         return self._path
 
-    def __getitem__(self, name: str) -> Generator[Record, None, None]:
+    def __getitem__(self, name: str) -> Relation:
         if name not in self.schema:
             raise TSDBError('relation not defined in schema: {}'.format(name))
         fields = None
         if self.autocast:
             fields = self.schema[name]
-        return (split(line, fields=fields)
-                for line in open(self._path, name, encoding=self.encoding))
+        return Relation(self._path, name, fields, encoding=self.encoding)
 
     def __iter__(self):
         return iter(self.schema)

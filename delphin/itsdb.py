@@ -396,7 +396,7 @@ class Table(tsdb.Relation):
                  encoding: str = 'utf-8') -> None:
         self.dir = Path(dir).expanduser()
         self.name = name
-        self.fields = fields
+        self.fields = fields  # type: Sequence[tsdb.Field]
         self._field_index = tsdb.make_field_index(fields)
         self.encoding = encoding
         try:
@@ -632,11 +632,11 @@ class Table(tsdb.Relation):
         for i, row in enumerate(self._rows):
             # always read next line until EOF to keep in sync
             if not file_exhausted:
+                line = None  # type: Optional[str]
                 try:
                     line = next(fh)
                 except StopIteration:
                     file_exhausted = True
-                    line = None
             # now skip if it's not a requested index
             if i not in indices:
                 continue
@@ -762,6 +762,7 @@ class TestSuite(tsdb.Database):
             table = self._data[name]
             fields = self.schema[name]
             if table._in_transaction:
+                data = []  # type: tsdb.Records
                 if table._volatile_index >= table._persistent_count:
                     append = True
                     data = table[table._persistent_count:]
@@ -835,6 +836,7 @@ class TestSuite(tsdb.Database):
             source = self
         if fieldmapper is None:
             fieldmapper = FieldMapper()
+        index = tsdb.make_field_index(source.schema[input_table])
 
         affected = set(fieldmapper.affected_tables).intersection(self.schema)
         for name in affected:
@@ -843,8 +845,8 @@ class TestSuite(tsdb.Database):
         key_names = [f.name for f in source.schema[input_table] if f.is_key]
 
         for row in source[input_table]:
-            datum = row[input_column]
-            keys = [row[name] for name in key_names]
+            datum = row[index[input_column]]
+            keys = [row[index[name]] for name in key_names]
             keys_dict = dict(zip(key_names, keys))
             response = cpu.process_item(datum, keys=keys_dict)
             logger.info(

@@ -5,7 +5,7 @@ TSQL -- Test Suite Query Language
 
 from typing import (
     List, Tuple, Dict, Set, Mapping, Optional, Union, Any, Type,
-    Iterator, Callable)
+    Iterator, Callable, cast as typing_cast)
 import operator
 import re
 
@@ -40,16 +40,16 @@ _Condition = Union[_Comparison, _Boolean]
 _FilterFunction = Callable[[tsdb.Record], bool]
 
 
-class _Record(object):
+class _Record(tsdb.Record):
     """Dummy Record type to mimic the call signature of itsdb.Row."""
     def __new__(cls,
                 fields: tsdb.Fields,
                 data: tsdb.Record,
-                field_index: tsdb.FieldIndex = None) -> tsdb.Record:
+                field_index: tsdb.FieldIndex = None):
         return tuple(data)
 
 
-class Selection(tsdb.Relation):
+class Selection(tsdb.Records):
     def __init__(self,
                  record_class: Optional[Type[_Record]] = None) -> None:
         """
@@ -57,7 +57,7 @@ class Selection(tsdb.Relation):
         """
         self.fields = []  # type: List[tsdb.Field]
         self._field_index = {}  # type: tsdb.FieldIndex
-        self.data = []  # type: tsdb.Relation
+        self.data = []  # type: tsdb.Records
         self.projection = None
         if record_class is None:
             record_class = _Record

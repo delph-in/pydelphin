@@ -29,7 +29,8 @@ these changes are prefixed with "**BREAKING**"
   `WARNING`)
 * `delphin.tsdb.cast()` now raises an error if the value to cast is
   not a string or `None`
-
+* `delphin.tsdb.Relation` is now a class instead of just a type
+  declaration, but its existence is still just for type-checking
 
 ## [v1.0.2][]
 
