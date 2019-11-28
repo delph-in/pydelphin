@@ -99,6 +99,19 @@ class TestTestSuite(object):
         assert ts['result'][1]['parse-id'] == 0
         assert ts['result'][1]['result-id'] == 1
 
+    def test_processed_items(self, mini_testsuite):
+        ts = itsdb.TestSuite(mini_testsuite)
+        responses = list(ts.processed_items())
+        assert len(responses) == 3
+        assert responses[0]['i-input'] == 'It rained.'
+        assert len(responses[0].results()) == 1
+        assert responses[0].result(0)['mrs'] == (
+            '[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
+            '  RELS: < [ _rain_v_1<3:9> LBL: h1 ARG0: e2 ] >'
+            '  HCONS: < h0 qeq h1 > ]')
+        assert len(responses[1].results()) == 0
+        assert len(responses[2].results()) == 1
+
 
 def test_Row(empty_alt_testsuite):
     ts = itsdb.TestSuite(str(empty_alt_testsuite))

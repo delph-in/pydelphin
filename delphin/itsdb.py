@@ -6,7 +6,7 @@
 
 from typing import (
     Iterable, Sequence, Tuple, List, Dict,
-    Iterator, Optional, IO, overload
+    Iterator, Optional, IO, overload, cast as typing_cast
 )
 from pathlib import Path
 import tempfile
@@ -220,7 +220,7 @@ class FieldMapper(object):
 
         return inserts
 
-    def collect(self, ts: 'TestSuite') -> Iterable[interface.Response]:
+    def collect(self, ts: 'TestSuite') -> Iterator[interface.Response]:
         """
         Map from test suites to response objects.
 
@@ -233,20 +233,39 @@ class FieldMapper(object):
            test suite is very large as it may exhaust the system's
            available memory.
         """
-        parse_map = {key: list(map(dict, grp))
-                     for key, grp
-                     in itertools.groupby(ts['parse'],
-                                          key=lambda row: row['i-id'])}
-        result_map = {key: list(map(dict, grp))
-                      for key, grp
-                      in itertools.groupby(ts['result'],
-                                           key=lambda row: row['parse-id'])}
+
+        # type checking this function is a mess; it needs a better fix
+
+        def get_i_id(row: 'Row') -> int:
+            i_id = row['i-id']
+            assert isinstance(i_id, int)
+            return i_id
+
+        def get_parse_id(row: 'Row') -> int:
+            parse_id = row['parse-id']
+            assert isinstance(parse_id, int)
+            return parse_id
+
+        parse_map = {}  # type: Dict[int, List[Dict[str, tsdb.Value]]]
+        rows  = typing_cast(Sequence['Row'], ts['parse'])
+        for key, grp in itertools.groupby(rows, key=get_i_id):
+            parse_map[key] = [dict(zip(row.keys(), row)) for row in grp]
+
+        result_map = {}  # type: Dict[int, List[Dict[str, tsdb.Value]]]
+        rows  = typing_cast(Sequence['Row'], ts['result'])
+        for key, grp in itertools.groupby(rows, key=get_parse_id):
+            result_map[key] = [dict(zip(row.keys(), row)) for row in grp]
+
         for item in ts['item']:
-            d = dict(item)
-            for parse in parse_map.get(d['i-id'], []):
+            d = dict(zip(item.keys(), item))  # type: Dict[str, tsdb.Value]
+            i_id = d['i-id']
+            assert isinstance(i_id, int)
+            for parse in parse_map.get(i_id, []):
                 response = interface.Response(d)
                 response.update(parse)
-                response['results'] = result_map.get(parse['parse-id'], [])
+                parse_id = parse['parse-id']
+                assert isinstance(parse_id, int)
+                response['results'] = result_map.get(parse_id, [])
                 yield response
 
 
@@ -761,7 +780,7 @@ class TestSuite(tsdb.Database):
 
     def processed_items(
             self,
-            fieldmapper: FieldMapper = None) -> Iterable[interface.Response]:
+            fieldmapper: FieldMapper = None) -> Iterator[interface.Response]:
         """
         Iterate over the data as :class:`Response` objects.
         """
