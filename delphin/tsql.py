@@ -370,9 +370,10 @@ def _process_condition_fields(
     #  ('==', ('i-id', 11))
     op, body = condition
     if op in ('and', 'or'):
+        body = typing_cast(List[_Condition], body)
         fieldset = set()
         conditions = []
-        for cond in body:  # type: _Condition
+        for cond in body:
             _cond, _fields = _process_condition_fields(cond, resolve_qname)
             fieldset.update(_fields)
             conditions.append(_cond)
@@ -396,8 +397,9 @@ def _process_condition_function(
     #  ('==', ('i-id', 11))
     op, body = condition
     if op in ('and', 'or'):
+        body = typing_cast(List[_Condition], body)
         conditions = []
-        for cond in body:  # type: _Condition
+        for cond in body:
             _func = _process_condition_function(cond, selection)
             conditions.append(_func)
         _func = all if op == 'and' else any
