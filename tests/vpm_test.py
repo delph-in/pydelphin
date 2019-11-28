@@ -1,9 +1,5 @@
 
-from sys import version_info
-if version_info > (3,):
-    from io import StringIO as S
-else:
-    from io import BytesIO as S
+from io import StringIO as S
 
 import pytest
 

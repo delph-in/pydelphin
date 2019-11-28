@@ -70,7 +70,7 @@ class ScopingSemanticStructure(SemanticStructure):
     def __init__(self,
                  top: Optional[Identifier],
                  index: Optional[Identifier],
-                 predications: Optional[Predications],
+                 predications: Predications,
                  lnk: Optional[Lnk],
                  surface,
                  identifier):
@@ -172,6 +172,7 @@ def _descendants(descs: Dict[Identifier, List[Predication]],
         return
     descs[id] = []
     for role, relation, label in scargs[id]:
+        assert isinstance(label, str)
         for p in scopes.get(label, []):
             descs[id].append(p)
             _descendants(descs, p.id, scargs, scopes)

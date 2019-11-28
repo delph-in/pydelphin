@@ -191,7 +191,10 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
     # EDS's predicate_modifiers argument in that case.
 
     if (src_rep, tgt_rep) == ('mrs', 'dmrs'):
-        from delphin.dmrs import from_mrs as converter
+        from delphin.dmrs import from_mrs
+
+        def converter(m):
+            return from_mrs(m, representative_priority=None)
 
     elif (src_rep, tgt_rep) == ('dmrs', 'mrs'):
         from delphin.mrs import from_dmrs as converter
