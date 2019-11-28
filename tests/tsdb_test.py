@@ -88,8 +88,18 @@ class TestDatabase():
 
     def test__getitem__(self, mini_testsuite, empty_testsuite):
         db = tsdb.Database(mini_testsuite)
-        items = db['item']
-        assert len(list(items)) == 3
+        assert list(db['item']) == [
+            ('10', 'It rained.', '1', '1-feb-2018 15:00'),
+            ('20', 'Rained.', '0', '01-02-18 15:00:00'),
+            ('30', 'It snowed.', '1', '2018-2-1 (15:00:00)'),
+        ]
+        # with autocast
+        db.autocast = True
+        assert list(db['item']) == [
+            (10, 'It rained.', 1, datetime(2018, 2, 1, 15, 0)),
+            (20, 'Rained.', 0, datetime(2018, 2, 1, 15, 0)),
+            (30, 'It snowed.', 1, datetime(2018, 2, 1, 15, 0)),
+        ]
         # relation undefined
         with pytest.raises(tsdb.TSDBError):
             db['not_a_relation']
@@ -97,6 +107,31 @@ class TestDatabase():
         db = tsdb.Database(empty_testsuite)
         with pytest.raises(tsdb.TSDBError):
             db['item']
+
+    def test_select_from(self, mini_testsuite):
+        db = tsdb.Database(mini_testsuite)
+        fields = ('i-id', 'i-date')
+        assert list(db.select_from('item', fields)) == [
+            ('10', '1-feb-2018 15:00'),
+            ('20', '01-02-18 15:00:00'),
+            ('30', '2018-2-1 (15:00:00)'),
+        ]
+        assert list(db.select_from('item', fields, cast=True)) == [
+            (10, datetime(2018, 2, 1, 15, 0)),
+            (20, datetime(2018, 2, 1, 15, 0)),
+            (30, datetime(2018, 2, 1, 15, 0)),
+        ]
+        db.autocast = True
+        assert list(db.select_from('item', fields)) == [
+            (10, datetime(2018, 2, 1, 15, 0)),
+            (20, datetime(2018, 2, 1, 15, 0)),
+            (30, datetime(2018, 2, 1, 15, 0)),
+        ]
+        assert list(db.select_from('item', fields, cast=True)) == [
+            (10, datetime(2018, 2, 1, 15, 0)),
+            (20, datetime(2018, 2, 1, 15, 0)),
+            (30, datetime(2018, 2, 1, 15, 0)),
+        ]
 
 
 def test_escape():

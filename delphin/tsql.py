@@ -81,8 +81,11 @@ class Selection(tsdb.Relation):
         index = tsdb.make_field_index(fields)
         cls = self.record_class
         for record in self.data:
+            record = getattr(record, 'data', record)  # in case it's a Row
             data = tuple(record[idx] for idx in indices)
-            if cast:
+            if cast and all(value is None or isinstance(value, str)
+                            for value in data):
+                data = typing_cast(Tuple[Optional[str], ...], data)
                 data = tuple(tsdb.cast(field.datatype, value)
                              for field, value in zip(fields, data))
             yield cls(fields, data, field_index=index)
@@ -463,7 +466,7 @@ def _join(selection: Selection,
     data = []  # type: List[tsdb.Record]
     if not selection.joined:
         _merge_fields(selection, name, [], fields)
-        data.extend(db.select_from(name, columns, cast=False))
+        data.extend(db._select_raw(name, columns))
     else:
         on = []  # type: List[str]
         if selection is not None:
@@ -477,15 +480,15 @@ def _join(selection: Selection,
 
         right = {}  # type: Dict[Tuple[tsdb.Value, ...], List[tsdb.Record]]
         for keys, row in zip(db.select_from(name, on, cast=True),
-                             db.select_from(name, cols, cast=False)):
+                             db._select_raw(name, cols)):
             right.setdefault(tuple(keys), []).append(tuple(row))
 
         rfill = tuple([None] * len(fields))
         for keys, lrow in zip(selection.select(*on, cast=True), selection):
             keys = tuple(keys)
             if how == 'left' or keys in right:
-                data.extend(lrow + rrow
-                            for rrow in right.get(keys, [rfill]))
+                for rrow in right.get(keys, [rfill]):
+                    data.append(tuple(lrow) + tuple(rrow))
 
         _merge_fields(selection, name, on, fields)
 

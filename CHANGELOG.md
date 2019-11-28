@@ -27,6 +27,8 @@ these changes are prefixed with "**BREAKING**"
 
 * The default logging for the main script is now `ERROR` (was:
   `WARNING`)
+* `delphin.tsdb.cast()` now raises an error if the value to cast is
+  not a string or `None`
 
 
 ## [v1.0.2][]

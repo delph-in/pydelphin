@@ -62,6 +62,8 @@ _MONTHS = {
 #############################################################################
 # Local types
 
+RawValue = Union[str, None]
+RawRecord = Sequence[RawValue]
 Value = Union[str, int, float, datetime, None]
 Record = Sequence[Value]
 Relation = Iterable[Record]
@@ -323,7 +325,8 @@ class Database(object):
         indices = [index[column] for column in columns]
         records = self[name]
         for record in records:
-            if cast:
+            if cast and not self.autocast:
+                record = typing_cast(RawRecord, record)
                 # _cast is a copy of the function cast()
                 data = tuple(_cast(fields[idx].datatype, record[idx])
                              for idx in indices)
@@ -331,6 +334,23 @@ class Database(object):
                 data = tuple(record[idx] for idx in indices)
             yield data
         records.close()
+
+    def _select_raw(
+            self,
+            name: str,
+            columns: Iterable[str] = None) -> Generator[RawRecord, None, None]:
+        if name not in self.schema:
+            raise TSDBError('relation not defined in schema: {}'.format(name))
+        fields = self.schema[name]
+        if columns is None:
+            indices = list(range(len(fields)))
+        else:
+            index = make_field_index(fields)
+            indices = [index[column] for column in columns]
+        with open(self._path, name, encoding=self.encoding) as file:
+            for line in file:
+                record = typing_cast(RawRecord, split(line, fields=None))
+                yield tuple(record[idx] for idx in indices)
 
 
 #############################################################################
@@ -536,6 +556,8 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
     """
     if raw_value is None or raw_value == '':
         return None
+    elif not isinstance(raw_value, str):
+        raise TypeError("cast() argument 'raw_value' must be a string or None")
     elif datatype == ':integer':
         return int(raw_value)
     elif datatype == ':float':
