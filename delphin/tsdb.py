@@ -694,9 +694,9 @@ def format(datatype: str,
         raw_value = str(value)
     return raw_value
 
+
 #############################################################################
 # Files
-
 
 def is_database_directory(path: util.PathLike) -> bool:
     """

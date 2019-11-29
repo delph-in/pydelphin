@@ -307,7 +307,9 @@ class _REPPIterativeGroup(_REPPGroup):
         o = s
         applied = False
         prev = None
+        i = 0
         while prev != o:
+            i += 1
             prev = o
             for operation in self.operations:
                 for step in operation._apply(o, active):
@@ -315,7 +317,7 @@ class _REPPIterativeGroup(_REPPGroup):
                     o = step.output
                     applied |= step.applied
             yield REPPStep(s, o, self, applied, _zeromap(o), _zeromap(o))
-        logger.debug('>%s (done)', self.name)
+        logger.debug('>%s (done; iterated %d time(s))', self.name, i)
 
 
 class REPP(object):

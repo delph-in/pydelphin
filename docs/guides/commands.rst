@@ -306,44 +306,39 @@ functionality can be useful for debugging.
 
 .. code:: console
 
-   $ delphin repp -c erg/pet/repp.set --trace <<< "Abrams didn't chase Browne."
-   Applied:!^(.+)$		 \1 
-      In:Abrams didn't chase Browne.
-     Out: Abrams didn't chase Browne. 
-   Applied:!'		’
-      In: Abrams didn't chase Browne. 
-     Out: Abrams didn’t chase Browne. 
-   Applied:Internal group #1
-      In: Abrams didn't chase Browne. 
-     Out: Abrams didn’t chase Browne. 
-   Applied:Internal group #1
-      In: Abrams didn't chase Browne. 
-     Out: Abrams didn’t chase Browne. 
-   Applied:Module quotes
-      In: Abrams didn't chase Browne. 
-     Out: Abrams didn’t chase Browne. 
-   Applied:!^(.+)$		 \1 
-      In: Abrams didn’t chase Browne. 
-     Out:  Abrams didn’t chase Browne.  
-   Applied:!  +		 
-      In:  Abrams didn’t chase Browne.  
-     Out: Abrams didn’t chase Browne. 
-   Applied:!([^ ])(\.) ([])}”"’'… ]*)$		\1 \2 \3
-      In: Abrams didn’t chase Browne. 
-     Out: Abrams didn’t chase Browne . 
-   Applied:Internal group #1
-      In: Abrams didn’t chase Browne. 
-     Out: Abrams didn’t chase Browne . 
-   Applied:Internal group #1
-      In: Abrams didn’t chase Browne. 
-     Out: Abrams didn’t chase Browne . 
-   Applied:!([^ ])([nN])[’']([tT]) 		\1 \2’\3 
-      In: Abrams didn’t chase Browne . 
-     Out: Abrams did n’t chase Browne . 
-   Applied:Module tokenizer
-      In:Abrams didn't chase Browne.
-     Out: Abrams did n’t chase Browne . 
+   $ delphin repp -c erg/pet/repp.set --trace --format triple <<< "Abrams didn't chase Browne."
+   Applied: !^(.+)$		 \1 
+   -Abrams didn't chase Browne.
+   + Abrams didn't chase Browne. 
+   Applied: !'		’
+   - Abrams didn't chase Browne. 
+   + Abrams didn’t chase Browne. 
+   Applied: !^(.+)$		 \1 
+   - Abrams didn’t chase Browne. 
+   +  Abrams didn’t chase Browne.  
+   Applied: !  +		 
+   -  Abrams didn’t chase Browne.  
+   + Abrams didn’t chase Browne. 
+   Applied: !([^ ])(\.) ([])}⌊⌋”"’'… ]*)$		\1 \2 \3
+   - Abrams didn’t chase Browne. 
+   + Abrams didn’t chase Browne . 
+   Applied: !([^ ])([nN])[’'‘]([tT]) 		\1 \2’\3 
+   - Abrams didn’t chase Browne . 
+   + Abrams did n’t chase Browne . 
    Done: Abrams did n’t chase Browne . 
+   (0, 6, Abrams)
+   (7, 10, did)
+   (10, 13, n’t)
+   (14, 19, chase)
+   (20, 26, Browne)
+   (26, 27, .)
+
+When outputting to a TTY, the output will be colored in the "diff"
+format. The ``--verbose`` (or ``-v``) option is also useful. With
+``-v``, warnings about invalid REPP patterns will be shown; with
+``-vv``, information about each REPP module called and the final
+pre-tokenization alignments are shown; and with ``-vvv``, debug lines
+will be shown with every rule attempted.
 
 Try ``delphin repp --help`` for more information.
 
