@@ -10,29 +10,18 @@ import importlib
 import logging
 import warnings
 
-try:
-    from delphin import highlight as _delphin_hl
-    from pygments import highlight as _highlight
-    from pygments.formatters import Terminal256Formatter as _Formatter
-except ImportError:
-    simplemrs_highlight = None
-else:
-    _lexer = _delphin_hl.SimpleMRSLexer()
-    _formatter = _Formatter(style=_delphin_hl.MRSStyle)
-
-    def simplemrs_highlight(text):
-        return _highlight(text, _lexer, _formatter)
-
-
 from delphin import exceptions
 from delphin import tsdb, itsdb, tsql
 from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
 from delphin import util
-from delphin.exceptions import PyDelphinException, PyDelphinWarning
+from delphin.exceptions import PyDelphinException
 import delphin.codecs
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
+
+
+logger = logging.getLogger(__name__)
 
 
 # EXCEPTIONS ##################################################################
@@ -95,6 +84,11 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     # normalize codec names
     source_fmt = source_fmt.replace('-', '').lower()
     target_fmt = target_fmt.replace('-', '').lower()
+
+    if color and target_fmt in ('simplemrs', 'simple-mrs'):
+        highlight = util.make_highlighter('simplemrs')
+    else:
+        highlight = str
 
     source_codec = _get_codec(source_fmt)
     target_codec = _get_codec(target_fmt)
@@ -170,14 +164,11 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
         try:
             s = target_codec.encode(x, **kwargs)
         except (PyDelphinException, KeyError, IndexError):
-            logging.exception('could not convert representation')
+            logger.exception('could not convert representation')
         else:
             parts.append(s)
 
-    output = header + joiner.join(parts) + footer
-
-    if color and target_fmt in ('simplemrs', 'simple-mrs'):
-        output = _colorize(output)
+    output = highlight(header + joiner.join(parts) + footer)
 
     return output
 
@@ -200,7 +191,10 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
     # EDS's predicate_modifiers argument in that case.
 
     if (src_rep, tgt_rep) == ('mrs', 'dmrs'):
-        from delphin.dmrs import from_mrs as converter
+        from delphin.dmrs import from_mrs
+
+        def converter(m):
+            return from_mrs(m, representative_priority=None)
 
     elif (src_rep, tgt_rep) == ('dmrs', 'mrs'):
         from delphin.mrs import from_dmrs as converter
@@ -219,13 +213,6 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
             src_rep.upper(), tgt_rep.upper()))
 
     return converter
-
-
-def _colorize(text):
-    if simplemrs_highlight:
-        return simplemrs_highlight(text)
-    else:
-        return text
 
 
 ###############################################################################
@@ -601,7 +588,7 @@ def _interpret_selection(select, source):
 
 
 def repp(source, config=None, module=None, active=None,
-         format=None, trace_level=0):
+         format=None, color=False, trace_level=0):
     """
     Tokenize with a Regular Expression PreProcessor (REPP).
 
@@ -619,12 +606,19 @@ def repp(source, config=None, module=None, active=None,
             are used; incompatible with *config* (default: `None`)
         format (str): the output format (`"yy"`, `"string"`, `"line"`,
             or `"triple"`; default: `"yy"`)
+        color (bool): apply syntax highlighting if `True` (default:
+            `False`)
         trace_level (int): if `0` no trace info is printed; if `1`,
-            applied rules are printed, if greather than `1`, both
+            applied rules are printed, if greater than `1`, both
             applied and unapplied rules (in order) are printed
             (default: `0`)
     """
-    from delphin.repp import REPP
+    from delphin.repp import REPP, REPPResult
+
+    if color:
+        highlight = util.make_highlighter('diff')
+    else:
+        highlight = str
 
     if config is not None and module is not None:
         raise CommandError("cannot specify both 'config' and 'module'")
@@ -637,46 +631,50 @@ def repp(source, config=None, module=None, active=None,
     else:
         r = REPP()  # just tokenize
 
+    def _repp(line):
+        line = line.rstrip('\n')
+        if trace_level > 0:
+            for step in r.trace(line, verbose=True):
+                if isinstance(step, REPPResult):
+                    print('Done:{}'.format(step.string))
+                elif hasattr(step.operation, 'pattern'):
+                    if step.applied:
+                        print('Applied:', step.operation)
+                        print(highlight(
+                            '-{}\n+{}'.format(step.input, step.output)))
+                    elif trace_level > 1:
+                        print('Did not apply:', step.operation)
+        else:
+            step = r.apply(line)
+        res = r.tokenize_result(step)
+        if format == 'yy':
+            print(res)
+        elif format == 'string':
+            print(' '.join(t.form for t in res.tokens))
+        elif format == 'line':
+            for t in res.tokens:
+                print(t.form)
+            print()
+        elif format == 'triple':
+            for t in res.tokens:
+                if t.lnk.type == Lnk.CHARSPAN:
+                    cfrom, cto = t.lnk.data
+                else:
+                    cfrom, cto = -1, -1
+                print(
+                    '({}, {}, {})'
+                    .format(cfrom, cto, t.form)
+                )
+            print()
+
     if hasattr(source, 'read'):
         for line in source:
-            _repp(r, line, format, trace_level)
+            _repp(line)
     else:
         source = Path(source).expanduser()
         with source.open(encoding='utf-8') as fh:
             for line in fh:
-                _repp(r, line, format, trace_level)
-
-
-def _repp(r, line, format, trace_level):
-    if trace_level > 0:
-        for step in r.trace(line.rstrip('\n'), verbose=True):
-            if not hasattr(step, 'applied'):
-                print('Done:{}'.format(step.string))
-                continue
-            if step.applied or trace_level > 1:
-                print('{}:{!s}\n   In:{}\n  Out:{}'.format(
-                    'Applied' if step.applied else 'Did not apply',
-                    step.operation, step.input, step.output))
-    res = r.tokenize(line.rstrip('\n'))
-    if format == 'yy':
-        print(res)
-    elif format == 'string':
-        print(' '.join(t.form for t in res.tokens))
-    elif format == 'line':
-        for t in res.tokens:
-            print(t.form)
-        print()
-    elif format == 'triple':
-        for t in res.tokens:
-            if t.lnk.type == Lnk.CHARSPAN:
-                cfrom, cto = t.lnk.data
-            else:
-                cfrom, cto = -1, -1
-            print(
-                '({}, {}, {})'
-                .format(cfrom, cto, t.form)
-            )
-        print()
+                _repp(line)
 
 
 ###############################################################################

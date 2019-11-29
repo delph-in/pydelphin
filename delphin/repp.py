@@ -4,21 +4,50 @@
 Regular Expression Preprocessor (REPP)
 """
 
-import re
 from sre_parse import parse_template
 from pathlib import Path
 from array import array
 from collections import namedtuple
+import warnings
+import logging
+
+# use regex library if available; otherwise warn
+try:
+    import regex as re
+    re.DEFAULT_VERSION = re.V1
+    _regex_available = True
+except ImportError:
+    import re  # type: ignore
+    _regex_available = False
 
 from delphin.tokens import YYToken, YYTokenLattice
 from delphin.lnk import Lnk
-from delphin.exceptions import PyDelphinException
+from delphin.exceptions import PyDelphinException, PyDelphinWarning
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
 
+logger = logging.getLogger(__name__)
+
+
+#: The tokenization pattern used if none is given in a REPP module.
+DEFAULT_TOKENIZER = r'[ \t]+'
+
+
 class REPPError(PyDelphinException):
     """Raised when there is an error in tokenizing with REPP."""
+
+
+class REPPWarning(PyDelphinWarning):
+    """Issued when REPP may not behave as expected."""
+
+
+if not _regex_available:
+    warnings.warn(
+        "The 'regex' library is not installed, so some regular expression "
+        "features may not work as expected. Install PyDelphin with the "
+        "[repp] extra to include the 'regex' library.",
+        REPPWarning)
 
 
 class REPPStep(namedtuple(
@@ -60,11 +89,16 @@ class _REPPOperation(object):
         raise NotImplementedError()
 
     def apply(self, s, active=None):
-        for step in self.trace(s, active=active):
-            pass
+        logger.info('apply(%r)', s)
+        for step in self._trace(s, active, False):
+            pass  # we only care about the last step
         return step
 
     def trace(self, s, active=None, verbose=False):
+        logger.info('trace(%r)', s)
+        yield from self._trace(s, active, verbose)
+
+    def _trace(self, s, active, verbose):
         startmap = _zeromap(s)
         endmap = _zeromap(s)
         # initial boundaries
@@ -81,13 +115,18 @@ class _REPPOperation(object):
             s = step.output
         yield REPPResult(s, startmap, endmap)
 
-    def tokenize(self, s, pattern=r'[ \t]+', active=None):
+    def tokenize(self, s, pattern=DEFAULT_TOKENIZER, active=None):
+        logger.info('tokenize(%r, %r)', s, pattern)
         res = self.apply(s, active=active)
+        return self.tokenize_result(res, pattern=pattern)
+
+    def tokenize_result(self, result, pattern=DEFAULT_TOKENIZER):
+        logger.info('tokenize_result(%r, %r)', result, pattern)
         tokens = [
-            YYToken(id=i, start=i, end=i+1,
+            YYToken(id=i, start=i, end=(i + 1),
                     lnk=Lnk.charspan(tok[0], tok[1]),
                     form=tok[2])
-            for i, tok in enumerate(_tokenize(res, pattern))
+            for i, tok in enumerate(_tokenize(result, pattern))
         ]
         return YYTokenLattice(tokens)
 
@@ -108,7 +147,7 @@ class _REPPRule(_REPPOperation):
     def __init__(self, pattern, replacement):
         self.pattern = pattern
         self.replacement = replacement
-        self._re = re.compile(pattern)
+        self._re = _compile(pattern)
 
         groups, literals = parse_template(replacement, self._re)
         # if a literal is None then it has a group, so make this
@@ -134,6 +173,8 @@ class _REPPRule(_REPPOperation):
         return '!{}\t\t{}'.format(self.pattern, self.replacement)
 
     def _apply(self, s, active):
+        logger.debug(' %s', self)
+
         ms = list(self._re.finditer(s))
 
         if ms:
@@ -148,13 +189,18 @@ class _REPPRule(_REPPOperation):
                 if pos < start:
                     _copy_part(s[pos:start], shift, parts, smap, emap)
 
-                for literal, start, end, tracked in self._itersegments(m):
-                    if tracked:
-                        _copy_part(literal, shift, parts, smap, emap)
-                    else:
-                        width = end - start
-                        _insert_part(literal, width, shift, parts, smap, emap)
-                        shift += width - len(literal)
+                if self._segments:
+                    for literal, start, end, tracked in self._itersegments(m):
+                        if tracked:
+                            _copy_part(literal, shift, parts, smap, emap)
+                        else:
+                            width = end - start
+                            _insert_part(literal, width, shift, parts,
+                                         smap, emap)
+                            shift += width - len(literal)
+                else:
+                    # the replacement is empty (match is deleted)
+                    shift += m.end() - start
 
                 pos = m.end()
 
@@ -234,6 +280,7 @@ class _REPPGroup(_REPPOperation):
                 yield step
                 o = step.output
                 applied |= step.applied
+
         yield REPPStep(s, o, self, applied, _zeromap(o), _zeromap(o))
 
 
@@ -244,7 +291,11 @@ class _REPPGroupCall(_REPPOperation):
 
     def _apply(self, s, active):
         if active is not None and self.name in active:
+            logger.info('>%s', self.name)
             yield from self.modules[self.name]._apply(s, active)
+            logger.debug('>%s (done)', self.name)
+        else:
+            logger.debug('>%s (inactive)', self.name)
 
 
 class _REPPIterativeGroup(_REPPGroup):
@@ -252,10 +303,13 @@ class _REPPIterativeGroup(_REPPGroup):
         return 'Internal group #{}'.format(self.name)
 
     def _apply(self, s, active):
+        logger.debug('>%s', self.name)
         o = s
         applied = False
         prev = None
+        i = 0
         while prev != o:
+            i += 1
             prev = o
             for operation in self.operations:
                 for step in operation._apply(o, active):
@@ -263,6 +317,7 @@ class _REPPIterativeGroup(_REPPGroup):
                     o = step.output
                     applied |= step.applied
             yield REPPStep(s, o, self, applied, _zeromap(o), _zeromap(o))
+        logger.debug('>%s (done; iterated %d time(s))', self.name, i)
 
 
 class REPP(object):
@@ -490,12 +545,42 @@ class REPP(object):
         """
         if pattern is None:
             if self.tokenize_pattern is None:
-                pattern = r'[ \t]+'
+                pattern = DEFAULT_TOKENIZER
             else:
                 pattern = self.tokenize_pattern
         if active is None:
             active = self.active
         return self.group.tokenize(s, pattern=pattern, active=active)
+
+    def tokenize_result(self, result, pattern=DEFAULT_TOKENIZER):
+        """
+        Tokenize the result of rule application.
+
+        Args:
+            result: a :class:`REPPResult` object
+            pattern (str, optional): the regular expression pattern on
+                which to split tokens; defaults to `[ \t]+`
+        Returns:
+            a :class:`~delphin.tokens.YYTokenLattice` containing the
+            tokens and their characterization information
+        """
+        return self.group.tokenize_result(result, pattern=pattern)
+
+
+def _compile(pattern):
+    try:
+        return re.compile(pattern)
+    except re.error:
+        if _regex_available and '[' in pattern or ']' in pattern:
+            warnings.warn(
+                'Invalid regex in REPP; see warning log for details.',
+                REPPWarning)
+            logger.warn("Possible unescaped brackets in %r; "
+                        "attempting to parse in compatibility mode",
+                        pattern)
+            return re.compile(pattern, flags=re.V0)
+        else:
+            raise
 
 
 def _zeromap(s):

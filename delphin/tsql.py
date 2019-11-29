@@ -5,7 +5,7 @@ TSQL -- Test Suite Query Language
 
 from typing import (
     List, Tuple, Dict, Set, Mapping, Optional, Union, Any, Type,
-    Iterator, Callable)
+    Iterator, Callable, cast as typing_cast)
 import operator
 import re
 
@@ -40,24 +40,24 @@ _Condition = Union[_Comparison, _Boolean]
 _FilterFunction = Callable[[tsdb.Record], bool]
 
 
-class _Record(object):
+class _Record(tsdb.Record):
     """Dummy Record type to mimic the call signature of itsdb.Row."""
     def __new__(cls,
                 fields: tsdb.Fields,
                 data: tsdb.Record,
-                field_index: tsdb.FieldIndex = None) -> tsdb.Record:
+                field_index: tsdb.FieldIndex = None):
         return tuple(data)
 
 
-class Selection(tsdb.Relation):
+class Selection(tsdb.Records):
     def __init__(self,
                  record_class: Optional[Type[_Record]] = None) -> None:
         """
         The results of a 'select' query.
         """
-        self.fields = []  # type: tsdb.Fields
+        self.fields = []  # type: List[tsdb.Field]
         self._field_index = {}  # type: tsdb.FieldIndex
-        self.data = []  # type: tsdb.Relation
+        self.data = []  # type: tsdb.Records
         self.projection = None
         if record_class is None:
             record_class = _Record
@@ -81,8 +81,11 @@ class Selection(tsdb.Relation):
         index = tsdb.make_field_index(fields)
         cls = self.record_class
         for record in self.data:
+            record = getattr(record, 'data', record)  # in case it's a Row
             data = tuple(record[idx] for idx in indices)
-            if cast:
+            if cast and all(value is None or isinstance(value, str)
+                            for value in data):
+                data = typing_cast(Tuple[Optional[str], ...], data)
                 data = tuple(tsdb.cast(field.datatype, value)
                              for field, value in zip(fields, data))
             yield cls(fields, data, field_index=index)
@@ -367,9 +370,10 @@ def _process_condition_fields(
     #  ('==', ('i-id', 11))
     op, body = condition
     if op in ('and', 'or'):
+        body = typing_cast(List[_Condition], body)
         fieldset = set()
         conditions = []
-        for cond in body:  # type: _Condition
+        for cond in body:
             _cond, _fields = _process_condition_fields(cond, resolve_qname)
             fieldset.update(_fields)
             conditions.append(_cond)
@@ -393,8 +397,9 @@ def _process_condition_function(
     #  ('==', ('i-id', 11))
     op, body = condition
     if op in ('and', 'or'):
+        body = typing_cast(List[_Condition], body)
         conditions = []
-        for cond in body:  # type: _Condition
+        for cond in body:
             _func = _process_condition_function(cond, selection)
             conditions.append(_func)
         _func = all if op == 'and' else any
@@ -463,7 +468,7 @@ def _join(selection: Selection,
     data = []  # type: List[tsdb.Record]
     if not selection.joined:
         _merge_fields(selection, name, [], fields)
-        data.extend(db.select_from(name, columns, cast=False))
+        data.extend(db._select_raw(name, columns))
     else:
         on = []  # type: List[str]
         if selection is not None:
@@ -475,17 +480,17 @@ def _join(selection: Selection,
         if not on:
             raise TSQLError('no shared keys for joining')
 
-        right = {}  # type: Dict[Tuple[tsdb.Value, ...], tsdb.Record]
+        right = {}  # type: Dict[Tuple[tsdb.Value, ...], List[tsdb.Record]]
         for keys, row in zip(db.select_from(name, on, cast=True),
-                             db.select_from(name, cols, cast=False)):
+                             db._select_raw(name, cols)):
             right.setdefault(tuple(keys), []).append(tuple(row))
 
         rfill = tuple([None] * len(fields))
         for keys, lrow in zip(selection.select(*on, cast=True), selection):
             keys = tuple(keys)
             if how == 'left' or keys in right:
-                data.extend(lrow + rrow
-                            for rrow in right.get(keys, [rfill]))
+                for rrow in right.get(keys, [rfill]):
+                    data.append(tuple(lrow) + tuple(rrow))
 
         _merge_fields(selection, name, on, fields)
 
@@ -604,7 +609,7 @@ def _parse_select(querystring: str) -> dict:
             'condition': condition}
 
 
-def _parse_select_projection(lexer: util.Lexer) -> List[str]:
+def _parse_select_projection(lexer: util.LookaheadLexer) -> List[str]:
     typ, col_id = lexer.choice_type(_STAR, _QID, _ID)
     projection = []
     if typ in (_QID, _ID):
@@ -616,7 +621,7 @@ def _parse_select_projection(lexer: util.Lexer) -> List[str]:
     return projection
 
 
-def _parse_select_from(lexer: util.Lexer) -> List[str]:
+def _parse_select_from(lexer: util.LookaheadLexer) -> List[str]:
     relations = []
     if lexer.accept_type(_FROM):
         relation = lexer.expect_type(_ID)
@@ -626,7 +631,8 @@ def _parse_select_from(lexer: util.Lexer) -> List[str]:
     return relations
 
 
-def _parse_select_where(lexer: util.Lexer) -> Optional[_Condition]:
+def _parse_select_where(
+        lexer: util.LookaheadLexer) -> Optional[_Condition]:
     conditions = []  # type: List[_Condition]
     while lexer.accept_type(_WHERE):
         conditions.append(_parse_condition_disjunction(lexer))
@@ -638,7 +644,8 @@ def _parse_select_where(lexer: util.Lexer) -> Optional[_Condition]:
     return condition
 
 
-def _parse_condition_disjunction(lexer: util.Lexer) -> _Condition:
+def _parse_condition_disjunction(
+        lexer: util.LookaheadLexer) -> _Condition:
     conds = []
     while True:
         conds.append(_parse_condition_conjunction(lexer))
@@ -654,7 +661,8 @@ def _parse_condition_disjunction(lexer: util.Lexer) -> _Condition:
         return ('or', list(conds))
 
 
-def _parse_condition_conjunction(lexer: util.Lexer) -> _Condition:
+def _parse_condition_conjunction(
+        lexer: util.LookaheadLexer) -> _Condition:
     conds = []  # type: List[_Condition]
     while True:
         typ, token = lexer.choice_type(_NOT, _LPAREN, _QID, _ID)
@@ -677,7 +685,9 @@ def _parse_condition_conjunction(lexer: util.Lexer) -> _Condition:
         return ('and', list(conds))
 
 
-def _parse_condition_statement(column: str, lexer: util.Lexer) -> _Comparison:
+def _parse_condition_statement(
+        column: str,
+        lexer: util.LookaheadLexer) -> _Comparison:
     op = lexer.expect_type(_OP)
     if op == '=':
         op = '=='  # normalize = to == (I think these are equivalent)

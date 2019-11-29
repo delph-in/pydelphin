@@ -88,8 +88,18 @@ class TestDatabase():
 
     def test__getitem__(self, mini_testsuite, empty_testsuite):
         db = tsdb.Database(mini_testsuite)
-        items = db['item']
-        assert len(list(items)) == 3
+        assert list(db['item']) == [
+            ('10', 'It rained.', '1', '1-feb-2018 15:00'),
+            ('20', 'Rained.', '0', '01-02-18 15:00:00'),
+            ('30', 'It snowed.', '1', '2018-2-1 (15:00:00)'),
+        ]
+        # with autocast
+        db.autocast = True
+        assert list(db['item']) == [
+            (10, 'It rained.', 1, datetime(2018, 2, 1, 15, 0)),
+            (20, 'Rained.', 0, datetime(2018, 2, 1, 15, 0)),
+            (30, 'It snowed.', 1, datetime(2018, 2, 1, 15, 0)),
+        ]
         # relation undefined
         with pytest.raises(tsdb.TSDBError):
             db['not_a_relation']
@@ -97,6 +107,31 @@ class TestDatabase():
         db = tsdb.Database(empty_testsuite)
         with pytest.raises(tsdb.TSDBError):
             db['item']
+
+    def test_select_from(self, mini_testsuite):
+        db = tsdb.Database(mini_testsuite)
+        fields = ('i-id', 'i-date')
+        assert list(db.select_from('item', fields)) == [
+            ('10', '1-feb-2018 15:00'),
+            ('20', '01-02-18 15:00:00'),
+            ('30', '2018-2-1 (15:00:00)'),
+        ]
+        assert list(db.select_from('item', fields, cast=True)) == [
+            (10, datetime(2018, 2, 1, 15, 0)),
+            (20, datetime(2018, 2, 1, 15, 0)),
+            (30, datetime(2018, 2, 1, 15, 0)),
+        ]
+        db.autocast = True
+        assert list(db.select_from('item', fields)) == [
+            (10, datetime(2018, 2, 1, 15, 0)),
+            (20, datetime(2018, 2, 1, 15, 0)),
+            (30, datetime(2018, 2, 1, 15, 0)),
+        ]
+        assert list(db.select_from('item', fields, cast=True)) == [
+            (10, datetime(2018, 2, 1, 15, 0)),
+            (20, datetime(2018, 2, 1, 15, 0)),
+            (30, datetime(2018, 2, 1, 15, 0)),
+        ]
 
 
 def test_escape():
@@ -106,6 +141,7 @@ def test_escape():
     assert tsdb.escape('a\nb') == 'a\\nb'
     assert tsdb.escape('a\\b') == 'a\\\\b'
     assert tsdb.escape(' a b ') == ' a b '
+    assert tsdb.escape('a\\s\\nb') == 'a\\\\s\\\\nb'
 
 
 def test_unescape():
@@ -115,6 +151,11 @@ def test_unescape():
     assert tsdb.unescape('a\\nb') == 'a\nb'
     assert tsdb.unescape('a\\\\b') == 'a\\b'
     assert tsdb.unescape(' a b ') == ' a b '
+    assert tsdb.unescape('a\\\\s\\\\nb') == 'a\\s\\nb'
+    with pytest.raises(tsdb.TSDBError):
+        tsdb.unescape('a\\qb')  # invalid escape sequence
+    with pytest.raises(tsdb.TSDBError):
+        tsdb.unescape('a\\')  # invalid escape sequence
 
 
 def test_split(empty_testsuite):
@@ -123,8 +164,8 @@ def test_split(empty_testsuite):
     assert tsdb.split(u'あ') == (u'あ',)
     assert tsdb.split('one@two') == ('one', 'two')
     assert tsdb.split('one@@three') == ('one', None, 'three')
-    assert (tsdb.split('one\\s@\\\\two\\nabc\\x')
-            == ('one@', '\\two\nabc\\x'))
+    assert (tsdb.split('one\\s@\\\\two\\nabc')
+            == ('one@', '\\two\nabc'))
     rels = tsdb.read_schema(empty_testsuite)
     assert tsdb.split('10@one', fields=rels['item']) == (10, 'one')
 

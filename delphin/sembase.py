@@ -3,7 +3,7 @@
 Basic classes and functions for semantic representations.
 """
 
-from typing import Mapping, Tuple, List, Dict, Union, Iterable
+from typing import (Optional, Mapping, Tuple, List, Union, Sequence)
 
 from delphin.lnk import Lnk, LnkMixin
 # Default modules need to import the PyDelphin version
@@ -88,7 +88,7 @@ class Predication(LnkMixin):
                  id: Identifier,
                  predicate: str,
                  type: Union[str, None],
-                 lnk: Lnk,
+                 lnk: Optional[Lnk],
                  surface,
                  base):
         super().__init__(lnk, surface)
@@ -109,9 +109,10 @@ class Predication(LnkMixin):
 
 # Structure types
 
-Predications = Iterable[Predication]
+Predications = Sequence[Predication]
 MaybePredication = Union[Predication, None]
 PredicationPair = Tuple[MaybePredication, MaybePredication]
+
 
 class SemanticStructure(LnkMixin):
     """
@@ -133,15 +134,13 @@ class SemanticStructure(LnkMixin):
     __slots__ = ('top', 'predications', 'identifier', '_pidx')
 
     def __init__(self,
-                 top: Identifier,
+                 top: Optional[Identifier],
                  predications: Predications,
-                 lnk: Lnk,
+                 lnk: Optional[Lnk],
                  surface,
                  identifier):
         super().__init__(lnk, surface)
         self.top = top
-        if predications is None:
-            predications = []
         self.predications = predications
         self._pidx = {p.id: p for p in predications}
         self.identifier = identifier

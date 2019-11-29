@@ -3,7 +3,7 @@
 # the warehouse project:
 #   https://github.com/pypa/warehouse/blob/master/warehouse/__about__.py
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 __version_info__ = __version__.replace('.', ' ').replace('-', ' ').split()
 
 __title__ = 'PyDelphin'

@@ -90,4 +90,3 @@ def _decode(lines):
                 newline = True
         else:
             pass
-

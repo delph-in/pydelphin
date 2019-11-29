@@ -16,14 +16,17 @@ class DerivationSyntaxError(PyDelphinSyntaxError):
     """Raised when parsing an invalid UDF string."""
 
 
-_terminal_fields = ('form', 'tokens')
-_token_fields = ('id', 'tfs')
-_nonterminal_fields = ('id', 'entity', 'score', 'start', 'end', 'daughters')
-_udx_fields = ('head', 'type')
-_all_fields = tuple(
-    set(_terminal_fields)
-    .union(_nonterminal_fields)
-    .union(_udx_fields)
+_all_fields = (
+    'form',
+    'tokens',
+    'id',
+    'entity',
+    'score',
+    'start',
+    'end',
+    'daughters',
+    'head',
+    'type',
 )
 
 
@@ -113,7 +116,7 @@ class _UDFNodeBase(object):
         return _to_dict(self, fields, labels)
 
 
-class UDFToken(namedtuple('UDFToken', _token_fields)):
+class UDFToken(namedtuple('UDFToken', 'id tfs')):
     """
     A token represenatation in derivations.
 
@@ -144,7 +147,7 @@ class UDFToken(namedtuple('UDFToken', _token_fields)):
         return self.tfs == other.tfs
 
 
-class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', _terminal_fields)):
+class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', 'form tokens')):
     """
     Terminal nodes in the Unified Derivation Format.
 
@@ -193,7 +196,8 @@ class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', _terminal_fields)):
         return False
 
 
-class UDFNode(_UDFNodeBase, namedtuple('UDFNode', _nonterminal_fields)):
+class UDFNode(_UDFNodeBase,
+              namedtuple('UDFNode', 'id entity score start end daughters')):
     """
     Normal (non-leaf) nodes in the Unified Derivation Format.
 
@@ -507,7 +511,8 @@ def _to_udf(obj, indent, level, udx=False):
                 entity = '^' + entity
             if obj.type:
                 entity = '{}@{}'.format(entity, obj.type)
-        dtrs = [_to_udf(dtr, indent, level+1, udx) for dtr in obj.daughters]
+        dtrs = [_to_udf(dtr, indent, (level + 1), udx)
+                for dtr in obj.daughters]
         dtrs = delim.join([''] + dtrs)  # empty first item to force indent
         if obj.id is None:
             return '({}{})'.format(entity, dtrs)

@@ -187,8 +187,10 @@ class DMRS(scope.ScopingSemanticStructure):
             top = int(top)
         if index:
             index = int(index)
+        if nodes is None:
+            nodes = []
 
-        super().__init__(top, index, nodes, lnk, surface, identifier)
+        super().__init__(top, index, list(nodes), lnk, surface, identifier)
 
         self.links = links
 

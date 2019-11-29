@@ -1,12 +1,19 @@
 
+import pytest
+# The regex library should be used if available; if not, tests may
+# need to be skipped.
+try:
+    import regex
+except ImportError:
+    regex = None
+
 from delphin import repp
 from delphin.lnk import Lnk
 
-def test_REPP():
-    r = repp.REPP
+r = repp.REPP
 
-    # single-module REPP
 
+def test_no_rules():
     x = r().apply('abc')
     assert x.string == 'abc'
     assert x.startmap.tolist() == [1,0,0,0,0]
@@ -17,32 +24,52 @@ def test_REPP():
     assert x.startmap.tolist() == [1,0,0,0,0]
     assert x.endmap.tolist() == [0,0,0,0,-1]
 
+
+def test_no_match():
     x = r.from_string(r'!a	b').apply('ccc')  # no match
     assert x.string == 'ccc'
     assert x.startmap.tolist() == [1, 0, 0, 0, 0]
     assert x.endmap.tolist() == [0, 0, 0, 0, -1]
 
+
+def test_basic_same_len():
     x = r.from_string(r'!a	b').apply('baba')
     assert x.string == 'bbbb'
     assert x.startmap.tolist() == [1,0,0,0,0,0]
     assert x.endmap.tolist() == [0,0,0,0,0,-1]
 
+
+def test_basic_len_change():
     x = r.from_string(r'!a	aa').apply('baba')
     assert x.string == 'baabaa'
     assert x.startmap.tolist() == [1,0,0,-1,-1,-1,-2,-2]
     assert x.endmap.tolist()  == [0,0,0,-1,-1,-1,-2,-3]
 
+
+def test_empty_replacement_issue_252():
+    # https://github.com/delph-in/pydelphin/issues/252
+    x = r.from_string(r'!a	').apply('ab')
+    assert x.string == 'b'
+    assert x.startmap.tolist() == [1,1,1]
+    assert x.endmap.tolist() == [0,1,0]
+
+
+def test_single_capturing_group():
     x = r.from_string(r'!(\w+)	[\1]').apply('abc def')
     assert x.string == '[abc] [def]'
     assert x.startmap.tolist() == [1, 0,-1,-1,-1,-1,-2,-2,-3,-3,-3,-3,-4]
     assert x.endmap.tolist()   == [0,-1,-1,-1,-1,-2,-2,-3,-3,-3,-3,-4,-5]
 
-    # From issue #250
+
+def test_skipped_capturing_group_issue_250():
+    # https://github.com/delph-in/pydelphin/issues/250
     x = r.from_string(r'!(b)(a)	B\2r').apply('baba')
     assert x.string == 'BarBar'
     assert x.startmap.tolist() == [1, 0,-1,-2,-1,-2,-3,-2]
     assert x.endmap.tolist()   == [0, 1, 0,-1, 0,-1,-2,-3]
 
+
+def test_len_change_with_capturing_group():
     x = r.from_string(r"!wo(n't)	will \1").apply("I won't go")
     assert x.string == "I will n't go"
     assert x.startmap.tolist() == [1,0,0,0,-1,-2,-3,-4,-3,-3,-3,-3,-3,-3,-3]
@@ -59,8 +86,16 @@ def test_REPP():
     assert x.tokens[3].form == 'go'
     assert x.tokens[3].lnk == Lnk.charspan(8,10)
 
-    # additional modules/groups
 
+@pytest.mark.skipif(regex is None, reason='regex library is not available')
+def test_local_inline_flags():
+    rpp = r.from_string(r'!a((?i)b)a	c')
+    assert rpp.apply('aba').string == 'c'
+    assert rpp.apply('aBa').string == 'c'
+    assert rpp.apply('AbA').string == 'AbA'
+
+
+def test_basic_external_group_active():
     x = r.from_string('>a', modules={'a': r.from_string(r'!a	b')}, active=['a']).apply('baba')
     assert x.string == 'bbbb'
     assert x.startmap.tolist() == [1,0,0,0,0,0]
@@ -71,11 +106,15 @@ def test_REPP():
     assert x.startmap.tolist() == [1,0,0,0,0,0]
     assert x.endmap.tolist() == [0,0,0,0,0,-1]
 
+
+def test_basic_external_group_inactive():
     x = r.from_string('>a', modules={'a': r.from_string(r'!a	b')}).apply('baba')
     assert x.string == 'baba'
     assert x.startmap.tolist() == [1,0,0,0,0,0]
     assert x.endmap.tolist() == [0,0,0,0,0,-1]
 
+
+def test_multiple_external_groups():
     x = r.from_string('>a\n>b\n>c', modules={'a': r.from_string('!a	b'), 'b': r.from_string('!b	c'), 'c': r.from_string('!c	d')}, active=['a','b','c']).apply('baba')
     assert x.string == 'dddd'
     assert x.startmap.tolist() == [1,0,0,0,0,0]
@@ -86,8 +125,8 @@ def test_REPP():
     assert x.startmap.tolist() == [1,0,0,0,0,0]
     assert x.endmap.tolist() == [0,0,0,0,0,-1]
 
-    # iterative groups
 
+def test_without_iterative_groups():
     x = r.from_string(
         r'!(^| )([()%,])([^ ])	\1\2 \3' '\n'
         r'!([^ ])([()%,])( |$)	\1 \2\3'
@@ -96,6 +135,8 @@ def test_REPP():
     assert x.startmap.tolist() == [1,0, 0,-1,-1,-1,-1,-1,-2,-2]
     assert x.endmap.tolist()   == [0,0,-1,-1,-1,-1,-1,-2,-2,-3]
 
+
+def test_with_iterative_groups():
     x = r.from_string(
         '#1\n'
         r'!(^| )([()%,])([^ ])	\1\2 \3' '\n'
@@ -106,8 +147,6 @@ def test_REPP():
     assert x.string == '( 42 % ) ,'
     assert x.startmap.tolist() == [1,0, 0,-1,-1,-1,-2,-2,-3,-3,-4,-4]
     assert x.endmap.tolist()   == [0,0,-1,-1,-1,-2,-2,-3,-3,-4,-4,-5]
-
-    # tokenization
 
     x = r.from_string(
         '#1\n'

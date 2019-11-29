@@ -3,7 +3,7 @@
 Utility functions.
 """
 
-from typing import Union
+from typing import (Union, Iterable, Iterator, Tuple)
 from pathlib import Path
 import warnings
 import pkgutil
@@ -144,7 +144,8 @@ class _SExprParser(object):
         stack = [[]]
         while i < n:
             c = s[i]
-            if c.isdigit() or c == '-' and s[i+1].isdigit():  # numbers
+            # numbers
+            if c.isdigit() or c == '-' and s[i + 1].isdigit():
                 j = i + 1
                 while s[j].isdigit():
                     j += 1
@@ -171,7 +172,8 @@ class _SExprParser(object):
                         j += 2
                     else:
                         j += 1
-                stack[-1].append(_SExpr_unescape_string(s[i+1:j]))
+                stack[-1].append(
+                    _SExpr_unescape_string(s[i + 1 : j]))  # noqa: E203
                 i = j + 1
             elif c == '(':
                 stack.append([])
@@ -181,7 +183,7 @@ class _SExprParser(object):
                 if len(xs) == 3 and xs[1] == '.':
                     xs = tuple(xs[::2])
                 if len(stack) == 0:
-                    return SExprResult(xs, s[i+1:])
+                    return SExprResult(xs, s[i + 1 :])  # noqa: E203
                 else:
                     stack[-1].append(xs)
                 i += 1
@@ -194,21 +196,18 @@ class _SExprParser(object):
                 stack[-1].append(_SExpr_unescape_symbol(m.group(0)))
                 i += len(m.group(0))
 
-
-# attach an additional method for convenience
-def _format_SExpr(d):
-    if isinstance(d, tuple) and len(d) == 2:
-        return '({} . {})'.format(d[0], d[1])
-    elif isinstance(d, (tuple, list)):
-        return '({})'.format(' '.join(map(_format_SExpr, d)))
-    elif isinstance(d, str):
-        return d
-    else:
-        return repr(d)
+    def format(self, d):
+        if isinstance(d, tuple) and len(d) == 2:
+            return '({} . {})'.format(d[0], d[1])
+        elif isinstance(d, (tuple, list)):
+            return '({})'.format(' '.join(map(self.format, d)))
+        elif isinstance(d, str):
+            return d
+        else:
+            return repr(d)
 
 
 SExpr = _SExprParser()
-SExpr.format = _format_SExpr
 
 
 class LookaheadIterator(object):
@@ -288,6 +287,9 @@ class LookaheadIterator(object):
             self._buffer_fill(n + 1)
             datum = buffer[n]
         return datum
+
+
+_Token = Tuple[int, str, int, int, int]
 
 
 class LookaheadLexer(LookaheadIterator):
@@ -390,10 +392,10 @@ class Lexer(object):
         e.__str__ = lambda self, desc=desc: desc.get(self.name, self.name)
         self.tokentypes = e
 
-    def lex(self, lineiter):
+    def lex(self, lineiter: Iterable[str]) -> LookaheadLexer:
         return LookaheadLexer(self.prelex(lineiter), self._errcls)
 
-    def prelex(self, lineiter):
+    def prelex(self, lineiter: Iterable[str]) -> Iterator[_Token]:
         """
         Lex the input string
 
@@ -467,3 +469,38 @@ def namespace_modules(ns):
     """Return the name to fullname mapping of modules in package *ns*."""
     return {name: '{}.{}'.format(ns.__name__, name)
             for _, name, _ in pkgutil.iter_modules(ns.__path__)}
+
+
+def make_highlighter(fmt):
+    try:
+        import pygments
+        from pygments.formatters import Terminal256Formatter as _formatter
+    except ImportError:
+        return str
+
+    highlight = str  # backoff function
+
+    if fmt == 'simplemrs':
+        try:
+            import delphin.highlight
+        except ImportError:
+            pass
+        else:
+
+            def highlight(text):
+                return pygments.highlight(
+                    text,
+                    delphin.highlight.SimpleMRSLexer(),
+                    _formatter(style=delphin.highlight.MRSStyle))
+
+    elif fmt == 'diff':
+        from pygments.lexers.diff import DiffLexer
+
+        def highlight(text):
+            # this seems to append a newline, so remove it
+            return pygments.highlight(
+                text,
+                DiffLexer(),
+                _formatter()).rstrip('\n')
+
+    return highlight

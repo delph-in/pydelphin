@@ -27,11 +27,12 @@ dependencies or may be platform specific, as shown in the table below:
 Module or Function                 Dependencies  Notes
 =================================  ============  ===========================
 :mod:`delphin.ace`                 ACE_          Linux and Mac only
-:mod:`delphin.web.client`          requests_     ``[web]`` extra (see below)
-:mod:`delphin.web.server`          Falcon_       ``[web]`` extra (see below)
+:mod:`delphin.web.client`          requests_     ``[web]`` extra
+:mod:`delphin.web.server`          Falcon_       ``[web]`` extra
 :func:`delphin.mrs.is_isomorphic`  NetworkX_
 :mod:`delphin.codecs.dmrspenman`   Penman_
 :mod:`delphin.codecs.edspenman`    Penman_
+:mod:`delphin.repp`                regex_        ``[repp]`` extra
 =================================  ============  ===========================
 
 See `Installing Extra Dependencies`_ for information about installing
@@ -43,6 +44,7 @@ are not listed in the table above).
 .. _Falcon: https://falcon.readthedocs.io/
 .. _NetworkX: https://networkx.github.io/
 .. _Penman: https://github.com/goodmami/penman
+.. _regex: https://bitbucket.org/mrabarnett/mrab-regex/
 
 
 Installing from PyPI
@@ -113,24 +115,32 @@ provides. The purpose of keeping these dependencies optional is to
 reduce the install size for users who do not make use of the
 additional features.
 
-If you need to use one of these features, such as `delphin.web`,
-install the extra dependencies with :command:`pip` as before but with
-an install parameter in brackets after ``pydelphin``. For instance::
+If you need to use some of these features, such as `delphin.web` and
+`delphin.repp`, install the extra dependencies with :command:`pip` as
+before but with an install parameter in brackets after
+``pydelphin``. For instance::
 
-  [~]$ pip install pydelphin[web]
+  [~]$ pip install pydelphin[web,repp]
 
-Without the install parameter, the code will still be installed but
-its dependencies will not be. The rest of PyDelphin will work but
-those features may raise an :exc:`ImportError`\.
+Without the install parameter, the PyDelphin code will still be
+installed but its dependencies will not be. The rest of PyDelphin will
+work but those features may raise an :exc:`ImportError` or issue a
+warning.
 
-For developers of PyDelphin there are additional dependencies needed
-to run unit tests and build documentation. These are available via the
-following install parameters:
+In addition, there are some dependencies that are only necessary for
+developers of PyDelphin to run unit tests and build documentation.
 
-- ``test``  -- for unit testing
-- ``doc``   -- for building documentation
-- ``dev``   -- for making releases (also includes ``test`` and ``doc``)
+The extras that PyDelphin defines are as follows:
 
+===========  ================================================================
+Extra        Description
+===========  ================================================================
+``[web]``    Required for using the :mod:`delphin.web` client and server
+``[repp]``   Optional for advanced regex features with :mod:`delphin.repp`
+``[docs]``   Required for building documentation
+``[tests]``  Required for running tests
+``[dev]``    Required for making releases (includes ``tests`` and ``docs``)
+===========  ================================================================
 
 Running Unit Tests
 ------------------

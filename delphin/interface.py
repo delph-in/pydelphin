@@ -4,6 +4,7 @@
 Interfaces for external data providers.
 """
 
+from typing import Optional
 from collections import Sequence
 
 from delphin import util
@@ -32,7 +33,7 @@ class Processor(object):
             `"transfer"`, or `"generate"`)
     """
 
-    task = None
+    task = None  # type: Optional[str]
 
     def process_item(self, datum, keys=None):
         """

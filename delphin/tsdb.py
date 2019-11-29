@@ -5,8 +5,8 @@ Test Suite Database (TSDB) Primitives
 """
 
 from typing import (
-    Union, Iterable, Sequence, Mapping, Tuple, List, Set, Optional,
-    Generator, IO
+    Union, Iterator, Iterable, Sequence, Mapping, Dict, Tuple, List, Set,
+    Optional, Generator, IO, cast as typing_cast
 )
 import re
 from pathlib import Path
@@ -62,10 +62,12 @@ _MONTHS = {
 #############################################################################
 # Local types
 
+RawValue = Union[str, None]
+RawRecord = Sequence[RawValue]
 Value = Union[str, int, float, datetime, None]
 Record = Sequence[Value]
-Relation = Iterable[Record]
-ColumnMap = Mapping[str, Value]  # e.g., a partial Record
+Records = Iterable[Record]
+ColumnMap = Dict[str, Value]  # e.g., a partial Record
 
 
 #############################################################################
@@ -143,7 +145,7 @@ class Field(object):
 
 
 Fields = Sequence[Field]
-FieldIndex = Mapping[str, int]
+FieldIndex = Dict[str, int]
 Schema = Mapping[str, Fields]
 SchemaLike = Union[Schema, util.PathLike]
 
@@ -248,6 +250,34 @@ def _format_schema(schema: Schema) -> str:
 #############################################################################
 # Basic Database Classes
 
+
+class Relation(Records):
+    """
+    A Relation is essentially an iterable of records.
+    """
+    def __init__(self,
+                 dir: util.PathLike,
+                 name: str,
+                 fields: Optional[Fields],
+                 encoding: str = 'utf-8'):
+        self.dir = Path(dir).expanduser()
+        self.name = name
+        self.fields = fields
+        self.encoding = encoding
+        self._generator = (split(line, fields=fields)
+                           for line in open(self.dir, name,
+                                            encoding=self.encoding))
+
+    def __next__(self) -> Record:
+        return next(self._generator)
+
+    def __iter__(self) -> Iterator[Record]:
+        yield from self._generator
+
+    def close(self) -> None:
+        self._generator.close()
+
+
 class Database(object):
     """
     A basic abstraction of a TSDB database.
@@ -291,18 +321,17 @@ class Database(object):
         self.encoding = encoding
 
     @property
-    def path(self) -> util.PathLike:
+    def path(self) -> Path:
         """The database directory's path."""
         return self._path
 
-    def __getitem__(self, name: str) -> Generator[Record, None, None]:
+    def __getitem__(self, name: str) -> Relation:
         if name not in self.schema:
             raise TSDBError('relation not defined in schema: {}'.format(name))
         fields = None
         if self.autocast:
             fields = self.schema[name]
-        return (split(line, fields=fields)
-                for line in open(self._path, name, encoding=self.encoding))
+        return Relation(self._path, name, fields, encoding=self.encoding)
 
     def __iter__(self):
         return iter(self.schema)
@@ -312,7 +341,7 @@ class Database(object):
 
     def select_from(self, name: str,
                     columns: Iterable[str] = None,
-                    cast: bool = False):
+                    cast: bool = False) -> Generator[Record, None, None]:
         """
         Yield values for *columns* from relation *name*.
         """
@@ -323,7 +352,8 @@ class Database(object):
         indices = [index[column] for column in columns]
         records = self[name]
         for record in records:
-            if cast:
+            if cast and not self.autocast:
+                record = typing_cast(RawRecord, record)
                 # _cast is a copy of the function cast()
                 data = tuple(_cast(fields[idx].datatype, record[idx])
                              for idx in indices)
@@ -331,6 +361,23 @@ class Database(object):
                 data = tuple(record[idx] for idx in indices)
             yield data
         records.close()
+
+    def _select_raw(
+            self,
+            name: str,
+            columns: Iterable[str] = None) -> Generator[RawRecord, None, None]:
+        if name not in self.schema:
+            raise TSDBError('relation not defined in schema: {}'.format(name))
+        fields = self.schema[name]
+        if columns is None:
+            indices = list(range(len(fields)))
+        else:
+            index = make_field_index(fields)
+            indices = [index[column] for column in columns]
+        with open(self._path, name, encoding=self.encoding) as file:
+            for line in file:
+                record = typing_cast(RawRecord, split(line, fields=None))
+                yield tuple(record[idx] for idx in indices)
 
 
 #############################################################################
@@ -369,12 +416,31 @@ def unescape(string: str) -> str:
         string (str): TSDB-escaped string
     Returns:
         The string with escape sequences replaced
+
     """
-    # str.replace()... is about 3-4x faster than re.sub() here
-    return (string
-            .replace('\\\\', '\\')  # must be done first
-            .replace('\\n', '\n')
-            .replace('\\s', FIELD_DELIMITER))
+    # unescape cannot use multiple str.replace() calls because of
+    # examples like '\\\\s' which turn into '@' instead of '\\s'
+    chars = []  # type: List[str]
+    esc = False
+    for c in string:
+        if esc:
+            if c == '\\':
+                chars.append('\\')
+            elif c == 's':
+                chars.append('@')
+            elif c == 'n':
+                chars.append('\n')
+            else:
+                raise TSDBError('invalid escape sequence: \\' + c)
+            esc = False
+        elif c == '\\':
+            esc = True
+        else:
+            chars.append(c)
+    if esc:
+        raise TSDBError(
+            'invalid escape at end-of-string: {!r}'.format(string))
+    return ''.join(chars)
 
 
 def split(line: str,
@@ -456,7 +522,7 @@ def make_record(colmap: ColumnMap, fields: Fields) -> Record:
         colmap: mapping of column names to values
         fields: iterable of :class:`Field` objects
     Returns:
-        A list of column values
+        A tuple of column values
     """
     return tuple(colmap.get(f.name, None) for f in fields)
 
@@ -469,8 +535,8 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
     returned, regardless of the *datatype*. However, when *datatype*
     is `:integer` and *raw_value* is `'-1'` (the default value for
     most `:integer` columns), `-1` is returned instead of `None`. This
-    means that :func:`cast` the inverse of :func:`format` except for
-    integer values of `-1`, some date formats, and coded defaults.
+    means that :func:`cast` is the inverse of :func:`format` except
+    for integer values of `-1`, some date formats, and coded defaults.
 
     Supported datatypes:
 
@@ -517,6 +583,8 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
     """
     if raw_value is None or raw_value == '':
         return None
+    elif not isinstance(raw_value, str):
+        raise TypeError("cast() argument 'raw_value' must be a string or None")
     elif datatype == ':integer':
         return int(raw_value)
     elif datatype == ':float':
@@ -534,7 +602,7 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
 _cast = cast
 
 
-def _parse_datetime(s: str) -> datetime:
+def _parse_datetime(s: str) -> Union[datetime, None]:
     if re.match(r':?(today|now)', s):
         return datetime.now()
 
@@ -561,11 +629,10 @@ def _parse_datetime(s: str) -> datetime:
         s = _date_fix(m)
 
     try:
-        dt = datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
+        return datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         warnings.warn('Invalid date field: {!r}'.format(s), TSDBWarning)
-        dt = None
-    return dt
+        return None
 
 
 def _date_fix(mo):
@@ -627,9 +694,9 @@ def format(datatype: str,
         raw_value = str(value)
     return raw_value
 
+
 #############################################################################
 # Files
-
 
 def is_database_directory(path: util.PathLike) -> bool:
     """
@@ -767,6 +834,8 @@ def write(dir: util.PathLike,
         ...            item_records,
         ...            schema['item'])
     """
+    dir = Path(dir).expanduser()
+
     if encoding is None:
         encoding = 'utf-8'
 
@@ -840,9 +909,9 @@ def initialize_database(path: util.PathLike,
 
 def write_database(db: Database,
                    path: util.PathLike,
-                   names: Optional[Iterable[str]] = None,
+                   names: Iterable[str] = None,
                    schema: SchemaLike = None,
-                   gzip: Optional[bool] = None,
+                   gzip: bool = False,
                    encoding: str = 'utf-8') -> None:
     """
     Write TSDB database *db* to *path*.
@@ -870,8 +939,7 @@ def write_database(db: Database,
         schema: the destination database schema; if `None` use the
             schema of *db*
         gzip: if `True`, compress all non-empty files; if `False`, do
-            not compress; if `None` compress if overwriting an
-            existing compressed file
+            not compress
         encoding: character encoding for the database files
     """
     path = Path(path).expanduser()
@@ -891,15 +959,14 @@ def write_database(db: Database,
 
     for name in names:
         fields = schema[name]
+        relation = []  # type: Iterable[Record]
         if name in db.schema:
             try:
                 relation = db[name]
             except (TSDBError, KeyError):
-                relation = []
+                pass
             if remake_records:
                 relation = _remake_records(relation, db.schema[name], fields)
-        else:
-            relation = []
         write(path,
               name,
               relation,

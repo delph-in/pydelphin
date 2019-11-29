@@ -103,7 +103,9 @@ class EDS(SemanticStructure):
                  lnk: Lnk = None,
                  surface=None,
                  identifier=None):
-        super().__init__(top, nodes, lnk, surface, identifier)
+        if nodes is None:
+            nodes = []
+        super().__init__(top, list(nodes), lnk, surface, identifier)
 
     @property
     def nodes(self):
