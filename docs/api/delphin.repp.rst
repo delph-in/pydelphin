@@ -56,3 +56,6 @@ Exceptions
 
 .. autoexception:: REPPError
    :show-inheritance:
+
+.. autoexception:: REPPWarning
+   :show-inheritance:

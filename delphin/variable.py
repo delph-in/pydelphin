@@ -55,7 +55,7 @@ def type(var):
     return split(var)[0]
 
 
-sort = type
+sort = type  #: :func:`sort` is an alias for :func:`type`.
 
 
 def id(var):

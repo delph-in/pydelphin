@@ -173,3 +173,10 @@ delphin.derivation
       .. py:attribute:: form
 
          The feature structure for the token.
+
+
+   Exceptions
+   ----------
+
+   .. autoexception:: DerivationSyntaxError
+      :show-inheritance:

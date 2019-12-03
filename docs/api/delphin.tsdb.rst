@@ -179,3 +179,6 @@ delphin.tsdb
 
    .. autoexception:: TSDBError
       :show-inheritance:
+
+   .. autoexception:: TSDBWarning
+      :show-inheritance:

@@ -68,12 +68,18 @@ delphin.variable
       x := i & p.  ; e   x   h
       h := p.
 
-   In PyDelphin the equivalent hierarchy could be created as follows:
+   In PyDelphin the equivalent hierarchy could be created as follows
+   with a :class:`delphin.hierarchy.MultiHierarchy`:
 
    >>> from delphin import hierarchy
    >>> h = hierarchy.MultiHierarchy(
    ...     '*top*',
-   ...     {'u': '*top*', 'i': 'u', 'p': 'u', 'e': 'i', 'x': 'i p', 'h': 'p'}
+   ...     {'u': '*top*',
+   ...      'i': 'u',
+   ...      'p': 'u',
+   ...      'e': 'i',
+   ...      'x': 'i p',
+   ...      'h': 'p'}
    ... )
 
 
@@ -111,6 +117,7 @@ delphin.variable
    ----------------
 
    .. autofunction:: split
+   .. autofunction:: type
    .. autofunction:: sort
    .. autofunction:: id
    .. autofunction:: is_valid

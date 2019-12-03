@@ -116,3 +116,6 @@ delphin.tsql
 
    .. autoexception:: TSQLSyntaxError
       :show-inheritance:
+
+   .. autoexception:: TSQLError
+      :show-inheritance:
