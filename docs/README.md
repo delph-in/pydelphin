@@ -15,7 +15,7 @@ $ pip install path/to/pydelphin[docs]
 ```
 
 For more information, see the documentation about [installing from
-source][] and [intalling extra dependencies][].  After these steps
+source][] and [installing extra dependencies][].  After these steps
 complete, you should be able to build the documentation.
 
 [installing from source]: https://pydelphin.readthedocs.io/en/latest/guides/setup.html#installing-from-source
