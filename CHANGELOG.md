@@ -9,6 +9,8 @@ these changes are prefixed with "**BREAKING**"
 
 ## [v1.0.3][]
 
+**Release date: 2019-11-29**
+
 Resolves some more REPP bugs, improves logging, and ensures the code statically
 type-checks.
 
@@ -39,6 +41,8 @@ type-checks.
 
 ## [v1.0.2][]
 
+**Release date: 2019-08-21**
+
 Resolves a REPP processing bug and improves REPP performance.
 
 ### Fixed
@@ -53,6 +57,8 @@ Resolves a REPP processing bug and improves REPP performance.
 
 ## [v1.0.1][]
 
+**Release date: 2019-08-15**
+
 Resolves some bugs related to DMRS-to-MRS conversion.
 
 ### Fixed
@@ -66,6 +72,8 @@ Resolves some bugs related to DMRS-to-MRS conversion.
 * `delphin.mrs.MRS` can now be instantiated with an empty structure
 
 ## [v1.0.0][]
+
+**Release date: 2019-08-14**
 
 This is the largest release of PyDelphin yet, with over a year of work
 and several years of ideas worked in. The changes are so numerous that
@@ -150,6 +158,8 @@ documented.
 
 ## [v0.9.2][]
 
+**Release date: 2019-04-01**
+
 ### Python Versions
 
 * Added Python 3.7 support
@@ -203,6 +213,8 @@ documented.
 
 ## [v0.9.1][]
 
+**Release date: 2018-10-31**
+
 ### Fixed
 
 * `delphin.tfs.TypedFeatureStructure` no longer duplicates attributes
@@ -216,6 +228,8 @@ documented.
   `delphin/__init__.py` ([#190][])
 
 ## [v0.9.0][]
+
+**Release date: 2018-10-20**
 
 This release introduces a completely redone TDL parser that follows
 the description of TDL syntax at http://moin.delph-in.net/TdlRfc based
@@ -329,6 +343,8 @@ See the rest of the changelog for additional improvements.
 
 ## [v0.8.0][]
 
+**Release date: 2018-08-23**
+
 This release improves EDS support, cleans up the code, makes the codecs
 consistent and makes predicate support harmonious with Delphin. This is the
 first release by the new maintainer, Angie McMillan-Major.
@@ -407,6 +423,8 @@ first release by the new maintainer, Angie McMillan-Major.
 
 ## [v0.7.2][]
 
+**Release date: 2018-06-12**
+
 This is a very minor release that just fixes one bug introduced in v0.7.1.
 
 ### Fixed
@@ -415,6 +433,8 @@ This is a very minor release that just fixes one bug introduced in v0.7.1.
   info from the first line of output ([#148][])
 
 ## [v0.7.1][]
+
+**Release date: 2018-06-09**
 
 There were some bugs in the last release, particularly with Python 2.7, which
 have been addressed in this release. There is one significant new feature,
@@ -474,6 +494,8 @@ which is the ability to process [incr tsdb()] profiles, either with the
 * Made `delphin.itsdb` more compatible with Python 2.7
 
 ## [v0.7.0][]
+
+**Release date: 2018-05-08**
 
 This release adds a number of features. The main ones include a redone
 [incr tsdb()] module, Prolog MRS export, and a REPP tokenizer. This
@@ -569,6 +591,8 @@ and removes or mitigates several dependencies.
 
 ## [v0.6.2][]
 
+**Release date: 2017-06-02**
+
 ### Added
 
 * `delphin.itsdb.ItsdbProfile.exists()` ([#112][])
@@ -589,6 +613,8 @@ and removes or mitigates several dependencies.
 * `is_valid_pred_string()` no longer requires `_rel` ([#111][])
 
 ## [v0.6.1][]
+
+**Release date: 2017-04-06**
 
 This minor release fixes a number of bugs with the ACE interface and a
 number of small bugs that came up during testing. While a minor release,
@@ -621,6 +647,8 @@ functions.
 * `delphin.mrs.simplemrs` fix error message on unexpected token
 
 ## [v0.6.0][]
+
+**Release date: 2017-01-20**
 
 This release replaces the top-level `pyDelphin` and `mrs.py` scripts
 with `delphin.sh` (when installed, a `delphin` command is made available
@@ -689,6 +717,8 @@ fixed or the functionality is deprecated.
 
 ## [v0.5.1][]
 
+**Release date: 2016-07-19**
+
 This minor release adds support for getting more parse information
 from ACE (via the ACE 0.9.24's `--tsdb-stdout`), updates derivation
 objects so UDX fields (e.g. `type`) can appear on all nonterminals,
@@ -738,6 +768,8 @@ and adds support for YY token lattices.
 
 ## [v0.5.0][]
 
+**Release date: 2016-06-19**
+
 ### Added
 
 * `delphin.interfaces.rest` ([#66][])
@@ -779,6 +811,8 @@ and adds support for YY token lattices.
   but should be significantly better.
 
 ## [v0.4.1][]
+
+**Release date: 2016-04-21**
 
 This release fixes a number of bugs and adds some minor features. The
 `delphin.mrs.query` module has also been fixed and tested to work with
@@ -835,6 +869,8 @@ the current version.
   - `nodeid()` (use `xmrs.nodeid()`)
 
 ## [v0.4.0][]
+
+**Release date: 2016-03-04**
 
 This release fixes a number of bugs (including fixes from two new
 contributors; see the [README][]), and adds some minor features:
@@ -896,6 +932,8 @@ supported and tested).
   of some TypedFeatureStructure
 
 ## [v0.3][]
+
+**Release date: 2015-08-25**
 
 This release simplifies the pyDelphin core classes and improves
 performance for many MRS tasks. Most significantly, the inspection
@@ -1027,11 +1065,14 @@ tests for pyDelphin.
 
 ## [v0.2][]
 
+**Release date: 2015-06-26**
+
 There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.0.3]: ../../releases/tag/v1.0.3
 [v1.0.2]: ../../releases/tag/v1.0.2
 [v1.0.1]: ../../releases/tag/v1.0.1
 [v1.0.0]: ../../releases/tag/v1.0.0
@@ -1053,102 +1094,102 @@ information about changes, except for
 [v0.2]: ../../releases/tag/v0.2
 [README]: README.md
 
-[#8]: https://github.com/delph-in/issues/8
-[#25]: https://github.com/delph-in/issues/25
-[#26]: https://github.com/delph-in/issues/26
-[#43]: https://github.com/delph-in/issues/43
-[#66]: https://github.com/delph-in/issues/66
-[#68]: https://github.com/delph-in/issues/68
-[#68]: https://github.com/delph-in/issues/68
-[#70]: https://github.com/delph-in/issues/70
-[#75]: https://github.com/delph-in/issues/75
-[#81]: https://github.com/delph-in/issues/81
-[#82]: https://github.com/delph-in/issues/82
-[#84]: https://github.com/delph-in/issues/84
-[#85]: https://github.com/delph-in/issues/85
-[#86]: https://github.com/delph-in/issues/86
-[#86]: https://github.com/delph-in/issues/86
-[#87]: https://github.com/delph-in/issues/87
-[#89]: https://github.com/delph-in/issues/89
-[#91]: https://github.com/delph-in/issues/91
-[#92]: https://github.com/delph-in/issues/92
-[#93]: https://github.com/delph-in/issues/93
-[#95]: https://github.com/delph-in/issues/95
-[#96]: https://github.com/delph-in/issues/96
-[#97]: https://github.com/delph-in/issues/97
-[#97]: https://github.com/delph-in/issues/97
-[#98]: https://github.com/delph-in/issues/98
-[#99]: https://github.com/delph-in/issues/99
-[#100]: https://github.com/delph-in/issues/100
-[#101]: https://github.com/delph-in/issues/101
-[#103]: https://github.com/delph-in/issues/103
-[#104]: https://github.com/delph-in/issues/104
-[#104]: https://github.com/delph-in/issues/104
-[#105]: https://github.com/delph-in/issues/105
-[#105]: https://github.com/delph-in/issues/105
-[#106]: https://github.com/delph-in/issues/106
-[#107]: https://github.com/delph-in/issues/107
-[#108]: https://github.com/delph-in/issues/108
-[#109]: https://github.com/delph-in/issues/109
-[#110]: https://github.com/delph-in/issues/110
-[#111]: https://github.com/delph-in/issues/111
-[#111]: https://github.com/delph-in/issues/111
-[#112]: https://github.com/delph-in/issues/112
-[#112]: https://github.com/delph-in/issues/112
-[#114]: https://github.com/delph-in/issues/114
-[#114]: https://github.com/delph-in/issues/114
-[#115]: https://github.com/delph-in/issues/115
-[#116]: https://github.com/delph-in/issues/116
-[#117]: https://github.com/delph-in/issues/117
-[#119]: https://github.com/delph-in/issues/119
-[#125]: https://github.com/delph-in/issues/125
-[#126]: https://github.com/delph-in/issues/126
-[#128]: https://github.com/delph-in/issues/128
-[#129]: https://github.com/delph-in/issues/129
-[#133]: https://github.com/delph-in/issues/133
-[#137]: https://github.com/delph-in/issues/137
-[#138]: https://github.com/delph-in/issues/138
-[#140]: https://github.com/delph-in/issues/140
-[#141]: https://github.com/delph-in/issues/141
-[#145]: https://github.com/delph-in/issues/145
-[#148]: https://github.com/delph-in/issues/148
-[#149]: https://github.com/delph-in/issues/149
-[#150]: https://github.com/delph-in/issues/150
-[#150]: https://github.com/delph-in/issues/150
-[#150]: https://github.com/delph-in/issues/150
-[#152]: https://github.com/delph-in/issues/152
-[#153]: https://github.com/delph-in/issues/153
-[#155]: https://github.com/delph-in/issues/155
-[#156]: https://github.com/delph-in/issues/156
-[#157]: https://github.com/delph-in/issues/157
-[#160]: https://github.com/delph-in/issues/160
-[#161]: https://github.com/delph-in/issues/161
-[#164]: https://github.com/delph-in/issues/164
-[#167]: https://github.com/delph-in/issues/167
-[#167]: https://github.com/delph-in/issues/167
-[#168]: https://github.com/delph-in/issues/168
-[#168]: https://github.com/delph-in/issues/168
-[#168]: https://github.com/delph-in/issues/168
-[#168]: https://github.com/delph-in/issues/168
-[#168]: https://github.com/delph-in/issues/168
-[#169]: https://github.com/delph-in/issues/169
-[#170]: https://github.com/delph-in/issues/170
-[#172]: https://github.com/delph-in/issues/172
-[#179]: https://github.com/delph-in/issues/179
-[#180]: https://github.com/delph-in/issues/180
-[#181]: https://github.com/delph-in/issues/181
-[#186]: https://github.com/delph-in/issues/186
-[#187]: https://github.com/delph-in/issues/187
-[#190]: https://github.com/delph-in/issues/190
-[#191]: https://github.com/delph-in/issues/191
-[#192]: https://github.com/delph-in/issues/192
-[#200]: https://github.com/delph-in/issues/200
-[#203]: https://github.com/delph-in/issues/203
-[#213]: https://github.com/delph-in/issues/213
-[#247]: https://github.com/delph-in/issues/247
-[#248]: https://github.com/delph-in/issues/248
-[#249]: https://github.com/delph-in/issues/249
-[#250]: https://github.com/delph-in/issues/250
-[#252]: https://github.com/delph-in/issues/252
-[#253]: https://github.com/delph-in/issues/253
-[#257]: https://github.com/delph-in/issues/257
+[#8]: https://github.com/delph-in/pydelphin/issues/8
+[#25]: https://github.com/delph-in/pydelphin/issues/25
+[#26]: https://github.com/delph-in/pydelphin/issues/26
+[#43]: https://github.com/delph-in/pydelphin/issues/43
+[#66]: https://github.com/delph-in/pydelphin/issues/66
+[#68]: https://github.com/delph-in/pydelphin/issues/68
+[#68]: https://github.com/delph-in/pydelphin/issues/68
+[#70]: https://github.com/delph-in/pydelphin/issues/70
+[#75]: https://github.com/delph-in/pydelphin/issues/75
+[#81]: https://github.com/delph-in/pydelphin/issues/81
+[#82]: https://github.com/delph-in/pydelphin/issues/82
+[#84]: https://github.com/delph-in/pydelphin/issues/84
+[#85]: https://github.com/delph-in/pydelphin/issues/85
+[#86]: https://github.com/delph-in/pydelphin/issues/86
+[#86]: https://github.com/delph-in/pydelphin/issues/86
+[#87]: https://github.com/delph-in/pydelphin/issues/87
+[#89]: https://github.com/delph-in/pydelphin/issues/89
+[#91]: https://github.com/delph-in/pydelphin/issues/91
+[#92]: https://github.com/delph-in/pydelphin/issues/92
+[#93]: https://github.com/delph-in/pydelphin/issues/93
+[#95]: https://github.com/delph-in/pydelphin/issues/95
+[#96]: https://github.com/delph-in/pydelphin/issues/96
+[#97]: https://github.com/delph-in/pydelphin/issues/97
+[#97]: https://github.com/delph-in/pydelphin/issues/97
+[#98]: https://github.com/delph-in/pydelphin/issues/98
+[#99]: https://github.com/delph-in/pydelphin/issues/99
+[#100]: https://github.com/delph-in/pydelphin/issues/100
+[#101]: https://github.com/delph-in/pydelphin/issues/101
+[#103]: https://github.com/delph-in/pydelphin/issues/103
+[#104]: https://github.com/delph-in/pydelphin/issues/104
+[#104]: https://github.com/delph-in/pydelphin/issues/104
+[#105]: https://github.com/delph-in/pydelphin/issues/105
+[#105]: https://github.com/delph-in/pydelphin/issues/105
+[#106]: https://github.com/delph-in/pydelphin/issues/106
+[#107]: https://github.com/delph-in/pydelphin/issues/107
+[#108]: https://github.com/delph-in/pydelphin/issues/108
+[#109]: https://github.com/delph-in/pydelphin/issues/109
+[#110]: https://github.com/delph-in/pydelphin/issues/110
+[#111]: https://github.com/delph-in/pydelphin/issues/111
+[#111]: https://github.com/delph-in/pydelphin/issues/111
+[#112]: https://github.com/delph-in/pydelphin/issues/112
+[#112]: https://github.com/delph-in/pydelphin/issues/112
+[#114]: https://github.com/delph-in/pydelphin/issues/114
+[#114]: https://github.com/delph-in/pydelphin/issues/114
+[#115]: https://github.com/delph-in/pydelphin/issues/115
+[#116]: https://github.com/delph-in/pydelphin/issues/116
+[#117]: https://github.com/delph-in/pydelphin/issues/117
+[#119]: https://github.com/delph-in/pydelphin/issues/119
+[#125]: https://github.com/delph-in/pydelphin/issues/125
+[#126]: https://github.com/delph-in/pydelphin/issues/126
+[#128]: https://github.com/delph-in/pydelphin/issues/128
+[#129]: https://github.com/delph-in/pydelphin/issues/129
+[#133]: https://github.com/delph-in/pydelphin/issues/133
+[#137]: https://github.com/delph-in/pydelphin/issues/137
+[#138]: https://github.com/delph-in/pydelphin/issues/138
+[#140]: https://github.com/delph-in/pydelphin/issues/140
+[#141]: https://github.com/delph-in/pydelphin/issues/141
+[#145]: https://github.com/delph-in/pydelphin/issues/145
+[#148]: https://github.com/delph-in/pydelphin/issues/148
+[#149]: https://github.com/delph-in/pydelphin/issues/149
+[#150]: https://github.com/delph-in/pydelphin/issues/150
+[#150]: https://github.com/delph-in/pydelphin/issues/150
+[#150]: https://github.com/delph-in/pydelphin/issues/150
+[#152]: https://github.com/delph-in/pydelphin/issues/152
+[#153]: https://github.com/delph-in/pydelphin/issues/153
+[#155]: https://github.com/delph-in/pydelphin/issues/155
+[#156]: https://github.com/delph-in/pydelphin/issues/156
+[#157]: https://github.com/delph-in/pydelphin/issues/157
+[#160]: https://github.com/delph-in/pydelphin/issues/160
+[#161]: https://github.com/delph-in/pydelphin/issues/161
+[#164]: https://github.com/delph-in/pydelphin/issues/164
+[#167]: https://github.com/delph-in/pydelphin/issues/167
+[#167]: https://github.com/delph-in/pydelphin/issues/167
+[#168]: https://github.com/delph-in/pydelphin/issues/168
+[#168]: https://github.com/delph-in/pydelphin/issues/168
+[#168]: https://github.com/delph-in/pydelphin/issues/168
+[#168]: https://github.com/delph-in/pydelphin/issues/168
+[#168]: https://github.com/delph-in/pydelphin/issues/168
+[#169]: https://github.com/delph-in/pydelphin/issues/169
+[#170]: https://github.com/delph-in/pydelphin/issues/170
+[#172]: https://github.com/delph-in/pydelphin/issues/172
+[#179]: https://github.com/delph-in/pydelphin/issues/179
+[#180]: https://github.com/delph-in/pydelphin/issues/180
+[#181]: https://github.com/delph-in/pydelphin/issues/181
+[#186]: https://github.com/delph-in/pydelphin/issues/186
+[#187]: https://github.com/delph-in/pydelphin/issues/187
+[#190]: https://github.com/delph-in/pydelphin/issues/190
+[#191]: https://github.com/delph-in/pydelphin/issues/191
+[#192]: https://github.com/delph-in/pydelphin/issues/192
+[#200]: https://github.com/delph-in/pydelphin/issues/200
+[#203]: https://github.com/delph-in/pydelphin/issues/203
+[#213]: https://github.com/delph-in/pydelphin/issues/213
+[#247]: https://github.com/delph-in/pydelphin/issues/247
+[#248]: https://github.com/delph-in/pydelphin/issues/248
+[#249]: https://github.com/delph-in/pydelphin/issues/249
+[#250]: https://github.com/delph-in/pydelphin/issues/250
+[#252]: https://github.com/delph-in/pydelphin/issues/252
+[#253]: https://github.com/delph-in/pydelphin/issues/253
+[#257]: https://github.com/delph-in/pydelphin/issues/257
