@@ -7,6 +7,10 @@ these changes are prefixed with "**BREAKING**"
 
 (no unreleased changes yet)
 
+### Added
+
+* `requirements.txt` mainly to try and help GitHub detect dependencies
+
 ### Changed
 
 * `delphin.mrs.is_isomorphic()` no longer uses NetworkX
