@@ -1,4 +1,4 @@
-sphinx==2.1.2
+sphinx==2.2.0
 sphinx-rtd-theme==0.4.3
 sphinx_autodoc_typehints==1.6.0
 delphin.highlight==1.0.0

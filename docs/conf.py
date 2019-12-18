@@ -47,7 +47,6 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
-    'sphinx_autodoc_typehints',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -194,14 +193,8 @@ intersphinx_mapping = {
 napoleon_use_rtype = False
 
 
-# -- Options for Sphinx-Autodoc-Typehints extension --------------------------
+# -- Options for autodoc extension -------------------------------------------
 
-# see https://github.com/agronholm/sphinx-autodoc-typehints/pull/78
-# drop_type_annotations = True
+# disable type hints
 
-import sphinx_autodoc_typehints
-
-def dummy_process_docstring(app, what, name, obj, options, lines):
-    pass
-
-sphinx_autodoc_typehints.process_docstring = dummy_process_docstring
+autodoc_typehints = 'none'

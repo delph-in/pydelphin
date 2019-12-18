@@ -10,7 +10,8 @@ these changes are prefixed with "**BREAKING**"
 ### Changed
 
 * `delphin.mrs.is_isomorphic()` no longer uses NetworkX
-
+* Docs no longer require the `sphinx_autodoc_typehints` package as of
+  Sphinx 2.2.0
 
 ## [v1.0.3][]
 
