@@ -3,12 +3,13 @@
 Utility functions.
 """
 
-from typing import (Union, Iterable, Iterator, Tuple)
+from typing import (Union, Iterable, Iterator, Dict, List, Tuple)
 from pathlib import Path
 import warnings
 import pkgutil
 import codecs
 import re
+from itertools import permutations
 from collections import deque, namedtuple
 from functools import wraps
 from enum import IntEnum
@@ -86,6 +87,90 @@ def _connected_components(nodes, edges):
             seen.update(component)
             components.append(component)
     return components
+
+
+def _isomorphism(g1, g2, top1, top2) -> Dict[str, str]:
+    """
+    Return the first isomorphism found for graphs *g1* and *g2*.
+
+    Start from *top1* and *top2*.
+
+    *g1* and *g2* are dictionaries mapping each node id to inner
+    dictionaries that map node ids to some data where there exists an
+    edge between the two node target. The data is an arbitrary string
+    used for matching heuristics.
+
+    This assumes that the graphs are not multigraphs.
+    """
+    _iso_inv_map(g1)
+    _iso_inv_map(g2)
+
+    hypothesis = {}  # type: Dict[str, str]
+    agenda = next(
+        _iso_candidates({top1: None}, {top2: None}, g1, g2, hypothesis),
+        [])  # type: List[Tuple[str, str]]
+    return next(_iso_vf2(hypothesis, g1, g2, agenda), {})
+
+
+def _iso_inv_map(d):
+    """
+    Augment *d* with inverse mappings.
+
+    Assumes *d* is not a multigraph.
+    """
+    _d = {}
+    for src, d2 in d.items():
+        for tgt, data in d2.items():
+            if tgt is not None and src != tgt:
+                if tgt not in _d:
+                    _d[tgt] = {}
+                _d[tgt][src] = '--' + data
+    for k, d2 in _d.items():
+        d[k].update(d2)
+
+
+def _iso_vf2(hyp, g1, g2, agenda):
+    # base case
+    if len(hyp) == len(g1) or not agenda:
+        yield hyp
+    n1, n2 = agenda.pop()
+    # get edges, filter node data and self edges
+    n1s = {n: d for n, d in g1[n1].items() if n is not None and n != n1}
+    n2s = {n: d for n, d in g2[n2].items() if n is not None and n != n2}
+    # update the current state
+    new_hyp = dict(hyp)
+    new_hyp[n1] = n2
+    for c_agenda in _iso_candidates(n1s, n2s, g1, g2, new_hyp):
+        yield from _iso_vf2(new_hyp, g1, g2, agenda + c_agenda)
+
+
+def _iso_candidates(n1s, n2s, g1, g2, hyp):
+    # get the inverse mapping for faster reverse lookups
+    inv = {n2: n1 for n1, n2 in hyp.items()}
+    for _n2s in permutations(list(n2s)):
+        # filter out bad mappings
+        agenda = []
+        for n1, n2 in zip(list(n1s), _n2s):
+            if hyp.get(n1) == n2 and inv.get(n2) == n1:
+                continue  # no issue, but don't add to agenda
+            elif n1 in hyp or n2 in inv:
+                agenda = []  # already traversed, not compatible
+                break
+            elif len(g1[n1]) != len(g2[n2]):
+                agenda = []  # incompatible arity
+                break
+            elif g1[n1].get(None) != g2[n2].get(None):
+                agenda = []  # incompatible node data
+                break
+            elif n1s[n1] != n2s[n2]:
+                agenda = []  # incompatible edge data
+                break
+            else:
+                agenda.append((n1, n2))
+        if agenda:
+            yield agenda
+    # Finally yield an empty agenda because there's nothing to do
+    yield []
 
 
 # unescaping escaped strings (potentially with unicode)

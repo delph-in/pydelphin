@@ -62,7 +62,6 @@ setup(
     ],
     install_requires=[
         'penman==0.6.2',
-        'networkx==2.3',
     ],
     extras_require={
         'docs': docs_require,

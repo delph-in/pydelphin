@@ -243,8 +243,8 @@ class MRS(scope.ScopingSemanticStructure):
         if variables is None:
             variables = {}
 
-        self.hcons = hcons
-        self.icons = icons
+        self.hcons = list(hcons)
+        self.icons = list(icons)
         self.variables = _fill_variables(
             variables, top, index, rels, hcons, icons)
 

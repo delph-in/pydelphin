@@ -3,7 +3,7 @@
 Operations on MRS structures
 """
 
-from typing import Iterable, Dict, Set
+from typing import Iterable, Dict, Set, Optional
 
 from delphin import variable
 from delphin import predicate
@@ -154,19 +154,25 @@ def is_isomorphic(m1: mrs.MRS,
         properties: if `True`, ensure variable properties are
             equal for mapped predications
     """
-    # loading NetworkX is slow; only do this when is_isomorphic is called
-    import networkx as nx
+    # simple tests
+    if (len(m1.rels) != len(m2.rels)
+            or len(m1.hcons) != len(m2.hcons)
+            or len(m1.icons) != len(m2.icons)
+            or len(m1.variables) != len(m2.variables)):
+        return False
 
-    m1dg = _make_mrs_digraph(m1, nx.DiGraph(), properties)
-    m2dg = _make_mrs_digraph(m2, nx.DiGraph(), properties)
+    g1 = _make_mrs_isograph(m1, properties)
+    g2 = _make_mrs_isograph(m2, properties)
 
-    def nem(m1d, m2d):  # node-edge-match
-        return m1d.get('sig') == m2d.get('sig')
-
-    return nx.is_isomorphic(m1dg, m2dg, node_match=nem, edge_match=nem)
+    iso = util._isomorphism(g1, g2, m1.top, m2.top)
+    return set(iso) == set(g1)
 
 
-def _make_mrs_digraph(x, dg, properties):
+def _make_mrs_isograph(x, properties):
+    g = {}  # type: Dict[Identifier, Dict[Optional[Identifier], str]]
+    g.update((v, {}) for v in x.variables)
+    g.update((ep.id, {}) for ep in x.rels)
+
     for ep in x.rels:
         # optimization: retrieve early to avoid successive lookup
         lbl = ep.label
@@ -175,7 +181,7 @@ def _make_mrs_digraph(x, dg, properties):
         args = ep.args
         carg = ep.carg
         # scope labels (may be targets of arguments or hcons)
-        dg.add_edge(lbl, id, sig='eq-scope')
+        g[lbl][id] = 'eq-scope'
         # predicate-argument structure
         s = predicate.normalize(ep.predicate)
         if carg is not None:
@@ -186,16 +192,22 @@ def _make_mrs_digraph(x, dg, properties):
                 val = props[prop]
                 proplist.append('{}={}'.format(prop.upper(), val.lower()))
             s += '{' + '|'.join(proplist) + '}'
-        dg.add_node(id, sig=s)
-        dg.add_edges_from((id, args[role], {'sig': role})
-                          for role in args if role != mrs.CONSTANT_ROLE)
+        g[id][None] = s
+        for role in args:
+            if role != mrs.CONSTANT_ROLE:
+                # there may be multiple roles (e.g., L-INDEX, L-HNDL, etc.)
+                roles = g[id].get(args[role], '').split() + [role]
+                g[id][args[role]] = ' '.join(sorted(roles))
+
     # hcons
-    dg.add_edges_from((hc.hi, hc.lo, {'sig': hc.relation})
-                      for hc in x.hcons)
+    for hc in x.hcons:
+        g[hc.hi][hc.lo] = hc.relation
+
     # icons
-    dg.add_edges_from((ic.left, ic.right, {'sig': ic.relation})
-                      for ic in x.icons)
-    return dg
+    for ic in x.icons:
+        g[ic.left][ic.right] = ic.relation
+
+    return g
 
 
 def compare_bags(testbag: Iterable[mrs.MRS],

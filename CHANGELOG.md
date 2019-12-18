@@ -7,6 +7,11 @@ these changes are prefixed with "**BREAKING**"
 
 (no unreleased changes yet)
 
+### Changed
+
+* `delphin.mrs.is_isomorphic()` no longer uses NetworkX
+
+
 ## [v1.0.3][]
 
 **Release date: 2019-11-29**
