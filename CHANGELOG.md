@@ -11,6 +11,7 @@ these changes are prefixed with "**BREAKING**"
 
 * `requirements.txt` mainly to try and help GitHub detect dependencies
 * `delphin.derivation.UDFNode.parent` ([#245][])
+* `delphin.derivation.UDFNode.internals()` ([#246][])
 * `delphin.derivation.UDFTerminal.parent` ([#245][])
 
 ### Changed
@@ -1199,6 +1200,7 @@ information about changes, except for
 [#203]: https://github.com/delph-in/pydelphin/issues/203
 [#213]: https://github.com/delph-in/pydelphin/issues/213
 [#245]: https://github.com/delph-in/pydelphin/issues/245
+[#246]: https://github.com/delph-in/pydelphin/issues/246
 [#247]: https://github.com/delph-in/pydelphin/issues/247
 [#248]: https://github.com/delph-in/pydelphin/issues/248
 [#249]: https://github.com/delph-in/pydelphin/issues/249

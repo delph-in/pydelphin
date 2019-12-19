@@ -334,6 +334,23 @@ class TestDerivation():
             '    6 "token [ +FORM \\"b\\" ]"))))')
         assert [t.form for t in a.terminals()] == ['a b', 'b']
 
+    def test_internals(self):
+        a = from_string('(root (1 some-thing -1 -1 -1'
+                        '  (2 a-thing -1 -1 -1 ("a"))'
+                        '  (3 b-thing -1 -1 -1 ("b"))))')
+        assert [t.id for t in a.internals()] == [None, 1]
+        a = from_string(
+            '(root'
+            ' (1 some-thing@some-type 0.4 0 5'
+            '  (2 a-lex@a-type 0.8 0 1'
+            '   ("a b"'
+            '    3 "token [ +FORM \\"a\\" ]"'
+            '    4 "token [ +FORM \\"b\\" ]"))'
+            '  (5 b-lex@b-type 0.9 1 2'
+            '   ("b"'
+            '    6 "token [ +FORM \\"b\\" ]"))))')
+        assert [t.id for t in a.internals()] == [None, 1]
+
     def test_to_udf(self):
         s = '(1 some-thing -1 -1 -1 ("token"))'
         assert from_string(s).to_udf(indent=None) == s

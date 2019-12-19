@@ -334,6 +334,21 @@ class UDFNode(_UDFNodeBase,
                 nodes.extend(dtr.terminals())
         return nodes
 
+    def internals(self):
+        """
+        Return the list of internal nodes.
+
+        Internal nodes are nodes above preterminals. In other words,
+        the union of internals and preterminals is the set of
+        nonterminal nodes.
+        """
+        if any(isinstance(dtr, UDFTerminal) for dtr in self.daughters):
+            return []
+        nodes = [self]
+        for dtr in self.daughters:
+            nodes.extend(dtr.internals())
+        return nodes
+
 
 class Derivation(UDFNode):
     """

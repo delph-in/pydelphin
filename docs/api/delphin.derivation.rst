@@ -112,7 +112,6 @@ delphin.derivation
       :members:
 
    .. autoclass:: UDFNode(id, entity, score=None, start=None, end=None, daughters=None, head=None, type=None, parent=None)
-      :members:
 
       .. py:attribute:: id
 
@@ -148,13 +147,16 @@ delphin.derivation
 	 that this is not a regular UDF/UDX attribute but is added for
 	 convenience in traversing the tree.
 
+      .. automethod:: is_head
       .. automethod:: is_root
+      .. automethod:: internals
+      .. automethod:: preterminals
+      .. automethod:: terminals
       .. automethod:: to_udf
       .. automethod:: to_udx
       .. automethod:: to_dict
 
    .. autoclass:: UDFTerminal(form, tokens=None, parent=None)
-      :members:
 
       .. py:attribute:: form
 
