@@ -142,6 +142,12 @@ delphin.derivation
 
          The lexical type (available on preterminal UDX nodes).
 
+      .. py:attribute:: parent
+
+	 The parent node in the tree, or ``None`` for the root. Note
+	 that this is not a regular UDF/UDX attribute but is added for
+	 convenience in traversing the tree.
+
       .. automethod:: is_root
       .. automethod:: to_udf
       .. automethod:: to_udx
@@ -157,6 +163,12 @@ delphin.derivation
       .. py:attribute:: tokens
 
          The list of tokens.
+
+      .. py:attribute:: parent
+
+	 The parent node in the tree. Note that this is not a regular
+	 UDF/UDX attribute but is added for convenience in traversing
+	 the tree.
 
       .. automethod:: is_root
       .. automethod:: to_udf

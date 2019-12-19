@@ -33,6 +33,12 @@ class TestUDFNode():
         assert n.is_head()
         assert n.type == 'type'
 
+    def test_parent(self):
+        n1 = N(None, 'entity')
+        assert n1.parent is None
+        n2 = N(1, 'entity', 0.5, 1, 2, [], head=True, type='type', parent=n1)
+        assert n2.parent is n1
+
 
 class TestDerivation():
     def test_init(self):

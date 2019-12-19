@@ -75,6 +75,10 @@ class _UDFNodeBase(object):
             return NotImplemented
         return not (self == other)
 
+    @property
+    def parent(self):
+        return self._parent
+
     # serialization
 
     def to_udf(self, indent=1):
