@@ -16,13 +16,16 @@ these changes are prefixed with "**BREAKING**"
 
 ### Changed
 
-* `delphin.mrs.is_isomorphic()` no longer uses NetworkX
+* `delphin.mrs.is_isomorphic()` no longer uses NetworkX ([#263][])
 * Docs no longer require the `sphinx_autodoc_typehints` package as of
-  Sphinx 2.2.0
+  Sphinx 2.2.0 ([#264][])
 * `delphin.exceptions.PyDelphinSyntaxError` now puts the ^ marker in
   the right spot.
 * Lexing in `delphin.util` now tracks the original line with each
   token, allowing for more informative syntax errors.
+* `delphin.tsql.select()` will raise a `TSQLError` if a condition's
+  type does not match that of the column it checks ([#261][])
+
 
 ## [v1.0.3][]
 
@@ -1212,3 +1215,6 @@ information about changes, except for
 [#252]: https://github.com/delph-in/pydelphin/issues/252
 [#253]: https://github.com/delph-in/pydelphin/issues/253
 [#257]: https://github.com/delph-in/pydelphin/issues/257
+[#261]: https://github.com/delph-in/pydelphin/issues/261
+[#263]: https://github.com/delph-in/pydelphin/issues/263
+[#264]: https://github.com/delph-in/pydelphin/issues/264

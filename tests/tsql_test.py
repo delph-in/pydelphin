@@ -16,7 +16,6 @@ def test_inspect_query():
         tsql.inspect_query('insert into item i-id values 10')
     with pytest.raises(tsql.TSQLSyntaxError):
         tsql.inspect_query('select *')
-    # with pytest.raises(tsql.TSQLSyntaxError):
     assert tsql.inspect_query('select i-input') == {
         'type': 'select',
         'projection': ['i-input'],
@@ -110,6 +109,14 @@ def test_parse_select_where():
                     ('not', ('==', ('i-wf', 2)))])
 
 
+def test_parse_select_where_types_issue_261():
+    # https://github.com/delph-in/pydelphin/issues/261
+    with pytest.raises(tsql.TSQLSyntaxError):
+        tsql.inspect_query('select i-id where i-wf ~ 1')
+    with pytest.raises(tsql.TSQLSyntaxError):
+        tsql.inspect_query('select i-id where i-input < "string"')
+
+
 def test_select(mini_testsuite):
     ts = itsdb.TestSuite(mini_testsuite)
     assert list(tsql.select('i-input', ts)) == [
@@ -145,7 +152,19 @@ def test_select_where(mini_testsuite):
     assert list(tsql.select('i-input where readings > 0', ts)) == [
         ('It rained.',), ('It snowed.',)]
 
-    # def test_Relations_path(simple_relations):
+
+def test_select_where_types_issue_261(mini_testsuite):
+    # https://github.com/delph-in/pydelphin/issues/261
+    ts = itsdb.TestSuite(mini_testsuite)
+    with pytest.raises(tsql.TSQLError):
+        tsql.select('i-id where i-id ~ "regex"', ts)
+    with pytest.raises(tsql.TSQLError):
+        tsql.select('i-id where i-input < 1', ts)
+    with pytest.raises(tsql.TSQLError):
+        tsql.select('i-id where i-input = 1', ts)
+
+
+# def test_Relations_path(simple_relations):
 #     r = tsdb.Relations.from_string(simple_relations)
 #     assert r.path('item', 'result') == [('parse', 'i-id'), ('result', 'parse-id')]
 #     assert r.path('parse', 'item') == [('item', 'i-id')]
