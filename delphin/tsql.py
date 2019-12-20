@@ -440,7 +440,7 @@ def _process_condition_function(
             index = field_index[body[0]]
             field = fields[index]
             value = tsdb.cast(field.datatype, row[index])
-            return re.search(body[1], value)
+            return value is not None and re.search(body[1], value)
 
     elif op == '!~':
 
@@ -448,7 +448,7 @@ def _process_condition_function(
             index = field_index[body[0]]
             field = fields[index]
             value = tsdb.cast(field.datatype, row[index])
-            return not re.search(body[1], value)
+            return value is None or not re.search(body[1], value)
 
     else:
         compare = _operator_functions[op]
@@ -457,7 +457,7 @@ def _process_condition_function(
             index = field_index[body[0]]
             field = fields[index]
             value = tsdb.cast(field.datatype, row[index])
-            return compare(value, body[1])
+            return value is not None and compare(value, body[1])
 
     return func
 

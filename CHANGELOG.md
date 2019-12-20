@@ -25,6 +25,8 @@ these changes are prefixed with "**BREAKING**"
   token, allowing for more informative syntax errors.
 * `delphin.tsql.select()` will raise a `TSQLError` if a condition's
   type does not match that of the column it checks ([#261][])
+* `delphin.tsql.select()` now considers ``None`` values when checking
+  conditions ([#262][])
 
 
 ## [v1.0.3][]
@@ -1216,5 +1218,6 @@ information about changes, except for
 [#253]: https://github.com/delph-in/pydelphin/issues/253
 [#257]: https://github.com/delph-in/pydelphin/issues/257
 [#261]: https://github.com/delph-in/pydelphin/issues/261
+[#262]: https://github.com/delph-in/pydelphin/issues/262
 [#263]: https://github.com/delph-in/pydelphin/issues/263
 [#264]: https://github.com/delph-in/pydelphin/issues/264
