@@ -19,6 +19,10 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.mrs.is_isomorphic()` no longer uses NetworkX
 * Docs no longer require the `sphinx_autodoc_typehints` package as of
   Sphinx 2.2.0
+* `delphin.exceptions.PyDelphinSyntaxError` now puts the ^ marker in
+  the right spot.
+* Lexing in `delphin.util` now tracks the original line with each
+  token, allowing for more informative syntax errors.
 
 ## [v1.0.3][]
 

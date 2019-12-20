@@ -374,7 +374,7 @@ class LookaheadIterator(object):
         return datum
 
 
-_Token = Tuple[int, str, int, int, int]
+_Token = Tuple[int, str, int, int, str]
 
 
 class LookaheadLexer(LookaheadIterator):
@@ -385,7 +385,7 @@ class LookaheadLexer(LookaheadIterator):
     def expect(self, *args, skip=None):
         vals = []
         for (ttype, tform) in args:
-            gid, token, lineno, offset, pos = self.next(skip=skip)
+            gid, token, lineno, offset, line = self.next(skip=skip)
             err = None
             if ttype is not None and gid != ttype:
                 err = str(ttype)
@@ -395,7 +395,7 @@ class LookaheadLexer(LookaheadIterator):
                 raise self._errcls('expected: ' + err,
                                    lineno=lineno,
                                    offset=offset,
-                                   text=token)
+                                   text=line)
             vals.append(token)
         if len(args) == 1:
             return vals[0]
@@ -404,7 +404,7 @@ class LookaheadLexer(LookaheadIterator):
 
     def accept(self, arg, skip=None, drop=False):
         ttype, tform = arg
-        gid, token, lineno, offset, pos = self.peek(skip=skip, drop=drop)
+        gid, token, lineno, offset, line = self.peek(skip=skip, drop=drop)
         if ((ttype is None or gid == ttype)
                 and (tform is None or token == tform)):
             self.next(skip=skip)
@@ -412,7 +412,7 @@ class LookaheadLexer(LookaheadIterator):
         return None
 
     def choice(self, *args, skip=None):
-        gid, token, lineno, offset, pos = self.next(skip=skip)
+        gid, token, lineno, offset, line = self.next(skip=skip)
         for (ttype, tform) in args:
             if ((ttype is None or gid == ttype)
                     and (tform is None or token == tform)):
@@ -420,7 +420,7 @@ class LookaheadLexer(LookaheadIterator):
         errs = [str(ttype) if ttype is not None else repr(tform)
                 for ttype, tform in args]
         raise self._errcls('expected one of: ' + ', '.join(errs),
-                           lineno=lineno, text=token)
+                           lineno=lineno, offset=offset, text=line)
 
     def expect_type(self, *args, skip=None):
         return self.expect(*((arg, None) for arg in args), skip=skip)
@@ -485,16 +485,15 @@ class Lexer(object):
         Lex the input string
 
         Yields:
-            (gid, token, line_number, offset, pos) where offset is the
-            character position within the line and pos is the
-            character position in the full input
+            (gid, token, line_number, offset, line) where offset is the
+            character position within the line
         """
         # loop optimizations
         finditer = self._re.finditer
         UNEXPECTED = self.tokentypes.UNEXPECTED
 
         lines = enumerate(lineiter, 1)
-        lineno = line_pos = 0
+        lineno = 0
         try:
             for lineno, line in lines:
                 matches = finditer(line)
@@ -508,8 +507,7 @@ class Lexer(object):
                             offset=offset,
                             text=line)
                     token = m.group(gid)
-                    yield (gid, token, lineno, offset, line_pos + offset)
-                line_pos += len(line) + 1  # +1 for newline character
+                    yield (gid, token, lineno, offset, line)
         except StopIteration:
             pass
 
