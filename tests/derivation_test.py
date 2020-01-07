@@ -33,6 +33,12 @@ class TestUDFNode():
         assert n.is_head()
         assert n.type == 'type'
 
+    def test_parent(self):
+        n1 = N(None, 'entity')
+        assert n1.parent is None
+        n2 = N(1, 'entity', 0.5, 1, 2, [], head=True, type='type', parent=n1)
+        assert n2.parent is n1
+
 
 class TestDerivation():
     def test_init(self):
@@ -327,6 +333,23 @@ class TestDerivation():
             '   ("b"'
             '    6 "token [ +FORM \\"b\\" ]"))))')
         assert [t.form for t in a.terminals()] == ['a b', 'b']
+
+    def test_internals(self):
+        a = from_string('(root (1 some-thing -1 -1 -1'
+                        '  (2 a-thing -1 -1 -1 ("a"))'
+                        '  (3 b-thing -1 -1 -1 ("b"))))')
+        assert [t.id for t in a.internals()] == [None, 1]
+        a = from_string(
+            '(root'
+            ' (1 some-thing@some-type 0.4 0 5'
+            '  (2 a-lex@a-type 0.8 0 1'
+            '   ("a b"'
+            '    3 "token [ +FORM \\"a\\" ]"'
+            '    4 "token [ +FORM \\"b\\" ]"))'
+            '  (5 b-lex@b-type 0.9 1 2'
+            '   ("b"'
+            '    6 "token [ +FORM \\"b\\" ]"))))')
+        assert [t.id for t in a.internals()] == [None, 1]
 
     def test_to_udf(self):
         s = '(1 some-thing -1 -1 -1 ("token"))'

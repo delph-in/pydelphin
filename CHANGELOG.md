@@ -7,6 +7,36 @@ these changes are prefixed with "**BREAKING**"
 
 (no unreleased changes yet)
 
+
+## [v1.1.0][]
+
+**Release date: 2020-01-07**
+
+Removes the NetworkX dependency, resolves some TSQL bugs, and adds
+some features to Derivations.
+
+### Added
+
+* `requirements.txt` mainly to try and help GitHub detect dependencies
+* `delphin.derivation.UDFNode.parent` ([#245][])
+* `delphin.derivation.UDFNode.internals()` ([#246][])
+* `delphin.derivation.UDFTerminal.parent` ([#245][])
+
+### Changed
+
+* `delphin.mrs.is_isomorphic()` no longer uses NetworkX ([#263][])
+* Docs no longer require the `sphinx_autodoc_typehints` package as of
+  Sphinx 2.2.0 ([#264][])
+* `delphin.exceptions.PyDelphinSyntaxError` now puts the ^ marker in
+  the right spot.
+* Lexing in `delphin.util` now tracks the original line with each
+  token, allowing for more informative syntax errors.
+* `delphin.tsql.select()` will raise a `TSQLError` if a condition's
+  type does not match that of the column it checks ([#261][])
+* `delphin.tsql.select()` now considers ``None`` values when checking
+  conditions ([#262][])
+
+
 ## [v1.0.3][]
 
 **Release date: 2019-11-29**
@@ -1072,6 +1102,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.1.0]: ../../releases/tag/v1.1.0
 [v1.0.3]: ../../releases/tag/v1.0.3
 [v1.0.2]: ../../releases/tag/v1.0.2
 [v1.0.1]: ../../releases/tag/v1.0.1
@@ -1186,6 +1217,8 @@ information about changes, except for
 [#200]: https://github.com/delph-in/pydelphin/issues/200
 [#203]: https://github.com/delph-in/pydelphin/issues/203
 [#213]: https://github.com/delph-in/pydelphin/issues/213
+[#245]: https://github.com/delph-in/pydelphin/issues/245
+[#246]: https://github.com/delph-in/pydelphin/issues/246
 [#247]: https://github.com/delph-in/pydelphin/issues/247
 [#248]: https://github.com/delph-in/pydelphin/issues/248
 [#249]: https://github.com/delph-in/pydelphin/issues/249
@@ -1193,3 +1226,7 @@ information about changes, except for
 [#252]: https://github.com/delph-in/pydelphin/issues/252
 [#253]: https://github.com/delph-in/pydelphin/issues/253
 [#257]: https://github.com/delph-in/pydelphin/issues/257
+[#261]: https://github.com/delph-in/pydelphin/issues/261
+[#262]: https://github.com/delph-in/pydelphin/issues/262
+[#263]: https://github.com/delph-in/pydelphin/issues/263
+[#264]: https://github.com/delph-in/pydelphin/issues/264

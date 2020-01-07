@@ -23,10 +23,10 @@ For bug requests, please provide the following, if possible:
   ```python
   >>> from delphin.__about__ import __version__
   >>> __version__  # distribution version
-  '1.0.0'
+  '1.1.0'
   >>> from delphin import mrs
   >>> mrs.__version__  # package version
-  '1.0.0'
+  '1.1.0'
   ```
 * Python version (e.g. 3.5, 3.6, etc.)
 

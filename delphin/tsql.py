@@ -4,10 +4,11 @@ TSQL -- Test Suite Query Language
 """
 
 from typing import (
-    List, Tuple, Dict, Set, Mapping, Optional, Union, Any, Type,
+    List, Tuple, Dict, Set, Optional, Union, Any, Type,
     Iterator, Callable, cast as typing_cast)
 import operator
 import re
+from datetime import datetime
 
 from delphin.exceptions import PyDelphinException, PyDelphinSyntaxError
 from delphin import util
@@ -38,6 +39,8 @@ _Comparison = Tuple[str, Tuple[str, tsdb.Value]]
 _Boolean = Tuple[str, Any]
 _Condition = Union[_Comparison, _Boolean]
 _FilterFunction = Callable[[tsdb.Record], bool]
+
+_QNameResolver = Callable[[str], Tuple[str, tsdb.Field]]
 
 
 class _Record(tsdb.Record):
@@ -196,13 +199,12 @@ def _make_execution_plan(
         condition: Optional[_Condition],
         db: tsdb.Database) -> Tuple:
     """Make a plan for all relations to join and columns to keep."""
-    schema_map = _make_schema_map(db, relations)
-    resolve_qname = _make_qname_resolver(schema_map)
+    resolve_qname = _make_qname_resolver(db, relations)
 
     if projection == ['*']:
         projection = _project_all(relations, db)
     else:
-        projection = [resolve_qname(name) for name in projection]
+        projection = [resolve_qname(name)[0] for name in projection]
 
     cond_resolved = None  # type: Optional[_Condition]
     cond_fields = []  # type: _Names
@@ -230,10 +232,16 @@ def _project_all(relations: List[str], db: tsdb.Database) -> List[str]:
     return projection
 
 
-def _make_schema_map(
+def _make_qname_resolver(
         db: tsdb.Database,
-        relations: List[str]) -> Mapping[str, List[str]]:
-    """Return an inverse mapping from field names to relations."""
+        relations: List[str]) -> _QNameResolver:
+    """
+    Return a function that turns column names into qualified names.
+
+    For example, `i-input` becomes `item.i-input`.
+    """
+
+    index = {rel: tsdb.make_field_index(db.schema[rel]) for rel in db.schema}
     schema_map = {}  # type: Dict[str, List[str]]
     for relname, fields in db.schema.items():
         for field in fields:
@@ -243,25 +251,17 @@ def _make_schema_map(
         schema_map[colname] = sorted(schema_map[colname],
                                      key=relations.__contains__,
                                      reverse=True)
-    return schema_map
 
-
-def _make_qname_resolver(schema_map):
-    """
-    Return a function that turns column names into qualified names.
-
-    For example, `i-input` becomes `item.i-input`.
-    """
-
-    def resolve(colname: str) -> str:
+    def resolve(colname: str) -> Tuple[str, tsdb.Field]:
         rel, _, col = colname.rpartition('.')
         if rel:
             qname = colname
         elif col in schema_map:
-            qname = '{}.{}'.format(schema_map[col][0], col)
+            rel = schema_map[col][0]
+            qname = '{}.{}'.format(rel, col)
         else:
             raise TSQLError('undefined column: {}'.format(colname))
-        return qname
+        return qname, db.schema[rel][index[rel][col]]
 
     return resolve
 
@@ -365,7 +365,7 @@ _operator_functions = {'==': operator.eq,
 
 def _process_condition_fields(
         condition: _Condition,
-        resolve_qname: Callable[[str], str]) -> Tuple[_Condition, _Names]:
+        resolve_qname: _QNameResolver) -> Tuple[_Condition, _Names]:
     # conditions are something like:
     #  ('==', ('i-id', 11))
     op, body = condition
@@ -374,18 +374,39 @@ def _process_condition_fields(
         fieldset = set()
         conditions = []
         for cond in body:
-            _cond, _fields = _process_condition_fields(cond, resolve_qname)
+            _cond, _fields = _process_condition_fields(
+                cond, resolve_qname)
             fieldset.update(_fields)
             conditions.append(_cond)
         return (op, conditions), sorted(fieldset)
 
     elif op == 'not':
-        ncond, fields = _process_condition_fields(body, resolve_qname)
+        ncond, fields = _process_condition_fields(
+            body, resolve_qname)
         return ('not', ncond), fields
 
     else:
-        qname = resolve_qname(body[0])
+        qname, field = resolve_qname(body[0])
+
+        # check if the condition's type matches the column
+        typ = _expected_type(field.datatype)
+        if not isinstance(body[1], typ):
+            raise TSQLError(
+                'type mismatch in condition on {}: {} {} {}'
+                .format(qname, typ.__name__, op, type(body[1]).__name__))
+
         return (op, (qname, body[1])), [qname]
+
+
+def _expected_type(datatype):
+    if datatype == ':string':
+        return str
+    elif datatype in ':integer':
+        return int
+    elif datatype in ':float':
+        return (int, float)
+    elif datatype in ':date':
+        return datetime
 
 
 def _process_condition_function(
@@ -419,7 +440,7 @@ def _process_condition_function(
             index = field_index[body[0]]
             field = fields[index]
             value = tsdb.cast(field.datatype, row[index])
-            return re.search(body[1], value)
+            return value is not None and re.search(body[1], value)
 
     elif op == '!~':
 
@@ -427,7 +448,7 @@ def _process_condition_function(
             index = field_index[body[0]]
             field = fields[index]
             value = tsdb.cast(field.datatype, row[index])
-            return not re.search(body[1], value)
+            return value is None or not re.search(body[1], value)
 
     else:
         compare = _operator_functions[op]
@@ -436,7 +457,7 @@ def _process_condition_function(
             index = field_index[body[0]]
             field = fields[index]
             value = tsdb.cast(field.datatype, row[index])
-            return compare(value, body[1])
+            return value is not None and compare(value, body[1])
 
     return func
 

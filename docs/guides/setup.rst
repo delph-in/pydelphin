@@ -29,7 +29,6 @@ Module or Function                 Dependencies  Notes
 :mod:`delphin.ace`                 ACE_          Linux and Mac only
 :mod:`delphin.web.client`          requests_     ``[web]`` extra
 :mod:`delphin.web.server`          Falcon_       ``[web]`` extra
-:func:`delphin.mrs.is_isomorphic`  NetworkX_
 :mod:`delphin.codecs.dmrspenman`   Penman_
 :mod:`delphin.codecs.edspenman`    Penman_
 :mod:`delphin.repp`                regex_        ``[repp]`` extra
@@ -42,7 +41,6 @@ are not listed in the table above).
 .. _ACE: http://sweaglesw.org/linguistics/ace/
 .. _requests: http://python-requests.org/
 .. _Falcon: https://falcon.readthedocs.io/
-.. _NetworkX: https://networkx.github.io/
 .. _Penman: https://github.com/goodmami/penman
 .. _regex: https://bitbucket.org/mrabarnett/mrab-regex/
 

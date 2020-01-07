@@ -75,6 +75,10 @@ class _UDFNodeBase(object):
             return NotImplemented
         return not (self == other)
 
+    @property
+    def parent(self):
+        return self._parent
+
     # serialization
 
     def to_udf(self, indent=1):
@@ -328,6 +332,21 @@ class UDFNode(_UDFNodeBase,
                 nodes.append(dtr)
             else:
                 nodes.extend(dtr.terminals())
+        return nodes
+
+    def internals(self):
+        """
+        Return the list of internal nodes.
+
+        Internal nodes are nodes above preterminals. In other words,
+        the union of internals and preterminals is the set of
+        nonterminal nodes.
+        """
+        if any(isinstance(dtr, UDFTerminal) for dtr in self.daughters):
+            return []
+        nodes = [self]
+        for dtr in self.daughters:
+            nodes.extend(dtr.internals())
         return nodes
 
 
