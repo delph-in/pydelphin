@@ -7,6 +7,14 @@ these changes are prefixed with "**BREAKING**"
 
 (no unreleased changes yet)
 
+
+## [v1.1.0][]
+
+**Release date: 2020-01-07**
+
+Removes the NetworkX dependency, resolves some TSQL bugs, and adds
+some features to Derivations.
+
 ### Added
 
 * `requirements.txt` mainly to try and help GitHub detect dependencies
@@ -1094,6 +1102,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.1.0]: ../../releases/tag/v1.1.0
 [v1.0.3]: ../../releases/tag/v1.0.3
 [v1.0.2]: ../../releases/tag/v1.0.2
 [v1.0.1]: ../../releases/tag/v1.0.1
