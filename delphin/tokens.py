@@ -87,7 +87,7 @@ class YYToken(_YYToken):
             surface=d.get('surface'),
             # ipos=
             # lrules=
-            pos=zip(d.get('tags', []), d.get('probabilities', []))
+            pos=list(zip(d.get('tags', []), d.get('probabilities', [])))
         )
 
     def to_dict(self):
