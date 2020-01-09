@@ -31,7 +31,7 @@ def load(source):
     if not hasattr(source, 'read'):
         source = str(Path(source).expanduser())
     graphs = penman.load(source)
-    xs = [from_triples(g.triples()) for g in graphs]
+    xs = [from_triples(g.triples) for g in graphs]
     return xs
 
 
@@ -45,7 +45,7 @@ def loads(s):
         a list of DMRS objects
     """
     graphs = penman.loads(s)
-    xs = [from_triples(g.triples()) for g in graphs]
+    xs = [from_triples(g.triples) for g in graphs]
     return xs
 
 
@@ -90,8 +90,11 @@ def dumps(ds, properties=False, lnk=True, indent=False):
     Returns:
         a PENMAN-serialization of the DMRS objects
     """
-    codec = penman.PENMANCodec()
-    to_graph = codec.triples_to_graph
+    if indent is True:
+        indent = -1
+    elif indent is False:
+        indent = None
+    to_graph = penman.Graph
     graphs = [to_graph(to_triples(d, properties=properties, lnk=lnk))
               for d in ds]
     return penman.dumps(graphs, indent=indent)
@@ -101,7 +104,7 @@ def decode(s):
     """
     Deserialize a DMRS object from a PENMAN string.
     """
-    return from_triples(penman.decode(s).triples())
+    return from_triples(penman.decode(s).triples)
 
 
 def encode(d, properties=True, lnk=True, indent=False):
@@ -117,8 +120,12 @@ def encode(d, properties=True, lnk=True, indent=False):
     Returns:
         a PENMAN-serialization of the DMRS object
     """
+    if indent is True:
+        indent = -1
+    elif indent is False:
+        indent = None
     triples = to_triples(d, properties=properties, lnk=lnk)
-    g = penman.PENMANCodec().triples_to_graph(triples)
+    g = penman.Graph(triples)
     return penman.encode(g, indent=indent)
 
 
@@ -143,24 +150,24 @@ def to_triples(d, properties=True, lnk=True):
     triples = []
     for node in nodes:
         _id = idmap[node.id]
-        triples.append((_id, 'instance', node.predicate))
+        triples.append((_id, ':instance', node.predicate))
         if lnk and node.lnk is not None:
-            triples.append((_id, 'lnk', '"{}"'.format(str(node.lnk))))
+            triples.append((_id, ':lnk', '"{}"'.format(str(node.lnk))))
         if node.carg is not None:
-            triples.append((_id, 'carg', '"{}"'.format(node.carg)))
+            triples.append((_id, ':carg', '"{}"'.format(node.carg)))
         if node.type:
-            triples.append((_id, CVARSORT, node.type))
+            triples.append((_id, ':' + CVARSORT, node.type))
         if properties:
             for key in sorted(node.properties, key=property_priority):
                 value = node.properties[key]
-                triples.append((_id, key.lower(), value))
+                triples.append((_id, ':' + key.lower(), value))
 
     # if d.top is not None:
     #     triples.append((None, 'top', d.top))
     for link in d.links:
         start = idmap[link.start]
         end = idmap[link.end]
-        relation = '{}-{}'.format(link.role.upper(), link.post)
+        relation = ':{}-{}'.format(link.role.upper(), link.post)
         triples.append((start, relation, end))
     return triples
 
@@ -172,6 +179,7 @@ def from_triples(triples):
     top = lnk = surface = identifier = None
     nids, nd, edges = [], {}, []
     for src, rel, tgt in triples:
+        rel = rel.lstrip(':')
         src, tgt = str(src), str(tgt)  # in case penman converts ids to ints
         if src is None and rel == 'top':
             top = tgt

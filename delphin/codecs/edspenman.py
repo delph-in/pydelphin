@@ -30,7 +30,7 @@ def load(source):
     if not hasattr(source, 'read'):
         source = str(Path(source).expanduser())
     graphs = penman.load(source)
-    xs = [from_triples(g.triples()) for g in graphs]
+    xs = [from_triples(g.triples) for g in graphs]
     return xs
 
 
@@ -44,7 +44,7 @@ def loads(s):
         a list of EDS objects
     """
     graphs = penman.loads(s)
-    xs = [from_triples(g.triples()) for g in graphs]
+    xs = [from_triples(g.triples) for g in graphs]
     return xs
 
 
@@ -89,8 +89,11 @@ def dumps(es, properties=True, lnk=True, indent=False):
     Returns:
         a EDS-PENMAN-serialization of the EDS objects
     """
-    codec = penman.PENMANCodec()
-    to_graph = codec.triples_to_graph
+    if indent is True:
+        indent = -1
+    elif indent is False:
+        indent = None
+    to_graph = penman.Graph
     graphs = [to_graph(to_triples(e, properties=properties, lnk=lnk))
               for e in es]
     return penman.dumps(graphs, indent=indent)
@@ -116,8 +119,12 @@ def encode(e, properties=True, lnk=True, indent=False):
     Returns:
         a EDS-PENMAN-serialization of the EDS object
     """
+    if indent is True:
+        indent = -1
+    elif indent is False:
+        indent = None
     triples = to_triples(e, properties=properties, lnk=lnk)
-    g = penman.PENMANCodec().triples_to_graph(triples)
+    g = penman.Graph(triples)
     return penman.encode(g, indent=indent)
 
 
@@ -134,18 +141,19 @@ def to_triples(e, properties=True, lnk=True):
     nodes = sorted(e.nodes, key=lambda n: n.id != e.top)
     for node in nodes:
         nid = node.id
-        triples.append((nid, 'instance', node.predicate))
+        triples.append((nid, ':instance', node.predicate))
         if lnk and node.lnk:
-            triples.append((nid, 'lnk', '"{}"'.format(str(node.lnk))))
+            triples.append((nid, ':lnk', '"{}"'.format(str(node.lnk))))
         if node.carg:
-            triples.append((nid, 'carg', '"{}"'.format(node.carg)))
+            triples.append((nid, ':carg', '"{}"'.format(node.carg)))
         if node.type is not None:
-            triples.append((nid, 'type', node.type))
+            triples.append((nid, ':type', node.type))
         if properties:
             for prop in sorted(node.properties, key=property_priority):
-                triples.append((nid, prop.lower(), node.properties[prop]))
+                rel = ':' + prop.lower()
+                triples.append((nid, rel, node.properties[prop]))
         for role in sorted(node.edges, key=role_priority):
-            triples.append((nid, role, node.edges[role]))
+            triples.append((nid, ':' + role, node.edges[role]))
     return triples
 
 
@@ -155,6 +163,7 @@ def from_triples(triples):
     """
     nids, nd = [], {}
     for src, rel, tgt in triples:
+        rel = rel.lstrip(':')
         if src not in nd:
             nids.append(src)
             nd[src] = {'pred': None, 'type': None, 'edges': {},

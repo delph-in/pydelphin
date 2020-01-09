@@ -5,7 +5,10 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
-(no unreleased changes yet)
+### Changed
+
+* `delphin.codecs.dmrspenman` update to Penman v0.9.0
+* `delphin.codecs.edspenman` update to Penman v0.9.0
 
 
 ## [v1.1.0][]

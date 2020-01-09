@@ -61,7 +61,7 @@ setup(
         'delphin.web',
     ],
     install_requires=[
-        'penman==0.6.2',
+        'penman==0.9.0',
     ],
     extras_require={
         'docs': docs_require,
