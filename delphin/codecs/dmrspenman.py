@@ -133,10 +133,6 @@ def to_triples(d, properties=True, lnk=True):
     """
     Encode *d* as triples suitable for PENMAN serialization.
     """
-    # attempt to convert if necessary
-    # if not isinstance(d, DMRS):
-    #     d = DMRS.from_xmrs(d)
-
     idmap = {}
     quantifiers = {node.id for node in d.nodes
                    if d.is_quantifier(node.id)}

@@ -308,10 +308,6 @@ def _encode(ms, semi, properties, lnk, indent):
 
 
 def _encode_indexed(m, semi, properties, lnk, indent):
-    # attempt to convert if necessary
-    # if not isinstance(m, MRS):
-    #     m = MRS.from_xmrs(m)
-
     if indent is None or indent is False:
         i1 = ',{{{}}}'
         i2 = i3 = ','

@@ -141,10 +141,6 @@ def to_dict(d, properties=True, lnk=True):
     """
     Encode DMRS *d* as a dictionary suitable for JSON serialization.
     """
-    # attempt to convert if necessary
-    # if not isinstance(d, DMRS):
-    #     d = DMRS.from_xmrs(d)
-
     nodes = []
     for node in d.nodes:
         n = dict(nodeid=node.id,

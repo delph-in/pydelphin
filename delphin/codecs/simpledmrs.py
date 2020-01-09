@@ -260,10 +260,6 @@ def _encode(ds, properties, lnk, indent):
 
 
 def _encode_dmrs(d, properties, lnk, indent):
-    # attempt to convert if necessary
-    # if not isinstance(d, DMRS):
-    #     d = DMRS.from_xmrs(d)
-
     if indent is None:
         delim = ' '
         end = ' }'

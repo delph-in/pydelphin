@@ -229,10 +229,6 @@ def _decode_edges(start, lexer):
 # Encoding
 
 def _encode_eds(e, properties, lnk, show_status, indent):
-    # attempt to convert if necessary
-    # if not isinstance(e, EDS):
-    #     e = EDS.from_xmrs(e, predicate_modifiers=predicate_modifiers)
-
     # do something predictable for empty EDS
     if len(e.nodes) == 0:
         return '{:\n}' if indent else '{:}'

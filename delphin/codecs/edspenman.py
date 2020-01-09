@@ -132,10 +132,6 @@ def to_triples(e, properties=True, lnk=True):
     """
     Encode the Eds as triples suitable for PENMAN serialization.
     """
-    # attempt to convert if necessary
-    if not isinstance(e, EDS):
-        e = EDS.from_xmrs(e)
-
     triples = []
     # sort node ids just so top var is first
     nodes = sorted(e.nodes, key=lambda n: n.id != e.top)

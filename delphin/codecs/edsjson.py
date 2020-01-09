@@ -139,10 +139,6 @@ def to_dict(eds, properties=True, lnk=True):
     """
     Encode the EDS as a dictionary suitable for JSON serialization.
     """
-    # attempt to convert if necessary
-    # if not isinstance(eds, EDS):
-    #     eds = EDS.from_xmrs(eds, predicate_modifiers)
-
     nodes = {}
     for node in eds.nodes:
         nd = {
