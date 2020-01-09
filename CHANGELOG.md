@@ -5,6 +5,10 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+### Fixed
+
+* `delphin.codecs.edspenman` now properly reads predicate names
+
 ### Changed
 
 * `delphin.codecs.dmrspenman` update to Penman v0.9.0

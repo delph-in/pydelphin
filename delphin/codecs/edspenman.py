@@ -168,7 +168,7 @@ def from_triples(triples):
             nids.append(src)
             nd[src] = {'pred': None, 'type': None, 'edges': {},
                        'props': {}, 'lnk': None, 'carg': None}
-        if rel == 'predicate':
+        if rel == 'instance':
             nd[src]['pred'] = tgt
         elif rel == 'lnk':
             nd[src]['lnk'] = Lnk(tgt.strip('"'))
