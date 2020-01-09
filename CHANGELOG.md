@@ -5,6 +5,11 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+### Python Versions
+
+* Removed Python 3.5 support ([#219][])
+* Added Python 3.8 support
+
 ### Fixed
 
 * `delphin.codecs.edspenman` now properly reads predicate names
@@ -1224,6 +1229,7 @@ information about changes, except for
 [#200]: https://github.com/delph-in/pydelphin/issues/200
 [#203]: https://github.com/delph-in/pydelphin/issues/203
 [#213]: https://github.com/delph-in/pydelphin/issues/213
+[#219]: https://github.com/delph-in/pydelphin/issues/219
 [#245]: https://github.com/delph-in/pydelphin/issues/245
 [#246]: https://github.com/delph-in/pydelphin/issues/246
 [#247]: https://github.com/delph-in/pydelphin/issues/247

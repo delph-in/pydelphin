@@ -28,7 +28,7 @@ For bug requests, please provide the following, if possible:
   >>> mrs.__version__  # package version
   '1.1.0'
   ```
-* Python version (e.g. 3.5, 3.6, etc.)
+* Python version (e.g. 3.6, 3.7, etc.)
 
 For feature requests, please provide a use case for the feature.
 
