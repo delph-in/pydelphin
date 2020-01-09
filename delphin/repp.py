@@ -4,10 +4,10 @@
 Regular Expression Preprocessor (REPP)
 """
 
+from typing import NamedTuple
 from sre_parse import parse_template
 from pathlib import Path
 from array import array
-from collections import namedtuple
 import warnings
 import logging
 
@@ -50,23 +50,7 @@ if not _regex_available:
         REPPWarning)
 
 
-class REPPStep(namedtuple(
-        'REPPStep', 'input output operation applied startmap endmap')):
-    """
-    A single rule application in REPP.
-
-    Attributes:
-        input (str): input string (prior to application)
-        output (str): output string (after application)
-        operation: operation performed
-        applied (bool): `True` if the rule was applied
-        startmap (:py:class:`array`): integer array of start offsets
-        endmap (:py:class:`array`): integer array of end offsets
-    """
-
-
-class REPPResult(namedtuple(
-        'REPPResult', 'string startmap endmap')):
+class REPPResult(NamedTuple):
     """
     The final result of REPP application.
 
@@ -75,6 +59,9 @@ class REPPResult(namedtuple(
         startmap (:py:class:`array`): integer array of start offsets
         endmap (:py:class:`array`): integer array of end offsets
     """
+    string: str
+    startmap: array
+    endmap: array
 
 
 class _REPPOperation(object):
@@ -129,6 +116,26 @@ class _REPPOperation(object):
             for i, tok in enumerate(_tokenize(result, pattern))
         ]
         return YYTokenLattice(tokens)
+
+
+class REPPStep(NamedTuple):
+    """
+    A single rule application in REPP.
+
+    Attributes:
+        input (str): input string (prior to application)
+        output (str): output string (after application)
+        operation: operation performed
+        applied (bool): `True` if the rule was applied
+        startmap (:py:class:`array`): integer array of start offsets
+        endmap (:py:class:`array`): integer array of end offsets
+    """
+    input: str
+    output: str
+    operation: _REPPOperation
+    applied: bool
+    startmap: array
+    endmap: array
 
 
 class _REPPRule(_REPPOperation):
