@@ -92,7 +92,7 @@ class ProcessorServer(object):
         instead.
     """
 
-    processor_class = None  # type: Optional[Type[interface.Processor]]
+    processor_class: Optional[Type[interface.Processor]] = None
 
     def __init__(self, grammar, *args, **kwargs):
         self.grammar = grammar

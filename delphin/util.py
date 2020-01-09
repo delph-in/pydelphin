@@ -105,10 +105,10 @@ def _isomorphism(g1, g2, top1, top2) -> Dict[str, str]:
     _iso_inv_map(g1)
     _iso_inv_map(g2)
 
-    hypothesis = {}  # type: Dict[str, str]
-    agenda = next(
+    hypothesis: Dict[str, str] = {}
+    agenda: List[Tuple[str, str]] = next(
         _iso_candidates({top1: None}, {top2: None}, g1, g2, hypothesis),
-        [])  # type: List[Tuple[str, str]]
+        [])
     return next(_iso_vf2(hypothesis, g1, g2, agenda), {})
 
 

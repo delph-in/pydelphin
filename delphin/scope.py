@@ -120,7 +120,7 @@ def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
         >>> {lbl: [p.id for p in ps] for lbl, ps in conjoined.items()}
         {'h1': ['e2'], 'h2': ['x4', 'e6']}
     """
-    scopemap = {}  # type: Dict[ScopeLabel, List[Predication]]
+    scopemap: Dict[ScopeLabel, List[Predication]] = {}
     for component in _connected_components(list(scopes), leqs):
         chosen_label = next(iter(component))
         scopemap[chosen_label] = []
@@ -158,7 +158,7 @@ def descendants(x: ScopingSemanticStructure,
     if scopes is None:
         _, scopes = x.scopes()
     scargs = x.scopal_arguments(scopes=scopes)
-    descs = {}  # type: Dict[Identifier, List[Predication]]
+    descs: Dict[Identifier, List[Predication]] = {}
     for p in x.predications:
         _descendants(descs, p.id, scargs, scopes)
     return descs
@@ -236,9 +236,9 @@ def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
     descs = {id: set(d.id for d in ds)
              for id, ds in descendants(x, scopes).items()}
 
-    reps = {
+    reps: Dict[ScopeLabel, List[Predication]] = {
         label: [] for label in scopes
-    }  # type: Dict[ScopeLabel, List[Predication]]
+    }
     for label, scope in scopes.items():
         if len(scope) == 1:
             reps[label].extend(scope)

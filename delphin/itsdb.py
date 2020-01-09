@@ -114,14 +114,15 @@ class FieldMapper(object):
         """
         Process *response* and return a list of (table, rowdata) tuples.
         """
-        transaction = []  # type: Transaction
+        transaction: Transaction = []
 
         patch = self._map_parse(response)
         parse_id = patch['parse-id']
         assert isinstance(parse_id, int)
         transaction.append(('parse', patch))
 
-        for result in response.results():  # type: interface.Result
+        result: interface.Result
+        for result in response.results():
             patch = self._map_result(result, parse_id)
             transaction.append(('result', patch))
 
@@ -142,7 +143,7 @@ class FieldMapper(object):
         return transaction
 
     def _map_parse(self, response: interface.Response) -> tsdb.ColumnMap:
-        patch = {}  # type: tsdb.ColumnMap
+        patch: tsdb.ColumnMap = {}
         # custom remapping, cleanup, and filling in holes
         patch['i-id'] = response.get('keys', {}).get('i-id', -1)
         self._parse_id = max(self._parse_id + 1, patch['i-id'])
@@ -170,7 +171,7 @@ class FieldMapper(object):
     def _map_result(self,
                     result: interface.Result,
                     parse_id: int) -> tsdb.ColumnMap:
-        patch = {'parse-id': parse_id}  # type: tsdb.ColumnMap
+        patch: tsdb.ColumnMap = {'parse-id': parse_id}
         if 'flags' in result:
             patch['flags'] = util.SExpr.format(result['flags'])
         for key in self._result_keys:
@@ -246,18 +247,18 @@ class FieldMapper(object):
             assert isinstance(parse_id, int)
             return parse_id
 
-        parse_map = {}  # type: Dict[int, List[Dict[str, tsdb.Value]]]
+        parse_map: Dict[int, List[Dict[str, tsdb.Value]]] = {}
         rows  = typing_cast(Sequence['Row'], ts['parse'])
         for key, grp in itertools.groupby(rows, key=get_i_id):
             parse_map[key] = [dict(zip(row.keys(), row)) for row in grp]
 
-        result_map = {}  # type: Dict[int, List[Dict[str, tsdb.Value]]]
+        result_map: Dict[int, List[Dict[str, tsdb.Value]]] = {}
         rows  = typing_cast(Sequence['Row'], ts['result'])
         for key, grp in itertools.groupby(rows, key=get_parse_id):
             result_map[key] = [dict(zip(row.keys(), row)) for row in grp]
 
         for item in ts['item']:
-            d = dict(zip(item.keys(), item))  # type: Dict[str, tsdb.Value]
+            d: Dict[str, tsdb.Value] = dict(zip(item.keys(), item))
             i_id = d['i-id']
             assert isinstance(i_id, int)
             for parse in parse_map.get(i_id, []):
@@ -396,7 +397,7 @@ class Table(tsdb.Relation):
                  encoding: str = 'utf-8') -> None:
         self.dir = Path(dir).expanduser()
         self.name = name
-        self.fields = fields  # type: Sequence[tsdb.Field]
+        self.fields: Sequence[tsdb.Field] = fields
         self._field_index = tsdb.make_field_index(fields)
         self.encoding = encoding
         try:
@@ -405,9 +406,9 @@ class Table(tsdb.Relation):
             # file didn't exist as plain-text or gzipped, so create it
             path = self.dir.joinpath(name)
             path.write_text('')
-        self._rows = []  # type: List[Optional[Row]]
+        self._rows: List[Optional[Row]] = []
         # storing the open file for __iter__ let's Table.close() work
-        self._file = None  # type: Optional[IO[str]]
+        self._file: Optional[IO[str]] = None
 
         # These two numbers are needed to track if changes to the
         # table are only additions or if they remove/alter existing
@@ -439,8 +440,8 @@ class Table(tsdb.Relation):
     def __iter__(self) -> Iterator[Row]:
         if self._file is not None:
             self._file.close()
-        fh = tsdb.open(self.dir, self.name,
-                       encoding=self.encoding)  # type: IO[str]
+        fh: IO[str] = tsdb.open(self.dir, self.name,
+                                encoding=self.encoding)
         self._file = fh
 
         for _, row in self._enum_rows(fh):
@@ -632,7 +633,7 @@ class Table(tsdb.Relation):
         for i, row in enumerate(self._rows):
             # always read next line until EOF to keep in sync
             if not file_exhausted:
-                line = None  # type: Optional[str]
+                line: Optional[str] = None
                 try:
                     line = next(fh)
                 except StopIteration:
@@ -691,7 +692,7 @@ class TestSuite(tsdb.Database):
             tsdb.write_schema(path, schema)
 
         super().__init__(path, autocast=False, encoding=encoding)
-        self._data = {}  # type: Dict[str, Table]
+        self._data: Dict[str, Table] = {}
 
     @property
     def in_transaction(self) -> bool:
@@ -762,7 +763,7 @@ class TestSuite(tsdb.Database):
             table = self._data[name]
             fields = self.schema[name]
             if table._in_transaction:
-                data = []  # type: tsdb.Records
+                data: tsdb.Records = []
                 if table._volatile_index >= table._persistent_count:
                     append = True
                     data = table[table._persistent_count:]
@@ -918,10 +919,10 @@ def match_rows(rows1: Rows,
             list of any matching rows from *rows1*, and the list of
             any matching rows from *rows2*
     """
-    matched = collections.OrderedDict()  # type: Dict[tsdb.Value, _Matched]
+    matched: Dict[tsdb.Value, _Matched] = collections.OrderedDict()
     for i, rows in enumerate([rows1, rows2]):
         for row in rows:
-            val = row[key]  # type: tsdb.Value
+            val: tsdb.Value = row[key]
             try:
                 data = matched[val]
             except KeyError:

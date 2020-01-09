@@ -58,14 +58,14 @@ class Selection(tsdb.Records):
         """
         The results of a 'select' query.
         """
-        self.fields = []  # type: List[tsdb.Field]
-        self._field_index = {}  # type: tsdb.FieldIndex
-        self.data = []  # type: tsdb.Records
+        self.fields: List[tsdb.Field] = []
+        self._field_index: tsdb.FieldIndex = {}
+        self.data: tsdb.Records = []
         self.projection = None
         if record_class is None:
             record_class = _Record
         self.record_class = record_class
-        self.joined = set()  # type: Set[str]
+        self.joined: Set[str] = set()
 
     def __iter__(self) -> Iterator[tsdb.Record]:
         if self.projection is None:
@@ -206,8 +206,8 @@ def _make_execution_plan(
     else:
         projection = [resolve_qname(name)[0] for name in projection]
 
-    cond_resolved = None  # type: Optional[_Condition]
-    cond_fields = []  # type: _Names
+    cond_resolved: Optional[_Condition] = None
+    cond_fields: _Names = []
     if condition:
         cond_resolved, cond_fields = _process_condition_fields(
             condition, resolve_qname)
@@ -219,7 +219,7 @@ def _make_execution_plan(
 
 def _project_all(relations: List[str], db: tsdb.Database) -> List[str]:
     projection = []
-    keys_added = set()  # type: Set[str]
+    keys_added: Set[str] = set()
     for name in relations:
         for field in db.schema[name]:
             qname = '{}.{}'.format(name, field.name)
@@ -242,7 +242,7 @@ def _make_qname_resolver(
     """
 
     index = {rel: tsdb.make_field_index(db.schema[rel]) for rel in db.schema}
-    schema_map = {}  # type: Dict[str, List[str]]
+    schema_map: Dict[str, List[str]] = {}
     for relname, fields in db.schema.items():
         for field in fields:
             schema_map.setdefault(field.name, []).append(relname)
@@ -486,12 +486,12 @@ def _join(selection: Selection,
     indices = [field_index[col] for col in columns]
     fields = [all_fields[idx] for idx in indices]
 
-    data = []  # type: List[tsdb.Record]
+    data: List[tsdb.Record] = []
     if not selection.joined:
         _merge_fields(selection, name, [], fields)
         data.extend(db._select_raw(name, columns))
     else:
-        on = []  # type: List[str]
+        on: List[str] = []
         if selection is not None:
             on = [f.name for f in fields
                   if f.is_key and f.name in selection._field_index]
@@ -501,7 +501,7 @@ def _join(selection: Selection,
         if not on:
             raise TSQLError('no shared keys for joining')
 
-        right = {}  # type: Dict[Tuple[tsdb.Value, ...], List[tsdb.Record]]
+        right: Dict[Tuple[tsdb.Value, ...], List[tsdb.Record]] = {}
         for keys, row in zip(db.select_from(name, on, cast=True),
                              db._select_raw(name, cols)):
             right.setdefault(tuple(keys), []).append(tuple(row))
@@ -654,10 +654,10 @@ def _parse_select_from(lexer: util.LookaheadLexer) -> List[str]:
 
 def _parse_select_where(
         lexer: util.LookaheadLexer) -> Optional[_Condition]:
-    conditions = []  # type: List[_Condition]
+    conditions: List[_Condition] = []
     while lexer.accept_type(_WHERE):
         conditions.append(_parse_condition_disjunction(lexer))
-    condition = None  # type: Optional[_Condition]
+    condition: Optional[_Condition] = None
     if len(conditions) == 1:
         condition = conditions[0]
     elif len(conditions) > 1:
@@ -684,7 +684,7 @@ def _parse_condition_disjunction(
 
 def _parse_condition_conjunction(
         lexer: util.LookaheadLexer) -> _Condition:
-    conds = []  # type: List[_Condition]
+    conds: List[_Condition] = []
     while True:
         typ, token = lexer.choice_type(_NOT, _LPAREN, _QID, _ID)
         if typ == _NOT:

@@ -22,7 +22,7 @@ def is_connected(m: mrs.MRS) -> bool:
     arguments (including qeqs), or label equalities.
     """
     ids = {ep.id for ep in m.rels}
-    g = {id: set() for id in ids}  # type: Dict[Identifier, Set[Identifier]]
+    g: Dict[Identifier, Set[Identifier]] = {id: set() for id in ids}
     # first establish links from labels and intrinsic variables to EPs
     for ep in m.rels:
         id, lbl, iv = ep.id, ep.label, ep.iv
@@ -169,7 +169,7 @@ def is_isomorphic(m1: mrs.MRS,
 
 
 def _make_mrs_isograph(x, properties):
-    g = {}  # type: Dict[Identifier, Dict[Optional[Identifier], str]]
+    g: Dict[Identifier, Dict[Optional[Identifier], str]] = {}
     g.update((v, {}) for v in x.variables)
     g.update((ep.id, {}) for ep in x.rels)
 

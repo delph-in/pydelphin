@@ -123,10 +123,10 @@ class Field(object):
             if flag in (':key', ':primary') or flag.startswith(':foreign'):
                 self.is_key = True
 
-        self.default = TSDB_CODED_ATTRIBUTES.get(
+        self.default: str = TSDB_CODED_ATTRIBUTES.get(
             name,
             '-1' if datatype == ':integer' else ''
-        )  # type: str
+        )
 
     def __str__(self):
         parts = [self.name, self.datatype]
@@ -187,10 +187,10 @@ def read_schema(path: util.PathLike) -> Schema:
 
 def _parse_schema(s: str) -> Schema:
     """Instantiate schema dict from a string."""
-    tables = []  # type: List[Tuple[str, Fields]]
-    seen = set()  # type: Set[str]
+    tables: List[Tuple[str, Fields]] = []
+    seen: Set[str] = set()
     current_table = ''
-    current_fields = []  # type: List[Field]
+    current_fields: List[Field] = []
     lines = list(reversed(s.splitlines()))  # to pop() in right order
     while lines:
         line = lines.pop().strip()
@@ -420,7 +420,7 @@ def unescape(string: str) -> str:
     """
     # unescape cannot use multiple str.replace() calls because of
     # examples like '\\\\s' which turn into '@' instead of '\\s'
-    chars = []  # type: List[str]
+    chars: List[str] = []
     esc = False
     for c in string:
         if esc:
@@ -959,7 +959,7 @@ def write_database(db: Database,
 
     for name in names:
         fields = schema[name]
-        relation = []  # type: Iterable[Record]
+        relation: Iterable[Record] = []
         if name in db.schema:
             try:
                 relation = db[name]

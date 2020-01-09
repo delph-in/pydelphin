@@ -72,8 +72,8 @@ class ACEProcess(interface.Processor):
         stderr (file): stream used for ACE's stderr
     """
 
-    _cmdargs = []  # type: List[str]
-    _termini = []  # type: List[Pattern[str]]
+    _cmdargs: List[str] = []
+    _termini: List[Pattern[str]] = []
 
     def __init__(self,
                  grm: util.PathLike,
@@ -105,7 +105,7 @@ class ACEProcess(interface.Processor):
             setattr(self, 'receive', self._default_receive)
         self.env = env or os.environ
         self._run_id = -1
-        self.run_infos = []  # type: List[Dict[str, Any]]
+        self.run_infos: List[Dict[str, Any]] = []
         self._stderr = stderr
         self._open()
 
@@ -591,7 +591,7 @@ _ace_argparser.add_argument('--max-words', type=int)
 
 def _ace_version(executable: str) -> Tuple[int, ...]:
     # 0.9.0 is the initial public release of ACE
-    version = (0, 9, 0)  # type: Tuple[int, ...]
+    version: Tuple[int, ...] = (0, 9, 0)
     try:
         out = check_output([executable, '-V'], universal_newlines=True)
     except (CalledProcessError, OSError):
