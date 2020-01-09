@@ -3,14 +3,14 @@
 Utility functions.
 """
 
-from typing import (Union, Iterable, Iterator, Dict, List, Tuple)
+from typing import (Union, Iterable, Iterator, Dict, List, Tuple, NamedTuple)
 from pathlib import Path
 import warnings
 import pkgutil
 import codecs
 import re
 from itertools import permutations
-from collections import deque, namedtuple
+from collections import deque
 from functools import wraps
 from enum import IntEnum
 
@@ -199,7 +199,14 @@ def _iso_candidates(n1s, n2s, g1, g2, hyp):
 # S-expressions
 #  e.g. (:n-inputs . 3) or (S (NP (NNS Dogs)) (VP (VBZ bark)))
 
-SExprResult = namedtuple('SExprResult', 'data remainder')
+_Val = Union[str, int, float]
+
+
+class SExprResult(NamedTuple):
+    """The result of parsing an S-Expression."""
+    data: Union[Tuple[_Val, _Val], List[_Val]]
+    remainder: str
+
 
 # escapes from https://en.wikipedia.org/wiki/S-expression#Use_in_Lisp
 _SExpr_escape_chars = r'"\s\(\)\[\]\{\}\\;'
