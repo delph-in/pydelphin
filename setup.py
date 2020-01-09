@@ -11,7 +11,7 @@ with open(os.path.join(base_dir, "delphin", "__about__.py")) as f:
 with open(os.path.join(base_dir, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
-repp_requires = ['regex==2019.11.1']
+repp_requires = ['regex==2020.1.8']
 
 # thanks: https://snarky.ca/clarifying-pep-518/
 doc_requirements = os.path.join(base_dir, 'docs', 'requirements.txt')
