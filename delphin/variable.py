@@ -35,7 +35,7 @@ def split(var):
     """
     match = _variable_re.match(var)
     if match is None:
-        raise ValueError('Invalid variable string: {}'.format(str(var)))
+        raise ValueError(f'Invalid variable string: {var!s}')
     else:
         return match.groups()
 
@@ -123,7 +123,7 @@ class VariableFactory(object):
         vid, index = self.vid, self.index
         while vid in index:
             vid += 1
-        varstring = '{}{}'.format(type, vid)
+        varstring = f'{type}{vid}'
         index[vid] = varstring
         if properties is None:
             properties = []

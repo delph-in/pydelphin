@@ -258,7 +258,7 @@ class ACEProcess(interface.Processor):
             result, lines = _make_response(
                 [('NOTE: PyDelphin could not validate the input and '
                   'refused to send it to ACE'),
-                 'SKIP: {}'.format(datum)],
+                 f'SKIP: {datum}'],
                 self.run_info)
         result['input'] = datum
         return result

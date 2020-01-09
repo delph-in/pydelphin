@@ -60,15 +60,15 @@ class YYToken(_YYToken):
             parts.append(str(self.lnk))
         parts.append(' '.join(map(str, self.paths or [1])))
         if self.surface is None:
-            parts.append('"{}"'.format(self.form))
+            parts.append(f'"{self.form}"')
         else:
-            parts.append('"{}" "{}"'.format(self.form, self.surface))
+            parts.append(f'"{self.form}" "{self.surface}"')
         parts.extend([
             str(self.ipos),
             ' '.join(map('"{}"'.format, self.lrules))
         ])
         if self.pos:
-            ps = ['"{}" {:.4f}'.format(pos, p) for pos, p in self.pos]
+            ps = [f'"{pos}" {p:.4f}' for pos, p in self.pos]
             parts.append(' '.join(ps))
         return '({})'.format(', '.join(parts))
 

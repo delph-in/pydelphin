@@ -77,7 +77,7 @@ class MultiHierarchy(object):
         if not normalize_identifier:
             self._norm = _norm_id
         elif not callable(normalize_identifier):
-            raise TypeError('not callable: {!r}'.format(normalize_identifier))
+            raise TypeError(f'not callable: {normalize_identifier!r}')
         else:
             self._norm = normalize_identifier
         top = self._norm(top)
@@ -112,8 +112,8 @@ class MultiHierarchy(object):
     def __setitem__(self, identifier, data):
         identifier = self._norm(identifier)
         if identifier not in self:
-            raise HierarchyError('cannot set data; not in hierarchy: {}'
-                                 .format(identifier))
+            raise HierarchyError(
+                f'cannot set data; not in hierarchy: {identifier}')
         self._data[identifier] = data
 
     def __iter__(self):

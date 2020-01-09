@@ -185,12 +185,12 @@ def _make_mrs_isograph(x, properties):
         # predicate-argument structure
         s = predicate.normalize(ep.predicate)
         if carg is not None:
-            s += '({})'.format(carg)
+            s += f'({carg})'
         elif properties and props:
             proplist = []
             for prop in sorted(props, key=property_priority):
                 val = props[prop]
-                proplist.append('{}={}'.format(prop.upper(), val.lower()))
+                proplist.append(f'{prop.upper()}={val.lower()}')
             s += '{' + '|'.join(proplist) + '}'
         g[id][None] = s
         for role in args:

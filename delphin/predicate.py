@@ -73,7 +73,7 @@ def split(s):
     _s = _strip_predicate(s)
     match = _robust_predicate_re.match(_s)
     if match is None:
-        raise PredicateError('invalid predicate: {}'.format(s))
+        raise PredicateError(f'invalid predicate: {s}')
 
     return (match.group('lemma'), match.group('pos'), match.group('sense'))
 
@@ -94,11 +94,11 @@ def create(lemma, pos, sense=None):
         '_some_q'
     """
     if _lemma_re.fullmatch(lemma) is None:
-        raise PredicateError('invalid lemma: {}'.format(lemma))
+        raise PredicateError(f'invalid lemma: {lemma}')
     if pos.lower() not in _POS:
-        raise PredicateError('invalid part-of-speech: {}'.format(pos))
+        raise PredicateError(f'invalid part-of-speech: {pos}')
     if sense is not None and _sense_re.fullmatch(sense) is None:
-        raise PredicateError('invalid sense: {}'.format(sense))
+        raise PredicateError(f'invalid sense: {sense}')
     parts = [lemma, pos]
     if sense:
         parts.append(sense)

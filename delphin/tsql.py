@@ -222,7 +222,7 @@ def _project_all(relations: List[str], db: tsdb.Database) -> List[str]:
     keys_added: Set[str] = set()
     for name in relations:
         for field in db.schema[name]:
-            qname = '{}.{}'.format(name, field.name)
+            qname = f'{name}.{field.name}'
             # only include same keys once
             if not field.is_key:
                 projection.append(qname)
@@ -258,9 +258,9 @@ def _make_qname_resolver(
             qname = colname
         elif col in schema_map:
             rel = schema_map[col][0]
-            qname = '{}.{}'.format(rel, col)
+            qname = f'{rel}.{col}'
         else:
-            raise TSQLError('undefined column: {}'.format(colname))
+            raise TSQLError(f'undefined column: {colname}')
         return qname, db.schema[rel][index[rel][col]]
 
     return resolve
@@ -286,7 +286,7 @@ def _plan_joins(projection, condition_fields, relations, db):
     for relation in relset:
         for field in db.schema[relation]:
             if field.is_key:
-                qname = '{}.{}'.format(relation, field.name)
+                qname = f'{relation}.{field.name}'
                 if qname not in added:
                     joinmap.setdefault(relation, []).append(field.name)
     # finally ensure joins occur in a valid order
@@ -605,8 +605,8 @@ def _parse_query(querystring: str) -> dict:
     if querytype in ('select', 'retrieve'):
         result = _parse_select(querybody)
     else:
-        raise TSQLSyntaxError("'{}' queries are not supported"
-                              .format(querytype), lineno=1)
+        raise TSQLSyntaxError(f"'{querytype}' queries are not supported",
+                              lineno=1)
 
     return result
 

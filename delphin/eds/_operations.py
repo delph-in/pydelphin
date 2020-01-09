@@ -223,7 +223,7 @@ def make_ids_unique(e, m):
         m: the MRS from which *e* was converted
     """
     # deps can be used to single out ep from set sharing ARG0s
-    new_ids = ('_{}'.format(i) for i in count(start=1))
+    new_ids = (f'_{i}' for i in count(start=1))
     nids = {}
     used = {}
     # initially only make new ids for quantifiers and those with no IV

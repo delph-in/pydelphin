@@ -175,7 +175,7 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
 
 def _get_codec(name):
     if name not in _CODECS:
-        raise CommandError('invalid codec: {}'.format(name))
+        raise CommandError(f'invalid codec: {name}')
     fullname = _CODECS[name]
     codec = importlib.import_module(fullname)
     return codec
@@ -209,8 +209,9 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
         converter = None
 
     else:
-        raise CommandError('{} -> {} conversion is not supported'.format(
-            src_rep.upper(), tgt_rep.upper()))
+        raise CommandError(
+            f'{src_rep.upper()} -> {tgt_rep.upper()}'
+            ' conversion is not supported')
 
     return converter
 
@@ -310,7 +311,7 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
             destination, db, schema, where, full, gzip)
 
     else:
-        raise CommandError('invalid source for mkprof: {!r}'.format(source))
+        raise CommandError(f'invalid source for mkprof: {source!r}')
 
     _mkprof_cleanup(destination, skeleton, old_relation_files)
 
@@ -351,17 +352,15 @@ def _lines_to_records(lineiter, colnames, split, fields):
         if len(colvals) != len(colnames):
             raise CommandError(
                 'line values do not match expected fields:\n'
-                '  fields: {}\n'
-                '  values: {}'.format(', '.join(colnames),
-                                      ', '.join(colvals)))
+                f'  fields: {", ".join(colnames)}\n'
+                f'  values: {", ".join(colvals)}')
         colmap = dict(zip(colnames, colvals))
 
         if with_i_id:
             if 'i-id' not in colmap:
                 colmap['i-id'] = i
             if colmap['i-id'] in i_ids:
-                raise CommandError('duplicate i-id: {}'
-                                   .format(colmap['i-id']))
+                raise CommandError(f'duplicate i-id: {colmap["i-id"]}')
             i_ids.add(colmap['i-id'])
 
         if with_i_length and 'i-length' not in colmap and 'i-input' in colmap:
@@ -409,8 +408,7 @@ def _mkprof_from_database(destination, db, schema, where, full, gzip):
             # filter the data, but use all if the query fails
             # (e.g., if the filter and table cannot be joined)
             try:
-                records = tsql.select(
-                    '* from {} {}'.format(table, where), db)
+                records = tsql.select(f'* from {table} {where}', db)
             except tsql.TSQLError:
                 records = list(db[table])
         else:
@@ -459,7 +457,7 @@ def _mkprof_summarize(destination, schema):
     isatty = sys.stdout.isatty()
 
     def _red(s):
-        return '\x1b[1;31m{}\x1b[0m'.format(s) if isatty else s
+        return f'\x1b[1;31m{s}\x1b[0m' if isatty else s
 
     fmt = '{:>8} bytes\t{}'
     for filename in ['relations'] + list(schema):
@@ -542,7 +540,7 @@ def process(grammar, testsuite, source=None, select=None,
             select += ' where i-wf != 2'
         processor = ace.ACEParser
     if result_id is not None:
-        select += ' where result-id == {}'.format(result_id)
+        select += f' where result-id == {result_id}'
 
     target = itsdb.TestSuite(testsuite)
     column, tablename, condition = _interpret_selection(select, source)
@@ -636,12 +634,11 @@ def repp(source, config=None, module=None, active=None,
         if trace_level > 0:
             for step in r.trace(line, verbose=True):
                 if isinstance(step, REPPResult):
-                    print('Done:{}'.format(step.string))
+                    print(f'Done:{step.string}')
                 elif hasattr(step.operation, 'pattern'):
                     if step.applied:
                         print('Applied:', step.operation)
-                        print(highlight(
-                            '-{}\n+{}'.format(step.input, step.output)))
+                        print(highlight(f'-{step.input}\n+{step.output}'))
                     elif trace_level > 1:
                         print('Did not apply:', step.operation)
         else:
@@ -661,10 +658,7 @@ def repp(source, config=None, module=None, active=None,
                     cfrom, cto = t.lnk.data
                 else:
                     cfrom, cto = -1, -1
-                print(
-                    '({}, {}, {})'
-                    .format(cfrom, cto, t.form)
-                )
+                print(f'({cfrom}, {cto}, {t.form})')
             print()
 
     if hasattr(source, 'read'):

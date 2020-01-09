@@ -290,7 +290,7 @@ class _SExprParser(object):
 
     def format(self, d):
         if isinstance(d, tuple) and len(d) == 2:
-            return '({} . {})'.format(d[0], d[1])
+            return f'({d[0]} . {d[1]})'
         elif isinstance(d, (tuple, list)):
             return '({})'.format(' '.join(map(self.format, d)))
         elif isinstance(d, str):
@@ -557,7 +557,7 @@ def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
 
 def namespace_modules(ns):
     """Return the name to fullname mapping of modules in package *ns*."""
-    return {name: '{}.{}'.format(ns.__name__, name)
+    return {name: f'{ns.__name__}.{name}'
             for _, name, _ in pkgutil.iter_modules(ns.__path__)}
 
 

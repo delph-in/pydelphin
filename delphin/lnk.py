@@ -87,7 +87,7 @@ class Lnk(object):
             self.type = arg
             self.data = data
         else:
-            raise LnkError('invalid Lnk: {}'.format(repr((arg, data))))
+            raise LnkError('invalid Lnk: {!r}'.format((arg, data)))
 
     @classmethod
     def default(cls):
@@ -151,7 +151,7 @@ class Lnk(object):
             return '<{}>'.format(' '.join(map(str, self.data)))
 
     def __repr__(self):
-        return '<Lnk object {} at {}>'.format(str(self), id(self))
+        return f'<Lnk object {self!s} at {id(self)}>'
 
     def __eq__(self, other):
         return self.type == other.type and self.data == other.data

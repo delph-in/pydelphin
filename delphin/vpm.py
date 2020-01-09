@@ -141,7 +141,7 @@ class VPM(object):
             if _valmatch([vs], src, op, None, self._semi, 'variables'):
                 vs = vs if tgt == ['*'] else tgt[0]
                 break
-        newvar = '{}{}'.format(vs, vid)
+        newvar = f'{vs}{vid}'
 
         newprops = {}
         for featsets, valmap in self._propmap:
