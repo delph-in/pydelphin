@@ -296,7 +296,7 @@ class ACEProcess(interface.Processor):
             if line.startswith('NOTE: tsdb run:'):
                 self._read_run_info(line)
             else:
-                logger.debug('ACE cleanup: {}'.format(line.rstrip()))
+                logger.debug('ACE cleanup: %s', line.rstrip())
         retval = self._p.wait()
         return retval
 
@@ -433,8 +433,8 @@ def compile(cfg_path: util.PathLike,
         )
     except (CalledProcessError, OSError):
         logger.error(
-            'Failed to compile grammar with ACE. See {}'
-            .format(getattr(stderr, 'name', '<stderr>'))
+            'Failed to compile grammar with ACE. See %s',
+            getattr(stderr, 'name', '<stderr>')
         )
         raise
 
@@ -663,7 +663,7 @@ def _sexpr_data(line: str) -> Iterator[Dict[str, Any]]:
                 (':error', 'incomplete output from ACE'),
                 '')
         if len(expr.data) != 2:
-            logger.error('Malformed output from ACE: {}'.format(line))
+            logger.error('Malformed output from ACE: %s', line)
             break
         line = expr.remainder.lstrip()
         yield expr.data
