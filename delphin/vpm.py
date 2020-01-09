@@ -157,7 +157,6 @@ class VPM(object):
                     for i, featval in enumerate(zip(tgtfeats, tgtvals)):
                         k, v = featval
                         if v == '*':
-                            print(i, len(vals), vals, k, v)
                             if i < len(vals) and vals[i] is not None:
                                 newprops[k] = vals[i]
                         elif v != '!':
