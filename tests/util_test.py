@@ -59,86 +59,86 @@ def test_SExpr_format():
 #     assert unescape_string('\\N{HIRAGANA LETTER A}') == 'あ'
 
 @pytest.fixture
-def empty_file(tmpdir):
-    f = tmpdir.join('empty.txt')
+def empty_file(tmp_path):
+    f = tmp_path / 'empty.txt'
     f.write_text(u'', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
-def nocomment_file(tmpdir):
-    f = tmpdir.join('nocomment.txt')
+def nocomment_file(tmp_path):
+    f = tmp_path / 'nocomment.txt'
     f.write_text(u'avm := *top*.', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
-def utf8_file(tmpdir):
-    f = tmpdir.join('utf8.txt')
+def utf8_file(tmp_path):
+    f = tmp_path / 'utf8.txt'
     f.write_text(u'; coding: utf-8\n'
                  u'a := character & [ ORTH \"あ\" ].', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
-def utf8var1_file(tmpdir):
-    f = tmpdir.join('utf8var1.txt')
+def utf8var1_file(tmp_path):
+    f = tmp_path / 'utf8var1.txt'
     f.write_text(u'; -*- mode: tdl; encoding: UTF-8; foo: bar -*-\n'
                  u'a := character & [ ORTH \"あ\" ].', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
-def utf8var2_file(tmpdir):
-    f = tmpdir.join('utf8var2.txt')
+def utf8var2_file(tmp_path):
+    f = tmp_path / 'utf8var2.txt'
     f.write_text(u'# coding: utf-8\n'
                  u'a=\"あ\"', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
-def latin1_file(tmpdir):
-    f = tmpdir.join('latin1.txt')
+def latin1_file(tmp_path):
+    f = tmp_path / 'latin1.txt'
     f.write_text(u'; coding: iso-8859-1\n'
                  u'a := character & [ ORTH \"á\" ].', encoding='iso-8859-1')
     return str(f)
 
 
 @pytest.fixture
-def shiftjis_file(tmpdir):
-    f = tmpdir.join('shift_jis.txt')
+def shiftjis_file(tmp_path):
+    f = tmp_path / 'shift_jis.txt'
     f.write_text(u'; coding: shift_jis\n'
                  u'a=\"あ\"', encoding='shift_jis')
     return str(f)
 
 
 @pytest.fixture
-def eucjp_file(tmpdir):
-    f = tmpdir.join('eucjp.txt')
+def eucjp_file(tmp_path):
+    f = tmp_path / 'eucjp.txt'
     f.write_text(u'; coding: euc_jp\n'
                  u'a=\"あ\"', encoding = 'euc_jp')
     return str(f)
 
 
 @pytest.fixture
-def invalid1_file(tmpdir):
-    f = tmpdir.join('invalid1.txt')
+def invalid1_file(tmp_path):
+    f = tmp_path / 'invalid1.txt'
     f.write_text(u'; encode: iso-8859-1\n'
                  u'á', encoding='iso-8859-1')
     return str(f)
 
 
 @pytest.fixture
-def invalid2_file(tmpdir):
-    f = tmpdir.join('invalid2.txt')
+def invalid2_file(tmp_path):
+    f = tmp_path / 'invalid2.txt'
     f.write_text(u'; coding: foo', encoding='utf-8')
     return str(f)
 
 
 @pytest.fixture
-def invalid3_file(tmpdir):
-    f = tmpdir.join('invalid3.txt')
-    f.write_binary(codecs.BOM_UTF8 + b'; coding: latin-1')
+def invalid3_file(tmp_path):
+    f = tmp_path / 'invalid3.txt'
+    f.write_bytes(codecs.BOM_UTF8 + b'; coding: latin-1')
     return str(f)
 
 

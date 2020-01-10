@@ -45,14 +45,14 @@ def mock_popen(pid=None, returncode=None, stdout=None, stderr=None):
     return MockedPopen
 
 
-def test_start(ace_mismatch, tmpdir, monkeypatch):
+def test_start(ace_mismatch, tmp_path, monkeypatch):
     popen = mock_popen(
         pid=10,
         returncode=255,
         stdout=io.StringIO(),
         stderr=io.StringIO(ace_mismatch))
-    grm = tmpdir.join('grm.dat')
-    grm.write('')
+    grm = tmp_path / 'grm.dat'
+    grm.write_text('')
     with monkeypatch.context() as m:
         m.setattr(ace, 'Popen', popen)
         m.setattr(ace, '_ace_version', lambda x: (0, 9, 29))
