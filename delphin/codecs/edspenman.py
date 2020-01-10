@@ -28,7 +28,7 @@ def load(source):
         a list of EDS objects
     """
     if not hasattr(source, 'read'):
-        source = str(Path(source).expanduser())
+        source = Path(source).expanduser()
     graphs = penman.load(source)
     xs = [from_triples(g.triples) for g in graphs]
     return xs

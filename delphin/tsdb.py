@@ -765,9 +765,8 @@ def open(dir: util.PathLike,
         ...         sentences.append(tsdb.split(line)[6])
     """
     path = get_path(dir, name)
-    # open and gzip.open don't accept pathlib.Path objects until Python 3.6
     if path.suffix.lower() == '.gz':
-        return gzopen(str(path), mode='rt', encoding=encoding)
+        return gzopen(path, mode='rt', encoding=encoding)
     else:
         return path.open(encoding=encoding)
 
@@ -843,7 +842,7 @@ def write(dir: util.PathLike,
 
     with tempfile.NamedTemporaryFile(
             mode='w+b', suffix='.tmp',
-            prefix=name, dir=str(dir)) as f_tmp:
+            prefix=name, dir=dir) as f_tmp:
 
         for record in records:
             f_tmp.write(
@@ -856,7 +855,7 @@ def write(dir: util.PathLike,
         # now copy the temp file to the destination
         f_tmp.seek(0)
         if gzip:
-            with gzopen(str(dest), mode) as f_out:
+            with gzopen(dest, mode) as f_out:
                 shutil.copyfileobj(f_tmp, f_out)
         else:
             with dest.open(mode=mode) as f_out:
