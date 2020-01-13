@@ -122,6 +122,22 @@ Core Components and Command Line Interface:
 
 ## Other Information
 
+### Citation
+
+Please use the following for academic citations (and see: https://ieeexplore.ieee.org/abstract/document/8939628):
+
+```bibtex
+@INPROCEEDINGS{Goodman:2019,
+  author={Goodman, Michael Wayne},
+  title={A Python Library for Deep Linguistic Resources},
+  booktitle={2019 Pacific Neighborhood Consortium Annual Conference and Joint Meetings (PNC)},
+  year={2019},
+  month=oct,
+  address={Singapore},
+  keywords={research software;linguistics;semantics;HPSG;computational linguistics;natural language processing;open source software}
+}
+```
+
 ### Acknowledgments
 
 Thanks to PyDelphin's
