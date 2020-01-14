@@ -129,8 +129,7 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
             xs = list(source_codec.load(path, **kwargs))
 
     # convert if source representation != target representation
-    if converter:
-        xs = map(converter, xs)
+    xs = _iter_convert(converter, xs)
 
     # write
     kwargs = {}
@@ -214,6 +213,22 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
             ' conversion is not supported')
 
     return converter
+
+
+def _iter_convert(converter, xs):
+    if not converter:
+        logger.info('no conversion necessary')
+        for i, x in enumerate(xs, 1):
+            logger.debug('item %d: %r', i, x)
+            yield x
+    else:
+        logger.info('converting...')
+        for i, x in enumerate(xs, 1):
+            logger.debug('item %d: %r', i, x)
+            try:
+                yield converter(x)
+            except PyDelphinException:
+                logger.error('could not convert item %d', i)
 
 
 ###############################################################################
