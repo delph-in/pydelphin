@@ -5,6 +5,7 @@ DMRS-PENMAN serialization and deserialization.
 """
 
 from pathlib import Path
+import logging
 
 import penman
 
@@ -13,6 +14,10 @@ from delphin.lnk import Lnk
 from delphin.dmrs import DMRS, Node, Link, CVARSORT
 from delphin.dmrs._dmrs import FIRST_NODE_ID
 from delphin.sembase import property_priority
+from delphin.util import _bfs
+
+
+logger = logging.getLogger(__name__)
 
 
 CODEC_INFO = {
@@ -151,6 +156,14 @@ def to_triples(d, properties=True, lnk=True):
     """
     Encode *d* as triples suitable for PENMAN serialization.
     """
+    # determine if graph is connected
+    g = {node.id: set() for node in d.nodes}
+    for link in d.links:
+        g[link.start].add(link.end)
+        g[link.end].add(link.start)
+    main_component = _bfs(g, start=d.top)
+    complete = True
+
     idmap = {}
     quantifiers = {node.id for node in d.nodes
                    if d.is_quantifier(node.id)}
@@ -163,26 +176,34 @@ def to_triples(d, properties=True, lnk=True):
     nodes = sorted(d.nodes, key=lambda n: d.top != n.id)
     triples = []
     for node in nodes:
-        _id = idmap[node.id]
-        triples.append((_id, ':instance', node.predicate))
-        if lnk and node.lnk is not None:
-            triples.append((_id, ':lnk', '"{}"'.format(str(node.lnk))))
-        if node.carg is not None:
-            triples.append((_id, ':carg', '"{}"'.format(node.carg)))
-        if node.type:
-            triples.append((_id, ':' + CVARSORT, node.type))
-        if properties:
-            for key in sorted(node.properties, key=property_priority):
-                value = node.properties[key]
-                triples.append((_id, ':' + key.lower(), value))
+        if node.id in main_component:
+            _id = idmap[node.id]
+            triples.append((_id, ':instance', node.predicate))
+            if lnk and node.lnk is not None:
+                triples.append((_id, ':lnk', '"{}"'.format(str(node.lnk))))
+            if node.carg is not None:
+                triples.append((_id, ':carg', '"{}"'.format(node.carg)))
+            if node.type:
+                triples.append((_id, ':' + CVARSORT, node.type))
+            if properties:
+                for key in sorted(node.properties, key=property_priority):
+                    value = node.properties[key]
+                    triples.append((_id, ':' + key.lower(), value))
+        else:
+            complete = False
 
     # if d.top is not None:
     #     triples.append((None, 'top', d.top))
     for link in d.links:
-        start = idmap[link.start]
-        end = idmap[link.end]
-        relation = ':{}-{}'.format(link.role.upper(), link.post)
-        triples.append((start, relation, end))
+        if link.start in main_component and link.end in main_component:
+            start = idmap[link.start]
+            end = idmap[link.end]
+            relation = ':{}-{}'.format(link.role.upper(), link.post)
+            triples.append((start, relation, end))
+
+    if not complete:
+        logger.warning(
+            'disconnected graph cannot be completely encoded: %r', d)
     return triples
 
 

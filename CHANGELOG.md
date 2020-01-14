@@ -20,6 +20,8 @@ these changes are prefixed with "**BREAKING**"
 
 * `delphin.codecs.dmrspenman` update to Penman v0.9.0
 * `delphin.codecs.edspenman` update to Penman v0.9.0
+* `delphin.codecs.edspenman` and `delphin.codecs.dmrspenman` now only
+  encode a graph's primary component ([#268][])
 
 
 ## [v1.1.0][]
@@ -1246,3 +1248,4 @@ information about changes, except for
 [#263]: https://github.com/delph-in/pydelphin/issues/263
 [#264]: https://github.com/delph-in/pydelphin/issues/264
 [#266]: https://github.com/delph-in/pydelphin/issues/266
+[#268]: https://github.com/delph-in/pydelphin/issues/268
