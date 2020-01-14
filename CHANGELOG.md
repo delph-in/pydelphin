@@ -13,6 +13,8 @@ these changes are prefixed with "**BREAKING**"
 ### Fixed
 
 * `delphin.codecs.edspenman` now properly reads predicate names
+* `delphin.codecs.edspenman` and `delphin.codecs.dmrspenman` now wrap
+  `PenmanError` in `PyDelphinException` ([#266][])
 
 ### Changed
 
@@ -1243,3 +1245,4 @@ information about changes, except for
 [#262]: https://github.com/delph-in/pydelphin/issues/262
 [#263]: https://github.com/delph-in/pydelphin/issues/263
 [#264]: https://github.com/delph-in/pydelphin/issues/264
+[#266]: https://github.com/delph-in/pydelphin/issues/266

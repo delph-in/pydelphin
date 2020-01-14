@@ -8,6 +8,7 @@ from pathlib import Path
 
 import penman
 
+from delphin.exceptions import PyDelphinException
 from delphin.lnk import Lnk
 from delphin.dmrs import DMRS, Node, Link, CVARSORT
 from delphin.dmrs._dmrs import FIRST_NODE_ID
@@ -30,7 +31,10 @@ def load(source):
     """
     if not hasattr(source, 'read'):
         source = Path(source).expanduser()
-    graphs = penman.load(source)
+    try:
+        graphs = penman.load(source)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
     xs = [from_triples(g.triples) for g in graphs]
     return xs
 
@@ -44,7 +48,10 @@ def loads(s):
     Returns:
         a list of DMRS objects
     """
-    graphs = penman.loads(s)
+    try:
+        graphs = penman.loads(s)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
     xs = [from_triples(g.triples) for g in graphs]
     return xs
 
@@ -97,14 +104,22 @@ def dumps(ds, properties=False, lnk=True, indent=False):
     to_graph = penman.Graph
     graphs = [to_graph(to_triples(d, properties=properties, lnk=lnk))
               for d in ds]
-    return penman.dumps(graphs, indent=indent)
+    try:
+        return penman.dumps(graphs, indent=indent)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
 
 
 def decode(s):
     """
     Deserialize a DMRS object from a PENMAN string.
     """
-    return from_triples(penman.decode(s).triples)
+    try:
+        g = penman.decode(s)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
+
+    return from_triples(g.triples)
 
 
 def encode(d, properties=True, lnk=True, indent=False):
@@ -126,7 +141,10 @@ def encode(d, properties=True, lnk=True, indent=False):
         indent = None
     triples = to_triples(d, properties=properties, lnk=lnk)
     g = penman.Graph(triples)
-    return penman.encode(g, indent=indent)
+    try:
+        return penman.encode(g, indent=indent)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
 
 
 def to_triples(d, properties=True, lnk=True):
