@@ -33,7 +33,11 @@ def from_mrs(m, representative_priority=None):
                  for ep in m.rels if not ep.is_quantifier()}
 
     top = _mrs_get_top(m.top, hcmap, reps, id_to_nid)
-    index = iv_to_nid[m.index] if m.index else None
+    # some bad MRSs have an INDEX that isn't the ARG0 of any EP, so
+    # make sure it exists first
+    index = None
+    if m.index and m.index in iv_to_nid:
+        index = iv_to_nid[m.index]
     nodes = _mrs_to_nodes(m, id_to_nid)
     links = _mrs_to_links(m, hcmap, reps, iv_to_nid, id_to_nid)
 

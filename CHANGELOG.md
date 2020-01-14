@@ -15,6 +15,10 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.codecs.edspenman` now properly reads predicate names
 * `delphin.codecs.edspenman` and `delphin.codecs.dmrspenman` now wrap
   `PenmanError` in `PyDelphinException` ([#266][])
+* `delphin.mrs.MRS.quantification_pairs()` detects and ignores when
+  quantifier(s) are shared by multiple EPs ([#267][])
+* `delphin.dmrs.from_mrs()` detects when an INDEX is specified but is
+  not the intrinsic argument of any EP ([#267][])
 
 ### Changed
 
@@ -1248,4 +1252,5 @@ information about changes, except for
 [#263]: https://github.com/delph-in/pydelphin/issues/263
 [#264]: https://github.com/delph-in/pydelphin/issues/264
 [#266]: https://github.com/delph-in/pydelphin/issues/266
+[#267]: https://github.com/delph-in/pydelphin/issues/267
 [#268]: https://github.com/delph-in/pydelphin/issues/268
