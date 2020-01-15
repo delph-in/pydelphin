@@ -42,6 +42,8 @@ def call_convert(args):
                         'syntax highlighting',
                         PyDelphinWarning)
                 color = False
+        if args.indent:
+            args.indent = int(args.indent)
         print(convert(
             args.PATH,
             vars(args)['from'],  # vars() to avoid syntax error

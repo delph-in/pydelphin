@@ -82,19 +82,13 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
         path = sys.stdin
 
     # normalize codec names
-    if color and target_fmt in ('simplemrs', 'simple-mrs'):
-        highlight = util.make_highlighter('simplemrs')
-    else:
-        highlight = str
-
     source_fmt, source_lines = _parse_format_name(source_fmt)
     target_fmt, target_lines = _parse_format_name(target_fmt)
+    # process other arguments
+    highlight = _get_highlighter(color, target_fmt)
     source_codec = _get_codec(source_fmt)
     target_codec = _get_codec(target_fmt)
     converter = _get_converter(source_codec, target_codec, predicate_modifiers)
-
-    if indent is not True and indent is not False and indent is not None:
-        indent = int(indent)
 
     if len(tsql.inspect_query('select ' + select)['projection']) != 1:
         raise CommandError(
@@ -126,13 +120,10 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
         kwargs['indent'] = indent
     if target_fmt == 'eds':
         kwargs['show_status'] = show_status
-    # if target_fmt.startswith('eds'):
-    #     kwargs['predicate_modifiers'] = predicate_modifiers
     if target_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
     kwargs['properties'] = properties
     kwargs['lnk'] = lnk
-
     # Manually dealing with headers, joiners, and footers is to
     # accommodate streaming output. Otherwise it is the same as
     # calling the following:
@@ -173,6 +164,14 @@ def _parse_format_name(name):
         name = name[:-6]
     name = name.replace('-', '')
     return name, lines
+
+
+def _get_highlighter(color, target_fmt):
+    if color and target_fmt in ('simplemrs', 'simple-mrs'):
+        highlight = util.make_highlighter('simplemrs')
+    else:
+        highlight = str
+    return highlight
 
 
 def _get_codec(name):
