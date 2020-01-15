@@ -6,7 +6,6 @@ PyDelphin API counterparts to the `delphin` commands.
 import sys
 from pathlib import Path
 import tempfile
-import importlib
 import logging
 import warnings
 
@@ -16,7 +15,6 @@ from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
 from delphin import util
 from delphin.exceptions import PyDelphinException
-import delphin.codecs
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
@@ -32,9 +30,6 @@ class CommandError(exceptions.PyDelphinException):
 
 ###############################################################################
 # CONVERT #####################################################################
-
-_CODECS = util.namespace_modules(delphin.codecs)
-
 
 def convert(path, source_fmt, target_fmt, select='result.mrs',
             properties=True, lnk=True, color=False, indent=None,
@@ -173,10 +168,10 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
 
 
 def _get_codec(name):
-    if name not in _CODECS:
-        raise CommandError(f'invalid codec: {name}')
-    fullname = _CODECS[name]
-    codec = importlib.import_module(fullname)
+    try:
+        codec = util.import_codec(name)
+    except KeyError as exc:
+        raise CommandError(f'invalid codec: {name}') from exc
     return codec
 
 

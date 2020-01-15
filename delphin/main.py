@@ -6,8 +6,6 @@ Entry-point for the 'delphin' command.
 
 import sys
 import os
-import importlib
-from collections import defaultdict
 import argparse
 import logging
 import warnings
@@ -18,7 +16,6 @@ from delphin.exceptions import PyDelphinWarning
 from delphin import tsdb
 from delphin import itsdb
 from delphin import util
-import delphin.codecs
 from delphin.commands import (
     convert, select, mkprof, process, compare, repp
 )
@@ -28,9 +25,6 @@ from delphin.__about__ import __version__
 
 logging.basicConfig()  # just use defaults here
 logger = logging.getLogger(__name__)  # for this module
-
-
-_CODECS = util.namespace_modules(delphin.codecs)
 
 
 def main():
@@ -86,17 +80,7 @@ def call_convert(args):
 
 
 def _list_codecs(verbose):
-    codecs = defaultdict(list)
-    for name, fullname in _CODECS.items():
-        try:
-            mod = importlib.import_module(fullname)
-            rep = mod.CODEC_INFO['representation']
-            description = mod.CODEC_INFO.get('description', '')
-        except (ImportError, AttributeError, KeyError) as ex:
-            if verbose:
-                codecs['(error)'].append((name, None, str(ex)))
-        else:
-            codecs[rep].append((name, mod, description))
+    codecs = util.inspect_codecs()
 
     for rep, data in sorted(codecs.items()):
         print(rep.upper())

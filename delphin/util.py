@@ -6,11 +6,12 @@ Utility functions.
 from typing import (Union, Iterable, Iterator, Dict, List, Tuple, NamedTuple)
 from pathlib import Path
 import warnings
+import importlib
 import pkgutil
 import codecs
 import re
 from itertools import permutations
-from collections import deque
+from collections import deque, defaultdict
 from functools import wraps
 from enum import IntEnum
 
@@ -559,6 +560,42 @@ def namespace_modules(ns):
     """Return the name to fullname mapping of modules in package *ns*."""
     return {name: f'{ns.__name__}.{name}'
             for _, name, _ in pkgutil.iter_modules(ns.__path__)}
+
+
+def inspect_codecs():
+    """
+    Inspect all available codecs and return a description.
+
+    The description is a mapping from a declared representation to a
+    list of codecs for that representation. Each item on the list is a
+    tuple of ``(codec_name, codec_module, codec_description)``. If
+    there is any error when attempting to load a codec module, the
+    representation will be ``(ERROR)``, the module will be ``None``,
+    and the description will be the exception message.
+    """
+    import delphin.codecs
+    codecs = namespace_modules(delphin.codecs)
+    result = defaultdict(list)
+    for name, fullname in codecs.items():
+        try:
+            mod = importlib.import_module(fullname)
+            rep = mod.CODEC_INFO['representation']
+            description = mod.CODEC_INFO.get('description', '')
+        except Exception as ex:
+            result['(error)'].append((name, None, str(ex)))
+        else:
+            result[rep].append((name, mod, description))
+    return result
+
+
+def import_codec(name: str):
+    """
+    Import codec *name* and return the module.
+    """
+    import delphin.codecs
+    codecs = namespace_modules(delphin.codecs)
+    fullname = codecs[name]
+    return importlib.import_module(fullname)
 
 
 def make_highlighter(fmt):
