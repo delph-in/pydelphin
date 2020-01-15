@@ -38,7 +38,12 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     """
     Convert between various DELPH-IN Semantics representations.
 
-    The *source_fmt* and *target_fmt* arguments are downcased and
+    If *source_fmt* ends with ``"-lines"``, then *path* must be an
+    input file containing one representation per line to be read with
+    the :func:`decode` function of the source codec. If *target_fmt*
+    ends with ``"-lines"``, then any :attr:`HEADER`, :attr:`JOINER`,
+    or :attr:`FOOTER` defined by the target codec are ignored. The
+    *source_fmt* and *target_fmt* arguments are then downcased and
     hyphens are removed to normalize the codec name.
 
     Note:
@@ -77,14 +82,13 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
         path = sys.stdin
 
     # normalize codec names
-    source_fmt = source_fmt.replace('-', '').lower()
-    target_fmt = target_fmt.replace('-', '').lower()
-
     if color and target_fmt in ('simplemrs', 'simple-mrs'):
         highlight = util.make_highlighter('simplemrs')
     else:
         highlight = str
 
+    source_fmt, source_lines = _parse_format_name(source_fmt)
+    target_fmt, target_lines = _parse_format_name(target_fmt)
     source_codec = _get_codec(source_fmt)
     target_codec = _get_codec(target_fmt)
     converter = _get_converter(source_codec, target_codec, predicate_modifiers)
@@ -108,20 +112,10 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     kwargs = {}
     if source_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
-
-    if hasattr(path, 'read'):
-        xs = list(source_codec.load(path, **kwargs))
+    if source_lines:
+        xs = _read_lines(path, source_codec, kwargs)
     else:
-        path = Path(path).expanduser()
-        if path.is_dir():
-            db = tsdb.Database(path)
-            # ts = itsdb.TestSuite(path)
-            xs = [
-                next(iter(source_codec.loads(r[0], **kwargs)), None)
-                for r in tsql.select(select, db)
-            ]
-        else:
-            xs = list(source_codec.load(path, **kwargs))
+        xs = _read(path, source_codec, select, kwargs)
 
     # convert if source representation != target representation
     xs = _iter_convert(converter, xs)
@@ -143,15 +137,19 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     # accommodate streaming output. Otherwise it is the same as
     # calling the following:
     #     target_codec.dumps(xs, **kwargs)
-    header = getattr(target_codec, 'HEADER', '')
-    joiner = getattr(target_codec, 'JOINER', ' ')
-    footer = getattr(target_codec, 'FOOTER', '')
-    if indent is not None:
-        if header:
-            header += '\n'
-        joiner = joiner.strip() + '\n'
-        if footer:
-            footer = '\n' + footer
+    if target_lines:
+        header = footer = ''
+        joiner = '\n'
+    else:
+        header = getattr(target_codec, 'HEADER', '')
+        joiner = getattr(target_codec, 'JOINER', ' ')
+        footer = getattr(target_codec, 'FOOTER', '')
+        if indent is not None:
+            if header:
+                header += '\n'
+            joiner = joiner.strip() + '\n'
+            if footer:
+                footer = '\n' + footer
 
     parts = []
     for x in xs:
@@ -165,6 +163,16 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     output = highlight(header + joiner.join(parts) + footer)
 
     return output
+
+
+def _parse_format_name(name):
+    name = name.lower()
+    lines = False
+    if name.endswith('-lines'):
+        lines = True
+        name = name[:-6]
+    name = name.replace('-', '')
+    return name, lines
 
 
 def _get_codec(name):
@@ -208,6 +216,37 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
             ' conversion is not supported')
 
     return converter
+
+
+def _read(path, source_codec, select, kwargs):
+    if hasattr(path, 'read'):
+        xs = list(source_codec.load(path, **kwargs))
+    else:
+        path = Path(path).expanduser()
+        if path.is_dir():
+            db = tsdb.Database(path)
+            # ts = itsdb.TestSuite(path)
+            xs = [
+                next(iter(source_codec.loads(r[0], **kwargs)), None)
+                for r in tsql.select(select, db)
+            ]
+        else:
+            xs = list(source_codec.load(path, **kwargs))
+    yield from xs
+
+
+def _read_lines(path, source_codec, kwargs):
+    if hasattr(path, 'read'):
+        yield from _read_file(path, source_codec, kwargs)
+    else:
+        path = Path(path).expanduser()
+        with path.open() as fh:
+            yield from _read_file(fh, source_codec, kwargs)
+
+
+def _read_file(fh, source_codec, kwargs):
+    for line in fh:
+        yield source_codec.decode(line, **kwargs)
 
 
 def _iter_convert(converter, xs):

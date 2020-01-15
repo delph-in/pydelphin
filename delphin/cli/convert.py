@@ -2,7 +2,8 @@
 """
 Convert DELPH-IN Semantics representations and formats.
 
-Use --list to see the available codecs.
+Use --list to see the available codecs. A codec name may be suffixed
+with "-lines" to enable line-based reading/writing.
 """
 
 import sys

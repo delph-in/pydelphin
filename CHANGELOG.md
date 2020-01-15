@@ -15,6 +15,7 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.util.inspect_codecs()` ([#270][])
 * `delphin.util.import_codec()` ([#270][])
 * `delphin.cli` namespace and modules for existing commands ([#269][])
+* `-lines` codec suffix for `delphin.commands.convert()` ([#271][])
 
 ### Fixed
 
@@ -1264,3 +1265,4 @@ information about changes, except for
 [#268]: https://github.com/delph-in/pydelphin/issues/268
 [#269]: https://github.com/delph-in/pydelphin/issues/269
 [#270]: https://github.com/delph-in/pydelphin/issues/270
+[#271]: https://github.com/delph-in/pydelphin/issues/271
