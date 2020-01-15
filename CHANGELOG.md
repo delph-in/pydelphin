@@ -14,6 +14,7 @@ these changes are prefixed with "**BREAKING**"
 
 * `delphin.util.inspect_codecs()` ([#270][])
 * `delphin.util.import_codec()` ([#270][])
+* `delphin.cli` namespace and modules for existing commands ([#269][])
 
 ### Fixed
 
@@ -31,6 +32,8 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.codecs.edspenman` update to Penman v0.9.0
 * `delphin.codecs.edspenman` and `delphin.codecs.dmrspenman` now only
   encode a graph's primary component ([#268][])
+* `delphin.main` now detects command modules declared in the
+  `delphin.cli` namespace ([#269][])
 
 
 ## [v1.1.0][]
@@ -1259,4 +1262,5 @@ information about changes, except for
 [#266]: https://github.com/delph-in/pydelphin/issues/266
 [#267]: https://github.com/delph-in/pydelphin/issues/267
 [#268]: https://github.com/delph-in/pydelphin/issues/268
+[#269]: https://github.com/delph-in/pydelphin/issues/269
 [#270]: https://github.com/delph-in/pydelphin/issues/270
