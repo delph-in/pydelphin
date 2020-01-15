@@ -42,8 +42,11 @@ def call_convert(args):
                         'syntax highlighting',
                         PyDelphinWarning)
                 color = False
-        if args.indent:
-            args.indent = int(args.indent)
+        if args.indent and args.indent is not True:
+            if args.indent.lower() in ('no', 'none'):
+                args.indent = None
+            else:
+                args.indent = int(args.indent)
         print(convert(
             args.PATH,
             vars(args)['from'],  # vars() to avoid syntax error
@@ -110,7 +113,7 @@ parser.add_argument(
     nargs='?',
     default=False,
     const=True,
-    help='format with explicit indent N')
+    help='format with explicit indent N ("no" for no newlines)')
 parser.add_argument(
     '--color',
     metavar='WHEN',

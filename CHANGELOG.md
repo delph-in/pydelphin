@@ -35,6 +35,8 @@ these changes are prefixed with "**BREAKING**"
   encode a graph's primary component ([#268][])
 * `delphin.main` now detects command modules declared in the
   `delphin.cli` namespace ([#269][])
+* `--indent` option to `delphin convert` can take `"no"` or `"none"`
+  to encode without newlines ([#271][])
 
 
 ## [v1.1.0][]
