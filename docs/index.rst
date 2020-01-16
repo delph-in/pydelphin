@@ -33,6 +33,7 @@ PyDelphin
   :hidden:
 
   api/delphin.ace.rst
+  api/delphin.cli.rst
   api/delphin.codecs.rst
   api/delphin.commands.rst
   api/delphin.derivation.rst

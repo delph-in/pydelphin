@@ -262,10 +262,6 @@ def _encode(ds, properties, lnk, indent):
 
 
 def _encode_dmrs(d, properties, lnk):
-    # attempt to convert if necessary
-    # if not isinstance(d, DMRS):
-    #     d = DMRS.from_xmrs(d)
-
     attributes = {}
     if lnk:
         attributes['cfrom'] = str(d.cfrom)

@@ -71,7 +71,7 @@ class Term(object):
 
     def __repr__(self):
         return "<{} object at {}>".format(
-            self.__class__.__name__, id(self))
+            type(self).__name__, id(self))
 
     def __and__(self, other):
         if isinstance(other, Term):
@@ -108,7 +108,7 @@ class TypeTerm(Term, str):
 
     def __repr__(self):
         return "<{} object ({}) at {}>".format(
-            self.__class__.__name__, self, id(self))
+            type(self).__name__, self, id(self))
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -203,7 +203,7 @@ class AVM(FeatureStructure, Term):
     def __setitem__(self, key, val):
         if not (val is None or isinstance(val, (Term, Conjunction))):
             raise TypeError('invalid attribute value type: {}'.format(
-                val.__class__.__name__))
+                type(val).__name__))
         super(AVM, self).__setitem__(key, val)
 
     def normalize(self):
@@ -247,7 +247,7 @@ class AVM(FeatureStructure, Term):
                 for term in val.terms:
                     if isinstance(term, AVM):
                         for fp, v in term.features(True):
-                            fs.append(('{}.{}'.format(featpath, fp), v))
+                            fs.append((f'{featpath}.{fp}', v))
                     else:
                         fs.append((featpath, term))
             else:
@@ -368,8 +368,8 @@ class ConsList(AVM):
             self[self._last_path] = end
             self.terminated = True
         else:
-            raise TDLError('Empty list must be {} or {}'.format(
-                LIST_TYPE, EMPTY_LIST_TYPE))
+            raise TDLError(
+                f'Empty list must be {LIST_TYPE} or {EMPTY_LIST_TYPE}')
 
 
 class DiffList(AVM):
@@ -469,7 +469,7 @@ class Conjunction(object):
                 self.add(term)
 
     def __repr__(self):
-        return "<Conjunction object at {}>".format(id(self))
+        return f"<Conjunction object at {id(self)}>"
 
     def __and__(self, other):
         if isinstance(other, Conjunction):
@@ -559,7 +559,7 @@ class Conjunction(object):
             elif isinstance(term, Coreference):
                 corefs.append(term)
             else:
-                raise TDLError('unexpected term {}'.format(term))
+                raise TDLError(f'unexpected term {term}')
         self._terms = corefs + types + avms
 
     @property
@@ -639,7 +639,7 @@ class TypeDefinition(object):
 
     def __repr__(self):
         return "<{} object '{}' at {}>".format(
-            self.__class__.__name__, self.identifier, id(self)
+            type(self).__name__, self.identifier, id(self)
         )
 
     @property
@@ -1027,7 +1027,7 @@ def _bounded(p1, p2, line, pos, line_no, lines):
             except StopIteration:
                 pattern = 'docstring' if p1 == '"""' else 'block comment'
                 raise TDLSyntaxError(
-                    'unterminated {}'.format(pattern),
+                    f'unterminated {pattern}',
                     lineno=start_line_no)
             pos = end = 0
     substrings.append(line[pos:end])
@@ -1122,7 +1122,7 @@ def _parse_tdl(tokens, path):
                 yield ('FileInclude', obj, line_no)
             else:
                 raise TDLSyntaxError(
-                    'unexpected token: {}'.format(token),
+                    f'unexpected token: {token}',
                     lineno=line_no)
             if environment is not None and obj is not None:
                 environment.entries.append(obj)
@@ -1151,7 +1151,7 @@ def _parse_tdl_definition(identifier, tokens):
             conjunction = Conjunction([conjunction])
         if len(conjunction.types()) == 0:
             raise TDLSyntaxError(
-                'no supertypes defined on {}'.format(identifier),
+                f'no supertypes defined on {identifier}',
                 lineno=line_no)
         obj = TypeDefinition(identifier, conjunction)
 
@@ -1190,7 +1190,7 @@ def _parse_letterset(token, line_no):
             return WildCard(m.group(1), chars)
     # if execution reached here there was a problems
     raise TDLSyntaxError(
-        'invalid letter-set or wild-card: {}'.format(token),
+        f'invalid letter-set or wild-card: {token}',
         lineno=line_no)
 
 
@@ -1235,9 +1235,8 @@ def _parse_tdl_term(tokens):
         term = String(token, docstring=doc)
     elif gid == 5:  # quoted symbol
         warnings.warn(
-            'Single-quoted symbol encountered at line {}; '
-            'Continuing as if it were a regular symbol.'
-            .format(line_no),
+            f'Single-quoted symbol encountered at line {line_no}; '
+            'Continuing as if it were a regular symbol.',
             TDLWarning)
         term = TypeIdentifier(token, docstring=doc)
     elif gid == 6:  # regex
@@ -1415,7 +1414,7 @@ def format(obj, indent=0):
     elif isinstance(obj, FileInclude):
         return _format_include(obj, indent)
     else:
-        raise ValueError('cannot format object as TDL: {!r}'.format(obj))
+        raise ValueError(f'cannot format object as TDL: {obj!r}')
 
 
 def _format_term(term, indent):
@@ -1431,7 +1430,7 @@ def _format_term(term, indent):
 
     if fmt is None:
         raise TDLError('not a valid term: {}'
-                       .format(term.__class__.__name__))
+                       .format(type(term).__name__))
 
     if term.docstring is not None:
         return '{}\n{}{}'.format(
@@ -1447,15 +1446,15 @@ def _format_id(term, indent):
 
 
 def _format_string(term, indent):
-    return '"{!s}"'.format(term)
+    return f'"{term!s}"'
 
 
 def _format_regex(term, indent):
-    return '^{!s}$'.format(term)
+    return f'^{term!s}$'
 
 
 def _format_coref(term, indent):
-    return '#{!s}'.format(term)
+    return f'#{term!s}'
 
 
 def _format_avm(avm, indent):
@@ -1491,7 +1490,7 @@ def _format_conslist(cl, indent):
         return '< {} >'.format(', '.join(values) + end)
     else:
         i = ' ' * (indent + 2)  # 2 = len('< ')
-        lines = ['< {}'.format(values[0])]
+        lines = [f'< {values[0]}']
         lines.extend(i + val for val in values[1:])
         return ',\n'.join(lines) + end + ' >'
 
@@ -1534,7 +1533,7 @@ def _format_conjunction(conj, indent):
 def _format_typedef(td, indent):
     i = ' ' * indent
     if hasattr(td, 'affix_type'):
-        patterns = ' '.join('({} {})'.format(a, b) for a, b in td.patterns)
+        patterns = ' '.join(f'({a} {b})' for a, b in td.patterns)
         body = _format_typedef_body(td, indent, indent + 2)
         return '{}{} {}\n%{} {}\n  {}.'.format(
             i, td.identifier, td._operator, td.affix_type, patterns, body)
@@ -1582,7 +1581,7 @@ def _format_docstring(doc, indent):
     ind = ' ' * indent
     contents = _escape_docstring(
         '\n{0}{1}\n{0}'.format(ind, ('\n' + ind).join(lines)))
-    return '"""{}"""'.format(contents)
+    return f'"""{contents}"""'
 
 
 def _escape_docstring(s):

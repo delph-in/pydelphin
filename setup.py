@@ -11,7 +11,7 @@ with open(os.path.join(base_dir, "delphin", "__about__.py")) as f:
 with open(os.path.join(base_dir, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
-repp_requires = ['regex==2019.11.1']
+repp_requires = ['regex==2020.1.8']
 
 # thanks: https://snarky.ca/clarifying-pep-518/
 doc_requirements = os.path.join(base_dir, 'docs', 'requirements.txt')
@@ -43,9 +43,9 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Text Processing :: Linguistic',
@@ -54,6 +54,7 @@ setup(
     keywords='nlp semantics hpsg delph-in linguistics',
     packages=[
         'delphin',
+        'delphin.cli',
         'delphin.codecs',
         'delphin.mrs',
         'delphin.eds',
@@ -61,7 +62,7 @@ setup(
         'delphin.web',
     ],
     install_requires=[
-        'penman==0.6.2',
+        'penman==0.9.1',
     ],
     extras_require={
         'docs': docs_require,

@@ -88,11 +88,13 @@ Interfaces with External Processors:
 - [`delphin.web`][]:       Client for the [web API](http://moin.delph-in.net/ErgApi)
 
 Core Components and Command Line Interface:
-- [`delphin.commands`][]:   Functional or CLI interface to common tasks
+- [`delphin.commands`][]:   Functional interface to common tasks
+- [`delphin.cli`][]:        Command-line interface to functional commands
 - [`delphin.hierarchy`][]:  Multiple-inheritance hierarchies
 - [`delphin.exceptions`][]: PyDelphin's basic exception classes
 
 
+[`delphin.cli`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.cli.html
 [`delphin.codecs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.codecs.html
 [`delphin.commands`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.commands.html
 [`delphin.derivation`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.derivation.html
@@ -121,6 +123,22 @@ Core Components and Command Line Interface:
 
 
 ## Other Information
+
+### Citation
+
+Please use the following for academic citations (and see: https://ieeexplore.ieee.org/abstract/document/8939628):
+
+```bibtex
+@INPROCEEDINGS{Goodman:2019,
+  author={Goodman, Michael Wayne},
+  title={A Python Library for Deep Linguistic Resources},
+  booktitle={2019 Pacific Neighborhood Consortium Annual Conference and Joint Meetings (PNC)},
+  year={2019},
+  month=oct,
+  address={Singapore},
+  keywords={research software;linguistics;semantics;HPSG;computational linguistics;natural language processing;open source software}
+}
+```
 
 ### Acknowledgments
 

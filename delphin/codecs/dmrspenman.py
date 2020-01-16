@@ -5,13 +5,19 @@ DMRS-PENMAN serialization and deserialization.
 """
 
 from pathlib import Path
+import logging
 
 import penman
 
+from delphin.exceptions import PyDelphinException
 from delphin.lnk import Lnk
 from delphin.dmrs import DMRS, Node, Link, CVARSORT
 from delphin.dmrs._dmrs import FIRST_NODE_ID
 from delphin.sembase import property_priority
+from delphin.util import _bfs
+
+
+logger = logging.getLogger(__name__)
 
 
 CODEC_INFO = {
@@ -29,9 +35,12 @@ def load(source):
         a list of DMRS objects
     """
     if not hasattr(source, 'read'):
-        source = str(Path(source).expanduser())
-    graphs = penman.load(source)
-    xs = [from_triples(g.triples()) for g in graphs]
+        source = Path(source).expanduser()
+    try:
+        graphs = penman.load(source)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
+    xs = [from_triples(g.triples) for g in graphs]
     return xs
 
 
@@ -44,8 +53,11 @@ def loads(s):
     Returns:
         a list of DMRS objects
     """
-    graphs = penman.loads(s)
-    xs = [from_triples(g.triples()) for g in graphs]
+    try:
+        graphs = penman.loads(s)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
+    xs = [from_triples(g.triples) for g in graphs]
     return xs
 
 
@@ -90,18 +102,29 @@ def dumps(ds, properties=False, lnk=True, indent=False):
     Returns:
         a PENMAN-serialization of the DMRS objects
     """
-    codec = penman.PENMANCodec()
-    to_graph = codec.triples_to_graph
+    if indent is True:
+        indent = -1
+    elif indent is False:
+        indent = None
+    to_graph = penman.Graph
     graphs = [to_graph(to_triples(d, properties=properties, lnk=lnk))
               for d in ds]
-    return penman.dumps(graphs, indent=indent)
+    try:
+        return penman.dumps(graphs, indent=indent)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
 
 
 def decode(s):
     """
     Deserialize a DMRS object from a PENMAN string.
     """
-    return from_triples(penman.decode(s).triples())
+    try:
+        g = penman.decode(s)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
+
+    return from_triples(g.triples)
 
 
 def encode(d, properties=True, lnk=True, indent=False):
@@ -117,18 +140,29 @@ def encode(d, properties=True, lnk=True, indent=False):
     Returns:
         a PENMAN-serialization of the DMRS object
     """
+    if indent is True:
+        indent = -1
+    elif indent is False:
+        indent = None
     triples = to_triples(d, properties=properties, lnk=lnk)
-    g = penman.PENMANCodec().triples_to_graph(triples)
-    return penman.encode(g, indent=indent)
+    g = penman.Graph(triples)
+    try:
+        return penman.encode(g, indent=indent)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
 
 
 def to_triples(d, properties=True, lnk=True):
     """
     Encode *d* as triples suitable for PENMAN serialization.
     """
-    # attempt to convert if necessary
-    # if not isinstance(d, DMRS):
-    #     d = DMRS.from_xmrs(d)
+    # determine if graph is connected
+    g = {node.id: set() for node in d.nodes}
+    for link in d.links:
+        g[link.start].add(link.end)
+        g[link.end].add(link.start)
+    main_component = _bfs(g, start=d.top)
+    complete = True
 
     idmap = {}
     quantifiers = {node.id for node in d.nodes
@@ -142,26 +176,34 @@ def to_triples(d, properties=True, lnk=True):
     nodes = sorted(d.nodes, key=lambda n: d.top != n.id)
     triples = []
     for node in nodes:
-        _id = idmap[node.id]
-        triples.append((_id, 'instance', node.predicate))
-        if lnk and node.lnk is not None:
-            triples.append((_id, 'lnk', '"{}"'.format(str(node.lnk))))
-        if node.carg is not None:
-            triples.append((_id, 'carg', '"{}"'.format(node.carg)))
-        if node.type:
-            triples.append((_id, CVARSORT, node.type))
-        if properties:
-            for key in sorted(node.properties, key=property_priority):
-                value = node.properties[key]
-                triples.append((_id, key.lower(), value))
+        if node.id in main_component:
+            _id = idmap[node.id]
+            triples.append((_id, ':instance', node.predicate))
+            if lnk and node.lnk is not None:
+                triples.append((_id, ':lnk', '"{}"'.format(str(node.lnk))))
+            if node.carg is not None:
+                triples.append((_id, ':carg', '"{}"'.format(node.carg)))
+            if node.type:
+                triples.append((_id, ':' + CVARSORT, node.type))
+            if properties:
+                for key in sorted(node.properties, key=property_priority):
+                    value = node.properties[key]
+                    triples.append((_id, ':' + key.lower(), value))
+        else:
+            complete = False
 
     # if d.top is not None:
     #     triples.append((None, 'top', d.top))
     for link in d.links:
-        start = idmap[link.start]
-        end = idmap[link.end]
-        relation = '{}-{}'.format(link.role.upper(), link.post)
-        triples.append((start, relation, end))
+        if link.start in main_component and link.end in main_component:
+            start = idmap[link.start]
+            end = idmap[link.end]
+            relation = ':{}-{}'.format(link.role.upper(), link.post)
+            triples.append((start, relation, end))
+
+    if not complete:
+        logger.warning(
+            'disconnected graph cannot be completely encoded: %r', d)
     return triples
 
 
@@ -172,6 +214,7 @@ def from_triples(triples):
     top = lnk = surface = identifier = None
     nids, nd, edges = [], {}, []
     for src, rel, tgt in triples:
+        rel = rel.lstrip(':')
         src, tgt = str(src), str(tgt)  # in case penman converts ids to ints
         if src is None and rel == 'top':
             top = tgt

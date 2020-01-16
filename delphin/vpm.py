@@ -141,7 +141,7 @@ class VPM(object):
             if _valmatch([vs], src, op, None, self._semi, 'variables'):
                 vs = vs if tgt == ['*'] else tgt[0]
                 break
-        newvar = '{}{}'.format(vs, vid)
+        newvar = f'{vs}{vid}'
 
         newprops = {}
         for featsets, valmap in self._propmap:
@@ -157,7 +157,6 @@ class VPM(object):
                     for i, featval in enumerate(zip(tgtfeats, tgtvals)):
                         k, v = featval
                         if v == '*':
-                            print(i, len(vals), vals, k, v)
                             if i < len(vals) and vals[i] is not None:
                                 newprops[k] = vals[i]
                         elif v != '!':

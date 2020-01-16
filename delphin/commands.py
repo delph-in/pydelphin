@@ -6,7 +6,6 @@ PyDelphin API counterparts to the `delphin` commands.
 import sys
 from pathlib import Path
 import tempfile
-import importlib
 import logging
 import warnings
 
@@ -16,7 +15,6 @@ from delphin.lnk import Lnk
 from delphin.semi import SemI, load as load_semi
 from delphin import util
 from delphin.exceptions import PyDelphinException
-import delphin.codecs
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
@@ -33,9 +31,6 @@ class CommandError(exceptions.PyDelphinException):
 ###############################################################################
 # CONVERT #####################################################################
 
-_CODECS = util.namespace_modules(delphin.codecs)
-
-
 def convert(path, source_fmt, target_fmt, select='result.mrs',
             properties=True, lnk=True, color=False, indent=None,
             show_status=False, predicate_modifiers=False,
@@ -43,7 +38,12 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     """
     Convert between various DELPH-IN Semantics representations.
 
-    The *source_fmt* and *target_fmt* arguments are downcased and
+    If *source_fmt* ends with ``"-lines"``, then *path* must be an
+    input file containing one representation per line to be read with
+    the :func:`decode` function of the source codec. If *target_fmt*
+    ends with ``"-lines"``, then any :attr:`HEADER`, :attr:`JOINER`,
+    or :attr:`FOOTER` defined by the target codec are ignored. The
+    *source_fmt* and *target_fmt* arguments are then downcased and
     hyphens are removed to normalize the codec name.
 
     Note:
@@ -82,20 +82,13 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
         path = sys.stdin
 
     # normalize codec names
-    source_fmt = source_fmt.replace('-', '').lower()
-    target_fmt = target_fmt.replace('-', '').lower()
-
-    if color and target_fmt in ('simplemrs', 'simple-mrs'):
-        highlight = util.make_highlighter('simplemrs')
-    else:
-        highlight = str
-
+    source_fmt, source_lines = _parse_format_name(source_fmt)
+    target_fmt, target_lines = _parse_format_name(target_fmt)
+    # process other arguments
+    highlight = _get_highlighter(color, target_fmt)
     source_codec = _get_codec(source_fmt)
     target_codec = _get_codec(target_fmt)
     converter = _get_converter(source_codec, target_codec, predicate_modifiers)
-
-    if indent is not True and indent is not False and indent is not None:
-        indent = int(indent)
 
     if len(tsql.inspect_query('select ' + select)['projection']) != 1:
         raise CommandError(
@@ -113,24 +106,13 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     kwargs = {}
     if source_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
-
-    if hasattr(path, 'read'):
-        xs = list(source_codec.load(path, **kwargs))
+    if source_lines:
+        xs = _read_lines(path, source_codec, kwargs)
     else:
-        path = Path(path).expanduser()
-        if path.is_dir():
-            db = tsdb.Database(path)
-            # ts = itsdb.TestSuite(path)
-            xs = [
-                next(iter(source_codec.loads(r[0], **kwargs)), None)
-                for r in tsql.select(select, db)
-            ]
-        else:
-            xs = list(source_codec.load(path, **kwargs))
+        xs = _read(path, source_codec, select, kwargs)
 
     # convert if source representation != target representation
-    if converter:
-        xs = map(converter, xs)
+    xs = _iter_convert(converter, xs)
 
     # write
     kwargs = {}
@@ -138,26 +120,27 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
         kwargs['indent'] = indent
     if target_fmt == 'eds':
         kwargs['show_status'] = show_status
-    # if target_fmt.startswith('eds'):
-    #     kwargs['predicate_modifiers'] = predicate_modifiers
     if target_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
     kwargs['properties'] = properties
     kwargs['lnk'] = lnk
-
     # Manually dealing with headers, joiners, and footers is to
     # accommodate streaming output. Otherwise it is the same as
     # calling the following:
     #     target_codec.dumps(xs, **kwargs)
-    header = getattr(target_codec, 'HEADER', '')
-    joiner = getattr(target_codec, 'JOINER', ' ')
-    footer = getattr(target_codec, 'FOOTER', '')
-    if indent is not None:
-        if header:
-            header += '\n'
-        joiner = joiner.strip() + '\n'
-        if footer:
-            footer = '\n' + footer
+    if target_lines:
+        header = footer = ''
+        joiner = '\n'
+    else:
+        header = getattr(target_codec, 'HEADER', '')
+        joiner = getattr(target_codec, 'JOINER', ' ')
+        footer = getattr(target_codec, 'FOOTER', '')
+        if indent is not None:
+            if header:
+                header += '\n'
+            joiner = joiner.strip() + '\n'
+            if footer:
+                footer = '\n' + footer
 
     parts = []
     for x in xs:
@@ -173,11 +156,29 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
     return output
 
 
+def _parse_format_name(name):
+    name = name.lower()
+    lines = False
+    if name.endswith('-lines'):
+        lines = True
+        name = name[:-6]
+    name = name.replace('-', '')
+    return name, lines
+
+
+def _get_highlighter(color, target_fmt):
+    if color and target_fmt in ('simplemrs', 'simple-mrs'):
+        highlight = util.make_highlighter('simplemrs')
+    else:
+        highlight = str
+    return highlight
+
+
 def _get_codec(name):
-    if name not in _CODECS:
-        raise CommandError('invalid codec: {}'.format(name))
-    fullname = _CODECS[name]
-    codec = importlib.import_module(fullname)
+    try:
+        codec = util.import_codec(name)
+    except KeyError as exc:
+        raise CommandError(f'invalid codec: {name}') from exc
     return codec
 
 
@@ -209,10 +210,58 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
         converter = None
 
     else:
-        raise CommandError('{} -> {} conversion is not supported'.format(
-            src_rep.upper(), tgt_rep.upper()))
+        raise CommandError(
+            f'{src_rep.upper()} -> {tgt_rep.upper()}'
+            ' conversion is not supported')
 
     return converter
+
+
+def _read(path, source_codec, select, kwargs):
+    if hasattr(path, 'read'):
+        xs = list(source_codec.load(path, **kwargs))
+    else:
+        path = Path(path).expanduser()
+        if path.is_dir():
+            db = tsdb.Database(path)
+            # ts = itsdb.TestSuite(path)
+            xs = [
+                next(iter(source_codec.loads(r[0], **kwargs)), None)
+                for r in tsql.select(select, db)
+            ]
+        else:
+            xs = list(source_codec.load(path, **kwargs))
+    yield from xs
+
+
+def _read_lines(path, source_codec, kwargs):
+    if hasattr(path, 'read'):
+        yield from _read_file(path, source_codec, kwargs)
+    else:
+        path = Path(path).expanduser()
+        with path.open() as fh:
+            yield from _read_file(fh, source_codec, kwargs)
+
+
+def _read_file(fh, source_codec, kwargs):
+    for line in fh:
+        yield source_codec.decode(line, **kwargs)
+
+
+def _iter_convert(converter, xs):
+    if not converter:
+        logger.info('no conversion necessary')
+        for i, x in enumerate(xs, 1):
+            logger.debug('item %d: %r', i, x)
+            yield x
+    else:
+        logger.info('converting...')
+        for i, x in enumerate(xs, 1):
+            logger.debug('item %d: %r', i, x)
+            try:
+                yield converter(x)
+            except PyDelphinException:
+                logger.error('could not convert item %d', i)
 
 
 ###############################################################################
@@ -310,7 +359,7 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
             destination, db, schema, where, full, gzip)
 
     else:
-        raise CommandError('invalid source for mkprof: {!r}'.format(source))
+        raise CommandError(f'invalid source for mkprof: {source!r}')
 
     _mkprof_cleanup(destination, skeleton, old_relation_files)
 
@@ -351,17 +400,15 @@ def _lines_to_records(lineiter, colnames, split, fields):
         if len(colvals) != len(colnames):
             raise CommandError(
                 'line values do not match expected fields:\n'
-                '  fields: {}\n'
-                '  values: {}'.format(', '.join(colnames),
-                                      ', '.join(colvals)))
+                f'  fields: {", ".join(colnames)}\n'
+                f'  values: {", ".join(colvals)}')
         colmap = dict(zip(colnames, colvals))
 
         if with_i_id:
             if 'i-id' not in colmap:
                 colmap['i-id'] = i
             if colmap['i-id'] in i_ids:
-                raise CommandError('duplicate i-id: {}'
-                                   .format(colmap['i-id']))
+                raise CommandError(f'duplicate i-id: {colmap["i-id"]}')
             i_ids.add(colmap['i-id'])
 
         if with_i_length and 'i-length' not in colmap and 'i-input' in colmap:
@@ -409,8 +456,7 @@ def _mkprof_from_database(destination, db, schema, where, full, gzip):
             # filter the data, but use all if the query fails
             # (e.g., if the filter and table cannot be joined)
             try:
-                records = tsql.select(
-                    '* from {} {}'.format(table, where), db)
+                records = tsql.select(f'* from {table} {where}', db)
             except tsql.TSQLError:
                 records = list(db[table])
         else:
@@ -459,7 +505,7 @@ def _mkprof_summarize(destination, schema):
     isatty = sys.stdout.isatty()
 
     def _red(s):
-        return '\x1b[1;31m{}\x1b[0m'.format(s) if isatty else s
+        return f'\x1b[1;31m{s}\x1b[0m' if isatty else s
 
     fmt = '{:>8} bytes\t{}'
     for filename in ['relations'] + list(schema):
@@ -542,7 +588,7 @@ def process(grammar, testsuite, source=None, select=None,
             select += ' where i-wf != 2'
         processor = ace.ACEParser
     if result_id is not None:
-        select += ' where result-id == {}'.format(result_id)
+        select += f' where result-id == {result_id}'
 
     target = itsdb.TestSuite(testsuite)
     column, tablename, condition = _interpret_selection(select, source)
@@ -636,12 +682,11 @@ def repp(source, config=None, module=None, active=None,
         if trace_level > 0:
             for step in r.trace(line, verbose=True):
                 if isinstance(step, REPPResult):
-                    print('Done:{}'.format(step.string))
+                    print(f'Done:{step.string}')
                 elif hasattr(step.operation, 'pattern'):
                     if step.applied:
                         print('Applied:', step.operation)
-                        print(highlight(
-                            '-{}\n+{}'.format(step.input, step.output)))
+                        print(highlight(f'-{step.input}\n+{step.output}'))
                     elif trace_level > 1:
                         print('Did not apply:', step.operation)
         else:
@@ -661,10 +706,7 @@ def repp(source, config=None, module=None, active=None,
                     cfrom, cto = t.lnk.data
                 else:
                     cfrom, cto = -1, -1
-                print(
-                    '({}, {}, {})'
-                    .format(cfrom, cto, t.form)
-                )
+                print(f'({cfrom}, {cto}, {t.form})')
             print()
 
     if hasattr(source, 'read'):

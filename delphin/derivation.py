@@ -138,9 +138,7 @@ class UDFToken(namedtuple('UDFToken', 'id tfs')):
         return super(UDFToken, cls).__new__(cls, id, tfs)
 
     def __repr__(self):
-        return '<UDFToken object ({} {!r}) at {}>'.format(
-            self.id, self.tfs, id(self)
-        )
+        return f'<UDFToken object ({self.id} {self.tfs!r}) at {id(self)}>'
 
     def __eq__(self, other):
         """
@@ -174,7 +172,7 @@ class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', 'form tokens')):
         return t
 
     def __repr__(self):
-        return '<UDFTerminal object ({}) at {}>'.format(self.form, id(self))
+        return f'<UDFTerminal object ({self.form}) at {id(self)}>'
 
     def __eq__(self, other):
         """
@@ -529,12 +527,12 @@ def _to_udf(obj, indent, level, udx=False):
             if obj._head:
                 entity = '^' + entity
             if obj.type:
-                entity = '{}@{}'.format(entity, obj.type)
+                entity = f'{entity}@{obj.type}'
         dtrs = [_to_udf(dtr, indent, (level + 1), udx)
                 for dtr in obj.daughters]
         dtrs = delim.join([''] + dtrs)  # empty first item to force indent
         if obj.id is None:
-            return '({}{})'.format(entity, dtrs)
+            return f'({entity}{dtrs})'
         else:
             # :g for score makes -1.0 look like -1
             return '({} {} {:g} {} {}{})'.format(
@@ -546,11 +544,11 @@ def _to_udf(obj, indent, level, udx=False):
                 dtrs
             )
     elif isinstance(obj, UDFTerminal):
-        form = '"{}"'.format(obj.form)
-        tokens = ['{} "{}"'.format(t.id, t.tfs) for t in obj.tokens]
+        form = f'"{obj.form}"'
+        tokens = [f'{t.id} "{t.tfs}"' for t in obj.tokens]
         return '({})'.format(delim.join([form] + tokens))
     else:
-        raise TypeError('Invalid node: {}'.format(str(obj)))
+        raise TypeError(f'Invalid node: {obj!s}')
 
 
 def _to_dict(obj, fields, labels):

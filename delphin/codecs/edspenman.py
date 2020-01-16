@@ -5,12 +5,18 @@ EDS-PENMAN serialization and deserialization.
 """
 
 from pathlib import Path
+import logging
 
 import penman
 
+from delphin.exceptions import PyDelphinException
 from delphin.lnk import Lnk
 from delphin.sembase import (role_priority, property_priority)
 from delphin.eds import (EDS, Node)
+from delphin.util import _bfs
+
+
+logger = logging.getLogger(__name__)
 
 
 CODEC_INFO = {
@@ -28,9 +34,12 @@ def load(source):
         a list of EDS objects
     """
     if not hasattr(source, 'read'):
-        source = str(Path(source).expanduser())
-    graphs = penman.load(source)
-    xs = [from_triples(g.triples()) for g in graphs]
+        source = Path(source).expanduser()
+    try:
+        graphs = penman.load(source)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
+    xs = [from_triples(g.triples) for g in graphs]
     return xs
 
 
@@ -43,8 +52,11 @@ def loads(s):
     Returns:
         a list of EDS objects
     """
-    graphs = penman.loads(s)
-    xs = [from_triples(g.triples()) for g in graphs]
+    try:
+        graphs = penman.loads(s)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
+    xs = [from_triples(g.triples) for g in graphs]
     return xs
 
 
@@ -89,18 +101,29 @@ def dumps(es, properties=True, lnk=True, indent=False):
     Returns:
         a EDS-PENMAN-serialization of the EDS objects
     """
-    codec = penman.PENMANCodec()
-    to_graph = codec.triples_to_graph
+    if indent is True:
+        indent = -1
+    elif indent is False:
+        indent = None
+    to_graph = penman.Graph
     graphs = [to_graph(to_triples(e, properties=properties, lnk=lnk))
               for e in es]
-    return penman.dumps(graphs, indent=indent)
+    try:
+        return penman.dumps(graphs, indent=indent)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not encode with Penman') from exc
 
 
 def decode(s):
     """
     Deserialize a EDS object from a EDS-PENMAN string.
     """
-    return from_triples(penman.decode(s).triples())
+    try:
+        g = penman.decode(s)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not decode with Penman') from exc
+
+    return from_triples(g.triples)
 
 
 def encode(e, properties=True, lnk=True, indent=False):
@@ -116,36 +139,56 @@ def encode(e, properties=True, lnk=True, indent=False):
     Returns:
         a EDS-PENMAN-serialization of the EDS object
     """
+    if indent is True:
+        indent = -1
+    elif indent is False:
+        indent = None
     triples = to_triples(e, properties=properties, lnk=lnk)
-    g = penman.PENMANCodec().triples_to_graph(triples)
-    return penman.encode(g, indent=indent)
+    g = penman.Graph(triples)
+    try:
+        return penman.encode(g, indent=indent)
+    except penman.PenmanError as exc:
+        raise PyDelphinException('could not encode with Penman') from exc
 
 
 def to_triples(e, properties=True, lnk=True):
     """
     Encode the Eds as triples suitable for PENMAN serialization.
     """
-    # attempt to convert if necessary
-    if not isinstance(e, EDS):
-        e = EDS.from_xmrs(e)
+    # determine if graph is connected
+    g = {node.id: set() for node in e.nodes}
+    for node in e.nodes:
+        for target in node.edges.values():
+            g[node.id].add(target)
+            g[target].add(node.id)
+    main_component = _bfs(g, start=e.top)
+    complete = True
 
     triples = []
     # sort node ids just so top var is first
     nodes = sorted(e.nodes, key=lambda n: n.id != e.top)
     for node in nodes:
         nid = node.id
-        triples.append((nid, 'instance', node.predicate))
-        if lnk and node.lnk:
-            triples.append((nid, 'lnk', '"{}"'.format(str(node.lnk))))
-        if node.carg:
-            triples.append((nid, 'carg', '"{}"'.format(node.carg)))
-        if node.type is not None:
-            triples.append((nid, 'type', node.type))
-        if properties:
-            for prop in sorted(node.properties, key=property_priority):
-                triples.append((nid, prop.lower(), node.properties[prop]))
-        for role in sorted(node.edges, key=role_priority):
-            triples.append((nid, role, node.edges[role]))
+        if nid in main_component:
+            triples.append((nid, ':instance', node.predicate))
+            if lnk and node.lnk:
+                triples.append((nid, ':lnk', '"{}"'.format(str(node.lnk))))
+            if node.carg:
+                triples.append((nid, ':carg', '"{}"'.format(node.carg)))
+            if node.type is not None:
+                triples.append((nid, ':type', node.type))
+            if properties:
+                for prop in sorted(node.properties, key=property_priority):
+                    rel = ':' + prop.lower()
+                    triples.append((nid, rel, node.properties[prop]))
+            for role in sorted(node.edges, key=role_priority):
+                triples.append((nid, ':' + role, node.edges[role]))
+        else:
+            complete = False
+
+    if not complete:
+        logger.warning(
+            'disconnected graph cannot be completely encoded: %r', e)
     return triples
 
 
@@ -155,11 +198,12 @@ def from_triples(triples):
     """
     nids, nd = [], {}
     for src, rel, tgt in triples:
+        rel = rel.lstrip(':')
         if src not in nd:
             nids.append(src)
             nd[src] = {'pred': None, 'type': None, 'edges': {},
                        'props': {}, 'lnk': None, 'carg': None}
-        if rel == 'predicate':
+        if rel == 'instance':
             nd[src]['pred'] = tgt
         elif rel == 'lnk':
             nd[src]['lnk'] = Lnk(tgt.strip('"'))

@@ -134,6 +134,20 @@ PyDelphin and appear in the list of available codecs when running
 ``delphin convert --list`` (see the :ref:`convert-tutorial` command).
 
 
+Defining a New Subcommand
+-------------------------
+
+Plugins can define subcommands that become available as
+:command:`delphin <subcommand>` by creating a module in the
+``delphin.cli`` namespace. Normally, the primary code of a plugin goes
+in the module of the ``delphin`` namespace and the ``delphin.cli``
+module only defines a translation from command-line arguments to
+internal function calls.
+
+See :doc:`../api/delphin.cli` for more information about defining such
+modules.
+
+
 Adding New Modules to PyDelphin
 -------------------------------
 

@@ -8,6 +8,48 @@ these changes are prefixed with "**BREAKING**"
 (no unreleased changes yet)
 
 
+## [v1.2.0][]
+
+**Release date: 2020-01-16**
+
+Removes Python 3.5 support, adds Python 3.8 support, adds the `cli`
+namespace, fixes some issues with MRS and DMRS, an expands formatting
+options for `delphin convert`.
+
+### Python Versions
+
+* Removed Python 3.5 support ([#219][])
+* Added Python 3.8 support
+
+### Added
+
+* `delphin.util.inspect_codecs()` ([#270][])
+* `delphin.util.import_codec()` ([#270][])
+* `delphin.cli` namespace and modules for existing commands ([#269][])
+* `-lines` codec suffix for `delphin.commands.convert()` ([#271][])
+
+### Fixed
+
+* `delphin.codecs.edspenman` now properly reads predicate names
+* `delphin.codecs.edspenman` and `delphin.codecs.dmrspenman` now wrap
+  `PenmanError` in `PyDelphinException` ([#266][])
+* `delphin.mrs.MRS.quantification_pairs()` detects and ignores when
+  quantifier(s) are shared by multiple EPs ([#267][])
+* `delphin.dmrs.from_mrs()` detects when an INDEX is specified but is
+  not the intrinsic argument of any EP ([#267][])
+
+### Changed
+
+* `delphin.codecs.dmrspenman` update to Penman v0.9
+* `delphin.codecs.edspenman` update to Penman v0.9
+* `delphin.codecs.edspenman` and `delphin.codecs.dmrspenman` now only
+  encode a graph's primary component ([#268][])
+* `delphin.main` now detects command modules declared in the
+  `delphin.cli` namespace ([#269][])
+* `--indent` option to `delphin convert` can take `"no"` or `"none"`
+  to encode without newlines ([#271][])
+
+
 ## [v1.1.0][]
 
 **Release date: 2020-01-07**
@@ -1102,6 +1144,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.2.0]: ../../releases/tag/v1.2.0
 [v1.1.0]: ../../releases/tag/v1.1.0
 [v1.0.3]: ../../releases/tag/v1.0.3
 [v1.0.2]: ../../releases/tag/v1.0.2
@@ -1217,6 +1260,7 @@ information about changes, except for
 [#200]: https://github.com/delph-in/pydelphin/issues/200
 [#203]: https://github.com/delph-in/pydelphin/issues/203
 [#213]: https://github.com/delph-in/pydelphin/issues/213
+[#219]: https://github.com/delph-in/pydelphin/issues/219
 [#245]: https://github.com/delph-in/pydelphin/issues/245
 [#246]: https://github.com/delph-in/pydelphin/issues/246
 [#247]: https://github.com/delph-in/pydelphin/issues/247
@@ -1230,3 +1274,9 @@ information about changes, except for
 [#262]: https://github.com/delph-in/pydelphin/issues/262
 [#263]: https://github.com/delph-in/pydelphin/issues/263
 [#264]: https://github.com/delph-in/pydelphin/issues/264
+[#266]: https://github.com/delph-in/pydelphin/issues/266
+[#267]: https://github.com/delph-in/pydelphin/issues/267
+[#268]: https://github.com/delph-in/pydelphin/issues/268
+[#269]: https://github.com/delph-in/pydelphin/issues/269
+[#270]: https://github.com/delph-in/pydelphin/issues/270
+[#271]: https://github.com/delph-in/pydelphin/issues/271

@@ -3,32 +3,28 @@
 YY tokens and token lattices.
 """
 
+from typing import NamedTuple, Optional, List, Tuple
 import re
-from collections import namedtuple
 
 from delphin.lnk import Lnk
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
 
-_yy_token = namedtuple(
-    'YYToken',
-    (
-        'id',       # token identifier
-        'start',    # start vertex
-        'end',      # end vertex
-        'lnk',      # <from:to> charspan (optional)
-        'paths',    # path membership
-        'form',     # surface token
-        'surface',  # original token (optional; only if `form` was modified)
-        'ipos',     # relative index of sub-token to which lrules apply
-        'lrules',   # list of morphological rules applied, "null" if None
-        'pos'       # pairs of (POS, prob)
-    )
-)
+class _YYToken(NamedTuple):
+    id: int
+    start: int
+    end: int
+    lnk: Lnk
+    paths: List[int]
+    form: str
+    surface: Optional[str]
+    ipos: int          # relative index of sub-token to which lrules apply
+    lrules: List[str]  # list of morphological rules applied, "null" if None
+    pos: List[Tuple[str, float]]
 
 
-class YYToken(_yy_token):
+class YYToken(_YYToken):
     """
     A tuple of token data in the YY format.
 
@@ -44,6 +40,8 @@ class YYToken(_yy_token):
         lrules: something about lexical rules; always "null"?
         pos: pairs of (POS, prob)
     """
+    __slots__ = ()
+
     def __new__(cls, id, start, end,
                 lnk=None, paths=(1,), form=None, surface=None,
                 ipos=0, lrules=("null",), pos=()):
@@ -62,15 +60,15 @@ class YYToken(_yy_token):
             parts.append(str(self.lnk))
         parts.append(' '.join(map(str, self.paths or [1])))
         if self.surface is None:
-            parts.append('"{}"'.format(self.form))
+            parts.append(f'"{self.form}"')
         else:
-            parts.append('"{}" "{}"'.format(self.form, self.surface))
+            parts.append(f'"{self.form}" "{self.surface}"')
         parts.extend([
             str(self.ipos),
             ' '.join(map('"{}"'.format, self.lrules))
         ])
         if self.pos:
-            ps = ['"{}" {:.4f}'.format(pos, p) for pos, p in self.pos]
+            ps = [f'"{pos}" {p:.4f}' for pos, p in self.pos]
             parts.append(' '.join(ps))
         return '({})'.format(', '.join(parts))
 
@@ -89,7 +87,7 @@ class YYToken(_yy_token):
             surface=d.get('surface'),
             # ipos=
             # lrules=
-            pos=zip(d.get('tags', []), d.get('probabilities', []))
+            pos=list(zip(d.get('tags', []), d.get('probabilities', [])))
         )
 
     def to_dict(self):

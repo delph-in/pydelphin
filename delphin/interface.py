@@ -33,7 +33,7 @@ class Processor(object):
             `"transfer"`, or `"generate"`)
     """
 
-    task = None  # type: Optional[str]
+    task: Optional[str] = None
 
     def process_item(self, datum, keys=None):
         """

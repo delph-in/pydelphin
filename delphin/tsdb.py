@@ -123,10 +123,10 @@ class Field(object):
             if flag in (':key', ':primary') or flag.startswith(':foreign'):
                 self.is_key = True
 
-        self.default = TSDB_CODED_ATTRIBUTES.get(
+        self.default: str = TSDB_CODED_ATTRIBUTES.get(
             name,
             '-1' if datatype == ':integer' else ''
-        )  # type: str
+        )
 
     def __str__(self):
         parts = [self.name, self.datatype]
@@ -179,18 +179,17 @@ def read_schema(path: util.PathLike) -> Schema:
     if path.is_dir():
         path = path.joinpath(SCHEMA_FILENAME)
     if not path.is_file():
-        raise TSDBSchemaError(
-            'no valid schema file at {!s}'.format(path))
+        raise TSDBSchemaError(f'no valid schema file at {path!s}')
 
     return _parse_schema(path.read_text())
 
 
 def _parse_schema(s: str) -> Schema:
     """Instantiate schema dict from a string."""
-    tables = []  # type: List[Tuple[str, Fields]]
-    seen = set()  # type: Set[str]
+    tables: List[Tuple[str, Fields]] = []
+    seen: Set[str] = set()
     current_table = ''
-    current_fields = []  # type: List[Field]
+    current_fields: List[Field] = []
     lines = list(reversed(s.splitlines()))  # to pop() in right order
     while lines:
         line = lines.pop().strip()
@@ -202,9 +201,7 @@ def _parse_schema(s: str) -> Schema:
         if table_m is not None:
             table_name = table_m.group('table')
             if table_name in seen:
-                raise TSDBSchemaError(
-                    'table {} redefined'.format(table_name)
-                )
+                raise TSDBSchemaError(f'table {table_name} redefined')
             current_table = table_name
             current_fields = []
             tables.append((current_table, current_fields))
@@ -314,7 +311,7 @@ class Database(object):
                  encoding: str = 'utf-8') -> None:
         path = Path(path).expanduser()
         if not is_database_directory(path):
-            raise TSDBError('not a valid TSDB database: {!s}'.format(path))
+            raise TSDBError(f'not a valid TSDB database: {path!s}')
         self._path = path
         self.schema = read_schema(path)
         self.autocast = autocast
@@ -327,7 +324,7 @@ class Database(object):
 
     def __getitem__(self, name: str) -> Relation:
         if name not in self.schema:
-            raise TSDBError('relation not defined in schema: {}'.format(name))
+            raise TSDBError(f'relation not defined in schema: {name}')
         fields = None
         if self.autocast:
             fields = self.schema[name]
@@ -367,7 +364,7 @@ class Database(object):
             name: str,
             columns: Iterable[str] = None) -> Generator[RawRecord, None, None]:
         if name not in self.schema:
-            raise TSDBError('relation not defined in schema: {}'.format(name))
+            raise TSDBError(f'relation not defined in schema: {name}')
         fields = self.schema[name]
         if columns is None:
             indices = list(range(len(fields)))
@@ -420,7 +417,7 @@ def unescape(string: str) -> str:
     """
     # unescape cannot use multiple str.replace() calls because of
     # examples like '\\\\s' which turn into '@' instead of '\\s'
-    chars = []  # type: List[str]
+    chars: List[str] = []
     esc = False
     for c in string:
         if esc:
@@ -438,8 +435,7 @@ def unescape(string: str) -> str:
         else:
             chars.append(c)
     if esc:
-        raise TSDBError(
-            'invalid escape at end-of-string: {!r}'.format(string))
+        raise TSDBError(f'invalid escape at end-of-string: {string!r}')
     return ''.join(chars)
 
 
@@ -594,7 +590,7 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
     elif datatype == ':string':
         return raw_value
     else:
-        raise TSDBError('invalid datatype: {}'.format(datatype))
+        raise TSDBError(f'invalid datatype: {datatype}')
 
 
 # some functions may use 'cast' as keyword parameter, so this lets
@@ -631,7 +627,7 @@ def _parse_datetime(s: str) -> Union[datetime, None]:
     try:
         return datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
     except ValueError:
-        warnings.warn('Invalid date field: {!r}'.format(s), TSDBWarning)
+        warnings.warn(f'Invalid date field: {s!r}', TSDBWarning)
         return None
 
 
@@ -647,7 +643,7 @@ def _date_fix(mo):
     H = mo.group('H') or '00'
     M = mo.group('M') or '00'
     S = mo.group('S') or '00'
-    return '{}-{}-{} {}:{}:{}'.format(y, m, d, H, M, S)
+    return f'{y}-{m}-{d} {H}:{M}:{S}'
 
 
 def format(datatype: str,
@@ -686,7 +682,7 @@ def format(datatype: str,
         raw_value = default
     elif datatype == ':date' and isinstance(value, datetime):
         month = _MONTHS[value.month]
-        pattern = '{}-{}-%Y'.format(str(value.day), month)
+        pattern = f'{value.day!s}-{month}-%Y'
         if (value.hour, value.minute, value.second) != (0, 0, 0):
             pattern += ' %H:%M:%S'
         raw_value = value.strftime(pattern)
@@ -727,10 +723,7 @@ def get_path(dir: util.PathLike,
     tx_path, gz_path, use_gz = _get_paths(dir, name)
     tbl_path = gz_path if use_gz else tx_path
     if not tbl_path.is_file():
-        raise TSDBError(
-            'File does not exist at {!s}(.gz)'
-            .format(tbl_path)
-        )
+        raise TSDBError(f'File does not exist at {tbl_path!s}(.gz)')
     return tbl_path
 
 
@@ -772,9 +765,8 @@ def open(dir: util.PathLike,
         ...         sentences.append(tsdb.split(line)[6])
     """
     path = get_path(dir, name)
-    # open and gzip.open don't accept pathlib.Path objects until Python 3.6
     if path.suffix.lower() == '.gz':
-        return gzopen(str(path), mode='rt', encoding=encoding)
+        return gzopen(path, mode='rt', encoding=encoding)
     else:
         return path.open(encoding=encoding)
 
@@ -840,7 +832,7 @@ def write(dir: util.PathLike,
         encoding = 'utf-8'
 
     if not dir.is_dir():
-        raise TSDBError('invalid test suite directory: {}'.format(dir))
+        raise TSDBError(f'invalid test suite directory: {dir}')
 
     tx_path, gz_path, use_gz = _get_paths(dir, name)
     if append and (gzip or use_gz):
@@ -850,7 +842,7 @@ def write(dir: util.PathLike,
 
     with tempfile.NamedTemporaryFile(
             mode='w+b', suffix='.tmp',
-            prefix=name, dir=str(dir)) as f_tmp:
+            prefix=name, dir=dir) as f_tmp:
 
         for record in records:
             f_tmp.write(
@@ -863,7 +855,7 @@ def write(dir: util.PathLike,
         # now copy the temp file to the destination
         f_tmp.seek(0)
         if gzip:
-            with gzopen(str(dest), mode) as f_out:
+            with gzopen(dest, mode) as f_out:
                 shutil.copyfileobj(f_tmp, f_out)
         else:
             with dest.open(mode=mode) as f_out:
@@ -944,7 +936,7 @@ def write_database(db: Database,
     """
     path = Path(path).expanduser()
     if path.is_file():
-        raise TSDBError('not a directory: {!s}'.format(path))
+        raise TSDBError(f'not a directory: {path!s}')
     remake_records = schema is not None
     if schema is None:
         schema = db.schema
@@ -959,7 +951,7 @@ def write_database(db: Database,
 
     for name in names:
         fields = schema[name]
-        relation = []  # type: Iterable[Record]
+        relation: Iterable[Record] = []
         if name in db.schema:
             try:
                 relation = db[name]

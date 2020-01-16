@@ -19,7 +19,7 @@ its source files.
 Requirements
 ------------
 
-PyDelphin works with Python 3.5 and higher, regardless of the
+PyDelphin works with Python 3.6 and higher, regardless of the
 platform. Certain features, however, may require additional
 dependencies or may be platform specific, as shown in the table below:
 

@@ -290,7 +290,9 @@ class MRS(scope.ScopingSemanticStructure):
                 pairs.append((ep, qmap.get(ep.iv)))
         # then unpaired quantifiers, if any
         for _, q in pairs:
-            if q is not None:
+            # some bad MRSs have multiple EPs share an ARG0; avoid the
+            # KeyError by checking if they are still in qmap
+            if q is not None and q.iv in qmap:
                 del qmap[q.iv]
         for q in qmap.values():
             pairs.append((None, q))

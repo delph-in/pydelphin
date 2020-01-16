@@ -4,10 +4,10 @@
 Regular Expression Preprocessor (REPP)
 """
 
+from typing import NamedTuple
 from sre_parse import parse_template
 from pathlib import Path
 from array import array
-from collections import namedtuple
 import warnings
 import logging
 
@@ -50,23 +50,7 @@ if not _regex_available:
         REPPWarning)
 
 
-class REPPStep(namedtuple(
-        'REPPStep', 'input output operation applied startmap endmap')):
-    """
-    A single rule application in REPP.
-
-    Attributes:
-        input (str): input string (prior to application)
-        output (str): output string (after application)
-        operation: operation performed
-        applied (bool): `True` if the rule was applied
-        startmap (:py:class:`array`): integer array of start offsets
-        endmap (:py:class:`array`): integer array of end offsets
-    """
-
-
-class REPPResult(namedtuple(
-        'REPPResult', 'string startmap endmap')):
+class REPPResult(NamedTuple):
     """
     The final result of REPP application.
 
@@ -75,6 +59,9 @@ class REPPResult(namedtuple(
         startmap (:py:class:`array`): integer array of start offsets
         endmap (:py:class:`array`): integer array of end offsets
     """
+    string: str
+    startmap: array
+    endmap: array
 
 
 class _REPPOperation(object):
@@ -131,6 +118,26 @@ class _REPPOperation(object):
         return YYTokenLattice(tokens)
 
 
+class REPPStep(NamedTuple):
+    """
+    A single rule application in REPP.
+
+    Attributes:
+        input (str): input string (prior to application)
+        output (str): output string (after application)
+        operation: operation performed
+        applied (bool): `True` if the rule was applied
+        startmap (:py:class:`array`): integer array of start offsets
+        endmap (:py:class:`array`): integer array of end offsets
+    """
+    input: str
+    output: str
+    operation: _REPPOperation
+    applied: bool
+    startmap: array
+    endmap: array
+
+
 class _REPPRule(_REPPOperation):
     """
     A REPP rewrite rule.
@@ -170,7 +177,7 @@ class _REPPRule(_REPPOperation):
                 break
 
     def __str__(self):
-        return '!{}\t\t{}'.format(self.pattern, self.replacement)
+        return f'!{self.pattern}\t\t{self.replacement}'
 
     def _apply(self, s, active):
         logger.debug(' %s', self)
@@ -266,7 +273,7 @@ class _REPPGroup(_REPPOperation):
     def __repr__(self):
         name = '("{}") '.format(self.name) if self.name is not None else ''
         return '<{} object {}at {}>'.format(
-            self.__class__.__name__, name, id(self)
+            type(self).__name__, name, id(self)
         )
 
     def __str__(self):
@@ -300,7 +307,7 @@ class _REPPGroupCall(_REPPOperation):
 
 class _REPPIterativeGroup(_REPPGroup):
     def __str__(self):
-        return 'Internal group #{}'.format(self.name)
+        return f'Internal group #{self.name}'
 
     def _apply(self, s, active):
         logger.debug('>%s', self.name)
@@ -378,7 +385,7 @@ class REPP(object):
         """
         path = Path(path).expanduser()
         if not path.is_file():
-            raise REPPError('REPP config file not found: {!s}'.format(path))
+            raise REPPError(f'REPP config file not found: {path!s}')
         confdir = path.parent
 
         # TODO: can TDL parsing be repurposed for this variant?
@@ -635,7 +642,7 @@ def _tokenize(result, pattern):
 
 def _repp_lines(path):
     if not path.is_file():
-        raise REPPError('REPP file not found: {!s}'.format(path))
+        raise REPPError(f'REPP file not found: {path!s}')
     return path.read_text(encoding='utf-8').splitlines()
 
 
@@ -656,7 +663,7 @@ def _parse_repp_group(lines, r, directory):
         elif line[0] == '!':
             match = re.match(r'([^\t]+)\t+(.*)', line[1:])
             if match is None:
-                raise REPPError('Invalid rewrite rule: {}'.format(line))
+                raise REPPError(f'Invalid rewrite rule: {line}')
             yield _REPPRule(match.group(1), match.group(2))
         elif line[0] == '<':
             fn = directory.joinpath(line[1:].rstrip())
@@ -713,4 +720,4 @@ def _parse_repp_group(lines, r, directory):
                 )
             r.info = line[1:]
         else:
-            raise REPPError('Invalid declaration: {}'.format(line))
+            raise REPPError(f'Invalid declaration: {line}')

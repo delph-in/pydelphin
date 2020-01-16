@@ -3,14 +3,15 @@
 Utility functions.
 """
 
-from typing import (Union, Iterable, Iterator, Dict, List, Tuple)
+from typing import (Union, Iterable, Iterator, Dict, List, Tuple, NamedTuple)
 from pathlib import Path
 import warnings
+import importlib
 import pkgutil
 import codecs
 import re
 from itertools import permutations
-from collections import deque, namedtuple
+from collections import deque, defaultdict
 from functools import wraps
 from enum import IntEnum
 
@@ -105,10 +106,10 @@ def _isomorphism(g1, g2, top1, top2) -> Dict[str, str]:
     _iso_inv_map(g1)
     _iso_inv_map(g2)
 
-    hypothesis = {}  # type: Dict[str, str]
-    agenda = next(
+    hypothesis: Dict[str, str] = {}
+    agenda: List[Tuple[str, str]] = next(
         _iso_candidates({top1: None}, {top2: None}, g1, g2, hypothesis),
-        [])  # type: List[Tuple[str, str]]
+        [])
     return next(_iso_vf2(hypothesis, g1, g2, agenda), {})
 
 
@@ -199,7 +200,14 @@ def _iso_candidates(n1s, n2s, g1, g2, hyp):
 # S-expressions
 #  e.g. (:n-inputs . 3) or (S (NP (NNS Dogs)) (VP (VBZ bark)))
 
-SExprResult = namedtuple('SExprResult', 'data remainder')
+_Val = Union[str, int, float]
+
+
+class SExprResult(NamedTuple):
+    """The result of parsing an S-Expression."""
+    data: Union[Tuple[_Val, _Val], List[_Val]]
+    remainder: str
+
 
 # escapes from https://en.wikipedia.org/wiki/S-expression#Use_in_Lisp
 _SExpr_escape_chars = r'"\s\(\)\[\]\{\}\\;'
@@ -283,7 +291,7 @@ class _SExprParser(object):
 
     def format(self, d):
         if isinstance(d, tuple) and len(d) == 2:
-            return '({} . {})'.format(d[0], d[1])
+            return f'({d[0]} . {d[1]})'
         elif isinstance(d, (tuple, list)):
             return '({})'.format(' '.join(map(self.format, d)))
         elif isinstance(d, str):
@@ -550,8 +558,44 @@ def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
 
 def namespace_modules(ns):
     """Return the name to fullname mapping of modules in package *ns*."""
-    return {name: '{}.{}'.format(ns.__name__, name)
+    return {name: f'{ns.__name__}.{name}'
             for _, name, _ in pkgutil.iter_modules(ns.__path__)}
+
+
+def inspect_codecs():
+    """
+    Inspect all available codecs and return a description.
+
+    The description is a mapping from a declared representation to a
+    list of codecs for that representation. Each item on the list is a
+    tuple of ``(codec_name, codec_module, codec_description)``. If
+    there is any error when attempting to load a codec module, the
+    representation will be ``(ERROR)``, the module will be ``None``,
+    and the description will be the exception message.
+    """
+    import delphin.codecs
+    codecs = namespace_modules(delphin.codecs)
+    result = defaultdict(list)
+    for name, fullname in codecs.items():
+        try:
+            mod = importlib.import_module(fullname)
+            rep = mod.CODEC_INFO['representation']
+            description = mod.CODEC_INFO.get('description', '')
+        except Exception as ex:
+            result['(error)'].append((name, None, str(ex)))
+        else:
+            result[rep].append((name, mod, description))
+    return result
+
+
+def import_codec(name: str):
+    """
+    Import codec *name* and return the module.
+    """
+    import delphin.codecs
+    codecs = namespace_modules(delphin.codecs)
+    fullname = codecs[name]
+    return importlib.import_module(fullname)
 
 
 def make_highlighter(fmt):

@@ -31,9 +31,9 @@ class PyDelphinSyntaxError(PyDelphinException):
     def __str__(self):
         parts = []
         if self.filename is not None:
-            parts.append('File "{}"'.format(self.filename))
+            parts.append(f'File "{self.filename}"')
         if self.lineno is not None:
-            parts.append('line {}'.format(self.lineno))
+            parts.append(f'line {self.lineno}')
         if parts:
             parts = ['', '  ' + ', '.join(parts)]
         if self.text is not None:
@@ -41,8 +41,7 @@ class PyDelphinSyntaxError(PyDelphinException):
             if self.offset is not None:
                 parts.append('    ' + (' ' * self.offset) + '^')
         elif parts:
-            parts[-1] += ', character {}'.format(self.offset)
+            parts[-1] += f', character {self.offset}'
         if self.message is not None:
-            parts.append('{}: {}'.format(self.__class__.__name__,
-                                         self.message))
+            parts.append(f'{type(self).__name__}: {self.message}')
         return '\n'.join(parts)

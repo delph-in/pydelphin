@@ -224,9 +224,7 @@ def _read_file(path, basedir, encoding):
 
 def _incorporate(d, key, val, path):
     if key in d:
-        warnings.warn("'{}' redefined in {}"
-                      .format(key, str(path)),
-                      SemIWarning)
+        warnings.warn(f"'{key}' redefined in {path}", SemIWarning)
     d[key] = val
 
 
@@ -444,7 +442,7 @@ class SemI(object):
             for k, v in var_data.get('properties', []):
                 k, v = k.upper(), v.lower()
                 if v not in self.properties:
-                    raise SemIError('undefined property value: {}'.format(v))
+                    raise SemIError(f'undefined property value: {v}')
                 properties.append((k, v))
             subhier[var] = var_data.get('parents') or TOP_TYPE
             data[var] = properties
@@ -455,7 +453,7 @@ class SemI(object):
             role = role.upper()
             var = data['value'].lower()
             if not (var == STRING_TYPE or var in self.variables):
-                raise SemIError('undefined variable type: {}'.format(var))
+                raise SemIError(f'undefined variable type: {var}')
             self.roles[role] = var
 
     def _init_predicates(self, predicates):
@@ -475,21 +473,19 @@ class SemI(object):
         synopsis = Synopsis.from_dict(synopsis_data)
         for role in synopsis:
             if role.name not in self.roles:
-                raise SemIError(
-                    '{}: undefined role: {}'.format(pred, role.name))
+                raise SemIError(f'{pred}: undefined role: {role.name}')
             if role.value == STRING_TYPE:
                 if role.properties:
-                    raise SemIError('{}: strings cannot define properties'
-                                    .format(pred))
+                    raise SemIError(
+                        f'{pred}: strings cannot define properties')
             elif role.value not in self.variables:
-                raise SemIError('{}: undefined variable type: {}'
-                                .format(pred, role.value))
+                raise SemIError(
+                    f'{pred}: undefined variable type: {role.value}')
             else:
                 for k, v in role.properties.items():
                     if v not in self.properties:
                         raise SemIError(
-                            '{}: undefined property value: {}'
-                            .format(pred, v))
+                            f'{pred}: undefined property value: {v}')
                     if k not in propcache[role.value]:
                         # Just warn because of the current situation where
                         # 'i' variables are used for unexpressed 'x's
@@ -574,7 +570,7 @@ class SemI(object):
 
         predicate = normalize_predicate(predicate)
         if predicate not in self.predicates:
-            raise SemIError('undefined predicate: {}'.format(predicate))
+            raise SemIError(f'undefined predicate: {predicate}')
         found = False
         for synopsis in self.predicates[predicate]:
             if not args or synopsis.subsumes(args, self.variables):

@@ -72,8 +72,8 @@ class ACEProcess(interface.Processor):
         stderr (file): stream used for ACE's stderr
     """
 
-    _cmdargs = []  # type: List[str]
-    _termini = []  # type: List[Pattern[str]]
+    _cmdargs: List[str] = []
+    _termini: List[Pattern[str]] = []
 
     def __init__(self,
                  grm: util.PathLike,
@@ -105,7 +105,7 @@ class ACEProcess(interface.Processor):
             setattr(self, 'receive', self._default_receive)
         self.env = env or os.environ
         self._run_id = -1
-        self.run_infos = []  # type: List[Dict[str, Any]]
+        self.run_infos: List[Dict[str, Any]] = []
         self._stderr = stderr
         self._open()
 
@@ -258,7 +258,7 @@ class ACEProcess(interface.Processor):
             result, lines = _make_response(
                 [('NOTE: PyDelphin could not validate the input and '
                   'refused to send it to ACE'),
-                 'SKIP: {}'.format(datum)],
+                 f'SKIP: {datum}'],
                 self.run_info)
         result['input'] = datum
         return result
@@ -296,7 +296,7 @@ class ACEProcess(interface.Processor):
             if line.startswith('NOTE: tsdb run:'):
                 self._read_run_info(line)
             else:
-                logger.debug('ACE cleanup: {}'.format(line.rstrip()))
+                logger.debug('ACE cleanup: %s', line.rstrip())
         retval = self._p.wait()
         return retval
 
@@ -433,8 +433,8 @@ def compile(cfg_path: util.PathLike,
         )
     except (CalledProcessError, OSError):
         logger.error(
-            'Failed to compile grammar with ACE. See {}'
-            .format(getattr(stderr, 'name', '<stderr>'))
+            'Failed to compile grammar with ACE. See %s',
+            getattr(stderr, 'name', '<stderr>')
         )
         raise
 
@@ -591,7 +591,7 @@ _ace_argparser.add_argument('--max-words', type=int)
 
 def _ace_version(executable: str) -> Tuple[int, ...]:
     # 0.9.0 is the initial public release of ACE
-    version = (0, 9, 0)  # type: Tuple[int, ...]
+    version: Tuple[int, ...] = (0, 9, 0)
     try:
         out = check_output([executable, '-V'], universal_newlines=True)
     except (CalledProcessError, OSError):
@@ -663,7 +663,7 @@ def _sexpr_data(line: str) -> Iterator[Dict[str, Any]]:
                 (':error', 'incomplete output from ACE'),
                 '')
         if len(expr.data) != 2:
-            logger.error('Malformed output from ACE: {}'.format(line))
+            logger.error('Malformed output from ACE: %s', line)
             break
         line = expr.remainder.lstrip()
         yield expr.data

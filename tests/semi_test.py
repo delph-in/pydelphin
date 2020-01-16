@@ -4,9 +4,10 @@ import pytest
 from delphin import semi
 
 
-def test_properties(tmpdir):
-    p = tmpdir.join('a.smi')
-    p.write('properties:\n'
+def test_properties(tmp_path):
+    p = tmp_path / 'a.smi'
+    p.write_text(
+            'properties:\n'
             '  bool.\n'
             '  + < bool.\n'
             '  - < bool.\n')
@@ -16,16 +17,18 @@ def test_properties(tmpdir):
     assert s.properties.subsumes('bool', '+')
     assert not s.properties.compatible('+', '-')
     # redefinition
-    p.write('properties:\n'
+    p.write_text(
+            'properties:\n'
             '  bool.\n'
             '  bool.\n')
     with pytest.warns(semi.SemIWarning):
         semi.load(str(p))
 
 
-def test_variables(tmpdir):
-    p = tmpdir.join('a.smi')
-    p.write('variables:\n'
+def test_variables(tmp_path):
+    p = tmp_path / 'a.smi'
+    p.write_text(
+            'variables:\n'
             '  u.\n'
             '  i < u.\n'
             '  e < i : PERF bool, TENSE tense.\n'
@@ -45,16 +48,18 @@ def test_variables(tmpdir):
     assert all(s.variables.subsumes('u', v) for v in 'iepx')
     assert not s.variables.compatible('e', 'x')
     # redefinition
-    p.write('variables:\n'
+    p.write_text(
+            'variables:\n'
             '  u.\n'
             '  u.\n')
     with pytest.warns(semi.SemIWarning):
         semi.load(str(p))
 
 
-def test_roles(tmpdir):
-    p = tmpdir.join('a.smi')
-    p.write('variables:\n'
+def test_roles(tmp_path):
+    p = tmp_path / 'a.smi'
+    p.write_text(
+            'variables:\n'
             '  i.\n'
             'roles:\n'
             '  ARG0 : i.\n'
@@ -65,7 +70,8 @@ def test_roles(tmpdir):
     assert s.roles['ARG0'] == 'i'
     assert s.roles['CARG'] == 'string'
     # redefinition
-    p.write('variables:\n'
+    p.write_text(
+            'variables:\n'
             '  i.\n'
             'roles:\n'
             '  ARG0 : i.\n'
@@ -74,9 +80,10 @@ def test_roles(tmpdir):
         semi.load(str(p))
 
 
-def test_predicates(tmpdir):
-    p = tmpdir.join('a.smi')
-    p.write('variables:\n'
+def test_predicates(tmp_path):
+    p = tmp_path / 'a.smi'
+    p.write_text(
+            'variables:\n'
             '  u.\n'
             '  i < u.\n'
             '  p < u.\n'
@@ -110,26 +117,31 @@ def test_predicates(tmpdir):
     assert len(s.predicates['_predominant_a_1']) == 2
 
 
-def test_include(tmpdir):
-    a = tmpdir.join('a.smi')
-    b = tmpdir.join('b.smi')
-    tmpdir.mkdir('sub')
-    c = tmpdir.join('sub', 'c.smi')
-    d = tmpdir.join('sub', 'd.smi')
-    a.write('predicates:\n'
+def test_include(tmp_path):
+    a = tmp_path / 'a.smi'
+    b = tmp_path / 'b.smi'
+    sub = tmp_path / 'sub'
+    sub.mkdir()
+    c = sub / 'c.smi'
+    d = sub / 'd.smi'
+    a.write_text(
+            'predicates:\n'
             '  abstract_q : ARG0 x, RSTR h, BODY h.\n'
             '  can_able.\n'
             '  _able_a_1 < can_able.\n'
             'include: b.smi\n'
             'include: sub/c.smi')
-    b.write('predicates:\n'
+    b.write_text(
+            'predicates:\n'
             '  existential_q < abstract_q.\n'
             '  _able_a_1 : ARG0 e, ARG1 p.')
-    c.write('predicates:\n'
+    c.write_text(
+            'predicates:\n'
             '  universal_q < abstract_q\n'
             '  _able_a_1 : ARG0 e, ARG1 i, ARG2 h.\n'
             'include: d.smi')
-    d.write('variables:\n'
+    d.write_text(
+            'variables:\n'
             '  u.\n'
             '  i < u.\n'
             '  p < u.\n'
@@ -156,18 +168,21 @@ def test_include(tmpdir):
     assert 'can_able' in s.predicates.parents('_able_a_1')
     assert len(s.predicates['_able_a_1']) == 2
     # redefinition
-    a.write('variables:\n'
+    a.write_text(
+            'variables:\n'
             '  i.\n'
             'include: b.smi\n')
-    b.write('variables:\n'
+    b.write_text(
+            'variables:\n'
             '  i.\n')
     with pytest.warns(semi.SemIWarning):
         semi.load(str(a))
 
 
-def test_comments(tmpdir):
-    p = tmpdir.join('a.smi')
-    p.write('; comment\n'
+def test_comments(tmp_path):
+    p = tmp_path / 'a.smi'
+    p.write_text(
+            '; comment\n'
             'variables:\n'
             '  ; comment\n'
             '  u.\n'
@@ -228,9 +243,10 @@ def test_consistency():
                                     'properties': {'IND': '+'}}]}]}})
 
 
-def test_to_dict(tmpdir):
-    p = tmpdir.join('a.smi')
-    p.write('variables:\n'
+def test_to_dict(tmp_path):
+    p = tmp_path / 'a.smi'
+    p.write_text(
+            'variables:\n'
             '  u.\n'
             '  i < u.\n'
             '  p < u.\n'
@@ -323,9 +339,10 @@ def test_to_dict(tmpdir):
     }
 
 
-def test_from_dict(tmpdir):
-    p = tmpdir.join('a.smi')
-    p.write('variables:\n'
+def test_from_dict(tmp_path):
+    p = tmp_path / 'a.smi'
+    p.write_text(
+            'variables:\n'
             '  u.\n'
             '  i < u.\n'
             '  p < u.\n'
