@@ -29,8 +29,8 @@ these changes are prefixed with "**BREAKING**"
 
 ### Changed
 
-* `delphin.codecs.dmrspenman` update to Penman v0.9.0
-* `delphin.codecs.edspenman` update to Penman v0.9.0
+* `delphin.codecs.dmrspenman` update to Penman v0.9
+* `delphin.codecs.edspenman` update to Penman v0.9
 * `delphin.codecs.edspenman` and `delphin.codecs.dmrspenman` now only
   encode a graph's primary component ([#268][])
 * `delphin.main` now detects command modules declared in the
