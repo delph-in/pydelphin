@@ -5,6 +5,17 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+(no unreleased changes yet)
+
+
+## [v1.2.0][]
+
+**Release date: 2020-01-16**
+
+Removes Python 3.5 support, adds Python 3.8 support, adds the `cli`
+namespace, fixes some issues with MRS and DMRS, an expands formatting
+options for `delphin convert`.
+
 ### Python Versions
 
 * Removed Python 3.5 support ([#219][])
@@ -1133,6 +1144,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.2.0]: ../../releases/tag/v1.2.0
 [v1.1.0]: ../../releases/tag/v1.1.0
 [v1.0.3]: ../../releases/tag/v1.0.3
 [v1.0.2]: ../../releases/tag/v1.0.2
