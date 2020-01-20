@@ -66,7 +66,7 @@ def single_item_skeleton(tmp_path):
     ts = tmp_path.joinpath('skeleton')
     ts.mkdir()
     ts.joinpath('relations').write_text(_simple_relations)
-    ts.joinpath('item').write_text('0@The dog barks.')
+    ts.joinpath('item').write_text('0@The dog barks.\n')
     return str(ts)
 
 
@@ -78,7 +78,7 @@ def gzipped_single_item_skeleton(tmp_path):
     fh = io.TextIOWrapper(
         gzip.GzipFile(str(ts.joinpath('item.gz')), 'w'),
         encoding='utf-8')
-    print('0@The dog barks.', end='', file=fh)
+    print('0@The dog barks.\n', end='', file=fh)
     fh.close()
     return str(ts)
 
@@ -96,7 +96,7 @@ def single_item_profile(tmp_path):
         '[ _the_q<0:3> LBL: h4 ARG0: x3 RSTR: h5 BODY: h6 ] '
         '[ _dog_n_1<4:7> LBL: h7 ARG0: x3 ] '
         '[ _bark_v_1<8:14> LBL: h1 ARG0: e2 ARG1: x3 ] > '
-        'HCONS: < h0 qeq h1 h5 qeq h7 > ]')
+        'HCONS: < h0 qeq h1 h5 qeq h7 > ]\n')
     return str(ts)
 
 
@@ -127,11 +127,11 @@ def mini_testsuite(tmp_path):
     item.write_text(
         '10@It rained.@1@1-feb-2018 15:00\n'
         '20@Rained.@0@01-02-18 15:00:00\n'
-        '30@It snowed.@1@2018-2-1 (15:00:00)')
+        '30@It snowed.@1@2018-2-1 (15:00:00)\n')
     parse.write_text(
         '10@10@1\n'
         '20@20@0\n'
-        '30@30@1')
+        '30@30@1\n')
     result.write_text(
         '10@0@'
         '[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
@@ -140,7 +140,7 @@ def mini_testsuite(tmp_path):
         '30@0@'
         '[ TOP: h0 INDEX: e2 [ e TENSE: past ]'
         '  RELS: < [ _snow_v_1<3:9> LBL: h1 ARG0: e2 ] >'
-        '  HCONS: < h0 qeq h1 > ]')
+        '  HCONS: < h0 qeq h1 > ]\n')
     return str(ts)
 
 
