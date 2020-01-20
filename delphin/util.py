@@ -329,9 +329,10 @@ class LookaheadIterator(object):
                 append(datum)
             except StopIteration:
                 if len(buffer) == 0:
-                    raise
+                    return False
                 else:
                     break
+        return True
 
     def next(self, skip=None):
         """
@@ -346,11 +347,13 @@ class LookaheadIterator(object):
                         break
                     popleft()
                 except IndexError:
-                    self._buffer_fill()
+                    if not self._buffer_fill():
+                        raise StopIteration
         try:
             datum = popleft()
         except IndexError:
-            self._buffer_fill()
+            if not self._buffer_fill():
+                raise StopIteration
             datum = popleft()
         return datum
 
@@ -368,7 +371,8 @@ class LookaheadIterator(object):
                 try:
                     datum = popleft()
                 except IndexError:
-                    self._buffer_fill()
+                    if not self._buffer_fill():
+                        raise StopIteration
                     datum = popleft()
                 if not skip(datum):
                     n -= 1
@@ -377,7 +381,8 @@ class LookaheadIterator(object):
                     stackpush(datum)
             buffer.extendleft(reversed(stack))
         else:
-            self._buffer_fill(n + 1)
+            if not self._buffer_fill(n + 1):
+                raise StopIteration
             datum = buffer[n]
         return datum
 

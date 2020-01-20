@@ -5,7 +5,10 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
-(no unreleased changes yet)
+### Fixed
+
+* `delphin.util.LookaheadIterator` no longer raises `RuntimeError` in
+  Python 3.7+ ([#275][])
 
 
 ## [v1.2.0][]
@@ -1280,3 +1283,4 @@ information about changes, except for
 [#269]: https://github.com/delph-in/pydelphin/issues/269
 [#270]: https://github.com/delph-in/pydelphin/issues/270
 [#271]: https://github.com/delph-in/pydelphin/issues/271
+[#275]: https://github.com/delph-in/pydelphin/issues/275
