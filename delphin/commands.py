@@ -456,7 +456,8 @@ def _mkprof_from_database(destination, db, schema, where, full, gzip):
             # filter the data, but use all if the query fails
             # (e.g., if the filter and table cannot be joined)
             try:
-                records = tsql.select(f'* from {table} {where}', db)
+                records = _tsql_distinct(
+                    tsql.select(f'* from {table} {where}', db))
             except tsql.TSQLError:
                 records = list(db[table])
         else:
@@ -480,6 +481,16 @@ def _no_such_relation(db, name):
     except tsdb.TSDBError:
         return True
     return False
+
+
+def _tsql_distinct(records):
+    distinct = []
+    prev = None
+    for record in records:
+        if record != prev:
+            distinct.append(record)
+        prev = record
+    return distinct
 
 
 def _mkprof_cleanup(destination, skeleton, old_files):

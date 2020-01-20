@@ -9,6 +9,7 @@ these changes are prefixed with "**BREAKING**"
 
 * `delphin.util.LookaheadIterator` no longer raises `RuntimeError` in
   Python 3.7+ ([#275][])
+* `delphin.commands.mkprof()` suppresses duplicate records ([#273][])
 
 
 ## [v1.2.0][]
@@ -1283,4 +1284,5 @@ information about changes, except for
 [#269]: https://github.com/delph-in/pydelphin/issues/269
 [#270]: https://github.com/delph-in/pydelphin/issues/270
 [#271]: https://github.com/delph-in/pydelphin/issues/271
+[#273]: https://github.com/delph-in/pydelphin/issues/273
 [#275]: https://github.com/delph-in/pydelphin/issues/275
