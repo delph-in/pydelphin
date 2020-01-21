@@ -13,6 +13,8 @@ these changes are prefixed with "**BREAKING**"
 
 ### Changed
 
+* `delphin` commands catch `PyDelphinException` and print its message
+  without the stacktrace unless logging is at DEBUG ([#276][])
 * `delphin.commands.process()` raises a `CommandError` if the `source`
   or `testsuite` arguments are not valid TSDB database paths (as
   appropriate) ([#276][])
