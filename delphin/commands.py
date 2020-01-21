@@ -614,7 +614,7 @@ def process(grammar, testsuite, source=None, select=None,
         select += f' where result-id == {result_id}'
 
     target = itsdb.TestSuite(testsuite)
-    column, tablename, condition = _interpret_selection(select, source)
+    column, relation, condition = _interpret_selection(select, source)
 
     with tempfile.TemporaryDirectory() as dir:
         # use a temporary test suite directory for filtered inputs
@@ -624,32 +624,42 @@ def process(grammar, testsuite, source=None, select=None,
 
         with processor(grammar, cmdargs=options, **kwargs) as cpu:
             target.process(cpu,
-                           selector=(tablename, column),
+                           selector=(relation, column),
                            source=tmp,
                            gzip=gzip)
 
 
 def _interpret_selection(select, source):
+    schema = tsdb.read_schema(source)
     queryobj = tsql.inspect_query('select ' + select)
     projection = queryobj['projection']
     if projection == '*' or len(projection) != 1:
-        raise CommandError("'select' must return a single column")
-    tablename, _, column = projection[0].rpartition('.')
-    if not tablename:
+        raise CommandError("select query must return a single column")
+    relation, _, column = projection[0].rpartition('.')
+    if not relation:
         # query could be 'i-input from item' instead of 'item.i-input'
         if len(queryobj['relations']) == 1:
-            tablename = queryobj['relations'][0]
+            relation = queryobj['relations'][0]
+        elif len(queryobj['relations']) > 1:
+            raise CommandError(
+                "select query may specify no more than 1 relation")
         # otherwise guess
         else:
-            schema = tsdb.read_schema(source)
-            tablename = next(
-                table for table in schema
-                if any(f.name == column for f in schema[table]))
+            relation = next(
+                (table for table in schema
+                 if any(f.name == column for f in schema[table])),
+                None)
+
+    if relation not in schema:
+        raise CommandError('invalid or missing relation in query')
+    elif not any(f.name == column for f in schema[relation]):
+        raise CommandError(f'invalid column in query: {column}')
+
     try:
         condition = select[select.index(' where ') + 7:]
     except ValueError:
         condition = ''
-    return column, tablename, condition
+    return column, relation, condition
 
 
 ###############################################################################

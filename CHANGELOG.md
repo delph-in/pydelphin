@@ -18,6 +18,8 @@ these changes are prefixed with "**BREAKING**"
   appropriate) ([#276][])
 * `delphin.commands.process()` will create a new directory if `source`
   is given and `testsuite` is a non-existing path
+* `delphin.commands.process()` raises a `CommandError` if the `select`
+  query has a column or relation invalid for the schema ([#276][])
 * `delphin.commands.compare()` raises a `CommandError` if the
   `testsuite` or `gold` arguments are not valid TSDB databases or
   database paths ([#276][])
