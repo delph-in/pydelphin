@@ -359,7 +359,7 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
             destination, db, schema, where, full, gzip)
 
     else:
-        raise CommandError(f'invalid source for mkprof: {source!r}')
+        raise CommandError(f'invalid source for mkprof: {source!s}')
 
     _mkprof_cleanup(destination, skeleton, old_relation_files)
 
@@ -584,8 +584,20 @@ def process(grammar, testsuite, source=None, select=None,
     if sum(1 if mode else 0 for mode in (generate, transfer, full_forest)) > 1:
         raise CommandError("'generate', 'transfer', and 'full-forest' "
                            "are mutually exclusive")
+
     if source is None:
-        source = testsuite
+        source = _validate_tsdb(testsuite)
+    else:
+        source = _validate_tsdb(source)
+        if not tsdb.is_database_directory(testsuite):
+            if testsuite.exists():
+                raise CommandError(
+                    f'{testsuite} exists and is not a TSDB database; '
+                    'remove it or select a different destination path')
+            mkprof(testsuite, source=source, full=False, quiet=True)
+        else:
+            pass  # both source and testsuite are valid TSDB databases
+
     if select is None:
         select = 'result.mrs' if (generate or transfer) else 'item.i-input'
     if generate:
@@ -758,11 +770,9 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
     from delphin.codecs import simplemrs
 
     if not isinstance(testsuite, itsdb.TestSuite):
-        source = Path(testsuite).expanduser()
-        testsuite = itsdb.TestSuite(source)
+        testsuite = itsdb.TestSuite(_validate_tsdb(testsuite))
     if not isinstance(gold, itsdb.TestSuite):
-        source = Path(gold).expanduser()
-        gold = itsdb.TestSuite(source)
+        gold = itsdb.TestSuite(_validate_tsdb(gold))
 
     queryobj = tsql.inspect_query('select ' + select)
     if len(queryobj['projection']) != 3:
@@ -786,3 +796,13 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
                'test': test_unique,
                'shared': shared,
                'gold': gold_unique}
+
+
+###############################################################################
+# HELPERS #####################################################################
+
+def _validate_tsdb(path):
+    path = Path(path).expanduser()
+    if not tsdb.is_database_directory(path):
+        raise CommandError(f'{path} is not a valid TSDB database')
+    return path

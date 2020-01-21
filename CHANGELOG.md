@@ -11,6 +11,17 @@ these changes are prefixed with "**BREAKING**"
   Python 3.7+ ([#275][])
 * `delphin.commands.mkprof()` suppresses duplicate records ([#273][])
 
+### Changed
+
+* `delphin.commands.process()` raises a `CommandError` if the `source`
+  or `testsuite` arguments are not valid TSDB database paths (as
+  appropriate) ([#276][])
+* `delphin.commands.process()` will create a new directory if `source`
+  is given and `testsuite` is a non-existing path
+* `delphin.commands.compare()` raises a `CommandError` if the
+  `testsuite` or `gold` arguments are not valid TSDB databases or
+  database paths ([#276][])
+
 
 ## [v1.2.0][]
 
@@ -1286,3 +1297,4 @@ information about changes, except for
 [#271]: https://github.com/delph-in/pydelphin/issues/271
 [#273]: https://github.com/delph-in/pydelphin/issues/273
 [#275]: https://github.com/delph-in/pydelphin/issues/275
+[#276]: https://github.com/delph-in/pydelphin/issues/276
