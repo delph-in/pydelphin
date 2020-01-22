@@ -537,11 +537,22 @@ def process(grammar, testsuite, source=None, select=None,
             options=None, all_items=False, result_id=None, gzip=False,
             stderr=None):
     """
-    Process (e.g., parse) a [incr tsdb()] profile.
+    Process the [incr tsdb()] profile *testsuite* with *grammar*.
 
-    Results are written to directly to *testsuite*.
+    Inputs are read from *source* and results are written to
+    *testsuite*. If *source* is ``None``, it is set to *testsuite*. It
+    is common for *source* to be ``None`` in parsing tasks, but it is
+    not recommended for transfer or generation because the MRS field
+    is both read from and written to for these tasks. If *source*
+    points to a valid [incr tsdb()] profile and *testsuite* is a path
+    to a non-existing location, the profile directory is created at
+    that path.
 
-    If *select* is `None`, the defaults depend on the task:
+    The default task is parsing, but generation is done if *generate*
+    is ``True`` and transfer is done if *transfer* is ``True``; only
+    one or neither may be ``True``. Input data is extracted from
+    *source* using the TSQL query *select*. If *select* is `None`, the
+    default depends on the task:
 
         ==========  =========================
         Task        Default value of *select*
@@ -555,22 +566,22 @@ def process(grammar, testsuite, source=None, select=None,
         grammar (str): path to a compiled grammar image
         testsuite (str): path to a [incr tsdb()] testsuite where data
             will be read from (see *source*) and written to
-        source (str): path to a [incr tsdb()] testsuite; if `None`,
+        source (str): path to a [incr tsdb()] testsuite; if ``None``,
             *testsuite* is used as the source of data
         select (str): TSQL query for selecting processor inputs
             (default depends on the processor type)
-        generate (bool): if `True`, generate instead of parse
-            (default: `False`)
-        transfer (bool): if `True`, transfer instead of parse
-            (default: `False`)
+        generate (bool): if ``True``, generate instead of parse
+            (default: ``False``)
+        transfer (bool): if ``True``, transfer instead of parse
+            (default: ``False``)
         options (list): list of ACE command-line options to use when
             invoking the ACE subprocess; unsupported options will
             give an error message
-        all_items (bool): if `True`, don't exclude ignored items
-            (those with `i-wf==2`) when parsing
-        result_id (int): if given, only keep items with the specified
-            `result-id`
-        gzip (bool): if `True`, non-empty tables will be compressed
+        all_items (bool): if ``True``, don't exclude ignored items
+            (those with ``i-wf==2``) when parsing
+        result_id (int): if given, only select inputs with the
+            specified ``result-id`` (transfer and generation)
+        gzip (bool): if ``True``, non-empty tables will be compressed
             with gzip
         stderr (file): stream for ACE's stderr
     """
