@@ -339,9 +339,14 @@ class ACETransferer(ACEProcess):
     task = 'transfer'
     _termini = [re.compile(r'^$')]
 
-    def __init__(self, grm, cmdargs=None, executable=None, env=None):
+    def __init__(self,
+                 grm: util.PathLike,
+                 cmdargs: List[str] = None,
+                 executable: util.PathLike = None,
+                 env: Mapping[str, str] = None,
+                 stderr: IO[Any] = None):
         super().__init__(grm, cmdargs=cmdargs, executable=executable, env=env,
-                         tsdbinfo=False, full_forest=False)
+                         tsdbinfo=False, full_forest=False, stderr=stderr)
 
     def _validate_input(self, datum):
         return _possible_mrs(datum)
@@ -364,10 +369,15 @@ class ACEGenerator(ACEProcess):
     _cmdargs = ['-e', '--tsdb-notes']
     _termini = [re.compile(r'NOTE: tsdb parse: ')]
 
-    def __init__(self, grm, cmdargs=None, executable=None, env=None,
-                 tsdbinfo=True):
+    def __init__(self,
+                 grm: util.PathLike,
+                 cmdargs: List[str] = None,
+                 executable: util.PathLike = None,
+                 env: Mapping[str, str] = None,
+                 tsdbinfo: bool = True,
+                 stderr: IO[Any] = None):
         super().__init__(grm, cmdargs=cmdargs, executable=executable, env=env,
-                         tsdbinfo=tsdbinfo, full_forest=False)
+                         tsdbinfo=tsdbinfo, full_forest=False, stderr=stderr)
 
     def _validate_input(self, datum):
         return _possible_mrs(datum)

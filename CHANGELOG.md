@@ -5,7 +5,10 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
-(no unreleased changes yet)
+### Fixed
+
+* `delphin.ace.ACETransferer` now has a `stderr` parameter ([#278][])
+* `delphin.ace.ACEGenerator` now has a `stderr` parameter ([#278][])
 
 
 ## [v1.2.1][]
@@ -1316,3 +1319,4 @@ information about changes, except for
 [#273]: https://github.com/delph-in/pydelphin/issues/273
 [#275]: https://github.com/delph-in/pydelphin/issues/275
 [#276]: https://github.com/delph-in/pydelphin/issues/276
+[#278]: https://github.com/delph-in/pydelphin/issues/278
