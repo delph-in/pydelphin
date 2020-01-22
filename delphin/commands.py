@@ -579,6 +579,9 @@ def process(grammar, testsuite, source=None, select=None,
     grammar = Path(grammar).expanduser()
     testsuite = Path(testsuite).expanduser()
 
+    if not grammar.is_file():
+        raise CommandError(f'{grammar} is not a file')
+
     kwargs = {}
     kwargs['stderr'] = stderr
     if sum(1 if mode else 0 for mode in (generate, transfer, full_forest)) > 1:
