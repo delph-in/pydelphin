@@ -5,7 +5,7 @@
 """
 
 from typing import (
-    Iterable, Sequence, Tuple, List, Dict,
+    Union, Iterable, Sequence, Tuple, List, Dict,
     Iterator, Optional, IO, overload, cast as typing_cast
 )
 from pathlib import Path
@@ -894,7 +894,7 @@ _Matched = Tuple[List[Row], List[Row]]
 
 def match_rows(rows1: Rows,
                rows2: Rows,
-               key: str,
+               key: Union[str, int],
                sort_keys: bool = True) -> Iterator[Match]:
     """
     Yield triples of `(value, left_rows, right_rows)` where
@@ -911,7 +911,7 @@ def match_rows(rows1: Rows,
     Args:
         rows1: a :class:`Table` or list of :class:`Row` objects
         rows2: a :class:`Table` or list of :class:`Row` objects
-        key (str): the column name on which to match
+        key (str, int): the column name or index on which to match
         sort_keys (bool): if `True`, yield matching rows sorted by the
             matched key instead of the original order
     Yields:

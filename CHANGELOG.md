@@ -10,6 +10,12 @@ these changes are prefixed with "**BREAKING**"
 * `delphin.ace.ACETransferer` now has a `stderr` parameter ([#278][])
 * `delphin.ace.ACEGenerator` now has a `stderr` parameter ([#278][])
 
+### Changed
+
+* `delphin.itsdb.match_rows()` accepts either an `int` or `str` for
+  the `key` parameter. This was always the case, but now it's
+  documented and typed properly.
+
 
 ## [v1.2.1][]
 
