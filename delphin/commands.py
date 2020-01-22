@@ -815,11 +815,14 @@ def compare(testsuite: Union[util.PathLike, itsdb.TestSuite],
 
     input_select = '{} {}'.format(queryobj['projection'][0],
                                   queryobj['projection'][1])
-    i_inputs = dict(tsql.select(input_select, testsuite))
+    # typing of tsql.select() is complicated right now, so just ignore
+    # it for the following calls. it may be easier after
+    # https://github.com/delph-in/pydelphin/issues/258
+    i_inputs = dict(tsql.select(input_select, testsuite))  # type: ignore
 
     matched_rows = itsdb.match_rows(
-        tsql.select(select, testsuite),
-        tsql.select(select, gold),
+        tsql.select(select, testsuite),  # type: ignore
+        tsql.select(select, gold),       # type: ignore
         0)
 
     for (key, testrows, goldrows) in matched_rows:
