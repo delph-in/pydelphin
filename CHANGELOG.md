@@ -5,6 +5,17 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+(no unreleased changes yet)
+
+
+## [v1.2.1][]
+
+**Release date: 2020-01-22**
+
+Bug fixes for recent Python versions and for the `delphin mkprof`
+command, and more user-friendly error messages from all `delphin`
+commands.
+
 ### Fixed
 
 * `delphin.util.LookaheadIterator` no longer raises `RuntimeError` in
@@ -1165,6 +1176,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.2.1]: ../../releases/tag/v1.2.1
 [v1.2.0]: ../../releases/tag/v1.2.0
 [v1.1.0]: ../../releases/tag/v1.1.0
 [v1.0.3]: ../../releases/tag/v1.0.3
