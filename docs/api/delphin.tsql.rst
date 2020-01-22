@@ -39,10 +39,9 @@ delphin.tsql
    `item parse result`) that are joined on shared keys. The `from`
    clause is required when `*` is used for the projection, but it can
    also be used to select columns from non-standard relations (e.g.,
-   `i-id from output`). Alternatively, `delphin.itsdb`-style data
-   specifiers (see :func:`delphin.itsdb.get_data_specifier`) may be
-   used to specify the relation on the column name (e.g.,
-   `item.i-id`).
+   `i-id from output`). Alternatively, qualified names (e.g.,
+   `item.i-id`) can specify both the column and the relation at the
+   same time.
 
    The `where` clause provide conditions for filtering the list of
    results. Conditions are binary operations that take a column or

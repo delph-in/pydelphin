@@ -142,6 +142,36 @@ def test_mkprof(mini_testsuite, empty_alt_testsuite,
     assert item.with_suffix('.gz').is_file()
 
 
+def test_mkprof_issue_273(mini_testsuite, tmp_path):
+    # https://github.com/delph-in/pydelphin/issues/273
+    from delphin import itsdb
+    ts1_ = tmp_path.joinpath('ts1')
+    ts1_.mkdir()
+    ts1 = str(ts1_)
+    ts0 = mini_testsuite
+    # this is when the condition occurs on a single row
+    mkprof(ts1, source=ts0, full=True, where='mrs ~ "_snow_v_1"')
+    item = pathlib.Path(ts1, 'item')
+    assert item.read_text() == (
+        '30@It snowed.@1@2018-2-1 (15:00:00)\n')
+    # this is when the condition occurs on multiple rows
+    _ts0 = itsdb.TestSuite(ts0)
+    _ts0['parse'].update(2, {'readings': 2})
+    _ts0['result'].append(
+        (30,
+         1,
+         '[ TOP: h0 INDEX e2 [ e TENSE: past ]'
+         '  RELS: < [ pronoun_q<0:2> LBL h3 ARG0: x4 RSTR: h5 BODY: h6 ]'
+         '          [ pron<0:2> LBL: h7 ARG0: x4 ]'
+         '          [ _snow_v_1<3:9> LBL: h1 ARG0: e2 ARG1: x4 ] >'
+         '  HCONS: < h0 qeq h1 h5 qeq h7 > ]'))
+    _ts0.commit()
+    mkprof(ts1, source=ts0, full=True, where='mrs ~ "_snow_v_1"')
+    item = pathlib.Path(ts1, 'item')
+    assert item.read_text() == (
+        '30@It snowed.@1@2018-2-1 (15:00:00)\n')
+
+
 def test_process(mini_testsuite):
     with pytest.raises(TypeError):
         process('grm.dat')

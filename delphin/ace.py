@@ -140,7 +140,7 @@ class ACEProcess(interface.Processor):
             'start': datetime.now()
         })
         if self._p.poll() is not None and self._p.returncode != 0:
-            raise ACEProcessError('Process closed on startup; see <stderr>.')
+            raise ACEProcessError("ACE process closed on startup")
 
     def __enter__(self):
         return self

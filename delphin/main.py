@@ -10,6 +10,7 @@ import importlib
 import argparse
 import logging
 
+from delphin.exceptions import PyDelphinException
 from delphin import util
 import delphin.cli
 # Default modules need to import the PyDelphin version
@@ -37,7 +38,13 @@ def main():
     logging.getLogger('delphin').setLevel(
         logging.ERROR - (args.verbosity * 10))
 
-    args.func(args)
+    try:
+        args.func(args)
+    except PyDelphinException as exc:
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.exception('an error has occurred; see below')
+        else:
+            sys.exit(str(exc))
 
 
 parser = argparse.ArgumentParser(

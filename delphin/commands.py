@@ -359,7 +359,7 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
             destination, db, schema, where, full, gzip)
 
     else:
-        raise CommandError(f'invalid source for mkprof: {source!r}')
+        raise CommandError(f'invalid source for mkprof: {source!s}')
 
     _mkprof_cleanup(destination, skeleton, old_relation_files)
 
@@ -456,7 +456,8 @@ def _mkprof_from_database(destination, db, schema, where, full, gzip):
             # filter the data, but use all if the query fails
             # (e.g., if the filter and table cannot be joined)
             try:
-                records = tsql.select(f'* from {table} {where}', db)
+                records = _tsql_distinct(
+                    tsql.select(f'* from {table} {where}', db))
             except tsql.TSQLError:
                 records = list(db[table])
         else:
@@ -480,6 +481,16 @@ def _no_such_relation(db, name):
     except tsdb.TSDBError:
         return True
     return False
+
+
+def _tsql_distinct(records):
+    distinct = []
+    prev = None
+    for record in records:
+        if record != prev:
+            distinct.append(record)
+        prev = record
+    return distinct
 
 
 def _mkprof_cleanup(destination, skeleton, old_files):
@@ -568,13 +579,28 @@ def process(grammar, testsuite, source=None, select=None,
     grammar = Path(grammar).expanduser()
     testsuite = Path(testsuite).expanduser()
 
+    if not grammar.is_file():
+        raise CommandError(f'{grammar} is not a file')
+
     kwargs = {}
     kwargs['stderr'] = stderr
     if sum(1 if mode else 0 for mode in (generate, transfer, full_forest)) > 1:
         raise CommandError("'generate', 'transfer', and 'full-forest' "
                            "are mutually exclusive")
+
     if source is None:
-        source = testsuite
+        source = _validate_tsdb(testsuite)
+    else:
+        source = _validate_tsdb(source)
+        if not tsdb.is_database_directory(testsuite):
+            if testsuite.exists():
+                raise CommandError(
+                    f'{testsuite} exists and is not a TSDB database; '
+                    'remove it or select a different destination path')
+            mkprof(testsuite, source=source, full=False, quiet=True)
+        else:
+            pass  # both source and testsuite are valid TSDB databases
+
     if select is None:
         select = 'result.mrs' if (generate or transfer) else 'item.i-input'
     if generate:
@@ -591,7 +617,7 @@ def process(grammar, testsuite, source=None, select=None,
         select += f' where result-id == {result_id}'
 
     target = itsdb.TestSuite(testsuite)
-    column, tablename, condition = _interpret_selection(select, source)
+    column, relation, condition = _interpret_selection(select, source)
 
     with tempfile.TemporaryDirectory() as dir:
         # use a temporary test suite directory for filtered inputs
@@ -601,32 +627,42 @@ def process(grammar, testsuite, source=None, select=None,
 
         with processor(grammar, cmdargs=options, **kwargs) as cpu:
             target.process(cpu,
-                           selector=(tablename, column),
+                           selector=(relation, column),
                            source=tmp,
                            gzip=gzip)
 
 
 def _interpret_selection(select, source):
+    schema = tsdb.read_schema(source)
     queryobj = tsql.inspect_query('select ' + select)
     projection = queryobj['projection']
     if projection == '*' or len(projection) != 1:
-        raise CommandError("'select' must return a single column")
-    tablename, _, column = projection[0].rpartition('.')
-    if not tablename:
+        raise CommandError("select query must return a single column")
+    relation, _, column = projection[0].rpartition('.')
+    if not relation:
         # query could be 'i-input from item' instead of 'item.i-input'
         if len(queryobj['relations']) == 1:
-            tablename = queryobj['relations'][0]
+            relation = queryobj['relations'][0]
+        elif len(queryobj['relations']) > 1:
+            raise CommandError(
+                "select query may specify no more than 1 relation")
         # otherwise guess
         else:
-            schema = tsdb.read_schema(source)
-            tablename = next(
-                table for table in schema
-                if any(f.name == column for f in schema[table]))
+            relation = next(
+                (table for table in schema
+                 if any(f.name == column for f in schema[table])),
+                None)
+
+    if relation not in schema:
+        raise CommandError('invalid or missing relation in query')
+    elif not any(f.name == column for f in schema[relation]):
+        raise CommandError(f'invalid column in query: {column}')
+
     try:
         condition = select[select.index(' where ') + 7:]
     except ValueError:
         condition = ''
-    return column, tablename, condition
+    return column, relation, condition
 
 
 ###############################################################################
@@ -747,11 +783,9 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
     from delphin.codecs import simplemrs
 
     if not isinstance(testsuite, itsdb.TestSuite):
-        source = Path(testsuite).expanduser()
-        testsuite = itsdb.TestSuite(source)
+        testsuite = itsdb.TestSuite(_validate_tsdb(testsuite))
     if not isinstance(gold, itsdb.TestSuite):
-        source = Path(gold).expanduser()
-        gold = itsdb.TestSuite(source)
+        gold = itsdb.TestSuite(_validate_tsdb(gold))
 
     queryobj = tsql.inspect_query('select ' + select)
     if len(queryobj['projection']) != 3:
@@ -775,3 +809,13 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
                'test': test_unique,
                'shared': shared,
                'gold': gold_unique}
+
+
+###############################################################################
+# HELPERS #####################################################################
+
+def _validate_tsdb(path):
+    path = Path(path).expanduser()
+    if not tsdb.is_database_directory(path):
+        raise CommandError(f'{path} is not a valid TSDB database')
+    return path

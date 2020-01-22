@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from delphin.util import safe_int, SExpr, detect_encoding
+from delphin.util import safe_int, SExpr, detect_encoding, LookaheadIterator
 
 import pytest, codecs
 
@@ -158,3 +158,22 @@ def test_detect_encoding(empty_file, nocomment_file, utf8_file, utf8var1_file,
         detect_encoding(invalid2_file)
     with pytest.raises(ValueError):
         detect_encoding(invalid3_file)
+
+
+class TestLookaheadIterator:
+    def test_empty(self):
+        # https://github.com/delph-in/pydelphin/issues/275
+        li = LookaheadIterator(iter([]))
+        with pytest.raises(StopIteration):
+            li.peek()
+        with pytest.raises(StopIteration):
+            li.next()
+
+    def test_single_item(self):
+        li = LookaheadIterator(iter([1]))
+        assert li.peek() == 1
+        assert li.next() == 1
+        with pytest.raises(StopIteration):
+            li.peek()
+        with pytest.raises(StopIteration):
+            li.next()

@@ -8,6 +8,38 @@ these changes are prefixed with "**BREAKING**"
 (no unreleased changes yet)
 
 
+## [v1.2.1][]
+
+**Release date: 2020-01-22**
+
+Bug fixes for recent Python versions and for the `delphin mkprof`
+command, and more user-friendly error messages from all `delphin`
+commands.
+
+### Fixed
+
+* `delphin.util.LookaheadIterator` no longer raises `RuntimeError` in
+  Python 3.7+ ([#275][])
+* `delphin.commands.mkprof()` suppresses duplicate records ([#273][])
+
+### Changed
+
+* `delphin` commands catch `PyDelphinException` and print its message
+  without the stacktrace unless logging is at DEBUG ([#276][])
+* `delphin.commands.process()` raises a `CommandError` if the
+  `grammar` argument is not a file ([#276][])
+* `delphin.commands.process()` raises a `CommandError` if the `source`
+  or `testsuite` arguments are not valid TSDB database paths (as
+  appropriate) ([#276][])
+* `delphin.commands.process()` will create a new directory if `source`
+  is given and `testsuite` is a non-existing path
+* `delphin.commands.process()` raises a `CommandError` if the `select`
+  query has a column or relation invalid for the schema ([#276][])
+* `delphin.commands.compare()` raises a `CommandError` if the
+  `testsuite` or `gold` arguments are not valid TSDB databases or
+  database paths ([#276][])
+
+
 ## [v1.2.0][]
 
 **Release date: 2020-01-16**
@@ -1144,6 +1176,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.2.1]: ../../releases/tag/v1.2.1
 [v1.2.0]: ../../releases/tag/v1.2.0
 [v1.1.0]: ../../releases/tag/v1.1.0
 [v1.0.3]: ../../releases/tag/v1.0.3
@@ -1280,3 +1313,6 @@ information about changes, except for
 [#269]: https://github.com/delph-in/pydelphin/issues/269
 [#270]: https://github.com/delph-in/pydelphin/issues/270
 [#271]: https://github.com/delph-in/pydelphin/issues/271
+[#273]: https://github.com/delph-in/pydelphin/issues/273
+[#275]: https://github.com/delph-in/pydelphin/issues/275
+[#276]: https://github.com/delph-in/pydelphin/issues/276

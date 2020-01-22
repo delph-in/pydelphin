@@ -226,13 +226,13 @@ def test_open(single_item_skeleton, gzipped_single_item_skeleton):
     fh = tsdb.open(single_item_skeleton, 'item')
     assert not fh.closed
     with fh:
-        assert list(fh) == ['0@The dog barks.']
+        assert list(fh) == ['0@The dog barks.\n']
     assert fh.closed
 
     with tsdb.open(single_item_skeleton, 'item') as fh:
-        assert list(fh) == ['0@The dog barks.']
+        assert list(fh) == ['0@The dog barks.\n']
     with tsdb.open(gzipped_single_item_skeleton, 'item') as fh:
-        assert list(fh) == ['0@The dog barks.']
+        assert list(fh) == ['0@The dog barks.\n']
 
 
 def test_write(single_item_skeleton):
