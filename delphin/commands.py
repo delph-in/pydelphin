@@ -1,8 +1,9 @@
 
 """
-PyDelphin API counterparts to the `delphin` commands.
+PyDelphin API counterparts to the ``delphin`` commands.
 """
 
+from typing import Union, Iterator, IO, Dict, Any
 import sys
 from pathlib import Path
 import tempfile
@@ -31,17 +32,24 @@ class CommandError(exceptions.PyDelphinException):
 ###############################################################################
 # CONVERT #####################################################################
 
-def convert(path, source_fmt, target_fmt, select='result.mrs',
-            properties=True, lnk=True, color=False, indent=None,
-            show_status=False, predicate_modifiers=False,
-            semi=None):
+def convert(path: Union[util.PathLike, IO[str]],
+            source_fmt: str,
+            target_fmt: str,
+            select: str = 'result.mrs',
+            properties: bool = True,
+            lnk: bool = True,
+            color: bool = False,
+            indent: int = None,
+            show_status: bool = False,
+            predicate_modifiers: bool = False,
+            semi: Union[SemI, util.PathLike] = None) -> str:
     """
     Convert between various DELPH-IN Semantics representations.
 
-    If *source_fmt* ends with ``"-lines"``, then *path* must be an
+    If *source_fmt* ends with `"-lines"`, then *path* must be an
     input file containing one representation per line to be read with
     the :func:`decode` function of the source codec. If *target_fmt*
-    ends with ``"-lines"``, then any :attr:`HEADER`, :attr:`JOINER`,
+    ends with `"-lines"`, then any :attr:`HEADER`, :attr:`JOINER`,
     or :attr:`FOOTER` defined by the target codec are ignored. The
     *source_fmt* and *target_fmt* arguments are then downcased and
     hyphens are removed to normalize the codec name.
@@ -54,8 +62,8 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
         .. _delphin.highlight: https://github.com/delph-in/delphin.highlight
 
     Args:
-        path (str, file): filename, testsuite directory, open file, or
-            stream of input representations
+        path (str, ~pathlib.Path, open file): filename, testsuite
+            directory, open file, or stream of input representations
         source_fmt (str): convert from this format
         target_fmt (str): convert to this format
         select (str): TSQL query for selecting data (ignored if *path*
@@ -66,7 +74,7 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
             if `True` (default: `True`)
         color (bool): apply syntax highlighting if `True` and
             *target_fmt* is `"simplemrs"` (default: `False`)
-        indent (int, optional): specifies an explicit number of spaces
+        indent (int): specifies an explicit number of spaces
             for indentation
         show_status (bool): show disconnected EDS nodes (ignored if
             *target_fmt* is not `"eds"`; default: `False`)
@@ -74,7 +82,7 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
             for certain kinds of patterns (ignored if *target_fmt* is
             not an EDS format; default: `False`)
         semi: a :class:`delphin.semi.SemI` object or path to a SEM-I
-            (ignored if *target_fmt* is not `indexedmrs`)
+            (ignored if *target_fmt* is not ``indexedmrs``)
     Returns:
         str: the converted representation
     """
@@ -103,7 +111,7 @@ def convert(path, source_fmt, target_fmt, select='result.mrs',
             semi = load_semi(semi)
 
     # read
-    kwargs = {}
+    kwargs: Dict[str, Any] = {}
     if source_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
     if source_lines:
@@ -274,7 +282,7 @@ def select(query: str, path: util.PathLike, record_class=None):
     Args:
         query (str): TSQL select query (e.g., `'i-id i-input mrs'` or
             `'* from item where readings > 0'`)
-        path: path to a TSDB test suite
+        path (str, ~pathlib.Path): path to a TSDB test suite
         record_class: alternative class for records in the selection
     Yields:
         selected data from the test suite
@@ -294,21 +302,21 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
     Data for the testsuite may come from an existing testsuite or from
     a list of sentences. There are four main usage patterns:
 
-        - `source="testsuite/"` -- read data from `testsuite/`
-        - `source=None, refresh=True` -- read data from *destination*
-        - `source=None, refresh=False` -- read sentences from stdin
-        - `source="sents.txt"` -- read sentences from `sents.txt`
+    - ``source="testsuite/"`` -- read data from `testsuite/`
+    - ``source=None, refresh=True`` -- read data from *destination*
+    - ``source=None, refresh=False`` -- read sentences from stdin
+    - ``source="sents.txt"`` -- read sentences from `sents.txt`
 
     The latter two require the *schema* parameter.
 
     Args:
-        destination (str): path of the new testsuite
-        source (str): path to a source testsuite or a file containing
-            sentences; if not given and *refresh* is `False`, sentences
-            are read from stdin
-        schema (str): path to a relations file to use for the created
-            testsuite; if `None` and *source* is a test suite, the
-            schema of *source* is used
+        destination (str, ~pathlib.Path): path of the new testsuite
+        source (str, ~pathlib.Path): path to a source testsuite or a
+            file containing sentences; if not given and *refresh* is
+            `False`, sentences are read from stdin
+        schema (str, ~pathlib.Path): path to a relations file to use
+            for the created testsuite; if `None` and *source* is a
+            test suite, the schema of *source* is used
         where (str): TSQL condition to filter records by; ignored if
             *source* is not a testsuite
         delimiter (str): if given, split lines from *source* or stdin
@@ -537,26 +545,38 @@ def process(grammar, testsuite, source=None, select=None,
             options=None, all_items=False, result_id=None, gzip=False,
             stderr=None):
     """
-    Process (e.g., parse) a [incr tsdb()] profile.
+    Process the [incr tsdb()] profile *testsuite* with *grammar*.
 
-    Results are written to directly to *testsuite*.
+    Inputs are read from *source* and results are written to
+    *testsuite*. If *source* is `None`, it is set to *testsuite*. It
+    is common for *source* to be `None` in parsing tasks, but it is
+    not recommended for transfer or generation because the MRS field
+    is both read from and written to for these tasks. If *source*
+    points to a valid [incr tsdb()] profile and *testsuite* is a path
+    to a non-existing location, the profile directory is created at
+    that path.
 
-    If *select* is `None`, the defaults depend on the task:
+    The default task is parsing, but generation is done if *generate*
+    is `True` and transfer is done if *transfer* is `True`; only
+    one or neither may be `True`. Input data is extracted from
+    *source* using the TSQL query *select*. If *select* is `None`, the
+    default depends on the task:
 
         ==========  =========================
         Task        Default value of *select*
         ==========  =========================
-        Parsing     `item.i-input`
-        Transfer    `result.mrs`
-        Generation  `result.mrs`
+        Parsing     ``item.i-input``
+        Transfer    ``result.mrs``
+        Generation  ``result.mrs``
         ==========  =========================
 
     Args:
-        grammar (str): path to a compiled grammar image
-        testsuite (str): path to a [incr tsdb()] testsuite where data
-            will be read from (see *source*) and written to
-        source (str): path to a [incr tsdb()] testsuite; if `None`,
-            *testsuite* is used as the source of data
+        grammar (str, ~pathlib.Path): path to a compiled grammar image
+        testsuite (str, ~pathlib.Path): path to the destination [incr
+            tsdb()] testsuite
+        source (str, ~pathlib.Path): path to the source [incr tsdb()]
+            testsuite; if `None`, *testsuite* is used as the source of
+            data
         select (str): TSQL query for selecting processor inputs
             (default depends on the processor type)
         generate (bool): if `True`, generate instead of parse
@@ -567,9 +587,9 @@ def process(grammar, testsuite, source=None, select=None,
             invoking the ACE subprocess; unsupported options will
             give an error message
         all_items (bool): if `True`, don't exclude ignored items
-            (those with `i-wf==2`) when parsing
-        result_id (int): if given, only keep items with the specified
-            `result-id`
+            (those with ``i-wf==2``) when parsing
+        result_id (int): if given, only select inputs with the
+            specified ``result-id`` (transfer and generation)
         gzip (bool): if `True`, non-empty tables will be compressed
             with gzip
         stderr (file): stream for ACE's stderr
@@ -679,11 +699,12 @@ def repp(source, config=None, module=None, active=None,
     similar interface.
 
     Args:
-        source (str, file): filename, open file, or stream of sentence
-            inputs
-        config (str): path to a PET REPP configuration (.set) file
-        module (str): path to a top-level REPP module; other modules
-            are found by external group calls
+        source (str, ~pathlib.Path, open file): filename, open file,
+            or stream of sentence inputs
+        config (str, ~pathlib.Path): path to a PET REPP configuration
+            (.set) file
+        module (str, ~pathlib.Path): path to a top-level REPP module;
+            other modules are found by external group calls
         active (list): select which modules are active; if `None`, all
             are used; incompatible with *config* (default: `None`)
         format (str): the output format (`"yy"`, `"string"`, `"line"`,
@@ -758,17 +779,19 @@ def repp(source, config=None, module=None, active=None,
 ###############################################################################
 # COMPARE #####################################################################
 
-def compare(testsuite, gold, select='i-id i-input mrs'):
+def compare(testsuite: Union[util.PathLike, itsdb.TestSuite],
+            gold: Union[util.PathLike, itsdb.TestSuite],
+            select: str = 'i-id i-input mrs') -> Iterator[Dict]:
     """
     Compare two [incr tsdb()] profiles.
 
     Args:
-        testsuite (str, TestSuite): path to the test [incr tsdb()]
-            testsuite or a :class:`TestSuite` object
-        gold (str, TestSuite): path to the gold [incr tsdb()]
-            testsuite or a :class:`TestSuite` object
+        testsuite (str, ~pathlib.Path, TestSuite): path to the test
+            [incr tsdb()] testsuite or a :class:`TestSuite` object
+        gold (str, ~pathlib.Path, TestSuite): path to the gold
+            [incr tsdb()] testsuite or a :class:`TestSuite` object
         select: TSQL query to select (id, input, mrs) triples
-            (default: `i-id i-input mrs`)
+            (default: `'i-id i-input mrs'`)
     Yields:
         dict: Comparison results as::
 
@@ -777,7 +800,6 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
              "test": number_of_unique_results_in_test,
              "shared": number_of_shared_results,
              "gold": number_of_unique_results_in_gold}
-
     """
     from delphin import mrs
     from delphin.codecs import simplemrs
@@ -793,11 +815,14 @@ def compare(testsuite, gold, select='i-id i-input mrs'):
 
     input_select = '{} {}'.format(queryobj['projection'][0],
                                   queryobj['projection'][1])
-    i_inputs = dict(tsql.select(input_select, testsuite))
+    # typing of tsql.select() is complicated right now, so just ignore
+    # it for the following calls. it may be easier after
+    # https://github.com/delph-in/pydelphin/issues/258
+    i_inputs = dict(tsql.select(input_select, testsuite))  # type: ignore
 
     matched_rows = itsdb.match_rows(
-        tsql.select(select, testsuite),
-        tsql.select(select, gold),
+        tsql.select(select, testsuite),  # type: ignore
+        tsql.select(select, gold),       # type: ignore
         0)
 
     for (key, testrows, goldrows) in matched_rows:

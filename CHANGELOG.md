@@ -8,6 +8,22 @@ these changes are prefixed with "**BREAKING**"
 (no unreleased changes yet)
 
 
+## [v1.2.2][]
+
+**Release date: 2020-03-03**
+
+### Fixed
+
+* `delphin.ace.ACETransferer` now has a `stderr` parameter ([#278][])
+* `delphin.ace.ACEGenerator` now has a `stderr` parameter ([#278][])
+
+### Changed
+
+* `delphin.itsdb.match_rows()` accepts either an `int` or `str` for
+  the `key` parameter. This was always the case, but now it's
+  documented and typed properly.
+
+
 ## [v1.2.1][]
 
 **Release date: 2020-01-22**
@@ -1176,6 +1192,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.2.2]: ../../releases/tag/v1.2.2
 [v1.2.1]: ../../releases/tag/v1.2.1
 [v1.2.0]: ../../releases/tag/v1.2.0
 [v1.1.0]: ../../releases/tag/v1.1.0
@@ -1316,3 +1333,4 @@ information about changes, except for
 [#273]: https://github.com/delph-in/pydelphin/issues/273
 [#275]: https://github.com/delph-in/pydelphin/issues/275
 [#276]: https://github.com/delph-in/pydelphin/issues/276
+[#278]: https://github.com/delph-in/pydelphin/issues/278
