@@ -18,14 +18,14 @@ these changes are prefixed with "**BREAKING**"
 * Data loss can occur when writing a TSDB database with invalid
   `:date` values. Workaround: fix the dates. ([#279])
 
-## [v1.2.2][]
+## [v1.2.2]
 
 **Release date: 2020-03-03**
 
 ### Fixed
 
-* `delphin.ace.ACETransferer` now has a `stderr` parameter ([#278][])
-* `delphin.ace.ACEGenerator` now has a `stderr` parameter ([#278][])
+* `delphin.ace.ACETransferer` now has a `stderr` parameter ([#278])
+* `delphin.ace.ACEGenerator` now has a `stderr` parameter ([#278])
 
 ### Changed
 
@@ -34,7 +34,7 @@ these changes are prefixed with "**BREAKING**"
   documented and typed properly.
 
 
-## [v1.2.1][]
+## [v1.2.1]
 
 **Release date: 2020-01-22**
 
@@ -45,28 +45,28 @@ commands.
 ### Fixed
 
 * `delphin.util.LookaheadIterator` no longer raises `RuntimeError` in
-  Python 3.7+ ([#275][])
-* `delphin.commands.mkprof()` suppresses duplicate records ([#273][])
+  Python 3.7+ ([#275])
+* `delphin.commands.mkprof()` suppresses duplicate records ([#273])
 
 ### Changed
 
 * `delphin` commands catch `PyDelphinException` and print its message
-  without the stacktrace unless logging is at DEBUG ([#276][])
+  without the stacktrace unless logging is at DEBUG ([#276])
 * `delphin.commands.process()` raises a `CommandError` if the
-  `grammar` argument is not a file ([#276][])
+  `grammar` argument is not a file ([#276])
 * `delphin.commands.process()` raises a `CommandError` if the `source`
   or `testsuite` arguments are not valid TSDB database paths (as
-  appropriate) ([#276][])
+  appropriate) ([#276])
 * `delphin.commands.process()` will create a new directory if `source`
   is given and `testsuite` is a non-existing path
 * `delphin.commands.process()` raises a `CommandError` if the `select`
-  query has a column or relation invalid for the schema ([#276][])
+  query has a column or relation invalid for the schema ([#276])
 * `delphin.commands.compare()` raises a `CommandError` if the
   `testsuite` or `gold` arguments are not valid TSDB databases or
-  database paths ([#276][])
+  database paths ([#276])
 
 
-## [v1.2.0][]
+## [v1.2.0]
 
 **Release date: 2020-01-16**
 
@@ -76,39 +76,39 @@ options for `delphin convert`.
 
 ### Python Versions
 
-* Removed Python 3.5 support ([#219][])
+* Removed Python 3.5 support ([#219])
 * Added Python 3.8 support
 
 ### Added
 
-* `delphin.util.inspect_codecs()` ([#270][])
-* `delphin.util.import_codec()` ([#270][])
-* `delphin.cli` namespace and modules for existing commands ([#269][])
-* `-lines` codec suffix for `delphin.commands.convert()` ([#271][])
+* `delphin.util.inspect_codecs()` ([#270])
+* `delphin.util.import_codec()` ([#270])
+* `delphin.cli` namespace and modules for existing commands ([#269])
+* `-lines` codec suffix for `delphin.commands.convert()` ([#271])
 
 ### Fixed
 
 * `delphin.codecs.edspenman` now properly reads predicate names
 * `delphin.codecs.edspenman` and `delphin.codecs.dmrspenman` now wrap
-  `PenmanError` in `PyDelphinException` ([#266][])
+  `PenmanError` in `PyDelphinException` ([#266])
 * `delphin.mrs.MRS.quantification_pairs()` detects and ignores when
-  quantifier(s) are shared by multiple EPs ([#267][])
+  quantifier(s) are shared by multiple EPs ([#267])
 * `delphin.dmrs.from_mrs()` detects when an INDEX is specified but is
-  not the intrinsic argument of any EP ([#267][])
+  not the intrinsic argument of any EP ([#267])
 
 ### Changed
 
 * `delphin.codecs.dmrspenman` update to Penman v0.9
 * `delphin.codecs.edspenman` update to Penman v0.9
 * `delphin.codecs.edspenman` and `delphin.codecs.dmrspenman` now only
-  encode a graph's primary component ([#268][])
+  encode a graph's primary component ([#268])
 * `delphin.main` now detects command modules declared in the
-  `delphin.cli` namespace ([#269][])
+  `delphin.cli` namespace ([#269])
 * `--indent` option to `delphin convert` can take `"no"` or `"none"`
-  to encode without newlines ([#271][])
+  to encode without newlines ([#271])
 
 
-## [v1.1.0][]
+## [v1.1.0]
 
 **Release date: 2020-01-07**
 
@@ -118,26 +118,26 @@ some features to Derivations.
 ### Added
 
 * `requirements.txt` mainly to try and help GitHub detect dependencies
-* `delphin.derivation.UDFNode.parent` ([#245][])
-* `delphin.derivation.UDFNode.internals()` ([#246][])
-* `delphin.derivation.UDFTerminal.parent` ([#245][])
+* `delphin.derivation.UDFNode.parent` ([#245])
+* `delphin.derivation.UDFNode.internals()` ([#246])
+* `delphin.derivation.UDFTerminal.parent` ([#245])
 
 ### Changed
 
-* `delphin.mrs.is_isomorphic()` no longer uses NetworkX ([#263][])
+* `delphin.mrs.is_isomorphic()` no longer uses NetworkX ([#263])
 * Docs no longer require the `sphinx_autodoc_typehints` package as of
-  Sphinx 2.2.0 ([#264][])
+  Sphinx 2.2.0 ([#264])
 * `delphin.exceptions.PyDelphinSyntaxError` now puts the ^ marker in
   the right spot.
 * Lexing in `delphin.util` now tracks the original line with each
   token, allowing for more informative syntax errors.
 * `delphin.tsql.select()` will raise a `TSQLError` if a condition's
-  type does not match that of the column it checks ([#261][])
+  type does not match that of the column it checks ([#261])
 * `delphin.tsql.select()` now considers ``None`` values when checking
-  conditions ([#262][])
+  conditions ([#262])
 
 
-## [v1.0.3][]
+## [v1.0.3]
 
 **Release date: 2019-11-29**
 
@@ -156,10 +156,10 @@ type-checks.
 
 ### Fixed
 
-* REPP now computes alignments even when substitution inserts nothing ([#252][])
-* REPP now uses the `regex` library if available ([#253][])
+* REPP now computes alignments even when substitution inserts nothing ([#252])
+* REPP now uses the `regex` library if available ([#253])
 * `delphin.tsdb.unescape()` doesn't incorrectly parse `\\` followed by `s` or
-  `n` ([#257][])
+  `n` ([#257])
 
 ### Changed
 
@@ -169,7 +169,7 @@ type-checks.
 * `delphin.tsdb.Relation` is now a class instead of just a type declaration,
   but its existence is still just for type-checking
 
-## [v1.0.2][]
+## [v1.0.2]
 
 **Release date: 2019-08-21**
 
@@ -178,14 +178,14 @@ Resolves a REPP processing bug and improves REPP performance.
 ### Fixed
 
 * `delphin.repp.REPP` no longer raises an IndexError when the
-  replacement does not use all group references ([#250][])
+  replacement does not use all group references ([#250])
 
 ### Changed
 
 * `delphin.repp.REPP` no longer recomputes alignments for unchanged
   strings, boosting performance 2-3x.
 
-## [v1.0.1][]
+## [v1.0.1]
 
 **Release date: 2019-08-15**
 
@@ -193,15 +193,15 @@ Resolves some bugs related to DMRS-to-MRS conversion.
 
 ### Fixed
 
-* `delphin.dmrs.DMRS.arguments()` no longer raises a NameError ([#247][])
-* `delphin.dmrs.DMRS.scopal_arguments()` returns correct labels ([#249][])
-* `delphin.mrs.from_dmrs()` assigns the correct top handle ([#248][])
+* `delphin.dmrs.DMRS.arguments()` no longer raises a NameError ([#247])
+* `delphin.dmrs.DMRS.scopal_arguments()` returns correct labels ([#249])
+* `delphin.mrs.from_dmrs()` assigns the correct top handle ([#248])
 
 ### Changed
 
 * `delphin.mrs.MRS` can now be instantiated with an empty structure
 
-## [v1.0.0][]
+## [v1.0.0]
 
 **Release date: 2019-08-14**
 
@@ -228,8 +228,8 @@ documented.
 
 ### Python Versions
 
-* Removed Python 2.7 support ([#115][])
-* Removed Python 3.4 support ([#213][])
+* Removed Python 2.7 support ([#115])
+* Removed Python 3.4 support ([#213])
 
 ### Main API Changes
 
@@ -286,7 +286,7 @@ documented.
     consult the API documentation
 
 
-## [v0.9.2][]
+## [v0.9.2]
 
 **Release date: 2019-04-01**
 
@@ -297,11 +297,11 @@ documented.
 ### Added
 
 * `delphin.interfaces.ace.AceProcessError` for unrecoverable ACE
-  crashes ([#181][])
+  crashes ([#181])
 * ACE command-line options are allowed with `delphin process --options=...`
-  and in `delphin.commands.process(..., options=...)` ([#180][])
+  and in `delphin.commands.process(..., options=...)` ([#180])
 * `delphin.itsdb.Record.from_dict()`
-* `delphin.itsdb.Table` ([#186][])
+* `delphin.itsdb.Table` ([#186])
   - `write()`
   - `attach()`
   - `detach()`
@@ -315,9 +315,9 @@ documented.
 
 ### Fixed
 
-* `delphin.mrs.eds` parsing of predicates and empty property lists ([#203][])
+* `delphin.mrs.eds` parsing of predicates and empty property lists ([#203])
 * `delphin.commands.convert` wrap the inner step of conversion in a try-except
-  block to more gracefully handle crashes on a single input. ([#200][])
+  block to more gracefully handle crashes on a single input. ([#200])
 * `delphin.itsdb.TestSuite.write()` re-enable the `append` parameter
 
 ### Removed
@@ -341,7 +341,7 @@ documented.
 * `delphin.mrs.convert()` use `delphin.commands.convert` instead
 
 
-## [v0.9.1][]
+## [v0.9.1]
 
 **Release date: 2018-10-31**
 
@@ -349,15 +349,15 @@ documented.
 
 * `delphin.tfs.TypedFeatureStructure` no longer duplicates attributes
   on `__slots__`
-* TDL identifiers are reverted to the more permissive blacklist pattern ([#192][])
-* TDL identifiers, coreferences, and 'symbols now use the same pattern ([#191][])
+* TDL identifiers are reverted to the more permissive blacklist pattern ([#192])
+* TDL identifiers, coreferences, and 'symbols now use the same pattern ([#191])
 
 ### Changed
 
 * Import package information from `delphin/__about__.py` into
-  `delphin/__init__.py` ([#190][])
+  `delphin/__init__.py` ([#190])
 
-## [v0.9.0][]
+## [v0.9.0]
 
 **Release date: 2018-10-20**
 
@@ -377,7 +377,7 @@ See the rest of the changelog for additional improvements.
 ### Fixed
 
 * `delphin.tdl.parse()` now accepts a filename argument and returns a properly
-  functioning generator ([#104][])
+  functioning generator ([#104])
 * `delphin.itsdb` works better with gzipped tables with Python 2
 * `delphin.mrs.penman` no longer calls `Eds.from_xmrs(x)` when `x` is an `Eds`
 
@@ -385,10 +385,10 @@ See the rest of the changelog for additional improvements.
 
 * `tests/tdl_test.py` unit tests intended to replace `tests/tdl_test.md`
 * `delphin.tdl.TdlType.docstring` contains a list of a type's docstrings
-* `delphin.tdl.parse()` now takes an `encoding` parameter ([#172][])
-* `delphin.tdl.iterparse()` for new-style TDL parsing ([#153][], [#167][], [#168][], [#170][])
-* `delphin.tdl.format()` for TDL serialization ([#82][], [#187][])
-* Updated TDL entity classes: ([#168][])
+* `delphin.tdl.parse()` now takes an `encoding` parameter ([#172])
+* `delphin.tdl.iterparse()` for new-style TDL parsing ([#153], [#167], [#168], [#170])
+* `delphin.tdl.format()` for TDL serialization ([#82], [#187])
+* Updated TDL entity classes: ([#168])
   - `delphin.tdl.Term`
   - `delphin.tdl.TypeIdentifier`
   - `delphin.tdl.String`
@@ -419,14 +419,14 @@ See the rest of the changelog for additional improvements.
   methods on `TypedFeatureStructure`, `AVM`, `Conjunction`, and
   `TypeDefinition`) now take a boolean `expand` argument which, if `True`,
   expands all feature paths.
-* `delphin.tfs.TypeHierarchy` with basic tests ([#93][])
+* `delphin.tfs.TypeHierarchy` with basic tests ([#93])
 * `delphin.exceptions.TdlWarning` for notifications about deprecated TDL
   syntaxes
 * `delphin.util.LookaheadIterator` for parsing with arbitrary lookahead
-* `delphin.commands` module to contain logic for `delphin` commands ([#140][])
+* `delphin.commands` module to contain logic for `delphin` commands ([#140])
 * `tests/commands_test.py` to test invocation of commands (but not results)
 * `delphin.util.detect_encoding` and tests for checking file header for
-  encoding information ([#169][])
+  encoding information ([#169])
 * `delphin.tsql` module for TSQL queries of testsuites
 * `delphin.exceptions.TSQLSyntaxError`
 * `delphin.itsdb`
@@ -434,16 +434,16 @@ See the rest of the changelog for additional improvements.
   - `Relations.path()` returns a path of `(table, shared_field)` tuples
     describing how to get from one table to another via shared keys
   - `TestSuite.write()` takes an optional `relations` parameter to write
-    a profile with an updated relations file ([#150][])
-  - `TestSuite.exists()` ([#150][])
-  - `TestSuite.size()` ([#150][])
+    a profile with an updated relations file ([#150])
+  - `TestSuite.exists()` ([#150])
+  - `TestSuite.size()` ([#150])
   - `Record.get()` takes a `cast` parameter; when `True`, values are cast
     to the field's datatype
   - `select_rows()` takes a `cast` parameter as with `Record.get()`
 
 ### Changed
 
-* `delphin.tdl` now parses triple-quoted docstrings ([#167][]); note that it
+* `delphin.tdl` now parses triple-quoted docstrings ([#167]); note that it
   no longer parses the old-style docstrings
 * `delphin.tdl.TdlDefinition` inherits from `delphin.tfs.FeatureStructure`
 * `delphin.itsdb.TestSuite` no longer casts values by default (see note on
@@ -453,13 +453,13 @@ See the rest of the changelog for additional improvements.
 * **BREAKING** The `delphin` commands have all replaced the previous
   method of filtering testsuites with the new TSQL queries. Applicators
   are no longer available to commands. Please see `delphin <cmd> -h` for
-  updated usage notes. ([#138][], [#179][])
+  updated usage notes. ([#138], [#179])
 
 ### Deprecated
 
-* `delphin.tdl.parse()` ([#168][])
-* `delphin.tdl.lex()` ([#168][])
-* `delphin.tdl.tokenize()` ([#168][])
+* `delphin.tdl.parse()` ([#168])
+* `delphin.tdl.lex()` ([#168])
+* `delphin.tdl.tokenize()` ([#168])
 
 ### Removed
 
@@ -471,7 +471,7 @@ See the rest of the changelog for additional improvements.
 * `recipes/` directory
 
 
-## [v0.8.0][]
+## [v0.8.0]
 
 **Release date: 2018-08-23**
 
@@ -482,10 +482,10 @@ first release by the new maintainer, Angie McMillan-Major.
 ### Added
 
 * `delphin.mrs.eds`: `dump()` and `dumps()` take a `show_status` parameter
-  which turns on the annotation of disconnected graphs and nodes ([#157][])
+  which turns on the annotation of disconnected graphs and nodes ([#157])
 * `delphin.mrs.eds`: `Eds.from_xmrs()`, `dump()` and `dumps()` take a
   `predicate_modifiers` parameter which enables the use of a function to
-  add additional edges in order to join disconnected graphs ([#156][])
+  add additional edges in order to join disconnected graphs ([#156])
 * `delphin.mrs.eds.non_argument_modifiers()` is the default method for
   EDS predicate modification, but it also works (with different
   parameters) for DMRS-like edges.
@@ -493,9 +493,9 @@ first release by the new maintainer, Angie McMillan-Major.
   disconnected graphs and nodes when `--to=eds`
 * The `convert` command can take a `--predicate-modifiers` option which
   attempts to rejoin disconnected EDS graphs that fit certain criteria
-* Documentation for implementing an ACE preprocessor ([#91][])
+* Documentation for implementing an ACE preprocessor ([#91])
 * `ace` as a `--from` codec for the `convert` subcommand, which reads
-    SimpleMRS strings from ACE output ([#92][])
+    SimpleMRS strings from ACE output ([#92])
 
 ### Changed
 
@@ -504,41 +504,41 @@ first release by the new maintainer, Angie McMillan-Major.
 * Representative node selection for DMRS and EDS considers the scope
   hierarchy when looking for candidate nodes
 * `delphin.mrs.xmrs.Xmrs.from_xmrs()` and `delphin.mrs.eds.Eds.from_xmrs()`
-  now take a `**kwargs` argument to facilitate the `convert` command ([#160][])
+  now take a `**kwargs` argument to facilitate the `convert` command ([#160])
 * The following `delphin.tdl` functions are now private:
     `delphin.tdl._parse_avm()`, `delphin.tdl._parse_affixes()`,
     `delphin.tdl._parse_typedef()`, `delphin.tdl._parse_attr_val()`,
     `delphin.tdl._parse_cons_list()`, `delphin.tdl._parse_conjunction()`,
-    `delphin.tdl._parse_diff_list()` ([#81][])
+    `delphin.tdl._parse_diff_list()` ([#81])
 * **BREAKING** `delphin.interfaces.ace.AceProcess` whitelists certain
     command-line arguments for ACE; invalid arguments or values raise a
     ValueError. This could break code that uses options not whitelisted,
-    but such code probably wouldn't work anyway. ([#149][])
+    but such code probably wouldn't work anyway. ([#149])
 
 ### Fixed
 
 * Converting to PENMAN via the `convert` command should no longer crash for
   disconnected graphs, but print a log message to stderr, print a blank line
-  to stdout, and then continue ([#161][])
+  to stdout, and then continue ([#161])
 * Updated the docstrings for `delphin.mrs.xmrs.Xmrs.args()`,
   `delphin.mrs.xmrs.Xmrs.outgoing_args()`, and
   `delphin.mrs.xmrs.Xmrs.incoming_args()`, from "DMRS-style undirected links"
   to "MOD/EQ links" and updated the return value of `Xmrs.args()` and
-  `Xmrs.outgoing_args` from `{nodeid: {}}` to `{role: tgt}` ([#133][])
+  `Xmrs.outgoing_args` from `{nodeid: {}}` to `{role: tgt}` ([#133])
 * `delphin.mrs.compare.isomorphic()` compares predicates using normalized form
 * Updated the code and the docstrings for references to 'string' and 'grammar'
-  predicates to refer to 'surface' and 'abstract' predicates ([#117][])
-* `delphin.tdl.parse()` now accepts either a file or a filename argument ([#104][])
+  predicates to refer to 'surface' and 'abstract' predicates ([#117])
+* `delphin.tdl.parse()` now accepts either a file or a filename argument ([#104])
 * The following dump methods now allow either a file or filename as their
   arguments like `delphin.mrs.penman.dump()`: `delphin.mrs.eds.dump()`,
   `delphin.mrs.simplemrs.dump()`, `delphin.mrs.simpledmrs.dump()`,
   `delphin.mrs.mrx.dump()`, `delphin.mrs.dmrx.dump()`,
-  `delphin.mrs.prolog.dump()` ([#152][])
-* Non-ascii XML output is now able to be processed in Python2 ([#106][])
+  `delphin.mrs.prolog.dump()` ([#152])
+* Non-ascii XML output is now able to be processed in Python2 ([#106])
 * `delphin.interfaces.ace` now validates parser, transfer, and generator inputs
-  and refuses to process invalid inputs ([#155][])
+  and refuses to process invalid inputs ([#155])
 * `delphin.interfaces.ace` handles whitespace in s-expressions a bit better
-* `itsdb.get_data_specifier()` now allows unicode arguments in Python2 ([#164][])
+* `itsdb.get_data_specifier()` now allows unicode arguments in Python2 ([#164])
 
 ### Deprecated
 
@@ -551,7 +551,7 @@ first release by the new maintainer, Angie McMillan-Major.
 * `delphin.mrs.components.Pred.grammarpred()`; replaced with
   `delphin.mrs.components.Pred.abstract()`
 
-## [v0.7.2][]
+## [v0.7.2]
 
 **Release date: 2018-06-12**
 
@@ -560,9 +560,9 @@ This is a very minor release that just fixes one bug introduced in v0.7.1.
 ### Fixed
 
 * ACE interface no longer gives unnecessary error message when reading the run
-  info from the first line of output ([#148][])
+  info from the first line of output ([#148])
 
-## [v0.7.1][]
+## [v0.7.1]
 
 **Release date: 2018-06-09**
 
@@ -598,7 +598,7 @@ which is the ability to process [incr tsdb()] profiles, either with the
 * `delphin.itsdb.Record` now validates field data (and tests are added)
 * `delphin.itsdb.Record` values can be set by the field name and index
 * `ace.AceProcess` and `rest.DelphinRestClient` in `delphin.interfaces` now
-  inherit from `base.Processor` ([#141][])
+  inherit from `base.Processor` ([#141])
 * `delphin.itsdb.ItsdbProfile` takes an optional `cast` keyword argument; this
   class is deprecated, but the addition is to smooth over the transition to
   the new `TestSuite` class.
@@ -606,7 +606,7 @@ which is the ability to process [incr tsdb()] profiles, either with the
   regarding the specifications of tables and/or data.
 * Reverted an incomplete rewrite of `delphin.itsdb.make_skeleton()`
 * Replaced `delphin.util.SExpr` with a custom non-PEG parser, which seems
-  to be much faster for pathological items ([#145][])
+  to be much faster for pathological items ([#145])
 * **BREAKING** `ItsdbProfile`, `TestSuite`, and `Table.from_file()` in
   `delphin.itsdb` now accept an encoding parameter, which defaults to `utf-8`.
   Profiles will be read and written using the specified encoding, instead of
@@ -623,7 +623,7 @@ which is the ability to process [incr tsdb()] profiles, either with the
 * The `mkprof` command is now more Python 2.7-compatible
 * Made `delphin.itsdb` more compatible with Python 2.7
 
-## [v0.7.0][]
+## [v0.7.0]
 
 **Release date: 2018-05-08**
 
@@ -640,31 +640,31 @@ and removes or mitigates several dependencies.
 ### Added
 
 * `delphin.interface.ace.compile()` can take `executable` and `env`
-  parameters, similar to `ace.parse()`, etc. ([#119][])
+  parameters, similar to `ace.parse()`, etc. ([#119])
 * `remap_nodeids` parameter to `Dmrs.from_triples()`, which defaults to
   `True`, indicates whether the nodeids used in the triples should be coerced
   into standard DMRS integer ids
 * `--select` option to `convert` command for non-standard profile schemata
 * Ensure the `properties=True|False` parameter existed for dump() and
-  dumps() for all MRS codecs; default value may differ ([#114][])
+  dumps() for all MRS codecs; default value may differ ([#114])
 * Add `--no-properties` option to delphin convert command; default is
   to always print properties (which may be different from the API
-  function default) ([#114][])
+  function default) ([#114])
 * `delphin.itsdb.Relations` class for encoding/decoding relations files,
-  which now also work on strings instead of actual files ([#99][])
+  which now also work on strings instead of actual files ([#99])
 * `delphin.itsdb.Relation` class for storing the relations of a single table
 * `delphin.itsdb.Record`, `delphin.itsdb.Table`, and
-  `delphin.itsdb.TestSuite` for modeling [incr tsdb()] substructures ([#89][])
-* `delphin.itsdb.join()` does inner and left joins ([#101][])
+  `delphin.itsdb.TestSuite` for modeling [incr tsdb()] substructures ([#89])
+* `delphin.itsdb.join()` does inner and left joins ([#101])
 * `delphin.itsdb.Field.default_value()` replaces
   `delphin.itsdb.default_value()`
 * `delphin.util.deprecated` decorator for marking deprecated functions and
    methods
-* DMRX now encodes index as a graph attribute ([#126][])
+* DMRX now encodes index as a graph attribute ([#126])
 * DMRS's dictionary view (for JSON output) now encodes index as a
   top-level attribute.
-* `delphin.mrs.prolog` serializer ([#8][])
-* `delphin.repp` for REPP tokenization ([#43][])
+* `delphin.mrs.prolog` serializer ([#8])
+* `delphin.repp` for REPP tokenization ([#43])
 * `delphin.exceptions.ReppError`
 * `delphin.exceptions.ReppWarning`
 
@@ -674,10 +674,10 @@ and removes or mitigates several dependencies.
 * `delphin.itsdb` now has public-facing `tsdb_core_files` and
   `tsdb_coded_attributes` variables
 * `mkprof` command includes any non-empty core files in skeletons
-* SimpleMRS codec now instantiates with the Mrs class instead of Xmrs ([#103][])
-* SimpleMRS no longer breaks at non-breaking spaces in predicates ([#128][])
-* Remove docopt dependency for command-line interfaces ([#137][])
-* Move imports of dependencies to avoid unnecessary ImportErrors ([#100][])
+* SimpleMRS codec now instantiates with the Mrs class instead of Xmrs ([#103])
+* SimpleMRS no longer breaks at non-breaking spaces in predicates ([#128])
+* Remove docopt dependency for command-line interfaces ([#137])
+* Move imports of dependencies to avoid unnecessary ImportErrors ([#100])
 * **BREAKING**: for `delphin.itsdb.Field`, the `other` list attribute is
   now just the boolean `partial` since there's no other use of it
 * Add a few more patterns to `.gitignore`
@@ -693,20 +693,20 @@ and removes or mitigates several dependencies.
 ### Fixed
 
 * Corrected docstrings that had been misplaced in delphin.mrs.xmrs for
-  over a year ([#116][])
+  over a year ([#116])
 * Non-integer nodeids no longer break sorting and construction
 * Fix a bug in EDS getting CVARSORT when properties are printed
-* Use target relations for writing empty files in `mkprof` command ([#125][])
+* Use target relations for writing empty files in `mkprof` command ([#125])
 * Properly split role and post in Dmrs.from_triples()
 * Use top-specifying triples (e.g. (0, 'top', 10000)) in Dmrs.from_triples()
-* Don't complain about missing POS field in Preds ([#129][])
+* Don't complain about missing POS field in Preds ([#129])
 * No longer print ARG0s twice in MRX
 * Let MRX deal with missing TOP and INDEX
 
 ### Removed
 
-* **BREAKING** `delphin.interfaces.ace._AceResult ([#97][])
-* **BREAKING** `delphin.interfaces.ace._AceResponse ([#97][])
+* **BREAKING** `delphin.interfaces.ace._AceResult ([#97])
+* **BREAKING** `delphin.interfaces.ace._AceResponse ([#97])
 
 ### Deprecated
 
@@ -719,30 +719,30 @@ and removes or mitigates several dependencies.
 * `delphin.itsdb.ItsdbProfile` - use `delphin.itsdb.TestSuite`
 * `delphin.itsdb.ItsdbSkeleton` - use `delphin.itsdb.TestSuite`
 
-## [v0.6.2][]
+## [v0.6.2]
 
 **Release date: 2017-06-02**
 
 ### Added
 
-* `delphin.itsdb.ItsdbProfile.exists()` ([#112][])
-* `delphin.itsdb.ItsdbProfile.size()` ([#112][])
-* `--in-place` option to the `delphin mkprof` command ([#109][])
-* `delphin.derivation.UdfNode.preterminals()` ([#105][])
-* `delphin.derivation.UdfNode.terminals()` ([#105][])
+* `delphin.itsdb.ItsdbProfile.exists()` ([#112])
+* `delphin.itsdb.ItsdbProfile.size()` ([#112])
+* `--in-place` option to the `delphin mkprof` command ([#109])
+* `delphin.derivation.UdfNode.preterminals()` ([#105])
+* `delphin.derivation.UdfNode.terminals()` ([#105])
 
 ### Changed
 
-* Hash on the normalized form of Preds. ([#107][])
+* Hash on the normalized form of Preds. ([#107])
 
 ### Fixed
 
-* Properly call `re.sub()` so the flags don't become the count ([#108][])
-* Include file size of gzipped tables in summary of `delphin mkprof` ([#110][])
-* `normalize_pred_string()` now strips `_rel` ([#111][]) and lowercases
-* `is_valid_pred_string()` no longer requires `_rel` ([#111][])
+* Properly call `re.sub()` so the flags don't become the count ([#108])
+* Include file size of gzipped tables in summary of `delphin mkprof` ([#110])
+* `normalize_pred_string()` now strips `_rel` ([#111]) and lowercases
+* `is_valid_pred_string()` no longer requires `_rel` ([#111])
 
-## [v0.6.1][]
+## [v0.6.1]
 
 **Release date: 2017-04-06**
 
@@ -766,17 +766,17 @@ functions.
 
 ### Fixed
 
-* `delphin.interfaces.ace` ignores stderr, which effectively fixes ([#86][])
-* `delphin.interfaces.ace` joins content lines in tsdb mode---fixes ([#95][])
+* `delphin.interfaces.ace` ignores stderr, which effectively fixes ([#86])
+* `delphin.interfaces.ace` joins content lines in tsdb mode---fixes ([#95])
 * Write empty tables for `delphin mkprof` command unless `--skeleton` is
-  used (fixes [#96][])
+  used (fixes [#96])
 * `delphin.mrs.xmrs.Xmrs` equality test now checks variable properties
-* `delphin.mrs.xmrs.Mrs.from_dict()` correctly reads variable properties ([#98][])
+* `delphin.mrs.xmrs.Mrs.from_dict()` correctly reads variable properties ([#98])
 * `delphin.interfaces.ace._AceResponse.get()` now backs off to ParseResponse
   on KeyError
 * `delphin.mrs.simplemrs` fix error message on unexpected token
 
-## [v0.6.0][]
+## [v0.6.0]
 
 **Release date: 2017-01-20**
 
@@ -803,7 +803,7 @@ fixed or the functionality is deprecated.
 * `delphin.mrs.eds.Eds.to_triples()`
 * `delphin.mrs.eds.Eds.from_triples()`
 * `delphin.mrs.penman` module for PENMAN serialization of DMRS and EDS
-  (resolves [#85][])
+  (resolves [#85])
 * `delphin.vpm` and tests
 * `delphin.semi` and tests
 
@@ -816,16 +816,16 @@ fixed or the functionality is deprecated.
   [art](http://sweaglesw.org/linguistics/libtsdb/art)'s `mkprof` tool.
 * `delphin.extra.latex` has nicer looking DMRS output
 * Quantifiers are detected more consistently for, e.g., DMRS conversion;
-  this mostly resolves ([#84][])
-* DMRS `/EQ` links are now `MOD/EQ` and fix a direction (resolves [#87][])
+  this mostly resolves ([#84])
+* DMRS `/EQ` links are now `MOD/EQ` and fix a direction (resolves [#87])
 * All \*MRS serializers/exporters take \*\*kwargs (though many ignore
   them) so that a common API can be used for, e.g., \*MRS conversion.
-* Strip quotes on reading CARGs, add them when writing (fixes [#75][])
+* Strip quotes on reading CARGs, add them when writing (fixes [#75])
 
 ### Fixed
 
 * `delphin.interfaces.ace` now detects interleaved stderr messages when
-  there are errors decoding or parsing S-Expressions (fixes [#86][])
+  there are errors decoding or parsing S-Expressions (fixes [#86])
 * Custom test runner in `setup.py`; now just call `tox`
 
 ### Removed
@@ -845,7 +845,7 @@ fixed or the functionality is deprecated.
 * `delphin.mrs.components.Node.__lt__()`
 * `delphin.mrs.components.ElementaryPredication.__lt__()`
 
-## [v0.5.1][]
+## [v0.5.1]
 
 **Release date: 2016-07-19**
 
@@ -896,16 +896,16 @@ and adds support for YY token lattices.
 * `delphin.derivation.UdfNode.basic_entity()` (use UdfNode.entity)
 * `delphin.derivation.UdfNode.lexical_type()` (use UdfNode.type)
 
-## [v0.5.0][]
+## [v0.5.0]
 
 **Release date: 2016-06-19**
 
 ### Added
 
-* `delphin.interfaces.rest` ([#66][])
-* `delphin.mrs.xmrs.Mrs`: `to_dict()` and `from_dict()` methods ([#68][])
-* `delphin.mrs.xmrs.Dmrs`: `to_dict()` and `from_dict()` methods ([#68][])
-* `delphin.mrs.eds` ([#25][], [#26][])
+* `delphin.interfaces.rest` ([#66])
+* `delphin.mrs.xmrs.Mrs`: `to_dict()` and `from_dict()` methods ([#68])
+* `delphin.mrs.xmrs.Dmrs`: `to_dict()` and `from_dict()` methods ([#68])
+* `delphin.mrs.eds` ([#25], [#26])
 * `delphin.lib.pegre` [Pegre](https://github.com/goodmami/pegre)
   parsing framework to help with EDS deserialization
 * `properties` property accessor on `delphin.mrs.components.Node`
@@ -926,7 +926,7 @@ and adds support for YY token lattices.
 
 ### Fixed
 
-* Fixed a regression in reading multiple SimpleMRSs ([#70][])
+* Fixed a regression in reading multiple SimpleMRSs ([#70])
 * `delphin.mrs.components.Pred`
   - `short_form()` now works as expected when the predicate is already
     short (e.g. has no `_rel` suffix)
@@ -940,7 +940,7 @@ and adds support for YY token lattices.
 * Added or updated documentation throughout. Coverage is not complete,
   but should be significantly better.
 
-## [v0.4.1][]
+## [v0.4.1]
 
 **Release date: 2016-04-21**
 
@@ -998,17 +998,17 @@ the current version.
   - `get_outbound_args()` (use `xmrs.outgoing_args()`)
   - `nodeid()` (use `xmrs.nodeid()`)
 
-## [v0.4.0][]
+## [v0.4.0]
 
 **Release date: 2016-03-04**
 
 This release fixes a number of bugs (including fixes from two new
-contributors; see the [README][]), and adds some minor features:
+contributors; see the [README]), and adds some minor features:
 
 * more convenient introspection of TDL lists
 * a LaTeX exporter for DMRS
 
-From [v0.4.0][], pyDelphin uses [semantic versioning](http://semver.org/),
+From [v0.4.0], pyDelphin uses [semantic versioning](http://semver.org/),
 and is available on [PyPI](https://pypi.python.org/pypi/pyDelphin).
 
 This release also drops support for Python 2.6 (Python 2.7 is still
@@ -1061,7 +1061,7 @@ supported and tested).
 * TDL parsing treats strings as primitives instead of as the supertype
   of some TypedFeatureStructure
 
-## [v0.3][]
+## [v0.3]
 
 **Release date: 2015-08-25**
 
@@ -1193,7 +1193,7 @@ tests for pyDelphin.
   - util.XmrsDiGraph
 
 
-## [v0.2][]
+## [v0.2]
 
 **Release date: 2015-06-26**
 
