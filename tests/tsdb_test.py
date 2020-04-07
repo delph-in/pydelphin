@@ -292,3 +292,22 @@ def test_write_database(tmp_path, mini_testsuite, empty_alt_testsuite):
         '10@It rained.@1-feb-2018 15:00\n'
         '20@Rained.@01-02-18 15:00:00\n'
         '30@It snowed.@2018-2-1 (15:00:00)\n')
+
+
+def test_bad_date_issue_279(tmp_path, empty_alt_testsuite):
+    tmp_ts = tmp_path.joinpath('test_bad_date_issue_279')
+    tmp_ts.mkdir()
+    schema = tsdb.read_schema(empty_alt_testsuite)
+    fields = schema['item']
+    tsdb.write_schema(tmp_ts, schema)
+    tsdb.write(
+        tmp_ts, 'item', [(0, 'The cat meows.', datetime(1999, 9, 8))], fields)
+    db = tsdb.Database(tmp_ts)
+    assert list(db['item']) == [
+        ('0', 'The cat meows.', '8-sep-1999')
+    ]
+    tsdb.write(
+        tmp_ts, 'item', [(0, 'The cat meows.', 'September 8, 1999')], fields)
+    assert list(db['item']) == [
+        ('0', 'The cat meows.', 'September 8, 1999')
+    ]

@@ -605,7 +605,7 @@ class Table(tsdb.Relation):
             Row(10)
             >>> next(table.select('i-id', 'i-input'))
             Row(10, 'It rained.')
-            >>> next(table.select('i-id', 'i-input'), cast=False)
+            >>> next(table.select('i-id', 'i-input', cast=False))
             ('10', 'It rained.')
         """
         indices = tuple(map(self._field_index.__getitem__, names))

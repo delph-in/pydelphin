@@ -9,6 +9,11 @@ these changes are prefixed with "**BREAKING**"
 
 * `delphin process -e` no longer requires a `where` condition ([#281])
 
+### Wontfix
+
+* Data loss can occur when writing a TSDB database with invalid
+  `:date` values. Workaround: fix the dates. ([#279])
+
 ## [v1.2.2][]
 
 **Release date: 2020-03-03**
@@ -1335,4 +1340,5 @@ information about changes, except for
 [#275]: https://github.com/delph-in/pydelphin/issues/275
 [#276]: https://github.com/delph-in/pydelphin/issues/276
 [#278]: https://github.com/delph-in/pydelphin/issues/278
+[#279]: https://github.com/delph-in/pydelphin/issues/279
 [#281]: https://github.com/delph-in/pydelphin/issues/281

@@ -196,7 +196,7 @@ is to pass in a running :class:`~delphin.ace.ACEProcess` instance to
 :meth:`TestSuite.process <delphin.itsdb.TestSuite.process>`\ ---the
 :class:`~delphin.itsdb.TestSuite` class will determine if the
 processor is for parsing, transfer, or generation (using the
-:attr:`ACEProcessor.task <delphin.ace.ACEProcessor.task>` attribute)
+:attr:`ACEProcessor.task <delphin.ace.ACEProcess.task>` attribute)
 and select the appropriate inputs from the test suite.
 
 >>> from delphin import ace
@@ -237,3 +237,19 @@ NOTE: 75 passive, 361 active edges in final generation chart; built 89 passives 
 NOTE: 35 passive, 210 active edges in final generation chart; built 37 passives total. [1 results]
 [...]
 
+
+Troubleshooting
+---------------
+
+``TSDBWarning: Invalid date field``
+
+  This warning occurs when PyDelphin tries to cast a value with the
+  ``:date`` datatype when the raw value is not an acceptable date
+  format (see :func:`delphin.tsdb.cast` for an
+  explanation). Practically this means that the date will not be
+  usable for things like TSQL conditions, but also note that it can
+  cause data loss when writing a profile containing invalid dates to
+  disk as PyDelphin will not write invalid data. Low-level operations
+  that do not cast the value, such as from the :mod:`delphin.tsdb`
+  module, may be able to write the raw string without data loss, but
+  it is better to just fix the invalid dates.
