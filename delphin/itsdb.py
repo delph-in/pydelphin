@@ -53,6 +53,10 @@ class FieldMapper(object):
     """
     A class for mapping between response objects and test suites.
 
+    If *source* is given, it is the test suite providing the inputs
+    used to create the responses, and it is used to provide some
+    contextual information that may not be present in the response.
+
     This class provides two methods for mapping responses to fields:
 
     * :meth:`map` -- takes a response and returns a list of (table,
@@ -83,7 +87,7 @@ class FieldMapper(object):
         affected_tables: list of tables that are affected by the
             processing
     """
-    def __init__(self):
+    def __init__(self, source: tsdb.Database = None):
         # the parse keys exclude some that are handled specially
         self._parse_keys = '''
             ninputs ntokens readings first total tcpu tgc treal words
@@ -109,6 +113,14 @@ class FieldMapper(object):
             run parse result rule output edge tree decision preference
             update fold score
         '''.split()
+
+        self._i_id_map = {}
+        if source:
+            self._i_id_map.update(
+                source.select_from(
+                    'parse',
+                    ('parse-id', 'i-id'),
+                    cast=True))
 
     def map(self, response: interface.Response) -> Transaction:
         """
@@ -145,7 +157,13 @@ class FieldMapper(object):
     def _map_parse(self, response: interface.Response) -> tsdb.ColumnMap:
         patch: tsdb.ColumnMap = {}
         # custom remapping, cleanup, and filling in holes
-        patch['i-id'] = response.get('keys', {}).get('i-id', -1)
+        keys = response.get('keys', {})
+        if 'i-id' in keys:
+            patch['i-id'] = keys['i-id']
+        elif 'parse-id' in keys and keys['parse-id'] in self._i_id_map:
+            patch['i-id'] = self._i_id_map[keys['parse-id']]
+        else:
+            patch['i-id'] = -1
         self._parse_id = max(self._parse_id + 1, patch['i-id'])
         patch['parse-id'] = self._parse_id
         patch['run-id'] = response.get('run', {}).get('run-id', -1)
@@ -809,9 +827,9 @@ class TestSuite(tsdb.Database):
             selector: a pair of (table_name, column_name) that specify
                 the table and column used for processor input (e.g.,
                 `('item', 'i-input')`)
-            source (:class:`TestSuite`, :class:`Table`): test suite or
-                table from which inputs are taken; if `None`, use the
-                current test suite
+            source (:class:`~delphin.tsdb.Database`): test suite from
+                which inputs are taken; if `None`, use the current
+                test suite
             fieldmapper (:class:`FieldMapper`): object for
                 mapping response fields to [incr tsdb()] fields; if
                 `None`, use a default mapper for the standard schema
@@ -836,7 +854,7 @@ class TestSuite(tsdb.Database):
         if source is None:
             source = self
         if fieldmapper is None:
-            fieldmapper = FieldMapper()
+            fieldmapper = FieldMapper(source=source)
         index = tsdb.make_field_index(source.schema[input_table])
 
         affected = set(fieldmapper.affected_tables).intersection(self.schema)

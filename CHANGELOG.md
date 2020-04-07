@@ -5,6 +5,10 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+### Added
+
+* `delphin.itsdb.FieldMapper` now has a `source` parameter ([#283])
+
 ### Fixed
 
 * `delphin process -e` no longer requires a `where` condition ([#281])
@@ -1342,3 +1346,4 @@ information about changes, except for
 [#278]: https://github.com/delph-in/pydelphin/issues/278
 [#279]: https://github.com/delph-in/pydelphin/issues/279
 [#281]: https://github.com/delph-in/pydelphin/issues/281
+[#283]: https://github.com/delph-in/pydelphin/issues/283
