@@ -5,8 +5,9 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
-(no unreleased changes yet)
+### Fixed
 
+* `delphin process -e` no longer requires a `where` condition ([#281])
 
 ## [v1.2.2][]
 
@@ -1334,3 +1335,4 @@ information about changes, except for
 [#275]: https://github.com/delph-in/pydelphin/issues/275
 [#276]: https://github.com/delph-in/pydelphin/issues/276
 [#278]: https://github.com/delph-in/pydelphin/issues/278
+[#281]: https://github.com/delph-in/pydelphin/issues/281
