@@ -5,6 +5,13 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
+(no unreleased changes)
+
+
+## [v1.2.3]
+
+**Release date: 2020-04-08**
+
 ### Added
 
 * `delphin.itsdb.FieldMapper` now has a `source` parameter ([#283])

@@ -125,9 +125,6 @@ Do the following tasks prior to releasing on GitHub and PyPI.
 - [ ] Merge to master
   - [ ] Test again
   - [ ] push
-- [ ] Create a source distribution: `setup.py sdist`
-- [ ] Build a wheel distribution: `setup.py bdist_wheel`
-- [ ] Upload to PyPI: `twine upload dist/*`
 - [ ] [Make a new release](https://github.com/delph-in/pydelphin/releases/new)
 - [ ] Announce
 
