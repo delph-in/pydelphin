@@ -272,3 +272,33 @@ def test_match_rows():
          [],
          [{'i-id': '30', 'i-input': 'd'}])
     ]
+
+
+def test_bad_date_issue_279b(tmp_path, empty_alt_testsuite):
+    tmp_ts = tmp_path.joinpath('test_bad_date_issue_279b')
+    tmp_ts.mkdir()
+    schema = tsdb.read_schema(empty_alt_testsuite)
+    fields = schema['item']
+    tsdb.write_schema(tmp_ts, schema)
+    tsdb.write(
+        tmp_ts, 'item', [(0, 'The cat meows.', 'September 8, 1999')], fields)
+    ts = itsdb.TestSuite(tmp_ts)
+    assert list(ts['item'].select('i-date', cast=False)) == [
+        ('September 8, 1999',)
+    ]
+    with pytest.warns(tsdb.TSDBWarning):
+        ts['item'][0]['i-date']
+
+    # Ideally the following would not raise an assertion error, but
+    # the invalid date gets stored as `None` in memory which then gets
+    # written to disk. Unfortunately the fix is not obvious at this
+    # time, so I'm going to sidestep the issue for now and just say
+    # that PyDelphin will not write profiles with invalid values.
+    #
+    # tsdb.write_database(ts, tmp_ts)
+    # ts.reload()
+    # assert list(ts['item'].select('i-date', cast=False)) == [
+    #     ('September 8, 1999',)
+    # ]
+
+

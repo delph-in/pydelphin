@@ -455,7 +455,7 @@ def _mkprof_from_database(destination, db, schema, where, full, gzip):
     tsdb.write_schema(destination, schema)
 
     to_copy = set(schema if full else tsdb.TSDB_CORE_FILES)
-    where = '' if where is None else 'where ' + where
+    where = '' if not where else 'where ' + where
 
     for table in schema:
         if table not in to_copy or _no_such_relation(db, table):

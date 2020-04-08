@@ -63,6 +63,7 @@ setup(
     ],
     install_requires=[
         'penman==0.9.1',
+        'progress==1.5',
     ],
     extras_require={
         'docs': docs_require,
