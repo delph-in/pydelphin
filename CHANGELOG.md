@@ -1211,6 +1211,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.2.3]: ../../releases/tag/v1.2.3
 [v1.2.2]: ../../releases/tag/v1.2.2
 [v1.2.1]: ../../releases/tag/v1.2.1
 [v1.2.0]: ../../releases/tag/v1.2.0
