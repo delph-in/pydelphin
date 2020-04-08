@@ -151,6 +151,7 @@ class ACEProcess(interface.Processor):
 
     def _result_lines(self, termini: List[Pattern[str]] = None) -> List[str]:
         poll = self._p.poll
+        assert self._p.stdout is not None, 'cannot receive output from ACE'
         next_line = self._p.stdout.readline
 
         if termini is None:
@@ -195,6 +196,7 @@ class ACEProcess(interface.Processor):
           :meth:`interact` method for most data-processing tasks with
           ACE.
         """
+        assert self._p.stdin is not None, 'cannot send inputs to ACE'
         try:
             self._p.stdin.write((datum.rstrip() + '\n'))
             self._p.stdin.flush()
@@ -291,12 +293,14 @@ class ACEProcess(interface.Processor):
         Close the ACE process and return the process's exit code.
         """
         self.run_info['end'] = datetime.now()
-        self._p.stdin.close()
-        for line in self._p.stdout:
-            if line.startswith('NOTE: tsdb run:'):
-                self._read_run_info(line)
-            else:
-                logger.debug('ACE cleanup: %s', line.rstrip())
+        if self._p.stdin is not None:
+            self._p.stdin.close()
+        if self._p.stdout is not None:
+            for line in self._p.stdout:
+                if line.startswith('NOTE: tsdb run:'):
+                    self._read_run_info(line)
+                else:
+                    logger.debug('ACE cleanup: %s', line.rstrip())
         retval = self._p.wait()
         return retval
 

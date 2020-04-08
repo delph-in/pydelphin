@@ -5,7 +5,7 @@
 """
 
 from typing import (
-    Union, Iterable, Sequence, Tuple, List, Dict,
+    Union, Iterable, Sequence, Tuple, List, Dict, Any,
     Iterator, Optional, IO, overload, cast as typing_cast
 )
 from pathlib import Path
@@ -108,7 +108,7 @@ class FieldMapper(object):
             user host os start end items status
         '''.split()
         self._parse_id = -1
-        self._runs = {}
+        self._runs: Dict[int, Dict[str, Any]] = {}
         self._last_run_id = -1
 
         self.affected_tables = '''
@@ -116,13 +116,14 @@ class FieldMapper(object):
             update fold score
         '''.split()
 
-        self._i_id_map = {}
+        self._i_id_map: Dict[int, int] = {}
         if source:
-            self._i_id_map.update(
-                source.select_from(
-                    'parse',
-                    ('parse-id', 'i-id'),
-                    cast=True))
+            pairs = typing_cast(List[Tuple[int, int]],
+                                source.select_from(
+                                    'parse',
+                                    ('parse-id', 'i-id'),
+                                    cast=True))
+            self._i_id_map.update(pairs)
 
     def map(self, response: interface.Response) -> Transaction:
         """
@@ -166,7 +167,9 @@ class FieldMapper(object):
             patch['i-id'] = self._i_id_map[keys['parse-id']]
         else:
             patch['i-id'] = -1
-        self._parse_id = max(self._parse_id + 1, patch['i-id'])
+        i_id = patch['i-id']
+        assert isinstance(i_id, int)  # for type-checker's benefit, mainly
+        self._parse_id = max(self._parse_id + 1, i_id)
         patch['parse-id'] = self._parse_id
         patch['run-id'] = response.get('run', {}).get('run-id', -1)
         if 'tokens' in response:
