@@ -8,6 +8,8 @@ these changes are prefixed with "**BREAKING**"
 ### Added
 
 * `delphin.itsdb.FieldMapper` now has a `source` parameter ([#283])
+* `delphin.itsdb.TestSuite.process()` displays a progress bar when not
+  logging individual items ([#282])
 
 ### Fixed
 
@@ -1346,4 +1348,5 @@ information about changes, except for
 [#278]: https://github.com/delph-in/pydelphin/issues/278
 [#279]: https://github.com/delph-in/pydelphin/issues/279
 [#281]: https://github.com/delph-in/pydelphin/issues/281
+[#282]: https://github.com/delph-in/pydelphin/issues/282
 [#283]: https://github.com/delph-in/pydelphin/issues/283

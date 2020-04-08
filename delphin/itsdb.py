@@ -15,6 +15,8 @@ import logging
 import collections
 import itertools
 
+from progress.bar import Bar as ProgressBar
+
 from delphin import util
 from delphin import tsdb
 from delphin import interface
@@ -863,20 +865,34 @@ class TestSuite(tsdb.Database):
 
         key_names = [f.name for f in source.schema[input_table] if f.is_key]
 
+        bar = None
+        if not logger.isEnabledFor(logging.INFO):
+            with tsdb.open(source.path, input_table) as fh:
+                total = sum(1 for _ in fh)
+            if total > 0:
+                bar = ProgressBar('Processing', max=total)
+
         for row in source[input_table]:
             datum = row[index[input_column]]
             keys = [row[index[name]] for name in key_names]
             keys_dict = dict(zip(key_names, keys))
             response = cpu.process_item(datum, keys=keys_dict)
+
             logger.info(
                 'Processed item {:>16}  {:>8} results'
                 .format(tsdb.join(keys), len(response['results']))
             )
+            if bar:
+                bar.next()
+
             for tablename, data in fieldmapper.map(response):
                 _add_row(self, tablename, data, buffer_size)
 
         for tablename, data in fieldmapper.cleanup():
             _add_row(self, tablename, data, buffer_size)
+
+        if bar:
+            bar.finish()
 
         tsdb.write_database(self, self.path, gzip=gzip)
 
