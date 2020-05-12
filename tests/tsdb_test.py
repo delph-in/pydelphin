@@ -265,6 +265,16 @@ def test_write(single_item_skeleton):
     assert path.with_suffix('').exists()
 
 
+def test_issue_285(empty_testsuite):
+    fields = tsdb.read_schema(empty_testsuite)['item']
+    tsdb.write(empty_testsuite, 'item', [(0, 'The cat meows.\r')], fields)
+    fh = tsdb.open(empty_testsuite, 'item')
+    assert not fh.closed
+    with fh:
+        assert list(fh) == ['0@The cat meows.\r\n']
+    assert fh.closed
+
+
 def test_write_database(tmp_path, mini_testsuite, empty_alt_testsuite):
     tmp_ts = tmp_path.joinpath('test_write_database')
     db = tsdb.Database(mini_testsuite)

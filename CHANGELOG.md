@@ -5,7 +5,9 @@ these changes are prefixed with "**BREAKING**"
 
 ## [Unreleased][unreleased]
 
-(no unreleased changes)
+### Fixed
+
+* `delphin.tsdb.open()` does not use universal newlines ([#285])
 
 
 ## [v1.2.3]
@@ -1358,3 +1360,4 @@ information about changes, except for
 [#281]: https://github.com/delph-in/pydelphin/issues/281
 [#282]: https://github.com/delph-in/pydelphin/issues/282
 [#283]: https://github.com/delph-in/pydelphin/issues/283
+[#285]: https://github.com/delph-in/pydelphin/issues/285
