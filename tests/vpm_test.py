@@ -6,7 +6,20 @@ import pytest
 from delphin import vpm
 
 
+def test_load(tmp_path):
+    vpm.load(S('; test vpm\n'
+               'a : b\n'
+               ' 1 >> 2'))
+    vpmfile = tmp_path / 'test.vpm'
+    vpmfile.write_text('; test vpm\n'
+                       'a : b\n'
+                       ' 1 >> 2')
+    vpm.load(vpmfile)
+
+
 def test_invalid():
+    with pytest.raises(vpm.VPMSyntaxError):
+        vpm.load(S('~~'))
     with pytest.raises(vpm.VPMSyntaxError):
         vpm.load(S('<>'))
     with pytest.raises(vpm.VPMSyntaxError):
