@@ -462,6 +462,42 @@ def test_parse_type_features():
     assert t['ATTR'].terms == ['val1', 'val2']
 
 
+def test_parse_cons_list():
+    t = tdlparse('a := b & [ ATTR < > ].')
+    assert isinstance(t['ATTR'], ConsList)
+    assert t['ATTR'].terminated
+
+    t = tdlparse('a := b & [ ATTR < ... > ].')
+    assert isinstance(t['ATTR'], ConsList)
+    assert not t['ATTR'].terminated
+
+    t = tdlparse('a := b & [ ATTR < [] . #x > ].')
+    assert isinstance(t['ATTR'], ConsList)
+    assert t['ATTR'].terminated
+
+    t = tdlparse('a := b & [ ATTR < [] , ... > ].')
+    assert isinstance(t['ATTR'], ConsList)
+    assert not t['ATTR'].terminated
+
+    with pytest.raises(TDLSyntaxError):
+        tdlparse('a := b & [ ATTR < [] , > ].')
+    with pytest.raises(TDLSyntaxError):
+        tdlparse('a := b & [ ATTR < , [] > ].')
+    with pytest.raises(TDLSyntaxError):
+        tdlparse('a := b & [ ATTR < [] [] > ].')
+
+
+def test_parse_diff_list():
+    t = tdlparse('a := b & [ ATTR <! !> ].')
+    assert isinstance(t['ATTR'], DiffList)
+
+    t = tdlparse('a := b & [ ATTR <! [] !> ].')
+    assert isinstance(t['ATTR'], DiffList)
+
+    t = tdlparse('a := b & [ ATTR <! [], [] !> ].')
+    assert isinstance(t['ATTR'], DiffList)
+
+
 def test_parse_multiple_features():
     t = tdlparse('a := b & [ ATTR1 1, ATTR2 2].')
     assert len(t.features()) == 2

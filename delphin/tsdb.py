@@ -766,9 +766,9 @@ def open(dir: util.PathLike,
     """
     path = get_path(dir, name)
     if path.suffix.lower() == '.gz':
-        return gzopen(path, mode='rt', encoding=encoding)
+        return gzopen(path, mode='rt', encoding=encoding, newline='\n')
     else:
-        return path.open(encoding=encoding)
+        return path.open(encoding=encoding, newline='\n')
 
 
 def write(dir: util.PathLike,

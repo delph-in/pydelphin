@@ -915,60 +915,6 @@ def _shift(tokens):
     return tok[0], tok[1], tok[2], after[0]
 
 
-def _accumulate(lexitems):
-    """
-    Yield lists of tokens based on very simple parsing that checks the
-    level of nesting within a structure. This is probably much faster
-    than the LookaheadIterator method, but it is less safe; an unclosed
-    list or AVM may cause it to build a list including the rest of the
-    file, or it may return a list that doesn't span a full definition.
-
-    As PyDelphin's goals for TDL parsing do not include speed, this
-    method is not currently used, although it is retained in the source
-    code as an example if future priorities change.
-    """
-    data = []
-    stack = []
-    break_on = 10
-    in_def = False
-    for item in lexitems:
-        gid = item[0]
-        # only yield comments outside of definitions
-        if gid in (2, 3):
-            if len(data) == 0:
-                yield [item]
-            else:
-                continue
-        elif gid == 20:
-            assert len(data) == 0
-            yield [item]
-        # the following just checks if the previous definition was not
-        # terminated when the next one is read in
-        elif gid in (7, 8):
-            if in_def:
-                yield data[:-1]
-                data = data[-1:] + [item]
-                stack = []
-                break_on = 10
-            else:
-                data.append(item)
-                in_def = True
-        else:
-            data.append(item)
-            if gid == break_on:
-                if len(stack) == 0:
-                    yield data
-                    data = []
-                    in_def = False
-                else:
-                    break_on = stack.pop()
-            elif gid in (13, 14, 15):
-                stack.append(break_on)
-                break_on = gid + 3
-    if data:
-        yield data
-
-
 def _lex(stream):
     """
     Lex the input stream according to _tdl_lex_re.

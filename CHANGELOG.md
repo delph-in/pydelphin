@@ -1,11 +1,17 @@
 # Change Log
 
-**Note**: some releases may have changes that may break backward compatibility;
-these changes are prefixed with "**BREAKING**"
-
 ## [Unreleased][unreleased]
 
-(no unreleased changes)
+(no unreleased changes yet)
+
+
+## [v1.2.4]
+
+**Release date: 2020-05-12**
+
+### Fixed
+
+* `delphin.tsdb.open()` does not use universal newlines ([#285])
 
 
 ## [v1.2.3]
@@ -1211,6 +1217,7 @@ information about changes, except for
 [commit messages](../../commits/v0.2).
 
 [unreleased]: ../../tree/develop
+[v1.2.4]: ../../releases/tag/v1.2.4
 [v1.2.3]: ../../releases/tag/v1.2.3
 [v1.2.2]: ../../releases/tag/v1.2.2
 [v1.2.1]: ../../releases/tag/v1.2.1
@@ -1358,3 +1365,4 @@ information about changes, except for
 [#281]: https://github.com/delph-in/pydelphin/issues/281
 [#282]: https://github.com/delph-in/pydelphin/issues/282
 [#283]: https://github.com/delph-in/pydelphin/issues/283
+[#285]: https://github.com/delph-in/pydelphin/issues/285
