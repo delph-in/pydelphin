@@ -47,7 +47,9 @@ running unit tests, please see the
 API changes in new versions are documented in the
 [CHANGELOG](https://github.com/delph-in/pydelphin/blob/develop/CHANGELOG.md),
 but for any unexpected changes please [file an
-issue](https://github.com/delph-in/pydelphin/issues).
+issue][issues].
+
+[issues]: https://github.com/delph-in/pydelphin/issues/
 
 ## Features
 
@@ -123,6 +125,17 @@ Core Components and Command Line Interface:
 
 
 ## Other Information
+
+### Getting Help
+
+Please use the [issue tracker][issues] for bug reports, feature
+requests, and PyDelphin-specific questions. For more general questions
+and support, try one of the following channels maintained by the
+DELPH-IN community:
+
+- [DELPH-IN Discourse](https://delphinqa.ling.washington.edu/) forums
+- [developers](http://lists.delph-in.net/mailman/listinfo/developers)
+  mailing list
 
 ### Citation
 
