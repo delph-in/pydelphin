@@ -50,9 +50,31 @@ NOTE: parsed 1 / 1 sentences, avg 1119k, time 0.00654s
 
 
 @pytest.fixture
+def item_relations(tmp_path):
+    f = tmp_path.joinpath('item-relations')
+    f.write_text('''item:
+  i-id :integer :key
+  i-difficulty :integer
+  i-input :string
+  i-length :integer
+  i-wf :integer''')
+    return f
+
+
+@pytest.fixture
 def sentence_file(tmp_path):
     f = tmp_path.joinpath('sents.txt')
     f.write_text('A dog barked.\n*Dog barked.')
+    return str(f)
+
+
+@pytest.fixture
+def csv_file(tmp_path):
+    f = tmp_path.joinpath('csv.txt')
+    f.write_text(
+        'i-wf@i-input@i-date\n'
+        '1@A dog barked.@25-may-2020\n'
+        '0@Dog barked.@25-may-2020')
     return str(f)
 
 
@@ -105,41 +127,59 @@ def _bidi_convert(d, srcfmt, tgtfmt):
     convert(str(tgt), tgtfmt, srcfmt)
 
 
-def test_mkprof(mini_testsuite, empty_alt_testsuite,
-                sentence_file, tmp_path, monkeypatch):
-    ts1_ = tmp_path.joinpath('ts1')
-    ts1_.mkdir()
-    ts1 = str(ts1_)
-    ts0 = mini_testsuite
-    sentence_file = str(sentence_file)
-
+def test_mkprof_sentence_file(item_relations, sentence_file, tmp_path):
+    ts = tmp_path.joinpath('ts')
     with pytest.raises(CommandError):
-        mkprof(ts1, source=sentence_file)
+        mkprof(ts, source=sentence_file)
+    mkprof(ts, source=sentence_file, schema=item_relations)
+    assert ts.joinpath('item').read_text() == (
+        '1@1@A dog barked.@3@1\n'
+        '2@1@Dog barked.@2@0\n')
+
+
+def test_mkprof_csv_file(item_relations, csv_file, tmp_path):
+    ts = tmp_path.joinpath('ts')
     with pytest.raises(CommandError):
-        mkprof(ts1, source='not a test suite')
+        mkprof(ts, source=csv_file, delimiter='@')
+    mkprof(ts, source=csv_file, delimiter='@', schema=item_relations)
+    assert ts.joinpath('item').read_text() == (
+        '1@1@A dog barked.@3@1\n'
+        '2@1@Dog barked.@2@0\n')
 
-    relations = str(pathlib.Path(mini_testsuite, 'relations'))
 
-    mkprof(ts1, source=ts0)
-    mkprof(ts1, source=None, refresh=True)
+def test_mkprof_stdin(item_relations, tmp_path, monkeypatch):
+    ts = tmp_path.joinpath('ts')
     with monkeypatch.context() as m:
         m.setattr('sys.stdin', io.StringIO('A dog barked.\n'))
-        mkprof(ts1, source=None, refresh=False, schema=relations)
-    mkprof(ts1, source=sentence_file, schema=relations)
+        mkprof(ts, source=None, refresh=False, schema=item_relations)
+    assert ts.joinpath('item').read_text() == '1@1@A dog barked.@3@1\n'
 
-    mkprof(ts1, source=ts0, full=True)
-    mkprof(ts1, source=ts0, skeleton=True)
-    mkprof(ts1, source=ts0, full=True, gzip=True)
 
-    mkprof(ts1, refresh=True, schema=pathlib.Path(empty_alt_testsuite, 'relations'))
-    item = pathlib.Path(ts1, 'item')
+def test_mkprof_refresh(mini_testsuite, empty_alt_testsuite):
+    ts = mini_testsuite
+    mkprof(ts, source=None, refresh=True)
+    mkprof(ts, source=None, refresh=True,
+           schema=pathlib.Path(empty_alt_testsuite, 'relations'))
+    item = ts.joinpath('item')
     assert item.read_text() == (
         '10@It rained.@1-feb-2018 15:00\n'
         '20@Rained.@01-02-18 15:00:00\n'
         '30@It snowed.@2018-2-1 (15:00:00)\n')
-    mkprof(ts1, refresh=True, gzip=True)
+    mkprof(ts, refresh=True, gzip=True)
     assert not item.with_suffix('').exists()
     assert item.with_suffix('.gz').is_file()
+
+
+def test_mkprof_source(mini_testsuite, tmp_path):
+    ts = tmp_path.joinpath('ts')
+
+    with pytest.raises(CommandError):
+        mkprof(ts, source='not a test suite')
+
+    mkprof(ts, source=mini_testsuite)
+    mkprof(ts, source=mini_testsuite, full=True)
+    mkprof(ts, source=mini_testsuite, skeleton=True)
+    mkprof(ts, source=mini_testsuite, full=True, gzip=True)
 
 
 def test_mkprof_issue_273(mini_testsuite, tmp_path):
