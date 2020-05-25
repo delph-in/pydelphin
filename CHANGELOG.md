@@ -2,7 +2,10 @@
 
 ## [Unreleased][unreleased]
 
-(no unreleased changes yet)
+### Fixed
+
+* `delphin mkprof` no longer drops last column when using --delimter
+  with a delimiter other than `@` (#288)
 
 
 ## [v1.2.4]
