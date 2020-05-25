@@ -57,7 +57,8 @@ def item_relations(tmp_path):
   i-difficulty :integer
   i-input :string
   i-length :integer
-  i-wf :integer''')
+  i-wf :integer
+  i-date :date''')
     return f
 
 
@@ -133,8 +134,8 @@ def test_mkprof_sentence_file(item_relations, sentence_file, tmp_path):
         mkprof(ts, source=sentence_file)
     mkprof(ts, source=sentence_file, schema=item_relations)
     assert ts.joinpath('item').read_text() == (
-        '1@1@A dog barked.@3@1\n'
-        '2@1@Dog barked.@2@0\n')
+        '1@1@A dog barked.@3@1@\n'
+        '2@1@Dog barked.@2@0@\n')
 
 
 def test_mkprof_csv_file(item_relations, csv_file, tmp_path):
@@ -143,8 +144,8 @@ def test_mkprof_csv_file(item_relations, csv_file, tmp_path):
         mkprof(ts, source=csv_file, delimiter='@')
     mkprof(ts, source=csv_file, delimiter='@', schema=item_relations)
     assert ts.joinpath('item').read_text() == (
-        '1@1@A dog barked.@3@1\n'
-        '2@1@Dog barked.@2@0\n')
+        '1@1@A dog barked.@3@1@25-may-2020\n'
+        '2@1@Dog barked.@2@0@25-may-2020\n')
 
 
 def test_mkprof_stdin(item_relations, tmp_path, monkeypatch):
@@ -152,7 +153,7 @@ def test_mkprof_stdin(item_relations, tmp_path, monkeypatch):
     with monkeypatch.context() as m:
         m.setattr('sys.stdin', io.StringIO('A dog barked.\n'))
         mkprof(ts, source=None, refresh=False, schema=item_relations)
-    assert ts.joinpath('item').read_text() == '1@1@A dog barked.@3@1\n'
+    assert ts.joinpath('item').read_text() == '1@1@A dog barked.@3@1@\n'
 
 
 def test_mkprof_refresh(mini_testsuite, empty_alt_testsuite):
@@ -210,6 +211,19 @@ def test_mkprof_issue_273(mini_testsuite, tmp_path):
     item = pathlib.Path(ts1, 'item')
     assert item.read_text() == (
         '30@It snowed.@1@2018-2-1 (15:00:00)\n')
+
+
+def test_mkprof_issue_288(item_relations, tmp_path):
+    # https://github.com/delph-in/pydelphin/issues/288
+    ts = tmp_path.joinpath('ts')
+    tsv = tmp_path.joinpath('sents')
+    tsv.write_text('i-wf\ti-input\ti-date\n'
+                   '1\tA dog barked.\t25-may-2020\n'
+                   '0\tDog barked.\t25-may-2020')
+    mkprof(ts, source=tsv, delimiter='\t', schema=item_relations)
+    assert ts.joinpath('item').read_text() == (
+        '1@1@A dog barked.@3@1@25-may-2020\n'
+        '2@1@Dog barked.@2@0@25-may-2020\n')
 
 
 def test_process(mini_testsuite):

@@ -442,7 +442,7 @@ def _make_split(delimiter, lineiter):
             def split(line):
                 return line.split(delimiter)
 
-        colnames = split(next(lineiter))
+        colnames = split(next(lineiter).rstrip('\n'))
 
     return colnames, split
 
