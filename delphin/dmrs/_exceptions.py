@@ -1,5 +1,9 @@
 
-from delphin.exceptions import PyDelphinException, PyDelphinSyntaxError
+from delphin.exceptions import (
+    PyDelphinException,
+    PyDelphinSyntaxError,
+    PyDelphinWarning,
+)
 
 
 class DMRSError(PyDelphinException):
@@ -8,3 +12,7 @@ class DMRSError(PyDelphinException):
 
 class DMRSSyntaxError(PyDelphinSyntaxError):
     """Raised when an invalid DMRS serialization is encountered."""
+
+
+class DMRSWarning(PyDelphinWarning):
+    """Issued when a DMRS may be incorrect or incomplete."""
