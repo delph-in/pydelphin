@@ -2,10 +2,16 @@
 
 ## [Unreleased][unreleased]
 
+### Added
+
+* `delphin.dmrs.DMRSWarning` for problems with conversion ([#289])
+
 ### Fixed
 
 * `delphin mkprof` no longer drops last column when using --delimter
   with a delimiter other than `@` ([#288])
+* MRS to DMRS conversion raises a `DMRSWarning` instead of a KeyError
+  when an EP has no intrinsic variable ([#289])
 
 
 ## [v1.2.4]
@@ -1370,3 +1376,4 @@ information about changes, except for
 [#283]: https://github.com/delph-in/pydelphin/issues/283
 [#285]: https://github.com/delph-in/pydelphin/issues/285
 [#288]: https://github.com/delph-in/pydelphin/issues/288
+[#289]: https://github.com/delph-in/pydelphin/issues/289

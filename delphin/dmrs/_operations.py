@@ -3,6 +3,8 @@
 Operations on DMRS structures
 """
 
+import warnings
+
 from delphin import variable
 from delphin import scope
 from delphin import dmrs
@@ -69,8 +71,16 @@ def _mrs_to_nodes(m, id_to_nid):
         properties, type = None, None
         if not ep.is_quantifier():
             iv = ep.iv
-            properties = m.properties(iv)
-            type = variable.type(iv)
+            if iv is None:
+                warnings.warn(
+                    f'missing intrinsic variable for {ep!r}; morphosemantic '
+                    'properties and node type information will be lost',
+                    dmrs.DMRSWarning)
+                properties = {}
+                type = variable.UNSPECIFIC
+            else:
+                properties = m.properties(iv)
+                type = variable.type(iv)
         nodes.append(
             dmrs.Node(node_id,
                       ep.predicate,
