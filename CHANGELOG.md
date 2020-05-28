@@ -5,7 +5,7 @@
 ### Fixed
 
 * `delphin mkprof` no longer drops last column when using --delimter
-  with a delimiter other than `@` (#288)
+  with a delimiter other than `@` ([#288])
 
 
 ## [v1.2.4]
@@ -1369,3 +1369,4 @@ information about changes, except for
 [#282]: https://github.com/delph-in/pydelphin/issues/282
 [#283]: https://github.com/delph-in/pydelphin/issues/283
 [#285]: https://github.com/delph-in/pydelphin/issues/285
+[#288]: https://github.com/delph-in/pydelphin/issues/288
