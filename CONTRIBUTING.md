@@ -52,8 +52,8 @@ Please follow these guidelines for code and repository changes:
   however, make use of the `delphin` namespace.
 * API documentation is generated from the code and uses docstrings, so
   provide descriptive docstrings for all modules, classs, methods, and
-  functions. Follow [Google-style docstrings][] and use
-  [reStructuredText][] for formatting.
+  functions. Follow [Google-style docstrings] and use
+  [reStructuredText] for formatting.
 
 ### Testing
 
@@ -98,15 +98,15 @@ functions should have docstrings and should not have a name with a
 leading underscore, as otherwise they will not appear in the
 documentation.
 
-The API reference and tutorials are written in [reStructuredText][]
-and generated using [Sphinx][] on the [Read the Docs][] service.
+The API reference and tutorials are written in [reStructuredText]
+and generated using [Sphinx] on the [Read the Docs] service.
 Repository files, such as the README, CHANGELOG, and CONTRIBUTING
-files, are written in [Markdown][].
+files, are written in [Markdown].
 
 For instructions on building the documentation, see [docs/](docs).
 Do not check in the generated documentation files (e.g., `*.html`);
 only documentation source files belong, as the rest will be
-generated automatically by [Read the Docs][].
+generated automatically by [Read the Docs].
 
 
 # Release Checklist
