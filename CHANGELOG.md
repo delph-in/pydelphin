@@ -1,6 +1,6 @@
 # Change Log
 
-## [Unreleased][unreleased]
+## [v1.3.0]
 
 ### Added
 
@@ -1225,7 +1225,7 @@ There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
 [commit messages](../../commits/v0.2).
 
-[unreleased]: ../../tree/develop
+[v1.3.0]: ../../releases/tag/v1.3.0
 [v1.2.4]: ../../releases/tag/v1.2.4
 [v1.2.3]: ../../releases/tag/v1.2.3
 [v1.2.2]: ../../releases/tag/v1.2.2
