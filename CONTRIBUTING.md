@@ -2,7 +2,7 @@
 
 The easiest way to contribute to PyDelphin is to try it out and enter
 bug reports and feature requests. If you're contributing code, fork
-the repository and make pull requests to the `develop` branch.
+the repository and make pull requests to the `master` branch.
 
 ## Filing issues
 
@@ -37,7 +37,7 @@ For feature requests, please provide a use case for the feature.
 Please follow these guidelines for code and repository changes:
 
 * [PEP8](https://www.python.org/dev/peps/pep-0008/) style guidelines
-* [Git-Flow](http://nvie.com/posts/a-successful-git-branching-model/)
+* [GitHub Flow](https://guides.github.com/introduction/flow/)
   branching model
 * [Semantic Versioning](http://semver.org/)
 * PyDelphin is object-oriented in many cases, but avoid unnecessary
@@ -113,23 +113,23 @@ generated automatically by [Read the Docs][].
 
 Do the following tasks prior to releasing on GitHub and PyPI.
 
-- [ ] Ensure all [issues][] are resolved for the version (check [milestones][])
-- [ ] Make the release commit on `develop` branch
-  - [ ] Update `CHANGELOG.md`
-  - [ ] Update `README.md` (contributors, requirements, etc.) if necessary
+- [ ] Create a branch for the release (e.g., `vX.Y.Z`)
+- [ ] Merge into the release branch all features and fixes slated for the release
+- [ ] Create a pull request for the version
+  - [ ] Ensure all related [issues] are resolved (check [milestones])
   - [ ] Ensure tests pass
   - [ ] Ensure the documentation builds without error (see above)
   - [ ] Bump the version in `delphin/__about__.py`
-  - [ ] commit
-  - [ ] push
-- [ ] Merge to master
-  - [ ] Test again
-  - [ ] push
+  - [ ] Update `README.md` if necessary
+  - [ ] Update `CHANGELOG.md` (header for version with release date)
+  - [ ] Merge
 - [ ] [Make a new release](https://github.com/delph-in/pydelphin/releases/new)
+- [ ] Ensure PyPI release was uploaded automatically (see [actions])
 - [ ] Announce
 
 [issues]: https://github.com/delph-in/pydelphin/issues
 [milestones]: https://github.com/delph-in/pydelphin/milestones
+[actions]: https://github.com/delph-in/pydelphin/actions
 [Google-style docstrings]: https://google.github.io/styleguide/pyguide.html?showone=Comments#Comments
 [Sphinx]: http://www.sphinx-doc.org/
 [reStructuredText]: http://docutils.sourceforge.net/
