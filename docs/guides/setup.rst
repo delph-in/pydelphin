@@ -70,27 +70,20 @@ Clone the repository from GitHub to get the latest source code::
 
   [~]$ git clone https://github.com/delph-in/pydelphin.git
 
-By default, cloning the git repository checks out the `develop`
-branch. If you want to work in a difference branch (e.g., `master` for
-the code of the latest release), you'll need to ``checkout`` the
-branch::
-
-  [~]$ cd pydelphin/
-  [~/pydelphin]$ git checkout master   # use the latest release
-  [~/pydelphin]$ git checkout develop  # use the latest development state
-
 Install from the source code using :command:`pip` as before but give
 it the path to the repository instead of the name of the PyPI
 project::
 
-  [~/pydelphin]$ pip install .  # when in the repository
-  [~]$ pip install ./pydelphin  # when not in the repository
+  [~]$ cd pydelphin/
+  [~/pydelphin]$ pip install .
 
 Installing from source does not require internet access once the
 repository has been cloned, but it does require internet to install
-any dependencies. Also note that if the directory is ``pydelphin``,
-just using the directory name will cause :command:`pip` to retrieve it
-from PyPI_, so make it look path-like by prefixing it with ``./``.
+any dependencies. Also note that if the project directory is named
+``pydelphin`` (the default) and you install from the directory above
+it, you mustn't just use the directory name as this will cause
+:command:`pip` to install from PyPI_; instead, make it look path-like
+by prefixing it with ``./`` (i.e., `pip install ./pydelphin`).
 
 For development, you may also want to use :command:`pip`\ 's `-e`
 option to install PyDelphin as "editable", meaning it installs the
