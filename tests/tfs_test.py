@@ -48,6 +48,12 @@ class TestFeatureStructure():
         empty_fs['B.C'] = 4
         assert empty_fs['B'] == tfs.FeatureStructure({'C': 4})
 
+    def test__setitem__issue293(self):
+        t = tfs.FeatureStructure()
+        t['A.B'] = 'c'
+        with pytest.raises(tfs.TFSError):
+            t['A.B.C'] = 'd'
+
     def test__getitem__(self, empty_fs, flat_fs, nested_fs):
         with pytest.raises(KeyError):
             empty_fs['unknown']

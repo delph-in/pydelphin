@@ -5,6 +5,7 @@
 ### Added
 
 * `delphin.dmrs.DMRSWarning` for problems with conversion ([#289])
+* `delphin.tfs.TFSError` ([#293])
 
 ### Fixed
 
@@ -12,6 +13,11 @@
   with a delimiter other than `@` ([#288])
 * MRS to DMRS conversion raises a `DMRSWarning` instead of a KeyError
   when an EP has no intrinsic variable ([#289])
+
+### Changed
+
+* `delphin.tfs.FeatureStructure` raises a `TFSError` when attempting
+  to assign a value on a non-subscriptable feature value ([#293])
 
 
 ## [v1.2.4]
@@ -1377,3 +1383,4 @@ information about changes, except for
 [#285]: https://github.com/delph-in/pydelphin/issues/285
 [#288]: https://github.com/delph-in/pydelphin/issues/288
 [#289]: https://github.com/delph-in/pydelphin/issues/289
+[#293]: https://github.com/delph-in/pydelphin/issues/293

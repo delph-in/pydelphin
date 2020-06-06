@@ -4,8 +4,13 @@ Basic classes for modeling feature structures.
 """
 
 from delphin.hierarchy import MultiHierarchy
+from delphin.exceptions import PyDelphinException
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
+
+
+class TFSError(PyDelphinException):
+    """Raised on invalid feature structure operations."""
 
 
 class FeatureStructure(object):
@@ -53,6 +58,10 @@ class FeatureStructure(object):
         else:
             if subkey in avm:
                 subdef = avm[subkey]
+                if not hasattr(subdef, '__setitem__'):
+                    raise TFSError(
+                        f'{type(subdef)!r} object at feature '
+                        f'{subkey} does not support item assignment')
             else:
                 subdef = avm[subkey] = self._default()
             subdef[subkeys[1]] = val
