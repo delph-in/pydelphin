@@ -5,6 +5,7 @@ import tempfile
 
 import pytest
 
+from delphin.tfs import TFSError
 from delphin import tdl
 from delphin.tdl import (
     Term,
@@ -295,6 +296,12 @@ class TestConjunction:
         a.add(AVM())
         a['ATTR'] = TypeIdentifier('val4')
         assert a.terms[1]['ATTR'] == TypeIdentifier('val4')
+
+    def test__setitem__issue293(self):
+        a = AVM({'A': Conjunction([AVM()])})
+        a['A.B'] = String('c')
+        with pytest.raises(TFSError):
+            a['A.B.C'] = String('d')
 
     def test__delitem__(self):
         a = Conjunction([AVM({'A.B': String('x')}),
