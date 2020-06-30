@@ -13,6 +13,7 @@
   with a delimiter other than `@` ([#288])
 * MRS to DMRS conversion raises a `DMRSWarning` instead of a KeyError
   when an EP has no intrinsic variable ([#289])
+* `delphin.mrs.is_isomorphic()` works on disconnected graphs ([#296])
 
 ### Changed
 
@@ -1384,3 +1385,4 @@ information about changes, except for
 [#288]: https://github.com/delph-in/pydelphin/issues/288
 [#289]: https://github.com/delph-in/pydelphin/issues/289
 [#293]: https://github.com/delph-in/pydelphin/issues/293
+[#296]: https://github.com/delph-in/pydelphin/issues/296

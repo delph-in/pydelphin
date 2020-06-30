@@ -250,8 +250,16 @@ def pathological2():
     ''')
 
 
-def test_is_isomorphic_identity(m1):
+def test_is_isomorphic_identity(m1, m1b, m1c, m1d, m1e, m1f, m1g, m2, m2b):
     assert mrs.is_isomorphic(m1, m1)
+    assert mrs.is_isomorphic(m1b, m1b)
+    assert mrs.is_isomorphic(m1c, m1c)
+    assert mrs.is_isomorphic(m1d, m1d)
+    assert mrs.is_isomorphic(m1e, m1e)
+    assert mrs.is_isomorphic(m1f, m1f)
+    assert mrs.is_isomorphic(m1g, m1g)
+    assert mrs.is_isomorphic(m2, m2)
+    assert mrs.is_isomorphic(m2b, m2b)
 
 
 def test_is_isomorphic_lnk(m1, m1b):

@@ -164,7 +164,7 @@ def is_isomorphic(m1: mrs.MRS,
     g1 = _make_mrs_isograph(m1, properties)
     g2 = _make_mrs_isograph(m2, properties)
 
-    iso = util._isomorphism(g1, g2, m1.top, m2.top)
+    iso = util._vf2(g1, g2)
     return set(iso) == set(g1)
 
 
