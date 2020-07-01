@@ -114,8 +114,8 @@ def _vf2(g1: _IsoGraph, g2: _IsoGraph) -> _IsoMap:
     mapping: _IsoMap = {}
     prev_n = None
     candidates = _vf2_candidates(mapping, g1, g2)
-    states = []
-    while candidates and len(mapping) < len(g2):
+    states: List[Tuple[Union[None, str], _IsoPairs]] = []
+    while len(mapping) < len(g2):
         pair_found = False
         while candidates and not pair_found:
             n, m = candidates.pop()
@@ -226,14 +226,15 @@ def _vf2_candidates(
         t1.update(n_ for n_ in g1[n] if n_ is not None and n_ not in m1)
         t2.update(m_ for m_ in g2[m] if m_ is not None and m_ not in m2)
 
+    # sorting t1 speeds up matches with t2 side when graphs are the same
     if t1 and t2:
         m = min(t2)
-        return [(n1, m) for n1 in t1]
+        return [(n1, m) for n1 in sorted(t1, reverse=True)]
 
     unmapped = set(g2) - m2
     if unmapped:
         m = min(set(g2) - m2)
-        return [(n1, m) for n1 in (set(g1) - m1)]
+        return [(n1, m) for n1 in sorted(set(g1) - m1, reverse=True)]
     else:
         return []
 
