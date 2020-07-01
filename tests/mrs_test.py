@@ -312,6 +312,24 @@ def test_is_isomorphic_pathological2(pathological1, pathological2):
     assert not mrs.is_isomorphic(pathological1, pathological2)
 
 
+def test_is_isomorphic_recursive():
+    m = simplemrs.decode('''
+    [ "Kim did not not not not not leave."
+      TOP: h0
+      INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
+      RELS: < [ proper_q<0:3> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: sg IND: + ] RSTR: h5 BODY: h6 ]
+              [ named<0:3> LBL: h7 ARG0: x3 CARG: "Kim" ]
+              [ neg<8:11> LBL: h1 ARG0: e9 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h10 ]
+              [ neg<12:15> LBL: h11 ARG0: e12 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h13 ]
+              [ neg<16:19> LBL: h14 ARG0: e15 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h16 ]
+              [ neg<20:23> LBL: h17 ARG0: e18 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h19 ]
+              [ neg<24:27> LBL: h20 ARG0: e21 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h22 ]
+              [ _leave_v_1<28:34> LBL: h23 ARG0: e2 ARG1: x3 ARG2: i24 ] >
+      HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h11 h13 qeq h14 h16 qeq h17 h19 qeq h20 h22 qeq h23 > ]
+    ''')  # noqa: E501
+    assert mrs.is_isomorphic(m, m)
+
+
 def test_from_dmrs(dogs_bark):
     from delphin import dmrs
     m = mrs.MRS(**dogs_bark)
