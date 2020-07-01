@@ -19,6 +19,8 @@
 
 * `delphin.tfs.FeatureStructure` raises a `TFSError` when attempting
   to assign a value on a non-subscriptable feature value ([#293])
+* `delphin.tsdb.format()` formats `datetime.date` objects in the TSDB
+  date format ([#291])
 
 
 ## [v1.2.4]
@@ -1384,5 +1386,6 @@ information about changes, except for
 [#285]: https://github.com/delph-in/pydelphin/issues/285
 [#288]: https://github.com/delph-in/pydelphin/issues/288
 [#289]: https://github.com/delph-in/pydelphin/issues/289
+[#291]: https://github.com/delph-in/pydelphin/issues/291
 [#293]: https://github.com/delph-in/pydelphin/issues/293
 [#296]: https://github.com/delph-in/pydelphin/issues/296

@@ -1,7 +1,7 @@
 
 import pathlib
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, date
 
 import pytest
 
@@ -217,6 +217,7 @@ def test_format():
     assert tsdb.format(':integer', None) == '-1'
     assert tsdb.format(':integer', None, default='1') == '1'
     assert tsdb.format(':date', datetime(1999, 9, 8)) == '8-sep-1999'
+    assert tsdb.format(':date', date(1999, 9, 8)) == '8-sep-1999'  # Issue #291
 
 
 def test_open(single_item_skeleton, gzipped_single_item_skeleton):
