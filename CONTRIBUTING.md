@@ -2,7 +2,7 @@
 
 The easiest way to contribute to PyDelphin is to try it out and enter
 bug reports and feature requests. If you're contributing code, fork
-the repository and make pull requests to the `master` branch.
+the repository and make pull requests to the `develop` branch.
 
 ## Filing issues
 
