@@ -2,7 +2,7 @@
 
 [![PyPI Version](https://img.shields.io/pypi/v/pydelphin.svg)](https://pypi.org/project/PyDelphin/)
 ![Python Support](https://img.shields.io/pypi/pyversions/pydelphin.svg)
-[![Build Status](https://travis-ci.org/delph-in/pydelphin.svg?branch=develop)](https://travis-ci.org/delph-in/pydelphin)
+[![Build Status](https://travis-ci.org/delph-in/pydelphin.svg)](https://travis-ci.org/delph-in/pydelphin)
 [![Documentation Status](https://readthedocs.org/projects/pydelphin/badge/?version=latest)](https://pydelphin.readthedocs.io/en/latest/?badge=latest)
 
 [DELPH-IN](http://delph-in.net) is an international consortium of
@@ -45,9 +45,8 @@ running unit tests, please see the
 [documentation](https://pydelphin.readthedocs.io/en/latest/guides/setup.html).
 
 API changes in new versions are documented in the
-[CHANGELOG](https://github.com/delph-in/pydelphin/blob/develop/CHANGELOG.md),
-but for any unexpected changes please [file an
-issue][issues].
+[CHANGELOG](CHANGELOG.md), but for any unexpected changes please [file
+an issue][issues].
 
 [issues]: https://github.com/delph-in/pydelphin/issues/
 

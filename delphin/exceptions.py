@@ -34,14 +34,14 @@ class PyDelphinSyntaxError(PyDelphinException):
             parts.append(f'File "{self.filename}"')
         if self.lineno is not None:
             parts.append(f'line {self.lineno}')
+        if self.offset is not None:
+            parts.append(f'character {self.offset}')
         if parts:
             parts = ['', '  ' + ', '.join(parts)]
         if self.text is not None:
             parts.append('    ' + self.text)
             if self.offset is not None:
                 parts.append('    ' + (' ' * self.offset) + '^')
-        elif parts:
-            parts[-1] += f', character {self.offset}'
         if self.message is not None:
             parts.append(f'{type(self).__name__}: {self.message}')
         return '\n'.join(parts)

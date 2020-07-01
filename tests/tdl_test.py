@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import os
 import tempfile
 
 import pytest
 
+from delphin.tfs import TFSError
 from delphin import tdl
 from delphin.tdl import (
     Term,
@@ -296,6 +298,12 @@ class TestConjunction:
         a['ATTR'] = TypeIdentifier('val4')
         assert a.terms[1]['ATTR'] == TypeIdentifier('val4')
 
+    def test__setitem__issue293(self):
+        a = AVM({'A': Conjunction([AVM()])})
+        a['A.B'] = String('c')
+        with pytest.raises(TFSError):
+            a['A.B.C'] = String('d')
+
     def test__delitem__(self):
         a = Conjunction([AVM({'A.B': String('x')}),
                          AVM({'A.D': String('y')})])
@@ -485,6 +493,20 @@ def test_parse_cons_list():
         tdlparse('a := b & [ ATTR < , [] > ].')
     with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ATTR < [] [] > ].')
+
+
+@pytest.mark.slow
+def test_issue_294():
+    # check for recursion error
+    with pytest.raises(TDLError):
+        tdlparse('a := b & [ ATTR < [] ' + ', []' * 500 + ' > ].')
+    # make sure it's avoidable
+    oldlimit = sys.getrecursionlimit()
+    try:
+        sys.setrecursionlimit(2000)
+        tdlparse('a := b & [ ATTR < [] ' + ', []' * 500 + ' > ].')
+    finally:
+        sys.setrecursionlimit(oldlimit)
 
 
 def test_parse_diff_list():

@@ -94,6 +94,7 @@ def m1():
       HCONS: < h0 qeq h1 > ]
     ''')
 
+
 # m1 but with different Lnk values
 @pytest.fixture
 def m1b():
@@ -103,6 +104,7 @@ def m1b():
       RELS: < [ "_rain_v_1_rel"<0:6> LBL: h1 ARG0: e2 ] >
       HCONS: < h0 qeq h1 > ]
     ''')
+
 
 # m1 but with different properties (TENSE)
 @pytest.fixture
@@ -114,6 +116,7 @@ def m1c():
       HCONS: < h0 qeq h1 > ]
     ''')
 
+
 # m1 but with unlinked LTOP
 @pytest.fixture
 def m1d():
@@ -123,6 +126,7 @@ def m1d():
       RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
       HCONS: < > ]
     ''')
+
 
 # m1 but with equated LTOP
 @pytest.fixture
@@ -134,6 +138,7 @@ def m1e():
       HCONS: < > ]
     ''')
 
+
 # "It snows." like m1, but with a different pred
 @pytest.fixture
 def m1f():
@@ -143,6 +148,7 @@ def m1f():
       RELS: < [ "_snow_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
       HCONS: < h0 qeq h1 > ]
     ''')
+
 
 # "It rains (something)" like m1, but with a different arity (in the
 # ERG this might be a different _rain_ pred)
@@ -154,6 +160,7 @@ def m1g():
       RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ARG1: i6] >
       HCONS: < h0 qeq h1 > ]
     ''')
+
 
 # "The dogs chased the dog."
 @pytest.fixture
@@ -168,7 +175,8 @@ def m2():
               [ _the_q<15:18> LBL: h9 ARG0: x8 RSTR: h10 BODY: h11 ]
               [ _dog_n_1<19:23> LBL: h12 ARG0: x8 ] >
       HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h12 > ]
-    ''')
+    ''')  # noqa: E501
+
 
 # "The dog chased the dogs."
 @pytest.fixture
@@ -183,7 +191,8 @@ def m2b():
               [ _the_q<15:18> LBL: h9 ARG0: x8 RSTR: h10 BODY: h11 ]
               [ _dog_n_1<19:23> LBL: h12 ARG0: x8 ] >
       HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h12 > ]
-    ''')
+    ''')  # noqa: E501
+
 
 # "Dogs and dogs chase dogs and dogs and chase dogs and dog"
 # the original sentence had all "dogs", but I changed the final one
@@ -216,7 +225,8 @@ def pathological1():
               [ udef_q_rel<53:58> LBL: h48 ARG0: x47 RSTR: h49 BODY: h50 ]
               [ "_dog_n_1_rel"<53:58> LBL: h51 ARG0: x47 ] >
       HCONS: < h0 qeq h1 h5 qeq h12 h9 qeq h11 h15 qeq h17 h22 qeq h29 h26 qeq h28 h32 qeq h34 h39 qeq h46 h43 qeq h45 h49 qeq h51 > ]
-    ''')
+    ''')  # noqa: E501
+
 
 # changed "dogs" to "dog" in a similar local position but different in the
 # overall graph:
@@ -247,11 +257,19 @@ def pathological2():
               [ udef_q_rel<53:58> LBL: h48 ARG0: x47 RSTR: h49 BODY: h50 ]
               [ "_dog_n_1_rel"<53:58> LBL: h51 ARG0: x47 ] >
       HCONS: < h0 qeq h1 h5 qeq h12 h9 qeq h11 h15 qeq h17 h22 qeq h29 h26 qeq h28 h32 qeq h34 h39 qeq h46 h43 qeq h45 h49 qeq h51 > ]
-    ''')
+    ''')  # noqa: E501
 
 
-def test_is_isomorphic_identity(m1):
+def test_is_isomorphic_identity(m1, m1b, m1c, m1d, m1e, m1f, m1g, m2, m2b):
     assert mrs.is_isomorphic(m1, m1)
+    assert mrs.is_isomorphic(m1b, m1b)
+    assert mrs.is_isomorphic(m1c, m1c)
+    assert mrs.is_isomorphic(m1d, m1d)
+    assert mrs.is_isomorphic(m1e, m1e)
+    assert mrs.is_isomorphic(m1f, m1f)
+    assert mrs.is_isomorphic(m1g, m1g)
+    assert mrs.is_isomorphic(m2, m2)
+    assert mrs.is_isomorphic(m2b, m2b)
 
 
 def test_is_isomorphic_lnk(m1, m1b):
@@ -292,6 +310,24 @@ def test_is_isomorphic_pathological1(pathological1):
 def test_is_isomorphic_pathological2(pathological1, pathological2):
     # be aware if the next ones take a long time to resolve
     assert not mrs.is_isomorphic(pathological1, pathological2)
+
+
+def test_is_isomorphic_recursive():
+    m = simplemrs.decode('''
+    [ "Kim did not not not not not leave."
+      TOP: h0
+      INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
+      RELS: < [ proper_q<0:3> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: sg IND: + ] RSTR: h5 BODY: h6 ]
+              [ named<0:3> LBL: h7 ARG0: x3 CARG: "Kim" ]
+              [ neg<8:11> LBL: h1 ARG0: e9 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h10 ]
+              [ neg<12:15> LBL: h11 ARG0: e12 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h13 ]
+              [ neg<16:19> LBL: h14 ARG0: e15 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h16 ]
+              [ neg<20:23> LBL: h17 ARG0: e18 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h19 ]
+              [ neg<24:27> LBL: h20 ARG0: e21 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h22 ]
+              [ _leave_v_1<28:34> LBL: h23 ARG0: e2 ARG1: x3 ARG2: i24 ] >
+      HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h11 h13 qeq h14 h16 qeq h17 h19 qeq h20 h22 qeq h23 > ]
+    ''')  # noqa: E501
+    assert mrs.is_isomorphic(m, m)
 
 
 def test_from_dmrs(dogs_bark):

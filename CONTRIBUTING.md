@@ -23,10 +23,10 @@ For bug requests, please provide the following, if possible:
   ```python
   >>> from delphin.__about__ import __version__
   >>> __version__  # distribution version
-  '1.2.0'
+  '1.3.0'
   >>> from delphin import mrs
   >>> mrs.__version__  # package version
-  '1.2.0'
+  '1.3.0'
   ```
 * Python version (e.g. 3.6, 3.7, etc.)
 
@@ -37,7 +37,7 @@ For feature requests, please provide a use case for the feature.
 Please follow these guidelines for code and repository changes:
 
 * [PEP8](https://www.python.org/dev/peps/pep-0008/) style guidelines
-* [Git-Flow](http://nvie.com/posts/a-successful-git-branching-model/)
+* [GitHub Flow](https://guides.github.com/introduction/flow/)
   branching model
 * [Semantic Versioning](http://semver.org/)
 * PyDelphin is object-oriented in many cases, but avoid unnecessary
@@ -52,8 +52,8 @@ Please follow these guidelines for code and repository changes:
   however, make use of the `delphin` namespace.
 * API documentation is generated from the code and uses docstrings, so
   provide descriptive docstrings for all modules, classs, methods, and
-  functions. Follow [Google-style docstrings][] and use
-  [reStructuredText][] for formatting.
+  functions. Follow [Google-style docstrings] and use
+  [reStructuredText] for formatting.
 
 ### Testing
 
@@ -98,38 +98,38 @@ functions should have docstrings and should not have a name with a
 leading underscore, as otherwise they will not appear in the
 documentation.
 
-The API reference and tutorials are written in [reStructuredText][]
-and generated using [Sphinx][] on the [Read the Docs][] service.
+The API reference and tutorials are written in [reStructuredText]
+and generated using [Sphinx] on the [Read the Docs] service.
 Repository files, such as the README, CHANGELOG, and CONTRIBUTING
-files, are written in [Markdown][].
+files, are written in [Markdown].
 
 For instructions on building the documentation, see [docs/](docs).
 Do not check in the generated documentation files (e.g., `*.html`);
 only documentation source files belong, as the rest will be
-generated automatically by [Read the Docs][].
+generated automatically by [Read the Docs].
 
 
 # Release Checklist
 
 Do the following tasks prior to releasing on GitHub and PyPI.
 
-- [ ] Ensure all [issues][] are resolved for the version (check [milestones][])
-- [ ] Make the release commit on `develop` branch
-  - [ ] Update `CHANGELOG.md`
-  - [ ] Update `README.md` (contributors, requirements, etc.) if necessary
+- [ ] Create a branch for the release (e.g., `vX.Y.Z`)
+- [ ] Merge into the release branch all features and fixes slated for the release
+- [ ] Create a pull request for the version
+  - [ ] Ensure all related [issues] are resolved (check [milestones])
   - [ ] Ensure tests pass
   - [ ] Ensure the documentation builds without error (see above)
   - [ ] Bump the version in `delphin/__about__.py`
-  - [ ] commit
-  - [ ] push
-- [ ] Merge to master
-  - [ ] Test again
-  - [ ] push
+  - [ ] Update `README.md` if necessary
+  - [ ] Update `CHANGELOG.md` (header for version with release date)
+  - [ ] Merge
 - [ ] [Make a new release](https://github.com/delph-in/pydelphin/releases/new)
+- [ ] Ensure PyPI release was uploaded automatically (see [actions])
 - [ ] Announce
 
 [issues]: https://github.com/delph-in/pydelphin/issues
 [milestones]: https://github.com/delph-in/pydelphin/milestones
+[actions]: https://github.com/delph-in/pydelphin/actions
 [Google-style docstrings]: https://google.github.io/styleguide/pyguide.html?showone=Comments#Comments
 [Sphinx]: http://www.sphinx-doc.org/
 [reStructuredText]: http://docutils.sourceforge.net/

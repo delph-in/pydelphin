@@ -8,6 +8,12 @@ import pytest
 from delphin.interface import Processor, Response
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "slow: mark this test as slow"
+    )
+
+
 _simple_relations = '''item:
   i-id :integer :key
   i-input :string

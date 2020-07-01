@@ -1,10 +1,13 @@
 # Change Log
 
-## [Unreleased][unreleased]
+## [v1.3.0]
+
+**Release date: 2020-07-01**
 
 ### Added
 
 * `delphin.dmrs.DMRSWarning` for problems with conversion ([#289])
+* `delphin.tfs.TFSError` ([#293])
 
 ### Fixed
 
@@ -12,6 +15,18 @@
   with a delimiter other than `@` ([#288])
 * MRS to DMRS conversion raises a `DMRSWarning` instead of a KeyError
   when an EP has no intrinsic variable ([#289])
+* `delphin.mrs.is_isomorphic()` works on disconnected graphs ([#296])
+
+### Changed
+
+* `delphin.tfs.FeatureStructure` raises a `TFSError` when attempting
+  to assign a value on a non-subscriptable feature value ([#293])
+* `delphin.tsdb.format()` formats `datetime.date` objects in the TSDB
+  date format ([#291])
+* `delphin.tsdb.write()` no longer requires the `fields` parameter if
+  writing to an existing test suite directory ([#290])
+* `delphin.tdl.iterparse()` will raise a more informative TDLError
+  from a RecursionError when parsing ([#294])
 
 
 ## [v1.2.4]
@@ -1225,7 +1240,7 @@ There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
 [commit messages](../../commits/v0.2).
 
-[unreleased]: ../../tree/develop
+[v1.3.0]: ../../releases/tag/v1.3.0
 [v1.2.4]: ../../releases/tag/v1.2.4
 [v1.2.3]: ../../releases/tag/v1.2.3
 [v1.2.2]: ../../releases/tag/v1.2.2
@@ -1377,3 +1392,8 @@ information about changes, except for
 [#285]: https://github.com/delph-in/pydelphin/issues/285
 [#288]: https://github.com/delph-in/pydelphin/issues/288
 [#289]: https://github.com/delph-in/pydelphin/issues/289
+[#290]: https://github.com/delph-in/pydelphin/issues/290
+[#291]: https://github.com/delph-in/pydelphin/issues/291
+[#293]: https://github.com/delph-in/pydelphin/issues/293
+[#294]: https://github.com/delph-in/pydelphin/issues/294
+[#296]: https://github.com/delph-in/pydelphin/issues/296

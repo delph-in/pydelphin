@@ -3,14 +3,22 @@
 Utility functions.
 """
 
-from typing import (Union, Iterable, Iterator, Dict, List, Tuple, NamedTuple)
+from typing import (
+    Union,
+    Iterable,
+    Iterator,
+    Set,
+    Dict,
+    List,
+    Tuple,
+    NamedTuple,
+)
 from pathlib import Path
 import warnings
 import importlib
 import pkgutil
 import codecs
 import re
-from itertools import permutations
 from collections import deque, defaultdict
 from functools import wraps
 from enum import IntEnum
@@ -90,36 +98,54 @@ def _connected_components(nodes, edges):
     return components
 
 
-def _isomorphism(g1, g2, top1, top2) -> Dict[str, str]:
-    """
-    Return the first isomorphism found for graphs *g1* and *g2*.
-
-    Start from *top1* and *top2*.
-
-    *g1* and *g2* are dictionaries mapping each node id to inner
-    dictionaries that map node ids to some data where there exists an
-    edge between the two node target. The data is an arbitrary string
-    used for matching heuristics.
-
-    This assumes that the graphs are not multigraphs.
-    """
-    _iso_inv_map(g1)
-    _iso_inv_map(g2)
-
-    hypothesis: Dict[str, str] = {}
-    agenda: List[Tuple[str, str]] = next(
-        _iso_candidates({top1: None}, {top2: None}, g1, g2, hypothesis),
-        [])
-    return next(_iso_vf2(hypothesis, g1, g2, agenda), {})
+_IsoGraph = Dict[str, Dict[Union[None, str], str]]
+_IsoMap = Dict[str, str]
+_IsoPairs = List[Tuple[str, str]]
 
 
-def _iso_inv_map(d):
+def _vf2(g1: _IsoGraph, g2: _IsoGraph) -> _IsoMap:
+    """See Cordella, Foggia, Sansone, and Vento 2004"""
+
+    # augment graph with inverse edges, making it effectively undirected
+    _vf2_inv_map(g1)
+    _vf2_inv_map(g2)
+
+    # VF2 is defined recursively but it is simple to make iterative
+    mapping: _IsoMap = {}
+    prev_n = None
+    candidates = _vf2_candidates(mapping, g1, g2)
+    states: List[Tuple[Union[None, str], _IsoPairs]] = []
+    while len(mapping) < len(g2):
+        pair_found = False
+        while candidates and not pair_found:
+            n, m = candidates.pop()
+            if _vf2_feasible(mapping, g1, g2, n, m):
+                pair_found = True
+
+        if pair_found:
+            # make new state
+            mapping[n] = m
+            states.append((prev_n, candidates))
+            prev_n = n
+            candidates = _vf2_candidates(mapping, g1, g2)
+        elif prev_n is None:
+            # end of the line; abort
+            break
+        else:
+            # restore old state
+            del mapping[prev_n]
+            prev_n, candidates = states.pop()
+
+    return mapping
+
+
+def _vf2_inv_map(d: _IsoGraph) -> None:
     """
     Augment *d* with inverse mappings.
 
     Assumes *d* is not a multigraph.
     """
-    _d = {}
+    _d: _IsoGraph = {}
     for src, d2 in d.items():
         for tgt, data in d2.items():
             if tgt is not None and src != tgt:
@@ -130,48 +156,87 @@ def _iso_inv_map(d):
         d[k].update(d2)
 
 
-def _iso_vf2(hyp, g1, g2, agenda):
-    # base case
-    if len(hyp) == len(g1) or not agenda:
-        yield hyp
-    n1, n2 = agenda.pop()
-    # get edges, filter node data and self edges
-    n1s = {n: d for n, d in g1[n1].items() if n is not None and n != n1}
-    n2s = {n: d for n, d in g2[n2].items() if n is not None and n != n2}
-    # update the current state
-    new_hyp = dict(hyp)
-    new_hyp[n1] = n2
-    for c_agenda in _iso_candidates(n1s, n2s, g1, g2, new_hyp):
-        yield from _iso_vf2(new_hyp, g1, g2, agenda + c_agenda)
+def _vf2_feasible(
+        mapping: _IsoMap,
+        g1: _IsoGraph,
+        g2: _IsoGraph,
+        n: str,
+        m: str,
+) -> bool:
+    e1 = g1[n]  # edges from n in g1
+    e2 = g2[m]  # edges from m in g2
+    inv_map = {b: a for a, b in mapping.items()}  # inverse of bijection
+    # semantic feasibility of nodes
+    if e1.get(None, '') != e2.get(None, ''):
+        return False
+    # accounts for r_in, r_out
+    if len(e1) != len(e2):
+        return False
+    # accounts for r_new (only 1 extra level of lookahead)
+    if (len(_vf2_new(mapping, g1, n)) != len(_vf2_new(inv_map, g2, m))):
+        return False
+    # accounts for r_pred, r_succ
+    if not (_vf2_consistent(mapping, g1, g2, n, m)
+            and _vf2_consistent(inv_map, g2, g1, m, n)):
+        return False
+    return True
 
 
-def _iso_candidates(n1s, n2s, g1, g2, hyp):
-    # get the inverse mapping for faster reverse lookups
-    inv = {n2: n1 for n1, n2 in hyp.items()}
-    for _n2s in permutations(list(n2s)):
-        # filter out bad mappings
-        agenda = []
-        for n1, n2 in zip(list(n1s), _n2s):
-            if hyp.get(n1) == n2 and inv.get(n2) == n1:
-                continue  # no issue, but don't add to agenda
-            elif n1 in hyp or n2 in inv:
-                agenda = []  # already traversed, not compatible
-                break
-            elif len(g1[n1]) != len(g2[n2]):
-                agenda = []  # incompatible arity
-                break
-            elif g1[n1].get(None) != g2[n2].get(None):
-                agenda = []  # incompatible node data
-                break
-            elif n1s[n1] != n2s[n2]:
-                agenda = []  # incompatible edge data
-                break
-            else:
-                agenda.append((n1, n2))
-        if agenda:
-            yield agenda
-    # Finally yield an empty agenda because there's nothing to do
-    yield []
+def _vf2_new(mapping: _IsoMap, g: _IsoGraph, a: str) -> Set[str]:
+    new = set()
+    agenda = [a]
+    while agenda:
+        cur = agenda.pop()
+        for a_ in g[cur]:
+            if not (a_ is None or a == cur or a in mapping or a in new):
+                agenda.append(a_)
+                new.add(a_)
+    return new
+
+
+def _vf2_consistent(
+        mapping: _IsoMap,
+        ga: _IsoGraph,
+        gb: _IsoGraph,
+        a: str,
+        b: str,
+) -> bool:
+    for a_, data in ga[a].items():
+        if a_ not in mapping:
+            continue
+        if mapping[a_] not in gb[b]:
+            return False
+        if gb[b][mapping[a_]] != data:  # semantic feasibility of edges
+            return False
+    return True
+
+
+def _vf2_candidates(
+        mapping: _IsoMap,
+        g1: _IsoGraph,
+        g2: _IsoGraph,
+) -> _IsoPairs:
+    # sides of the mapping as sets
+    m1: Set[str] = set(mapping)
+    m2: Set[str] = set(mapping.values())
+    # combination of incoming and outgoing edges
+    t1: Set[str] = set()
+    t2: Set[str] = set()
+    for n, m in mapping.items():
+        t1.update(n_ for n_ in g1[n] if n_ is not None and n_ not in m1)
+        t2.update(m_ for m_ in g2[m] if m_ is not None and m_ not in m2)
+
+    # sorting t1 speeds up matches with t2 side when graphs are the same
+    if t1 and t2:
+        m = min(t2)
+        return [(n1, m) for n1 in sorted(t1, reverse=True)]
+
+    unmapped = set(g2) - m2
+    if unmapped:
+        m = min(set(g2) - m2)
+        return [(n1, m) for n1 in sorted(set(g1) - m1, reverse=True)]
+    else:
+        return []
 
 
 # unescaping escaped strings (potentially with unicode)

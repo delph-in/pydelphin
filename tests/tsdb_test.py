@@ -1,7 +1,7 @@
 
 import pathlib
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, date
 
 import pytest
 
@@ -217,6 +217,7 @@ def test_format():
     assert tsdb.format(':integer', None) == '-1'
     assert tsdb.format(':integer', None, default='1') == '1'
     assert tsdb.format(':date', datetime(1999, 9, 8)) == '8-sep-1999'
+    assert tsdb.format(':date', date(1999, 9, 8)) == '8-sep-1999'  # Issue #291
 
 
 def test_open(single_item_skeleton, gzipped_single_item_skeleton):
@@ -273,6 +274,14 @@ def test_issue_285(empty_testsuite):
     with fh:
         assert list(fh) == ['0@The cat meows.\r\n']
     assert fh.closed
+
+
+def test_issue_290(empty_testsuite, tmp_path):
+    tsdb.write(empty_testsuite, 'item', [(0, 'The cat meows.')])
+    assert (empty_testsuite / 'item').read_text() == '0@The cat meows.\n'
+    newdir = tmp_path / 'new_dir'
+    with pytest.raises(tsdb.TSDBError):
+        tsdb.write(newdir, 'item', [(0, 'The cat meows.')])
 
 
 def test_write_database(tmp_path, mini_testsuite, empty_alt_testsuite):
