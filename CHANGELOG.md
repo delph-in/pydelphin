@@ -23,6 +23,8 @@
   date format ([#291])
 * `delphin.tsdb.write()` no longer requires the `fields` parameter if
   writing to an existing test suite directory ([#290])
+* `delphin.tdl.iterparse()` will raise a more informative TDLError
+  from a RecursionError when parsing ([#294])
 
 
 ## [v1.2.4]
@@ -1391,4 +1393,5 @@ information about changes, except for
 [#290]: https://github.com/delph-in/pydelphin/issues/290
 [#291]: https://github.com/delph-in/pydelphin/issues/291
 [#293]: https://github.com/delph-in/pydelphin/issues/293
+[#294]: https://github.com/delph-in/pydelphin/issues/294
 [#296]: https://github.com/delph-in/pydelphin/issues/296
