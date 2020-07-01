@@ -14,7 +14,7 @@ from collections import OrderedDict
 from gzip import open as gzopen
 import tempfile
 import shutil
-from datetime import datetime
+from datetime import datetime, date
 import warnings
 
 from delphin.exceptions import PyDelphinException, PyDelphinWarning
@@ -64,7 +64,7 @@ _MONTHS = {
 
 RawValue = Union[str, None]
 RawRecord = Sequence[RawValue]
-Value = Union[str, int, float, datetime, None]
+Value = Union[str, int, float, datetime, date, None]
 Record = Sequence[Value]
 Records = Iterable[Record]
 ColumnMap = Dict[str, Value]  # e.g., a partial Record
@@ -680,10 +680,11 @@ def format(datatype: str,
         else:
             default = str(default)  # ensure it is a string
         raw_value = default
-    elif datatype == ':date' and isinstance(value, datetime):
+    elif datatype == ':date' and isinstance(value, (date, datetime)):
         month = _MONTHS[value.month]
         pattern = f'{value.day!s}-{month}-%Y'
-        if (value.hour, value.minute, value.second) != (0, 0, 0):
+        if (isinstance(value, datetime)
+                and (value.hour, value.minute, value.second) != (0, 0, 0)):
             pattern += ' %H:%M:%S'
         raw_value = value.strftime(pattern)
     else:
