@@ -276,6 +276,14 @@ def test_issue_285(empty_testsuite):
     assert fh.closed
 
 
+def test_issue_290(empty_testsuite, tmp_path):
+    tsdb.write(empty_testsuite, 'item', [(0, 'The cat meows.')])
+    assert (empty_testsuite / 'item').read_text() == '0@The cat meows.\n'
+    newdir = tmp_path / 'new_dir'
+    with pytest.raises(tsdb.TSDBError):
+        tsdb.write(newdir, 'item', [(0, 'The cat meows.')])
+
+
 def test_write_database(tmp_path, mini_testsuite, empty_alt_testsuite):
     tmp_ts = tmp_path.joinpath('test_write_database')
     db = tsdb.Database(mini_testsuite)
