@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import os
 import tempfile
 
@@ -492,6 +493,20 @@ def test_parse_cons_list():
         tdlparse('a := b & [ ATTR < , [] > ].')
     with pytest.raises(TDLSyntaxError):
         tdlparse('a := b & [ ATTR < [] [] > ].')
+
+
+@pytest.mark.slow
+def test_issue_294():
+    # check for recursion error
+    with pytest.raises(TDLError):
+        tdlparse('a := b & [ ATTR < [] ' + ', []' * 500 + ' > ].')
+    # make sure it's avoidable
+    oldlimit = sys.getrecursionlimit()
+    try:
+        sys.setrecursionlimit(2000)
+        tdlparse('a := b & [ ATTR < [] ' + ', []' * 500 + ' > ].')
+    finally:
+        sys.setrecursionlimit(oldlimit)
 
 
 def test_parse_diff_list():

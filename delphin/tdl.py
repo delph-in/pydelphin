@@ -1029,6 +1029,12 @@ def _parse(f, path):
     except TDLSyntaxError as ex:
         ex.filename = str(path)
         raise
+    except RecursionError as exc:
+        raise TDLError(
+            "excessively recursive TDL structure (perhaps there's "
+            "a very long list); try increasing Python's recursion "
+            "limit with sys.setrecursionlimit(n)"
+        ) from exc
 
 
 def _parse_tdl(tokens, path):
