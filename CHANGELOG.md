@@ -21,6 +21,8 @@
   to assign a value on a non-subscriptable feature value ([#293])
 * `delphin.tsdb.format()` formats `datetime.date` objects in the TSDB
   date format ([#291])
+* `delphin.tsdb.write()` no longer requires the `fields` parameter if
+  writing to an existing test suite directory ([#290])
 
 
 ## [v1.2.4]
@@ -1386,6 +1388,7 @@ information about changes, except for
 [#285]: https://github.com/delph-in/pydelphin/issues/285
 [#288]: https://github.com/delph-in/pydelphin/issues/288
 [#289]: https://github.com/delph-in/pydelphin/issues/289
+[#290]: https://github.com/delph-in/pydelphin/issues/290
 [#291]: https://github.com/delph-in/pydelphin/issues/291
 [#293]: https://github.com/delph-in/pydelphin/issues/293
 [#296]: https://github.com/delph-in/pydelphin/issues/296

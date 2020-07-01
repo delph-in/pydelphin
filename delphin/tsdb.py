@@ -775,7 +775,7 @@ def open(dir: util.PathLike,
 def write(dir: util.PathLike,
           name: str,
           records: Iterable[Record],
-          fields: Fields,
+          fields: Fields = None,
           append: bool = False,
           gzip: bool = False,
           encoding: str = 'utf-8') -> None:
@@ -816,7 +816,8 @@ def write(dir: util.PathLike,
         dir: path to the database directory
         name: name of the relation to write
         records: iterable of records to write
-        fields: iterable of :class:`Field` objects
+        fields: iterable of :class:`Field` objects, optional if *dir*
+            points to an existing test suite directory
         append: if `True`, append to rather than overwrite the file
         gzip: if `True` and the file is not empty, compress the file
             with `gzip`; if `False`, do not compress
@@ -834,6 +835,14 @@ def write(dir: util.PathLike,
 
     if not dir.is_dir():
         raise TSDBError(f'invalid test suite directory: {dir}')
+
+    if fields is None:
+        schema_path = dir / SCHEMA_FILENAME
+        if schema_path.is_file():
+            fields = read_schema(schema_path)[name]
+        else:
+            raise TSDBError(
+                f'cannot determine fields; no schema file at {schema_path}')
 
     tx_path, gz_path, use_gz = _get_paths(dir, name)
     if append and (gzip or use_gz):
