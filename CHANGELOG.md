@@ -2,6 +2,8 @@
 
 ## [v1.3.0]
 
+**Release date: 2020-07-01**
+
 ### Added
 
 * `delphin.dmrs.DMRSWarning` for problems with conversion ([#289])
