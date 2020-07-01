@@ -503,7 +503,7 @@ def test_issue_294():
     # make sure it's avoidable
     oldlimit = sys.getrecursionlimit()
     try:
-        sys.setrecursionlimit(2000)
+        sys.setrecursionlimit(2500)
         tdlparse('a := b & [ ATTR < [] ' + ', []' * 500 + ' > ].')
     finally:
         sys.setrecursionlimit(oldlimit)
