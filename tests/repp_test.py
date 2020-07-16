@@ -208,3 +208,27 @@ def test_with_iterative_groups():
     assert x.tokens[3].lnk == Lnk.charspan(4, 5)
     assert x.tokens[4].form == ','
     assert x.tokens[4].lnk == Lnk.charspan(5, 6)
+
+
+def test_trace():
+    x = r.from_string(r'''
+!(\w+)	[\1]
+!\[([^\]]+)\]	*\1*
+''')
+    steps = list(x.trace('abc def'))
+    assert len(steps) == 4
+    # first rule of module
+    assert isinstance(steps[0], repp.REPPStep)
+    assert steps[0].input == 'abc def'
+    assert steps[0].output == '[abc] [def]'
+    # second rule of module
+    assert isinstance(steps[1], repp.REPPStep)
+    assert steps[1].input == '[abc] [def]'
+    assert steps[1].output == '*abc* *def*'
+    # module group
+    assert isinstance(steps[2], repp.REPPStep)
+    assert steps[2].input == 'abc def'
+    assert steps[2].output == '*abc* *def*'
+    # final result
+    assert isinstance(steps[3], repp.REPPResult)
+    assert steps[3].string == '*abc* *def*'
