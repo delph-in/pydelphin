@@ -1,5 +1,5 @@
 
-from typing import Iterable, Mapping
+from typing import Optional, Iterable, Mapping
 
 from delphin.lnk import Lnk
 from delphin import variable
@@ -56,6 +56,8 @@ class EP(sembase.Predication):
                  lnk: Lnk = None,
                  surface=None,
                  base=None):
+        self.id: str  # further constrain for EPs
+
         if args is None:
             args = {}
         # EPs formally do not have identifiers but they are very useful
@@ -229,6 +231,10 @@ class MRS(scope.ScopingSemanticStructure):
                  lnk: Lnk = None,
                  surface=None,
                  identifier=None):
+
+        # further constrain these types
+        self.top: Optional[str]
+        self.index: Optional[str]
 
         if rels is None:
             rels = []

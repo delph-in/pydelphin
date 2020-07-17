@@ -5,6 +5,7 @@
 ### Fixed
 
 * `delphin.repp` better anticipates unmatched capture groups ([#301])
+* `delphin.dmrs.from_mrs()` no longer crashes on bad HCONS ([#303])
 
 
 ## [v1.3.0]
@@ -1405,3 +1406,4 @@ information about changes, except for
 [#294]: https://github.com/delph-in/pydelphin/issues/294
 [#296]: https://github.com/delph-in/pydelphin/issues/296
 [#301]: https://github.com/delph-in/pydelphin/issues/301
+[#303]: https://github.com/delph-in/pydelphin/issues/303
