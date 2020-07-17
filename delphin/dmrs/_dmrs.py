@@ -319,9 +319,8 @@ class DMRS(scope.ScopingSemanticStructure):
         The return value maps node ids to lists of scopal arguments as
         (role, scope_relation, target) triples. If *scopes* is given,
         the target is the scope label, otherwise it is the target
-        node's id. Only links with a :attr:`Link.role` value are
-        considered, so ``MOD/EQ`` links are not included as scopal
-        arguments.
+        node's id. Note that ``MOD/EQ`` links are not included as
+        scopal arguments.
 
         Args:
             scopes: mapping of scope labels to lists of predications
