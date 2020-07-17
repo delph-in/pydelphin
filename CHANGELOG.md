@@ -1,5 +1,12 @@
 # Change Log
 
+## [v1.3.1]
+
+### Fixed
+
+* `delphin.repp` better anticipates unmatched capture groups ([#301])
+
+
 ## [v1.3.0]
 
 **Release date: 2020-07-01**
@@ -1397,3 +1404,4 @@ information about changes, except for
 [#293]: https://github.com/delph-in/pydelphin/issues/293
 [#294]: https://github.com/delph-in/pydelphin/issues/294
 [#296]: https://github.com/delph-in/pydelphin/issues/296
+[#301]: https://github.com/delph-in/pydelphin/issues/301

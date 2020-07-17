@@ -201,6 +201,9 @@ class _REPPRule(_REPPOperation):
             for i, literal
             in enumerate(literals)
         ]
+        # either literal or group must be None, but not both
+        assert all((lit is None) != (grp is None)
+                   for lit, grp in self._segments)
 
         # Get "trackable" capture groups; i.e., those that are
         # transparent for characterization. For PET behavior, these
@@ -290,7 +293,7 @@ class _REPPRule(_REPPOperation):
                 if literal is None:
                     assert group is not None
                     start, end = spans[group]
-                    yield (m.group(group), start, end, True)
+                    yield (m.group(group) or '', start, end, True)
                     start = end
                     if group + 1 in spans:
                         end = spans[group + 1][0]
@@ -299,11 +302,13 @@ class _REPPRule(_REPPOperation):
                     yield (literal, start, end, False)
 
         # then group all remaining segments together
-        remaining = self._segments[self._last_trackable + 1:]
+        remaining: List[Optional[str]] = [
+            m.group(grp) if grp is not None else lit
+            for lit, grp in self._segments[self._last_trackable + 1:]
+        ]
         if remaining:
-            literal = ''.join(
-                m.group(group) if group is not None else literal
-                for literal, group in remaining)
+            # in some cases m.group(grp) can return None, so replace with ''
+            literal = ''.join(segment or '' for segment in remaining)
             yield (literal, start, m.end(), False)
 
 

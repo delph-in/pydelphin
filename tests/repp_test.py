@@ -232,3 +232,10 @@ def test_trace():
     # final result
     assert isinstance(steps[3], repp.REPPResult)
     assert steps[3].string == '*abc* *def*'
+
+
+def test_unmatched_group_issue_301():
+    # https://github.com/delph-in/pydelphin/issues/301
+    x = r.from_string(r'!(a)(b)*	\1 \2')
+    assert x.apply('ab').string == 'a b'
+    assert x.apply('a').string == 'a '
