@@ -2,10 +2,25 @@
 
 ## [v1.3.1]
 
+### Added
+
+* `delphin.commands.process` now has a `report_progress` parameter,
+  defaulting to `True`, for printing a progress bar ([#304])
+* `delphin.itsdb.TestSuite.process()` now has a `callback` parameter,
+  called for each response during processing, which can be used to
+  implement a progress bar (among other things) ([#304])
+
 ### Fixed
 
 * `delphin.repp` better anticipates unmatched capture groups ([#301])
 * `delphin.dmrs.from_mrs()` no longer crashes on bad HCONS ([#303])
+
+### Changed
+
+* `delphin.itsdb.TestSuite.process()` no longer prints a progress bar,
+  leaving it instead to the caller via the `callback ` parameter;
+  since the progress bar is a side effect this is not a breaking
+  change ([#304])
 
 
 ## [v1.3.0]
@@ -1407,3 +1422,4 @@ information about changes, except for
 [#296]: https://github.com/delph-in/pydelphin/issues/296
 [#301]: https://github.com/delph-in/pydelphin/issues/301
 [#303]: https://github.com/delph-in/pydelphin/issues/303
+[#304]: https://github.com/delph-in/pydelphin/issues/304

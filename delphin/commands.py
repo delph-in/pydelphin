@@ -10,6 +10,8 @@ import tempfile
 import logging
 import warnings
 
+from progress.bar import Bar as ProgressBar
+
 from delphin import exceptions
 from delphin import tsdb, itsdb, tsql
 from delphin.lnk import Lnk
@@ -543,7 +545,7 @@ def _mkprof_summarize(destination, schema):
 def process(grammar, testsuite, source=None, select=None,
             generate=False, transfer=False, full_forest=False,
             options=None, all_items=False, result_id=None, gzip=False,
-            stderr=None):
+            stderr=None, report_progress=True):
     """
     Process the [incr tsdb()] profile *testsuite* with *grammar*.
 
@@ -593,6 +595,9 @@ def process(grammar, testsuite, source=None, select=None,
         gzip (bool): if `True`, non-empty tables will be compressed
             with gzip
         stderr (file): stream for ACE's stderr
+        report_progress (bool): print a progress bar to stderr if
+            `True` and logging verbosity is at WARNING or lower;
+            (default: `True`)
     """
     from delphin import ace
 
@@ -645,11 +650,22 @@ def process(grammar, testsuite, source=None, select=None,
                full=True, gzip=True, quiet=True)
         tmp = itsdb.TestSuite(dir)
 
+        process_kwargs = {'selector': (relation, column),
+                          'source': tmp,
+                          'gzip': gzip}
+        bar = None
+        if (report_progress
+            and len(tmp[relation])
+            and not logger.isEnabledFor(logging.INFO)
+        ):
+            bar = ProgressBar('Processing', max=len(tmp[relation]))
+            process_kwargs['callback'] = lambda _: bar.next()
+
         with processor(grammar, cmdargs=options, **kwargs) as cpu:
-            target.process(cpu,
-                           selector=(relation, column),
-                           source=tmp,
-                           gzip=gzip)
+            target.process(cpu, **process_kwargs)
+            if bar:
+                bar.finish()
+
 
 
 def _interpret_selection(select, source):
