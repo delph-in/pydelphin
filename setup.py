@@ -62,7 +62,7 @@ setup(
         'delphin.web',
     ],
     install_requires=[
-        'penman==1.0.0',
+        'penman==1.1.0',
         'progress==1.5',
     ],
     extras_require={
