@@ -2,6 +2,8 @@
 
 ## [v1.4.0]
 
+**Release date: 2020-07-20**
+
 ### Added
 
 * `delphin.commands.process` now has a `report_progress` parameter,
