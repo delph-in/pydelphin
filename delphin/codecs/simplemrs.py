@@ -142,6 +142,11 @@ SimpleMRSLexer = Lexer(
          r'|\d+(?: +\d+)*)>', 'LNK:a lnk value'),
         (r'"([^"\\]*(?:\\.[^"\\]*)*)"', 'DQSTRING:a string'),
         (r"'([^ \n:<>\[\]])", 'SQSYMBOL:a quoted symbol'),
+        (r'_[^\s_]+'  # lemma
+         r'_[nvajrscpqxud]'  # pos
+         r'(?:_(?:[^\s_<]|<(?![-0-9:#@ ]*>\s))+)?'  # optional sense
+         r'(?:_rel)?',  # optional suffix
+         'PREDICATE:a surface predicate'),
         (r'<', 'LANGLE:<'),
         (r'>', 'RANGLE:>'),
         (r'([^\s:<>\[\]]+):', 'FEATURE:a feature'),
@@ -152,15 +157,16 @@ SimpleMRSLexer = Lexer(
     error_class=MRSSyntaxError)
 
 
-LBRACK   = SimpleMRSLexer.tokentypes.LBRACK
-RBRACK   = SimpleMRSLexer.tokentypes.RBRACK
-LNK      = SimpleMRSLexer.tokentypes.LNK
-DQSTRING = SimpleMRSLexer.tokentypes.DQSTRING
-SQSYMBOL = SimpleMRSLexer.tokentypes.SQSYMBOL
-LANGLE   = SimpleMRSLexer.tokentypes.LANGLE
-RANGLE   = SimpleMRSLexer.tokentypes.RANGLE
-FEATURE  = SimpleMRSLexer.tokentypes.FEATURE
-SYMBOL   = SimpleMRSLexer.tokentypes.SYMBOL
+LBRACK    = SimpleMRSLexer.tokentypes.LBRACK
+RBRACK    = SimpleMRSLexer.tokentypes.RBRACK
+LNK       = SimpleMRSLexer.tokentypes.LNK
+DQSTRING  = SimpleMRSLexer.tokentypes.DQSTRING
+SQSYMBOL  = SimpleMRSLexer.tokentypes.SQSYMBOL
+PREDICATE = SimpleMRSLexer.tokentypes.PREDICATE
+LANGLE    = SimpleMRSLexer.tokentypes.LANGLE
+RANGLE    = SimpleMRSLexer.tokentypes.RANGLE
+FEATURE   = SimpleMRSLexer.tokentypes.FEATURE
+SYMBOL    = SimpleMRSLexer.tokentypes.SYMBOL
 
 
 def _decode(lineiter):
@@ -240,7 +246,7 @@ def _decode_rel(lexer, variables):
     surface = None
     lexer.expect_type(LBRACK)
     pred = predicate.normalize(
-        lexer.choice_type(DQSTRING, SQSYMBOL, SYMBOL)[1])
+        lexer.choice_type(DQSTRING, SQSYMBOL, PREDICATE, SYMBOL)[1])
     lnk = _decode_lnk(lexer)
     surface = lexer.accept_type(DQSTRING)
     _, label = lexer.expect((FEATURE, 'LBL'), (SYMBOL, None))

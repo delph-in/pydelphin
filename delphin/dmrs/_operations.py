@@ -3,14 +3,22 @@
 Operations on DMRS structures
 """
 
+from typing import Optional, Dict, List, Callable
 import warnings
 
 from delphin import variable
 from delphin import scope
+from delphin import mrs
 from delphin import dmrs
 
 
-def from_mrs(m, representative_priority=None):
+_HCMap = Dict[str, mrs.HCons]
+_IdMap = Dict[str, int]
+
+
+def from_mrs(
+    m: mrs.MRS, representative_priority: Callable = None
+) -> dmrs.DMRS:
     """
     Create a DMRS by converting from MRS *m*.
 
@@ -27,12 +35,13 @@ def from_mrs(m, representative_priority=None):
     Raises:
         DMRSError when conversion fails.
     """
-    hcmap = {hc.hi: hc for hc in m.hcons}
+    hcmap: _HCMap = {hc.hi: hc for hc in m.hcons}
     reps = scope.representatives(m, priority=representative_priority)
     # EP id to node id map; create now to keep ids consistent
-    id_to_nid = {ep.id: i for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)}
-    iv_to_nid = {ep.iv: id_to_nid[ep.id]
-                 for ep in m.rels if not ep.is_quantifier()}
+    id_to_nid: _IdMap = {ep.id: i
+                         for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)}
+    iv_to_nid: _IdMap = {ep.iv: id_to_nid[ep.id]
+                         for ep in m.rels if not ep.is_quantifier()}
 
     top = _mrs_get_top(m.top, hcmap, reps, id_to_nid)
     # some bad MRSs have an INDEX that isn't the ARG0 of any EP, so
@@ -53,18 +62,28 @@ def from_mrs(m, representative_priority=None):
         identifier=m.identifier)
 
 
-def _mrs_get_top(top, hcmap, reps, id_to_nid):
-    if top in hcmap:
-        lbl = hcmap[top].lo
-        rep = reps[lbl][0]
-        top = id_to_nid[rep.id]
-    elif top in reps:
-        rep = reps[top][0]
-        top = id_to_nid[rep.id]
+def _mrs_get_top(
+        top_var: Optional[str],
+        hcmap: _HCMap,
+        reps: scope.ScopeMap,
+        id_to_nid: _IdMap
+) -> Optional[int]:
+    top: Optional[int]
+    if top_var is None:
+        top = None
+    else:
+        lbl = hcmap[top_var].lo if top_var in hcmap else top_var
+        if lbl in reps:
+            rep = reps[lbl][0]
+            assert isinstance(rep, mrs.EP)
+            top = id_to_nid[rep.id]
+        else:
+            warnings.warn(f'unusable TOP: {top_var}', dmrs.DMRSWarning)
+            top = None
     return top
 
 
-def _mrs_to_nodes(m, id_to_nid):
+def _mrs_to_nodes(m: mrs.MRS, id_to_nid: _IdMap) -> List[dmrs.Node]:
     nodes = []
     for ep in m.rels:
         node_id = id_to_nid[ep.id]
@@ -93,7 +112,13 @@ def _mrs_to_nodes(m, id_to_nid):
     return nodes
 
 
-def _mrs_to_links(m, hcmap, reps, iv_to_nid, id_to_nid):
+def _mrs_to_links(
+        m: mrs.MRS,
+        hcmap: _HCMap,
+        reps: scope.ScopeMap,
+        iv_to_nid: _IdMap,
+        id_to_nid: _IdMap
+) -> List[dmrs.Link]:
     links = []
     # links from arguments
     for src, roleargs in m.arguments().items():
@@ -107,23 +132,32 @@ def _mrs_to_links(m, hcmap, reps, iv_to_nid, id_to_nid):
                 else:
                     post = dmrs.NEQ_POST
             # scopal arguments
-            elif tgt in reps and len(reps[tgt]) > 0:
-                tgt = reps[tgt][0]
-                end = id_to_nid[tgt.id]
-                post = dmrs.HEQ_POST
-            elif tgt in hcmap:
-                lo = hcmap[tgt].lo
-                tgt = reps[lo][0]
-                end = id_to_nid[tgt.id]
-                post = dmrs.H_POST
-            # other (e.g., BODY, dropped arguments, etc.)
             else:
-                continue
+                if tgt in hcmap:
+                    lbl = hcmap[tgt].lo
+                    post = dmrs.H_POST
+                    if lbl not in reps:
+                        warnings.warn(
+                            f'broken handle constraint: {hcmap[tgt]}',
+                            dmrs.DMRSWarning
+                        )
+                else:
+                    lbl = tgt
+                    post = dmrs.HEQ_POST
+                if lbl in reps and len(reps[lbl]) > 0:
+                    ep = reps[lbl][0]
+                    assert isinstance(ep, mrs.EP)
+                    end = id_to_nid[ep.id]
+                # BODY, dropped arguments, invalid, etc.
+                else:
+                    continue
             links.append(dmrs.Link(start, end, role, post))
     # MOD/EQ links for shared labels without argumentation
     for label, eps in reps.items():
         if len(eps) > 1:
-            end = id_to_nid[eps[0].id]
+            ep = eps[0]
+            assert isinstance(ep, mrs.EP)
+            end = id_to_nid[ep.id]
             for src in eps[1:]:
                 start = id_to_nid[src.id]
                 links.append(

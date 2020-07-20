@@ -6,7 +6,7 @@
 
 from typing import (
     Union, Iterable, Sequence, Tuple, List, Dict, Any,
-    Iterator, Optional, IO, overload, cast as typing_cast
+    Iterator, Optional, IO, overload, Callable, cast as typing_cast
 )
 from pathlib import Path
 import tempfile
@@ -14,8 +14,6 @@ from datetime import datetime
 import logging
 import collections
 import itertools
-
-from progress.bar import Bar as ProgressBar
 
 from delphin import util
 from delphin import tsdb
@@ -813,18 +811,24 @@ class TestSuite(tsdb.Database):
             fieldmapper = FieldMapper()
         yield from fieldmapper.collect(self)
 
-    def process(self,
-                cpu: interface.Processor,
-                selector: Tuple[str, str] = None,
-                source: tsdb.Database = None,
-                fieldmapper: FieldMapper = None,
-                gzip: bool = False,
-                buffer_size: int = 1000) -> None:
+    def process(
+            self,
+            cpu: interface.Processor,
+            selector: Tuple[str, str] = None,
+            source: tsdb.Database = None,
+            fieldmapper: FieldMapper = None,
+            gzip: bool = False,
+            buffer_size: int = 1000,
+            callback: Callable[[interface.Response], Any] = None,
+    ) -> None:
         """
         Process each item in a [incr tsdb()] test suite.
 
         The output rows will be flushed to disk when the number of new
         rows in a table is *buffer_size*.
+
+        The *callback* parameter can be used, for example, to update a
+        progress indicator.
 
         Args:
             cpu (:class:`~delphin.interface.Processor`): processor
@@ -842,6 +846,8 @@ class TestSuite(tsdb.Database):
             buffer_size (int): number of output rows to hold in memory
                 before flushing to disk; ignored if the test suite is all
                 in-memory; if `None`, do not flush to disk
+            callback: a function that is called with the response for
+                each item processed; the return value is ignored
         Examples:
             >>> ts.process(ace_parser)
             >>> ts.process(ace_generator, 'result:mrs', source=ts2)
@@ -868,13 +874,6 @@ class TestSuite(tsdb.Database):
 
         key_names = [f.name for f in source.schema[input_table] if f.is_key]
 
-        bar = None
-        if not logger.isEnabledFor(logging.INFO):
-            with tsdb.open(source.path, input_table) as fh:
-                total = sum(1 for _ in fh)
-            if total > 0:
-                bar = ProgressBar('Processing', max=total)
-
         for row in source[input_table]:
             datum = row[index[input_column]]
             keys = [row[index[name]] for name in key_names]
@@ -885,17 +884,14 @@ class TestSuite(tsdb.Database):
                 'Processed item {:>16}  {:>8} results'
                 .format(tsdb.join(keys), len(response['results']))
             )
-            if bar:
-                bar.next()
+            if callback:
+                callback(response)
 
             for tablename, data in fieldmapper.map(response):
                 _add_row(self, tablename, data, buffer_size)
 
         for tablename, data in fieldmapper.cleanup():
             _add_row(self, tablename, data, buffer_size)
-
-        if bar:
-            bar.finish()
 
         tsdb.write_database(self, self.path, gzip=gzip)
 

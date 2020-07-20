@@ -259,7 +259,7 @@ def test_compare(mini_testsuite):
 
 
 def test_repp(sentence_file):
-    sentence_file = str(sentence_file)  # Python2
+    sentence_file = sentence_file
     with pytest.raises(CommandError):
         repp(sentence_file, config='x', module='y')
     with pytest.raises(CommandError):

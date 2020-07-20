@@ -1,5 +1,30 @@
 # Change Log
 
+## [v1.4.0]
+
+### Added
+
+* `delphin.commands.process` now has a `report_progress` parameter,
+  defaulting to `True`, for printing a progress bar ([#304])
+* `delphin.itsdb.TestSuite.process()` now has a `callback` parameter,
+  called for each response during processing, which can be used to
+  implement a progress bar (among other things) ([#304])
+
+### Fixed
+
+* `delphin.repp` better anticipates unmatched capture groups ([#301])
+* `delphin.dmrs.from_mrs()` no longer crashes on bad HCONS ([#303])
+* `delphin.codes.simplemrs` is more robust to bad predicate strings,
+  but there are still limits ([#302])
+
+### Changed
+
+* `delphin.itsdb.TestSuite.process()` no longer prints a progress bar,
+  leaving it instead to the caller via the `callback ` parameter;
+  since the progress bar is a side effect this is not a breaking
+  change ([#304])
+
+
 ## [v1.3.0]
 
 **Release date: 2020-07-01**
@@ -1240,6 +1265,7 @@ There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
 [commit messages](../../commits/v0.2).
 
+[v1.4.0]: ../../releases/tag/v1.4.0
 [v1.3.0]: ../../releases/tag/v1.3.0
 [v1.2.4]: ../../releases/tag/v1.2.4
 [v1.2.3]: ../../releases/tag/v1.2.3
@@ -1397,3 +1423,7 @@ information about changes, except for
 [#293]: https://github.com/delph-in/pydelphin/issues/293
 [#294]: https://github.com/delph-in/pydelphin/issues/294
 [#296]: https://github.com/delph-in/pydelphin/issues/296
+[#301]: https://github.com/delph-in/pydelphin/issues/301
+[#302]: https://github.com/delph-in/pydelphin/issues/302
+[#303]: https://github.com/delph-in/pydelphin/issues/303
+[#304]: https://github.com/delph-in/pydelphin/issues/304

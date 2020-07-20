@@ -23,10 +23,10 @@ For bug requests, please provide the following, if possible:
   ```python
   >>> from delphin.__about__ import __version__
   >>> __version__  # distribution version
-  '1.3.0'
+  '1.4.0'
   >>> from delphin import mrs
   >>> mrs.__version__  # package version
-  '1.3.0'
+  '1.4.0'
   ```
 * Python version (e.g. 3.6, 3.7, etc.)
 
@@ -62,7 +62,7 @@ Always run the unit tests before committing. You can use a tool like
 this:
 
     [tox]
-    envlist = py35,py36,py37
+    envlist = py36,py37,py38
 
     [testenv]
     usedevelop = True

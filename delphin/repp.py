@@ -4,7 +4,20 @@
 Regular Expression Preprocessor (REPP)
 """
 
-from typing import NamedTuple
+from typing import (
+    TYPE_CHECKING,
+    Optional,
+    Union,
+    NamedTuple,
+    List,
+    Tuple,
+    Dict,
+    Set,
+    Pattern,
+    Match,
+    Iterable,
+    Iterator,
+)
 from sre_parse import parse_template
 from pathlib import Path
 from array import array
@@ -20,6 +33,7 @@ except ImportError:
     import re  # type: ignore
     _regex_available = False
 
+from delphin.util import PathLike
 from delphin.tokens import YYToken, YYTokenLattice
 from delphin.lnk import Lnk
 from delphin.exceptions import PyDelphinException, PyDelphinWarning
@@ -32,6 +46,12 @@ logger = logging.getLogger(__name__)
 
 #: The tokenization pattern used if none is given in a REPP module.
 DEFAULT_TOKENIZER = r'[ \t]+'
+
+
+if TYPE_CHECKING:
+    _CMap = array[int]  # characterization map
+else:
+    _CMap = array
 
 
 class REPPError(PyDelphinException):
@@ -60,62 +80,8 @@ class REPPResult(NamedTuple):
         endmap (:py:class:`array`): integer array of end offsets
     """
     string: str
-    startmap: array
-    endmap: array
-
-
-class _REPPOperation(object):
-    """
-    The supertype of REPP groups and rules.
-
-    This class defines the apply(), trace(), and tokenize() methods
-    which are available in [_REPPRule], [_REPPGroup],
-    [_REPPIterativeGroup], and [REPP] instances.
-    """
-    def _apply(self, s, active):
-        raise NotImplementedError()
-
-    def apply(self, s, active=None):
-        logger.info('apply(%r)', s)
-        for step in self._trace(s, active, False):
-            pass  # we only care about the last step
-        return step
-
-    def trace(self, s, active=None, verbose=False):
-        logger.info('trace(%r)', s)
-        yield from self._trace(s, active, verbose)
-
-    def _trace(self, s, active, verbose):
-        startmap = _zeromap(s)
-        endmap = _zeromap(s)
-        # initial boundaries
-        startmap[0] = 1
-        endmap[-1] = -1
-        step = None
-        for step in self._apply(s, active):
-            if step.applied or verbose:
-                yield step
-            if step.applied:
-                startmap = _mergemap(startmap, step.startmap)
-                endmap = _mergemap(endmap, step.endmap)
-        if step is not None:
-            s = step.output
-        yield REPPResult(s, startmap, endmap)
-
-    def tokenize(self, s, pattern=DEFAULT_TOKENIZER, active=None):
-        logger.info('tokenize(%r, %r)', s, pattern)
-        res = self.apply(s, active=active)
-        return self.tokenize_result(res, pattern=pattern)
-
-    def tokenize_result(self, result, pattern=DEFAULT_TOKENIZER):
-        logger.info('tokenize_result(%r, %r)', result, pattern)
-        tokens = [
-            YYToken(id=i, start=i, end=(i + 1),
-                    lnk=Lnk.charspan(tok[0], tok[1]),
-                    form=tok[2])
-            for i, tok in enumerate(_tokenize(result, pattern))
-        ]
-        return YYTokenLattice(tokens)
+    startmap: _CMap
+    endmap: _CMap
 
 
 class REPPStep(NamedTuple):
@@ -132,10 +98,79 @@ class REPPStep(NamedTuple):
     """
     input: str
     output: str
-    operation: _REPPOperation
+    operation: '_REPPOperation'
     applied: bool
-    startmap: array
-    endmap: array
+    startmap: _CMap
+    endmap: _CMap
+
+
+_Trace = Iterator[Union[REPPStep, REPPResult]]
+
+
+class _REPPOperation(object):
+    """
+    The supertype of REPP groups and rules.
+
+    This class defines the apply(), trace(), and tokenize() methods
+    which are available in [_REPPRule], [_REPPGroup],
+    [_REPPIterativeGroup], and [REPP] instances.
+    """
+    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
+        raise NotImplementedError()
+
+    def apply(self, s: str, active: Iterable[str] = None) -> REPPResult:
+        logger.info('apply(%r)', s)
+        for step in self._trace(s, set(active or []), False):
+            pass  # we only care about the last step
+        assert isinstance(step, REPPResult)
+        return step
+
+    def trace(
+        self, s: str, active: Iterable[str] = None, verbose: bool = False
+    ) -> _Trace:
+        logger.info('trace(%r)', s)
+        yield from self._trace(s, set(active or []), verbose)
+
+    def _trace(
+        self, s: str, active: Set[str], verbose: bool
+    ) -> _Trace:
+        startmap = _zeromap(s)
+        endmap = _zeromap(s)
+        # initial boundaries
+        startmap[0] = 1
+        endmap[-1] = -1
+        step = None
+        for step in self._apply(s, active):
+            if step.applied or verbose:
+                yield step
+            if step.applied:
+                startmap = _mergemap(startmap, step.startmap)
+                endmap = _mergemap(endmap, step.endmap)
+        if step is not None:
+            s = step.output
+        yield REPPResult(s, startmap, endmap)
+
+    def tokenize(
+        self,
+        s: str,
+        pattern: str = DEFAULT_TOKENIZER,
+        active: Iterable[str] = None
+    ) -> YYTokenLattice:
+        logger.info('tokenize(%r, %r)', s, pattern)
+        res = self.apply(s, active=set(active or []))
+        return self.tokenize_result(res, pattern=pattern)
+
+    def tokenize_result(
+            self, result: REPPResult, pattern: str = DEFAULT_TOKENIZER
+    ) -> YYTokenLattice:
+        logger.info('tokenize_result(%r, %r)', result, pattern)
+        tokens = [
+            YYToken(id=i, start=i, end=(i + 1),
+                    lnk=Lnk.charspan(tok[0], tok[1]),
+                    form=tok[2])
+            for i, tok in enumerate(_tokenize(result, pattern))
+        ]
+        return YYTokenLattice(tokens)
 
 
 class _REPPRule(_REPPOperation):
@@ -151,7 +186,7 @@ class _REPPRule(_REPPOperation):
         pattern: the regular expression pattern to match
         replacement: the replacement template
     """
-    def __init__(self, pattern, replacement):
+    def __init__(self, pattern: str, replacement: str):
         self.pattern = pattern
         self.replacement = replacement
         self._re = _compile(pattern)
@@ -161,8 +196,14 @@ class _REPPRule(_REPPOperation):
         # easier to iterate over by making pairs of (literal, None) or
         # (None, group)
         group_map = dict(groups)
-        self._segments = [(literal, group_map.get(i))
-                          for i, literal in enumerate(literals)]
+        self._segments: List[Tuple[Optional[str], Optional[int]]] = [
+            (literal, group_map.get(i))
+            for i, literal
+            in enumerate(literals)
+        ]
+        # either literal or group must be None, but not both
+        assert all((lit is None) != (grp is None)
+                   for lit, grp in self._segments)
 
         # Get "trackable" capture groups; i.e., those that are
         # transparent for characterization. For PET behavior, these
@@ -179,7 +220,7 @@ class _REPPRule(_REPPOperation):
     def __str__(self):
         return f'!{self.pattern}\t\t{self.replacement}'
 
-    def _apply(self, s, active):
+    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
         logger.debug(' %s', self)
 
         ms = list(self._re.finditer(s))
@@ -187,7 +228,7 @@ class _REPPRule(_REPPOperation):
         if ms:
             pos = 0  # current position in the original string
             shift = 0  # current original/target length difference
-            parts = []
+            parts: List[str] = []
             smap = array('i', [0])
             emap = array('i', [0])
 
@@ -226,14 +267,18 @@ class _REPPRule(_REPPOperation):
 
         yield REPPStep(s, o, self, applied, smap, emap)
 
-    def _itermatches(self, ms):
+    def _itermatches(
+            self, ms: Iterable[Match[str]]
+    ) -> Iterator[Tuple[int, Match[str]]]:
         """Yield pairs of the last affected position and a match."""
         last_pos = 0
         for m in ms:
             yield (last_pos, m)
             last_pos = m.end()
 
-    def _itersegments(self, m):
+    def _itersegments(
+            self, m: Match[str]
+    ) -> Iterator[Tuple[str, int, int, bool]]:
         """Yield tuples of (replacement, start, end, tracked)."""
         start = m.start()
 
@@ -241,33 +286,39 @@ class _REPPRule(_REPPOperation):
         tracked = self._segments[:self._last_trackable + 1]
         if tracked:
             spans = {group: m.span(group)
-                     for literal, group in tracked
-                     if literal is None}
+                     for _, group in tracked
+                     if group is not None}
             end = m.start(1)  # if literal before tracked group
             for literal, group in tracked:
                 if literal is None:
+                    assert group is not None
                     start, end = spans[group]
-                    yield (m.group(group), start, end, True)
+                    yield (m.group(group) or '', start, end, True)
                     start = end
                     if group + 1 in spans:
                         end = spans[group + 1][0]
                 else:
+                    assert literal is not None
                     yield (literal, start, end, False)
 
         # then group all remaining segments together
-        remaining = self._segments[self._last_trackable + 1:]
+        remaining: List[Optional[str]] = [
+            m.group(grp) if grp is not None else lit
+            for lit, grp in self._segments[self._last_trackable + 1:]
+        ]
         if remaining:
-            literal = ''.join(
-                m.group(group) if literal is None else literal
-                for literal, group in remaining)
+            # in some cases m.group(grp) can return None, so replace with ''
+            literal = ''.join(segment or '' for segment in remaining)
             yield (literal, start, m.end(), False)
 
 
 class _REPPGroup(_REPPOperation):
-    def __init__(self, operations=None, name=None):
+    def __init__(
+            self, operations: List[_REPPOperation] = None, name: str = None
+    ):
         if operations is None:
             operations = []
-        self.operations = operations
+        self.operations: List[_REPPOperation] = operations
         self.name = name
 
     def __repr__(self):
@@ -279,7 +330,7 @@ class _REPPGroup(_REPPOperation):
     def __str__(self):
         return 'Module {}'.format(self.name if self.name is not None else '')
 
-    def _apply(self, s, active):
+    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
         o = s
         applied = False
         for operation in self.operations:
@@ -292,11 +343,11 @@ class _REPPGroup(_REPPOperation):
 
 
 class _REPPGroupCall(_REPPOperation):
-    def __init__(self, name, modules):
+    def __init__(self, name: str, modules: Dict[str, 'REPP']):
         self.name = name
         self.modules = modules
 
-    def _apply(self, s, active):
+    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
         if active is not None and self.name in active:
             logger.info('>%s', self.name)
             yield from self.modules[self.name]._apply(s, active)
@@ -309,7 +360,7 @@ class _REPPIterativeGroup(_REPPGroup):
     def __str__(self):
         return f'Internal group #{self.name}'
 
-    def _apply(self, s, active):
+    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
         logger.debug('>%s', self.name)
         o = s
         applied = False
@@ -355,22 +406,26 @@ class REPP(object):
             activations
     """
 
-    def __init__(self, name=None, modules=None, active=None):
-        self.info = None
-        self.tokenize_pattern = None
+    def __init__(
+            self,
+            name: str = None,
+            modules: Dict[str, 'REPP'] = None,
+            active: Iterable[str] = None):
+        self.info: Optional[str] = None
+        self.tokenize_pattern: Optional[str] = None
         self.group = _REPPGroup(name=name)
 
         if modules is None:
-            modules = []
+            modules = {}
         self.modules = dict(modules)
-        self.active = set()
+        self.active: Set[str] = set()
         if active is None:
             active = []
         for mod in active:
             self.activate(mod)
 
     @classmethod
-    def from_config(cls, path, directory=None):
+    def from_config(cls, path: PathLike, directory=None):
         """
         Instantiate a REPP from a PET-style `.set` configuration file.
 
@@ -485,23 +540,23 @@ class REPP(object):
         _parse_repp(s.splitlines(), r, None)
         return r
 
-    def activate(self, mod):
+    def activate(self, mod: str) -> None:
         """
         Set external module *mod* to active.
         """
         self.active.add(mod)
 
-    def deactivate(self, mod):
+    def deactivate(self, mod: str) -> None:
         """
         Set external module *mod* to inactive.
         """
         if mod in self.active:
             self.active.remove(mod)
 
-    def _apply(self, s, active):
+    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
         return self.group._apply(s, active)
 
-    def apply(self, s, active=None):
+    def apply(self, s: str, active: Iterable[str] = None) -> REPPResult:
         """
         Apply the REPP's rewrite rules to the input string *s*.
 
@@ -515,9 +570,13 @@ class REPP(object):
         """
         if active is None:
             active = self.active
+        else:
+            active = set(active)
         return self.group.apply(s, active=active)
 
-    def trace(self, s, active=None, verbose=False):
+    def trace(
+        self, s: str, active: Iterable[str] = None, verbose: bool = False
+    ) -> _Trace:
         """
         Rewrite string *s* like `apply()`, but yield each rewrite step.
 
@@ -536,7 +595,9 @@ class REPP(object):
             active = self.active
         return self.group.trace(s, active=active, verbose=verbose)
 
-    def tokenize(self, s, pattern=None, active=None):
+    def tokenize(
+            self, s: str, pattern: str = None, active: Iterable[str] = None
+    ) -> YYTokenLattice:
         """
         Rewrite and tokenize the input string *s*.
 
@@ -559,7 +620,9 @@ class REPP(object):
             active = self.active
         return self.group.tokenize(s, pattern=pattern, active=active)
 
-    def tokenize_result(self, result, pattern=DEFAULT_TOKENIZER):
+    def tokenize_result(
+            self, result: REPPResult, pattern: str = DEFAULT_TOKENIZER
+    ) -> YYTokenLattice:
         """
         Tokenize the result of rule application.
 
@@ -574,7 +637,7 @@ class REPP(object):
         return self.group.tokenize_result(result, pattern=pattern)
 
 
-def _compile(pattern):
+def _compile(pattern: str) -> Pattern[str]:
     try:
         return re.compile(pattern)
     except re.error:
@@ -590,11 +653,11 @@ def _compile(pattern):
             raise
 
 
-def _zeromap(s):
+def _zeromap(s: str) -> _CMap:
     return array('i', [0] * (len(s) + 2))
 
 
-def _mergemap(map1, map2):
+def _mergemap(map1: _CMap, map2: _CMap) -> _CMap:
     """
     Positions in map2 have an integer indicating the relative shift to
     the equivalent position in map1. E.g., the i'th position in map2
@@ -607,13 +670,26 @@ def _mergemap(map1, map2):
     return merged
 
 
-def _copy_part(s, shift, parts, smap, emap):
+def _copy_part(
+        s: str,
+        shift: int,
+        parts: List[str],
+        smap: _CMap,
+        emap: _CMap
+) -> None:
     parts.append(s)
     smap.extend([shift] * len(s))
     emap.extend([shift] * len(s))
 
 
-def _insert_part(s, w, shift, parts, smap, emap):
+def _insert_part(
+        s: str,
+        w: int,
+        shift: int,
+        parts: List[str],
+        smap: _CMap,
+        emap: _CMap
+) -> None:
     parts.append(s)
     a = shift
     b = a - len(s)
@@ -623,7 +699,7 @@ def _insert_part(s, w, shift, parts, smap, emap):
     emap.extend(range(a, b, -1))
 
 
-def _tokenize(result, pattern):
+def _tokenize(result: REPPResult, pattern: str) -> List[Tuple[int, int, str]]:
     s, sm, em = result  # unpack for efficiency in loop
     toks = []
     pos = 0
@@ -640,13 +716,13 @@ def _tokenize(result, pattern):
     return toks
 
 
-def _repp_lines(path):
+def _repp_lines(path: Path) -> List[str]:
     if not path.is_file():
         raise REPPError(f'REPP file not found: {path!s}')
     return path.read_text(encoding='utf-8').splitlines()
 
 
-def _parse_repp(lines, r, directory):
+def _parse_repp(lines: List[str], r: REPP, directory: Path) -> None:
     ops = list(_parse_repp_group(lines, r, directory))
     if lines:
         raise REPPError('Unexpected termination; maybe the # operator '
@@ -654,8 +730,10 @@ def _parse_repp(lines, r, directory):
     r.group.operations.extend(ops)
 
 
-def _parse_repp_group(lines, r, directory):
-    igs = {}  # internal groups
+def _parse_repp_group(
+    lines: List[str], r: REPP, directory: Path
+) -> Iterator[_REPPOperation]:
+    igs: Dict[str, _REPPIterativeGroup] = {}  # internal groups
     while lines:
         line = lines.pop(0)
         if line.startswith(';') or line.strip() == '':
