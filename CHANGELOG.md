@@ -14,6 +14,8 @@
 
 * `delphin.repp` better anticipates unmatched capture groups ([#301])
 * `delphin.dmrs.from_mrs()` no longer crashes on bad HCONS ([#303])
+* `delphin.codes.simplemrs` is more robust to bad predicate strings,
+  but there are still limits ([#302])
 
 ### Changed
 
@@ -1421,5 +1423,6 @@ information about changes, except for
 [#294]: https://github.com/delph-in/pydelphin/issues/294
 [#296]: https://github.com/delph-in/pydelphin/issues/296
 [#301]: https://github.com/delph-in/pydelphin/issues/301
+[#302]: https://github.com/delph-in/pydelphin/issues/302
 [#303]: https://github.com/delph-in/pydelphin/issues/303
 [#304]: https://github.com/delph-in/pydelphin/issues/304
