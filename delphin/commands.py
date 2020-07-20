@@ -655,9 +655,8 @@ def process(grammar, testsuite, source=None, select=None,
                           'gzip': gzip}
         bar = None
         if (report_progress
-            and len(tmp[relation])
-            and not logger.isEnabledFor(logging.INFO)
-        ):
+                and len(tmp[relation])
+                and not logger.isEnabledFor(logging.INFO)):
             bar = ProgressBar('Processing', max=len(tmp[relation]))
             process_kwargs['callback'] = lambda _: bar.next()
 
@@ -665,7 +664,6 @@ def process(grammar, testsuite, source=None, select=None,
             target.process(cpu, **process_kwargs)
             if bar:
                 bar.finish()
-
 
 
 def _interpret_selection(select, source):

@@ -811,14 +811,15 @@ class TestSuite(tsdb.Database):
             fieldmapper = FieldMapper()
         yield from fieldmapper.collect(self)
 
-    def process(self,
-                cpu: interface.Processor,
-                selector: Tuple[str, str] = None,
-                source: tsdb.Database = None,
-                fieldmapper: FieldMapper = None,
-                gzip: bool = False,
-                buffer_size: int = 1000,
-                callback: Callable[[interface.Response], Any] = None,
+    def process(
+            self,
+            cpu: interface.Processor,
+            selector: Tuple[str, str] = None,
+            source: tsdb.Database = None,
+            fieldmapper: FieldMapper = None,
+            gzip: bool = False,
+            buffer_size: int = 1000,
+            callback: Callable[[interface.Response], Any] = None,
     ) -> None:
         """
         Process each item in a [incr tsdb()] test suite.
