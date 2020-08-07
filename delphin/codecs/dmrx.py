@@ -295,7 +295,10 @@ def _encode_node(node, properties, lnk):
         attributes['carg'] = node.carg
     e = etree.Element('node', attrib=attributes)
     e.append(_encode_pred(node.predicate))
-    e.append(etree.Element('sortinfo', attrib=node.sortinfo))
+    if properties is True:
+        e.append(etree.Element('sortinfo', attrib=node.sortinfo))
+    else:
+        e.append(etree.Element('sortinfo'))
     return e
 
 
