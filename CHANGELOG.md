@@ -1,5 +1,15 @@
 # Change Log
 
+## [v1.4.1]
+
+**Release date: 2020-08-20**
+
+### Fixed
+
+* `delphin.codecs.dmrx` now actually suppresses properties when
+  `properties=False` ([#306]); thanks to @arademaker
+
+
 ## [v1.4.0]
 
 **Release date: 2020-07-20**
@@ -1429,3 +1439,4 @@ information about changes, except for
 [#302]: https://github.com/delph-in/pydelphin/issues/302
 [#303]: https://github.com/delph-in/pydelphin/issues/303
 [#304]: https://github.com/delph-in/pydelphin/issues/304
+[#306]: https://github.com/delph-in/pydelphin/issues/306
