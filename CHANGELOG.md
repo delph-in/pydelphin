@@ -2,6 +2,8 @@
 
 ## [v1.4.1]
 
+**Release date: 2020-08-20**
+
 ### Fixed
 
 * `delphin.codecs.dmrx` now actually suppresses properties when

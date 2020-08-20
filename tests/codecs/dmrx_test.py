@@ -31,4 +31,4 @@ def test_no_properties(it_rains_dmrs):
     assert d.nodes[0].properties == {'TENSE': 'pres'}
     d = dmrx.decode(dmrx.encode(it_rains_dmrs, properties=False))
     assert d.nodes[0].properties == {}
-    
+
