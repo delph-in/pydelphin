@@ -148,7 +148,7 @@ delphin.ace
    provides the `ace` :doc:`codec <delphin.codecs>`, available at
    :mod:`delphin.codecs.ace`. The codec ignores the non-MRS content in
    ACE's stdout so the user can use ACE output as a stream or as a
-   corpus of MRS representations. For example::
+   corpus of MRS representations. For example:
 
    .. code-block:: console
 
