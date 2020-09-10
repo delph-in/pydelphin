@@ -237,6 +237,15 @@ NOTE: 75 passive, 361 active edges in final generation chart; built 89 passives 
 NOTE: 35 passive, 210 active edges in final generation chart; built 37 passives total. [1 results]
 [...]
 
+PyDelphin also has the ability to do `full-forest
+<http://moin.delph-in.net/FftbTop>`_ parsing. In this mode, results
+(with derivation trees, MRSs, etc.) do not get enumerated in the
+profile but the edges of analyses are stored instead. The results of
+parsing in this mode can be used for full-forest treebanking.
+
+>>> with ace.ACEParser('~/grammars/erg.dat', full_forest=True) as cpu:
+...     ts.process(cpu)
+
 
 Troubleshooting
 ---------------
