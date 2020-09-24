@@ -39,8 +39,9 @@ def from_mrs(m, predicate_modifiers=False, unique_ids=True,
     # EP id to node id map; create now to keep ids consistent
     hcmap = {hc.hi: hc for hc in m.hcons}
     reps = scope.representatives(m, priority=representative_priority)
+    ivmap = {e.iv : e for e in m.predications}
 
-    top = _mrs_get_top(m.top, hcmap, reps)
+    top = _mrs_get_top(m.top, hcmap, reps, m.index, ivmap)
     deps = _mrs_args_to_basic_deps(m, hcmap, reps)
     nodes = _mrs_to_nodes(m, deps)
 
@@ -64,10 +65,13 @@ def from_mrs(m, predicate_modifiers=False, unique_ids=True,
     return e
 
 
-def _mrs_get_top(top, hcmap, reps):
+def _mrs_get_top(top, hcmap, reps, index, ivmap):
     if top in hcmap:
         lbl = hcmap[top].lo
-        top = reps[lbl][0].id
+        if lbl in reps:
+            top = reps[lbl][0].id
+        else:
+            top = reps[ivmap[index].label][0].id
     elif top in reps:
         top = reps[top][0].id
     return top
