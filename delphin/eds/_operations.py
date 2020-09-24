@@ -74,6 +74,8 @@ def _mrs_get_top(top, hcmap, reps, index, ivmap):
             top = reps[ivmap[index].label][0].id
     elif top in reps:
         top = reps[top][0].id
+    else:
+        top = None
     return top
 
 
