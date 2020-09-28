@@ -94,7 +94,10 @@ def _mrs_args_to_basic_deps(m, hcmap, reps):
                 # qeq
                 if tgt in hcmap:
                     lbl = hcmap[tgt].lo
-                    tgt = reps[lbl][0].id
+                    if lbl in reps:
+                        tgt = reps[lbl][0].id
+                    else:
+                        continue
                 # label arg
                 elif tgt in reps:
                     tgt = reps[tgt][0].id
