@@ -164,7 +164,8 @@ can help.
 .. seealso::
 
    - :mod:`delphin.tsql` module
-
+   - The Test Suite Query Language RFC wiki page: http://moin.delph-in.net/TsqlRfc
+   
 
 Writing Test Suites to Disk
 ---------------------------
