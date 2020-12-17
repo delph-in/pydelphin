@@ -3,6 +3,7 @@
 Operations on EDS
 """
 
+import warnings
 from itertools import count
 
 from delphin import variable
@@ -39,10 +40,12 @@ def from_mrs(m, predicate_modifiers=False, unique_ids=True,
     # EP id to node id map; create now to keep ids consistent
     hcmap = {hc.hi: hc for hc in m.hcons}
     reps = scope.representatives(m, priority=representative_priority)
-    ivmap = {e.iv : e for e in m.predications}
+    ivmap = {p.iv: (p, q)
+             for p, q in m.quantification_pairs()
+             if p is not None}
 
     top = _mrs_get_top(m.top, hcmap, reps, m.index, ivmap)
-    deps = _mrs_args_to_basic_deps(m, hcmap, reps)
+    deps = _mrs_args_to_basic_deps(m, hcmap, ivmap, reps)
     nodes = _mrs_to_nodes(m, deps)
 
     e = eds.EDS(
@@ -66,25 +69,28 @@ def from_mrs(m, predicate_modifiers=False, unique_ids=True,
 
 
 def _mrs_get_top(top, hcmap, reps, index, ivmap):
-    if top in hcmap:
+    if top in hcmap and hcmap[top].lo in reps:
         lbl = hcmap[top].lo
-        if lbl in reps:
+        top = reps[lbl][0].id
+    else:
+        if top in hcmap:
+            warnings.warn(
+                f'broken handle constraint: {hcmap[top]}',
+                eds.EDSWarning
+            )
+        if top in reps:
+            top = reps[top][0].id
+        elif index in ivmap and ivmap[index][0].label in reps:
+            lbl = ivmap[index][0].label
             top = reps[lbl][0].id
         else:
-            top = reps[ivmap[index].label][0].id
-    elif top in reps:
-        top = reps[top][0].id
-    else:
-        top = None
+            warnings.warn('unable to find a suitable TOP', eds.EDSWarning)
+            top = None
     return top
 
 
-def _mrs_args_to_basic_deps(m, hcmap, reps):
-    ivmap = {p.iv: (p, q)
-             for p, q in m.quantification_pairs()
-             if p is not None}
+def _mrs_args_to_basic_deps(m, hcmap, ivmap, reps):
     edges = {}
-
     for src, roleargs in m.arguments().items():
         if src in ivmap:
             p, q = ivmap[src]
@@ -97,6 +103,10 @@ def _mrs_args_to_basic_deps(m, hcmap, reps):
                     if lbl in reps:
                         tgt = reps[lbl][0].id
                     else:
+                        warnings.warn(
+                            f'broken handle constraint: {hcmap[tgt]}',
+                            eds.EDSWarning
+                        )
                         continue
                 # label arg
                 elif tgt in reps:
@@ -257,7 +267,8 @@ def make_ids_unique(e, m):
                 nids[nid] = next(new_ids)
 
     # now use the unique ID mapping for reassignment
-    e.top = nids[e.top]
+    if e.top is not None:
+        e.top = nids[e.top]
     for node in e.nodes:
         node.id = nids[node.id]
         edges = {role: nids[arg] for role, arg in node.edges.items()}
