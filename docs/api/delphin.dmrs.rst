@@ -82,3 +82,6 @@ delphin.dmrs
 
    .. autoexception:: DMRSSyntaxError
       :show-inheritance:
+
+   .. autoexception:: DMRSWarning
+      :show-inheritance:

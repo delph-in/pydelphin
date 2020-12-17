@@ -53,3 +53,6 @@ delphin.eds
 
    .. autoexception:: EDSSyntaxError
       :show-inheritance:
+
+   .. autoexception:: EDSWarning
+      :show-inheritance:
