@@ -40,12 +40,53 @@ def test_decode():
     assert e.nodes[3].predicate == '_bark_v_1'
 
 
+def test_decode_no_top():
+    e = edsnative.decode(
+        '{:\n'
+        ' e2:_bark_v_1{e}[ARG1 x4]\n'
+        ' _1:udef_q[BV x4]\n'
+        ' x4:_dog_n_1{x}[]\n'
+        '}'
+    )
+    assert e.top is None
+    assert len(e.nodes) == 3
+    # without initial colon
+    e = edsnative.decode(
+        '{\n'
+        ' e2:_bark_v_1{e}[ARG1 x4]\n'
+        ' _1:udef_q[BV x4]\n'
+        ' x4:_dog_n_1{x}[]\n'
+        '}'
+    )
+    assert e.top is None
+    assert len(e.nodes) == 3
+    # without newlines
+    e = edsnative.decode(
+        '{:e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}'
+    )
+    assert e.top is None
+    assert len(e.nodes) == 3
+
+
 def test_encode(dogs_bark_from_mrs):
     d = EDS(**dogs_bark_from_mrs)
     assert edsnative.encode(d) == (
         '{e2: e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}')
     assert edsnative.encode(d, indent=True) == (
         '{e2:\n'
+        ' e2:_bark_v_1{e}[ARG1 x4]\n'
+        ' _1:udef_q[BV x4]\n'
+        ' x4:_dog_n_1{x}[]\n'
+        '}')
+
+
+def test_encode_no_top(dogs_bark_from_mrs):
+    d = EDS(**dogs_bark_from_mrs)
+    d.top = None
+    assert edsnative.encode(d) == (
+        '{e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}')
+    assert edsnative.encode(d, indent=True) == (
+        '{\n'
         ' e2:_bark_v_1{e}[ARG1 x4]\n'
         ' _1:udef_q[BV x4]\n'
         ' x4:_dog_n_1{x}[]\n'

@@ -176,8 +176,28 @@ def _decode(lineiter):
 
 
 def _decode_eds(lexer):
-    _, top, _ = lexer.expect_type(LBRACE, SYMBOL, COLON)
-    lexer.accept_type(GRAPHSTATUS)
+    lexer.expect_type(LBRACE)
+
+    # after the LBRACE, the following patterns determine the top:
+    #   :                      1st is COLON        -> None
+    #   (fragmented)           1st is GRAPHSTATUS  -> None
+    #   }                      1st is RBRACE       -> None
+    #   |                      1st is NODESTATUS   -> None
+    #   <sym1> : (fragmented)  3rd is GRAPHSTATUS  -> <sym1>
+    #   <sym1> : |             3rd is NODESTATUS   -> <sym1>
+    #   <sym1> : <sym2> :      4th is COLON        -> <sym1>
+    #   <sym1> : <sym2> ...    otherwise           -> None
+    if lexer.peek()[0] in (COLON, GRAPHSTATUS, RBRACE, NODESTATUS):
+        top = None
+        lexer.accept_type(COLON)
+        lexer.accept_type(GRAPHSTATUS)
+    elif (lexer.peek(2)[0] in (GRAPHSTATUS, NODESTATUS)
+          or lexer.peek(3)[0] == COLON):
+        top, _ = lexer.expect_type(SYMBOL, COLON)
+        lexer.accept_type(GRAPHSTATUS)
+    else:
+        top = None
+
     nodes = []
     while lexer.peek()[0] != RBRACE:
         lexer.accept_type(NODESTATUS)
@@ -231,7 +251,11 @@ def _decode_edges(start, lexer):
 def _encode_eds(e, properties, lnk, show_status, indent):
     # do something predictable for empty EDS
     if len(e.nodes) == 0:
-        return '{:\n}' if indent else '{:}'
+        return '{\n}' if indent else '{}'
+
+    delim = '\n' if indent else ' '
+    connected = ' ' if indent else ''
+    disconnected = '|' if show_status else ' '
 
     # determine if graph is connected
     g = {node.id: set() for node in e.nodes}
@@ -241,25 +265,21 @@ def _encode_eds(e, properties, lnk, show_status, indent):
             g[target].add(node.id)
     nidgrp = _bfs(g, start=e.top)
 
-    status = ''
+    top_parts = []
+    if e.top is not None:
+        top_parts.append(e.top + ':')
     if show_status and nidgrp != set(g):
-        status = ' (fragmented)'
-    delim = '\n' if indent else ' '
-    connected = ' ' if indent else ''
-    disconnected = '|' if show_status else ' '
+        top_parts.append('(fragmented)')
 
-    ed_list = []
+    parts = []
+    if top_parts or indent:
+        parts.append(' '.join(top_parts))
+
     for node in e.nodes:
         membership = connected if node.id in nidgrp else disconnected
-        ed_list.append(membership + _encode_node(node, properties, lnk))
+        parts.append(membership + _encode_node(node, properties, lnk))
 
-    return '{{{top}{status}{delim}{ed_list}{enddelim}}}'.format(
-        top=e.top + ':' if e.top is not None else ':',
-        status=status,
-        delim=delim,
-        ed_list=delim.join(ed_list),
-        enddelim='\n' if indent else ''
-    )
+    return '{' + delim.join(parts) + ('\n}' if indent else '}')
 
 
 def _encode_node(node, properties, lnk):
