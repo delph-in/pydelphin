@@ -5,6 +5,7 @@
 ### Added
 
 * `delphin.eds.EDSWarning`
+* `delphin.codecs.eds` now reads and writes identifiers ([#323])
 
 ### Fixed
 
@@ -1462,3 +1463,4 @@ information about changes, except for
 [#306]: https://github.com/delph-in/pydelphin/issues/306
 [#316]: https://github.com/delph-in/pydelphin/issues/316
 [#319]: https://github.com/delph-in/pydelphin/issues/319
+[#323]: https://github.com/delph-in/pydelphin/issues/323

@@ -138,6 +138,7 @@ def encode(e, properties=True, lnk=True, show_status=False, indent=False):
 
 _EDSLexer = Lexer(
     tokens=[
+        (r'\#([^\s\{]+)\s*(?=\{|$)', 'IDENTIFIER'),
         (r'\{', 'LBRACE:{'),
         (r'\}', 'RBRACE:}'),
         (r'\((?:cyclic *)?(?:fragmented)?\)', 'GRAPHSTATUS'),
@@ -153,6 +154,7 @@ _EDSLexer = Lexer(
     ],
     error_class=EDSSyntaxError)
 
+IDENTIFIER  = _EDSLexer.tokentypes.IDENTIFIER
 LBRACE      = _EDSLexer.tokentypes.LBRACE
 RBRACE      = _EDSLexer.tokentypes.RBRACE
 GRAPHSTATUS = _EDSLexer.tokentypes.GRAPHSTATUS
@@ -176,6 +178,7 @@ def _decode(lineiter):
 
 
 def _decode_eds(lexer):
+    identifier = lexer.accept_type(IDENTIFIER)
     lexer.expect_type(LBRACE)
 
     # after the LBRACE, the following patterns determine the top:
@@ -204,7 +207,7 @@ def _decode_eds(lexer):
         start, _ = lexer.expect_type(SYMBOL, COLON)
         nodes.append(_decode_node(start, lexer))
     lexer.expect_type(RBRACE)
-    return EDS(top=top, nodes=nodes)
+    return EDS(top=top, nodes=nodes, identifier=identifier)
 
 
 def _decode_node(start, lexer):
@@ -249,9 +252,14 @@ def _decode_edges(start, lexer):
 # Encoding
 
 def _encode_eds(e, properties, lnk, show_status, indent):
+    start = '{'
+    if e.identifier:
+        start = f'#{e.identifier}' + ('\n' if indent else ' ') + '{'
+    end = '\n}' if indent else '}'
+
     # do something predictable for empty EDS
     if len(e.nodes) == 0:
-        return '{\n}' if indent else '{}'
+        return start + end
 
     delim = '\n' if indent else ' '
     connected = ' ' if indent else ''
@@ -279,7 +287,7 @@ def _encode_eds(e, properties, lnk, show_status, indent):
         membership = connected if node.id in nidgrp else disconnected
         parts.append(membership + _encode_node(node, properties, lnk))
 
-    return '{' + delim.join(parts) + ('\n}' if indent else '}')
+    return start + delim.join(parts) + end
 
 
 def _encode_node(node, properties, lnk):

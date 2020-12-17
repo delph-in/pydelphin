@@ -68,7 +68,23 @@ def test_decode_no_top():
     assert len(e.nodes) == 3
 
 
+def test_decode_identifier():
+    e = edsnative.decode(
+        '#123\n'
+        '{e2:\n'
+        ' e2:_rain_v_1<3:9>{e SF prop, TENSE pres}[]\n'
+        '}'
+    )
+    assert e.identifier == '123'
+    e = edsnative.decode(
+        '#123 {e2: e2:_rain_v_1<3:9>{e SF prop, TENSE pres}[] }'
+    )
+    assert e.identifier == '123'
+
+
 def test_encode(dogs_bark_from_mrs):
+    assert edsnative.encode(EDS()) == '{}'
+    assert edsnative.encode(EDS(), indent=True) == '{\n}'
     d = EDS(**dogs_bark_from_mrs)
     assert edsnative.encode(d) == (
         '{e2: e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}')
@@ -87,6 +103,21 @@ def test_encode_no_top(dogs_bark_from_mrs):
         '{e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}')
     assert edsnative.encode(d, indent=True) == (
         '{\n'
+        ' e2:_bark_v_1{e}[ARG1 x4]\n'
+        ' _1:udef_q[BV x4]\n'
+        ' x4:_dog_n_1{x}[]\n'
+        '}')
+
+
+def test_encode_identifier(dogs_bark_from_mrs):
+    assert edsnative.encode(EDS(identifier='123')) == '#123 {}'
+    d = EDS(**dogs_bark_from_mrs)
+    d.identifier = '123'
+    assert edsnative.encode(d) == (
+        '#123 {e2: e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}')
+    assert edsnative.encode(d, indent=True) == (
+        '#123\n'
+        '{e2:\n'
         ' e2:_bark_v_1{e}[ARG1 x4]\n'
         ' _1:udef_q[BV x4]\n'
         ' x4:_dog_n_1{x}[]\n'
