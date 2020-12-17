@@ -1,5 +1,24 @@
 # Change Log
 
+## Unreleased
+
+### Added
+
+* `delphin.eds.EDSWarning`
+
+### Fixed
+
+* `delphin.codecs.eds` now reads EDSs without tops (related to [#316])
+* `delphin.eds` conversion from MRS ignores broken HCONS ([#319])
+
+### Changed
+
+* `delphin.codecs.eds` no longer outputs `:` when top is `None`
+  (related to [#316])
+* `delphin.eds` conversion from MRS backs off to index as top if MRS
+  top is `None` ([#316])
+
+
 ## [v1.4.1]
 
 **Release date: 2020-08-20**
@@ -1441,3 +1460,5 @@ information about changes, except for
 [#303]: https://github.com/delph-in/pydelphin/issues/303
 [#304]: https://github.com/delph-in/pydelphin/issues/304
 [#306]: https://github.com/delph-in/pydelphin/issues/306
+[#316]: https://github.com/delph-in/pydelphin/issues/316
+[#319]: https://github.com/delph-in/pydelphin/issues/319
