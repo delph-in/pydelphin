@@ -6,6 +6,7 @@
 
 * `delphin.eds.EDSWarning`
 * `delphin.codecs.eds` now reads and writes identifiers ([#323])
+* `--no-predicate-modifiers` option for `delphin convert`
 
 ### Fixed
 
@@ -16,8 +17,18 @@
 
 * `delphin.codecs.eds` no longer outputs `:` when top is `None`
   (related to [#316])
-* `delphin.eds` conversion from MRS backs off to index as top if MRS
-  top is `None` ([#316])
+* `delphin.codecs.eds` now defaults to `indent=True`
+* `delphin.eds.from_mrs` backs off to index as top if MRS top is
+  `None` ([#316])
+* `delphin.eds.from_mrs` defaults to `predicate_modifiers=True`
+* All semantics codecs now use indentation and blank lines in between
+  by default
+* `*-lines` codecs now ignore the `--indent` option
+
+### Deprecated
+
+* `--predicate-modifiers`; with predicate modification is now the
+  default for EDS
 
 
 ## [v1.4.1]

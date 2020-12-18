@@ -3,7 +3,8 @@
 Convert DELPH-IN Semantics representations and formats.
 
 Use --list to see the available codecs. A codec name may be suffixed
-with "-lines" to enable line-based reading/writing.
+with "-lines" to enable line-based reading/writing, in which case the
+--indent option is ignored.
 """
 
 import sys
@@ -111,8 +112,7 @@ parser.add_argument(
     '--indent',
     metavar='N',
     nargs='?',
-    default=False,
-    const=True,
+    default=True,
     help='format with explicit indent N ("no" for no newlines)')
 parser.add_argument(
     '--color',
@@ -133,6 +133,11 @@ parser.add_argument(
     '--predicate-modifiers',
     action='store_true',
     help='(--to=eds* only) attempt to join disconnected graphs')
+parser.add_argument(
+    '--no-predicate-modifiers',
+    dest='predicate_modifiers',
+    action='store_false',
+    help='(--to=eds* only) do not use predicate modification')
 parser.add_argument(
     '--sem-i', '--semi',
     dest='semi',

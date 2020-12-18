@@ -12,7 +12,7 @@ from delphin import eds
 from delphin import util
 
 
-def from_mrs(m, predicate_modifiers=False, unique_ids=True,
+def from_mrs(m, predicate_modifiers=True, unique_ids=True,
              representative_priority=None):
     """
     Create an EDS by converting from MRS *m*.

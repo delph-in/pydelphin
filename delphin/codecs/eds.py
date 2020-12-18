@@ -50,9 +50,8 @@ def loads(s):
 
 
 def dump(es, destination, properties=True, lnk=True, show_status=False,
-         indent=False, encoding='utf-8'):
-    """
-    Serialize EDS objects to an EDS file.
+         indent=True, encoding='utf-8'):
+    """Serialize EDS objects to an EDS file.
 
     Args:
         destination: filename or file object
@@ -61,11 +60,11 @@ def dump(es, destination, properties=True, lnk=True, show_status=False,
         properties: if `True`, encode variable properties
         lnk: if `False`, suppress surface alignments and strings
         show_status (bool): if `True`, indicate disconnected components
-        indent: if `True`, adaptively indent; if `False` or `None`,
-            don't indent; if a non-negative integer N, indent N spaces
-            per level
+        indent: if `True` or a positive integer, format with newlines
+            and indentation; if `0`, `False` or `None`, don't indent
         encoding (str): if *destination* is a filename, write to the
             file with the given encoding; otherwise it is ignored
+
     """
     string = dumps(es, properties=properties, lnk=lnk,
                    show_status=show_status, indent=indent)
@@ -77,7 +76,7 @@ def dump(es, destination, properties=True, lnk=True, show_status=False,
             print(string, file=fh)
 
 
-def dumps(es, properties=True, lnk=True, show_status=False, indent=False):
+def dumps(es, properties=True, lnk=True, show_status=False, indent=True):
     """
     Serialize EDS objects to an EDS string.
 
@@ -87,16 +86,15 @@ def dumps(es, properties=True, lnk=True, show_status=False, indent=False):
         properties: if `True`, encode variable properties
         lnk: if `False`, suppress surface alignments and strings
         show_status (bool): if `True`, indicate disconnected components
-        indent: if `True`, adaptively indent; if `False` or `None`,
-            don't indent; if a non-negative integer N, indent N spaces
-            per level
+        indent: if `True` or a positive integer, format with newlines
+            and indentation; if `0`, `False` or `None`, don't indent
     Returns:
         an EDS-serialization of the EDS objects
     """
     if indent is None or indent is False:
         delim = ' '
     else:
-        delim = '\n'
+        delim = '\n\n'
     return delim.join(
         encode(e, properties=properties, lnk=lnk,
                show_status=show_status, indent=indent)
@@ -111,7 +109,7 @@ def decode(s):
     return _decode_eds(lexer)
 
 
-def encode(e, properties=True, lnk=True, show_status=False, indent=False):
+def encode(e, properties=True, lnk=True, show_status=False, indent=True):
     """
     Serialize an EDS object to an EDS string.
 
@@ -120,8 +118,8 @@ def encode(e, properties=True, lnk=True, show_status=False, indent=False):
         properties (bool): if `False`, suppress variable properties
         lnk: if `False`, suppress surface alignments and strings
         show_status (bool): if `True`, indicate disconnected components
-        indent (bool, int): if `True` or an integer value, add
-            newlines and indentation
+        indent: if `True` or a positive integer, format with newlines
+            and indentation; if `0`, `False` or `None`, don't indent
     Returns:
         an EDS-serialization of the EDS object
     """

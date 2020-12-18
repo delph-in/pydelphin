@@ -125,9 +125,7 @@ def convert(path: Union[util.PathLike, IO[str]],
     xs = _iter_convert(converter, xs)
 
     # write
-    kwargs = {}
-    if indent:
-        kwargs['indent'] = indent
+    kwargs = {'indent': indent}
     if target_fmt == 'eds':
         kwargs['show_status'] = show_status
     if target_fmt == 'indexedmrs' and semi is not None:
@@ -141,6 +139,7 @@ def convert(path: Union[util.PathLike, IO[str]],
     if target_lines:
         header = footer = ''
         joiner = '\n'
+        kwargs['indent'] = None
     else:
         header = getattr(target_codec, 'HEADER', '')
         joiner = getattr(target_codec, 'JOINER', ' ')
@@ -148,7 +147,7 @@ def convert(path: Union[util.PathLike, IO[str]],
         if indent is not None:
             if header:
                 header += '\n'
-            joiner = joiner.strip() + '\n'
+            joiner = joiner.strip() + '\n\n'
             if footer:
                 footer = '\n' + footer
 

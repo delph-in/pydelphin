@@ -66,6 +66,11 @@ def test_decode_no_top():
     )
     assert e.top is None
     assert len(e.nodes) == 3
+    # with anonymous top (supposedly)
+    e = edsnative.decode(
+        '{_: e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}'
+    )
+    assert e.top == '_'
 
 
 def test_decode_identifier():
@@ -83,12 +88,12 @@ def test_decode_identifier():
 
 
 def test_encode(dogs_bark_from_mrs):
-    assert edsnative.encode(EDS()) == '{}'
-    assert edsnative.encode(EDS(), indent=True) == '{\n}'
+    assert edsnative.encode(EDS()) == '{\n}'
+    assert edsnative.encode(EDS(), indent=False) == '{}'
     d = EDS(**dogs_bark_from_mrs)
-    assert edsnative.encode(d) == (
+    assert edsnative.encode(d, indent=False) == (
         '{e2: e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}')
-    assert edsnative.encode(d, indent=True) == (
+    assert edsnative.encode(d) == (
         '{e2:\n'
         ' e2:_bark_v_1{e}[ARG1 x4]\n'
         ' _1:udef_q[BV x4]\n'
@@ -99,9 +104,9 @@ def test_encode(dogs_bark_from_mrs):
 def test_encode_no_top(dogs_bark_from_mrs):
     d = EDS(**dogs_bark_from_mrs)
     d.top = None
-    assert edsnative.encode(d) == (
+    assert edsnative.encode(d, indent=False) == (
         '{e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}')
-    assert edsnative.encode(d, indent=True) == (
+    assert edsnative.encode(d) == (
         '{\n'
         ' e2:_bark_v_1{e}[ARG1 x4]\n'
         ' _1:udef_q[BV x4]\n'
@@ -110,12 +115,13 @@ def test_encode_no_top(dogs_bark_from_mrs):
 
 
 def test_encode_identifier(dogs_bark_from_mrs):
-    assert edsnative.encode(EDS(identifier='123')) == '#123 {}'
+    assert edsnative.encode(EDS(identifier='123'), indent=False) == '#123 {}'
     d = EDS(**dogs_bark_from_mrs)
     d.identifier = '123'
+    assert edsnative.encode(d, indent=False) == (
+        '#123 {e2: e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}'
+    )
     assert edsnative.encode(d) == (
-        '#123 {e2: e2:_bark_v_1{e}[ARG1 x4] _1:udef_q[BV x4] x4:_dog_n_1{x}[]}')
-    assert edsnative.encode(d, indent=True) == (
         '#123\n'
         '{e2:\n'
         ' e2:_bark_v_1{e}[ARG1 x4]\n'
