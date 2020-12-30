@@ -57,25 +57,60 @@ Please follow these guidelines for code and repository changes:
 
 ### Testing
 
-Always run the unit tests before committing. You can use a tool like
-[Tox](https://testrun.org/tox/latest/) with a minimal config like
-this:
+Always run the unit tests before committing. First, from a terminal
+with PyDelphin's top-level directory as the current working directory,
+create a virtual environment (the following assumes you have Python 3
+installed; the commands may differ depending on your operating system
+and choice of shell):
+
+* Linux/macOS
+
+  ```console
+  $ python3 -m venv env
+  $ source env/bin/activate
+  ```
+
+* Windows
+
+  ```console
+  > py -3 -m venv env
+  > .\env\Scripts\Activate.ps1
+  ```
+
+Once activated, you should see `(env)` in the shell prompt. You can
+then install PyDelphin's dependencies and run tests with the current
+version of Python:
+
+```console
+$ pip install .[test]
+$ pytest
+...
+```
+
+To run the tests for all supported versions of Python, a tool like
+[Tox](https://tox.readthedocs.io/) is helpful. First install `tox`:
+
+```console
+$ pip install tox
+```
+
+Then create a `tox.ini` file in the same directory as `setup.py`:
 
     [tox]
-    envlist = py36,py37,py38
+    envlist = py36,py37,py38,py39
 
     [testenv]
     usedevelop = True
     extras = tests
     commands = pytest
 
-But this config is no longer distributed with PyDelphin. To run the
-tests without tox, then for each supported Python version:
+Then you can run `tox` which will create virtual environments and run
+`pytest` for each version (note: you need to have each of those
+versions of Python installed for it to work):
 
- - create a virtual environment and activate it
- - `pip install -e .[test]` (from the PyDelphin directory)
- - `pytest` (maybe `py.test` depending on your system)
-
+```console
+$ tox
+```
 
 ### Test Coverage
 
