@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('..'))
 import delphin.__about__
 
 project = delphin.__about__.__title__
-copyright = u'2019, Michael Wayne Goodman'
+copyright = u'2020, Michael Wayne Goodman'
 author = delphin.__about__.__author__
 
 # The short X.Y version

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [v1.5.0]
+
+**Release date: 2020-12-30**
+
 ### Python Versions
 
 * Added Python 3.9 support
@@ -1313,6 +1317,7 @@ There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
 [commit messages](../../commits/v0.2).
 
+[v1.5.0]: ../../releases/tag/v1.5.0
 [v1.4.1]: ../../releases/tag/v1.4.1
 [v1.4.0]: ../../releases/tag/v1.4.0
 [v1.3.0]: ../../releases/tag/v1.3.0
