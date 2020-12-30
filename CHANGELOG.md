@@ -12,6 +12,7 @@
 
 * `delphin.codecs.eds` now reads EDSs without tops (related to [#316])
 * `delphin.eds` conversion from MRS ignores broken HCONS ([#319])
+* `delphin.tsdb.read_schema()` always opens files in UTF-8 ([#324])
 
 ### Changed
 
@@ -1475,3 +1476,4 @@ information about changes, except for
 [#316]: https://github.com/delph-in/pydelphin/issues/316
 [#319]: https://github.com/delph-in/pydelphin/issues/319
 [#323]: https://github.com/delph-in/pydelphin/issues/323
+[#324]: https://github.com/delph-in/pydelphin/issues/324

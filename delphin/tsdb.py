@@ -181,7 +181,7 @@ def read_schema(path: util.PathLike) -> Schema:
     if not path.is_file():
         raise TSDBSchemaError(f'no valid schema file at {path!s}')
 
-    return _parse_schema(path.read_text())
+    return _parse_schema(path.read_text(encoding='utf-8'))
 
 
 def _parse_schema(s: str) -> Schema:
@@ -548,7 +548,7 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
     Casting the `:integer`, `:string`, and `:float` types is trivial,
     but for `:date` TSDB uses a non-standard date format.  This format
     generally follows the `DD-MM-YY` pattern, optionally followed by a
-    time (with no timezone or UTF-offset allowed). The day of the
+    time (with no timezone or UTC-offset allowed). The day of the
     month may be left unspecified, in which case `01` is used. Years
     may be 2 or 4 digits: in the case of 2-digit years, `19` is
     prepended if the 2-digit year is greater than or equal to 93 (the
