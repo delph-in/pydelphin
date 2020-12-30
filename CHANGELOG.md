@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Python Versions
+
+* Added Python 3.9 support
+
 ### Added
 
 * `delphin.eds.EDSWarning`
