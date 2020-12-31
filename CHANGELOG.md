@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+* `delphin.tsdb.write_schema()` always opens files in UTF-8 ([#324])
+
+
 ## [v1.5.0]
 
 **Release date: 2020-12-30**

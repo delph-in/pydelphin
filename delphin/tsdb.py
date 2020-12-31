@@ -230,7 +230,7 @@ def write_schema(path: util.PathLike,
     path = Path(path).expanduser()
     if path.is_dir():
         path = path.joinpath(SCHEMA_FILENAME)
-    path.write_text(_format_schema(schema) + '\n')
+    path.write_text(_format_schema(schema) + '\n', encoding='utf-8')
 
 
 def _format_schema(schema: Schema) -> str:
