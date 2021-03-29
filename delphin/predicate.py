@@ -146,13 +146,13 @@ def is_surface(s):
     Return `True` if *s* is a valid surface predicate string.
 
     Examples:
-        >>> is_valid('"_dog_n_1_rel"')
+        >>> is_surface('"_dog_n_1_rel"')
         True
-        >>> is_valid('_dog_n_1')
+        >>> is_surface('_dog_n_1')
         True
-        >>> is_valid('_dog_noun_1')
+        >>> is_surface('_dog_noun_1')
         False
-        >>> is_valid('dog_noun_1')
+        >>> is_surface('dog_noun_1')
         False
     """
     _s = _strip_predicate(s)
@@ -169,9 +169,9 @@ def is_abstract(s):
         True
         >>> is_abstract('"coord"')
         True
-        >>> is_valid('"_dog_n_1_rel"')
+        >>> is_abstract('"_dog_n_1_rel"')
         False
-        >>> is_valid('_dog_n_1')
+        >>> is_abstract('_dog_n_1')
         False
     """
     _s = _strip_predicate(s)
