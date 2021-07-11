@@ -5,7 +5,7 @@ Interfaces for external data providers.
 """
 
 from typing import Optional
-from collections import Sequence
+from collections.abc import Sequence
 
 from delphin import util
 from delphin import exceptions

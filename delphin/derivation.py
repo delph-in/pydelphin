@@ -5,7 +5,8 @@ Classes and functions related to derivation trees.
 """
 
 import re
-from collections import namedtuple, Sequence
+from collections import namedtuple
+from collections.abc import Sequence
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
