@@ -293,72 +293,101 @@ def _SExpr_unescape_string(s):
     return re.sub(r'\\(["\\])', r'\1', s)
 
 
-class _SExprParser(object):
-    def parse(self, s):
-        i = 0
-        n = len(s)
-        while i < n and s[i].isspace():
+def _SExpr_parse(s: str) -> SExprResult:
+    s = s.lstrip()
+    data: _Cons = []
+    if not s:
+        return SExprResult(data, '')
+    assert s.startswith('(')
+    i = 1
+    n = len(s)
+    stack: List[List[_SExpr]] = []
+    vals: List[_SExpr] = []
+    while i < n:
+        c = s[i]
+        # numbers
+        if c.isdigit() or c == '-' and (i + 1 < n) and s[i + 1].isdigit():
+            num, i = _SExpr_parse_number(s, i)
+            vals.append(num)
+        # quoted strings
+        elif c == '"':
+            string, i = _SExpr_parse_string(s, i)
+            vals.append(string)
+        # start new list
+        elif c == '(':
+            stack.append(vals)
+            vals = []
             i += 1
-        if i == n:
-            return SExprResult([], '')
-        assert s[i] == '('
-        i += 1
-        while i < n and s[i].isspace():
-            i += 1
-        stack = [[]]
-        while i < n:
-            c = s[i]
-            # numbers
-            if c.isdigit() or c == '-' and s[i + 1].isdigit():
-                j = i + 1
-                while s[j].isdigit():
-                    j += 1
-                c = s[j]
-                if c in '.eE':  # float
-                    if c == '.':
-                        j += 1
-                        while s[j].isdigit():
-                            j += 1
-                    if c in 'eE':
-                        j += 1
-                        if s[j] in '+=':
-                            j += 1
-                        while s[j].isdigit():
-                            j += 1
-                    stack[-1].append(float(s[i:j]))
-                else:  # int
-                    stack[-1].append(int(s[i:j]))
-                i = j
-            elif c == '"':  # quoted strings
-                j = i + 1
-                while s[j] != '"':
-                    if s[j] == '\\':
-                        j += 2
-                    else:
-                        j += 1
-                stack[-1].append(
-                    _SExpr_unescape_string(s[i + 1 : j]))  # noqa: E203
-                i = j + 1
-            elif c == '(':
-                stack.append([])
-                i += 1
-            elif c == ')':
-                xs = stack.pop()
-                if len(xs) == 3 and xs[1] == '.':
-                    xs = tuple(xs[::2])
-                if len(stack) == 0:
-                    return SExprResult(xs, s[i + 1 :])  # noqa: E203
-                else:
-                    stack[-1].append(xs)
-                i += 1
-            elif c.isspace():
-                i += 1
+        # end list
+        elif c == ')':
+            if len(vals) == 3 and vals[1] == '.':
+                data = (vals[0], vals[2])  # simplify dotted pair
             else:
-                m = _SExpr_symbol_re.match(s, pos=i)
-                if m is None:
-                    raise ValueError('Invalid S-Expression: ' + s)
-                stack[-1].append(_SExpr_unescape_symbol(m.group(0)))
-                i += len(m.group(0))
+                data = vals
+            if len(stack) == 0:
+                break
+            else:
+                stack[-1].append(data)
+                vals = stack.pop()
+            i += 1
+        # ignore whitespace
+        elif c.isspace():
+            i += 1
+        # any other symbol
+        else:
+            sym, i = _SExpr_parse_symbol(s, i)
+            vals.append(sym)
+
+    return SExprResult(data, s[i+1:])
+
+
+def _SExpr_parse_number(s: str, i: int) -> Tuple[Union[int, float], int]:
+    j = i + 1  # start at next character
+    while s[j].isdigit():
+        j += 1
+    c = s[j]
+
+    if c not in '.eE':  # int
+        return int(s[i:j]), j
+
+    # float
+    if c == '.':
+        j += 1
+        while s[j].isdigit():
+            j += 1
+        c = s[j]
+
+    if c in 'eE':
+        j += 1
+        if s[j] in '+-':
+            j += 1
+        while s[j].isdigit():
+            j += 1
+
+    return float(s[i:j]), j
+
+
+def _SExpr_parse_string(s: str, i: int) -> Tuple[str, int]:
+    j = i + 1
+    while s[j] != '"':
+        if s[j] == '\\':
+            j += 2
+        else:
+            j += 1
+    return _SExpr_unescape_string(s[i+1:j]), j + 1
+
+
+def _SExpr_parse_symbol(s: str, i: int) -> Tuple[str, int]:
+    m = _SExpr_symbol_re.match(s, pos=i)
+    if m is None:
+        raise ValueError('Invalid S-Expression: ' + s)
+    return _SExpr_unescape_symbol(m.group(0)), m.end()
+
+
+class _SExprParser(object):
+
+    def parse(self, s: str) -> SExprResult:
+        return _SExpr_parse(s.lstrip())
 
     def format(self, d):
         if isinstance(d, tuple) and len(d) == 2:
