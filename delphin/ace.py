@@ -677,7 +677,7 @@ def _sexpr_data(line: str) -> Iterator[Tuple[str, Any]]:
                 (':error', 'incomplete output from ACE'),
                 '')
         if len(expr.data) != 2:
-            logger.error('Malformed output from ACE: %s', line)
+            logger.error('Could not read output from ACE: %s', line)
             break
 
         key, val = expr.data
