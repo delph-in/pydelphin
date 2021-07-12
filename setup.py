@@ -12,6 +12,7 @@ with open(os.path.join(base_dir, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 repp_requires = ['regex==2020.1.8']
+web_requires = ['requests==2.22.0', 'falcon==2.0.0']
 
 # thanks: https://snarky.ca/clarifying-pep-518/
 doc_requirements = os.path.join(base_dir, 'docs', 'requirements.txt')
@@ -21,8 +22,11 @@ if os.path.isfile(doc_requirements):
 else:
     docs_require = []
 
-tests_require = repp_requires + [
+tests_require = repp_requires + web_requires + [
     'pytest',
+    'flake8',
+    'mypy',
+    'types-requests',
 ]
 
 setup(
@@ -75,7 +79,7 @@ setup(
             'wheel >= 0.31.0',
             'twine >= 1.11.0'
         ],
-        'web': ['requests==2.22.0', 'falcon==2.0.0'],
+        'web': web_requires,
         'repp': repp_requires,
     },
     entry_points={
