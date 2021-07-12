@@ -2,7 +2,7 @@
 
 [![PyPI Version](https://img.shields.io/pypi/v/pydelphin.svg)](https://pypi.org/project/PyDelphin/)
 ![Python Support](https://img.shields.io/pypi/pyversions/pydelphin.svg)
-[![Build Status](https://travis-ci.org/delph-in/pydelphin.svg)](https://travis-ci.org/delph-in/pydelphin)
+[![Test Status](https://github.com/delph-in/pydelphin/workflows/tests/badge.svg)](https://github.com/delph-in/pydelphin/actions?query=workflow%3A%22tests%22)
 [![Documentation Status](https://readthedocs.org/projects/pydelphin/badge/?version=latest)](https://pydelphin.readthedocs.io/en/latest/?badge=latest)
 
 [DELPH-IN](http://delph-in.net) is an international consortium of
