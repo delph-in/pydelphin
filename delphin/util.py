@@ -4,6 +4,7 @@ Utility functions.
 """
 
 from typing import (
+    Any,
     Union,
     Iterable,
     Iterator,
@@ -265,12 +266,17 @@ def _vf2_candidates(
 # S-expressions
 #  e.g. (:n-inputs . 3) or (S (NP (NNS Dogs)) (VP (VBZ bark)))
 
-_Val = Union[str, int, float]
+_Atom = Union[str, int, float]
+_SExpr = Union[_Atom, '_Cons']
+# The following would be nice, but Mypy doesn't do recursive types yet:
+#     https://github.com/python/mypy/issues/731
+# _Cons = Union[Tuple[_SExpr, _SExpr], List[_SExpr]]
+_Cons = Union[Tuple[Any, Any], List[Any]]
 
 
 class SExprResult(NamedTuple):
     """The result of parsing an S-Expression."""
-    data: Union[Tuple[_Val, _Val], List[_Val]]
+    data: _Cons
     remainder: str
 
 

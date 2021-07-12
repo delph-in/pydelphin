@@ -11,7 +11,7 @@ from typing import (
 import re
 from pathlib import Path
 from collections import OrderedDict
-from gzip import open as gzopen
+from gzip import open as gzopen, GzipFile
 import tempfile
 import shutil
 from datetime import datetime, date
@@ -740,9 +740,6 @@ def _get_paths(dir: util.PathLike, name: str) -> Tuple[Path, Path, bool]:
     return tx_path, gz_path, use_gz
 
 
-# Note: the return type should have TextIO instead of IO[str], but
-# there's a bug in the type checker. Replace when mypy no longer
-# complains about TextIO.
 def open(dir: util.PathLike,
          name: str,
          encoding: Optional[str] = None) -> IO[str]:
@@ -865,8 +862,8 @@ def write(dir: util.PathLike,
         # now copy the temp file to the destination
         f_tmp.seek(0)
         if gzip:
-            with gzopen(dest, mode) as f_out:
-                shutil.copyfileobj(f_tmp, f_out)
+            with GzipFile(dest, mode=mode) as gz_out:
+                shutil.copyfileobj(f_tmp, gz_out)
         else:
             with dest.open(mode=mode) as f_out:
                 shutil.copyfileobj(f_tmp, f_out)

@@ -1,8 +1,11 @@
 # coding: utf-8
 
+import codecs
+
 from delphin.util import safe_int, SExpr, detect_encoding, LookaheadIterator
 
-import pytest, codecs
+import pytest
+
 
 def test_safe_int():
     assert safe_int('1') == 1
@@ -57,6 +60,7 @@ def test_SExpr_format():
 #     assert unescape_string('\\u3042') == 'あ'
 #     assert unescape_string('\\xe3\\x81\\x82') == 'あ'
 #     assert unescape_string('\\N{HIRAGANA LETTER A}') == 'あ'
+
 
 @pytest.fixture
 def empty_file(tmp_path):
@@ -116,7 +120,7 @@ def shiftjis_file(tmp_path):
 def eucjp_file(tmp_path):
     f = tmp_path / 'eucjp.txt'
     f.write_text(u'; coding: euc_jp\n'
-                 u'a=\"あ\"', encoding = 'euc_jp')
+                 u'a=\"あ\"', encoding='euc_jp')
     return str(f)
 
 
@@ -142,9 +146,11 @@ def invalid3_file(tmp_path):
     return str(f)
 
 
-def test_detect_encoding(empty_file, nocomment_file, utf8_file, utf8var1_file,
+def test_detect_encoding(
+    empty_file, nocomment_file, utf8_file, utf8var1_file,
     utf8var2_file, shiftjis_file, eucjp_file, latin1_file, invalid1_file,
-    invalid2_file, invalid3_file):
+    invalid2_file, invalid3_file
+):
     assert detect_encoding(empty_file) == 'utf-8'
     assert detect_encoding(nocomment_file) == 'utf-8'
     assert detect_encoding(utf8_file) == 'utf-8'

@@ -668,7 +668,7 @@ def _make_response(lines, run) -> Tuple[interface.Response, List[str]]:
     return response, content_lines
 
 
-def _sexpr_data(line: str) -> Iterator[Dict[str, Any]]:
+def _sexpr_data(line: str) -> Iterator[Tuple[str, Any]]:
     while line:
         try:
             expr = util.SExpr.parse(line)
@@ -679,8 +679,12 @@ def _sexpr_data(line: str) -> Iterator[Dict[str, Any]]:
         if len(expr.data) != 2:
             logger.error('Malformed output from ACE: %s', line)
             break
+
+        key, val = expr.data
+        assert isinstance(key, str)
+        yield key, val
+
         line = expr.remainder.lstrip()
-        yield expr.data
 
 
 def _tsdb_response(response: interface.Response,
