@@ -571,7 +571,7 @@ def generate(grm: util.PathLike,
 
 # The following defines the command-line options available for users to
 # specify in ACEProcess tasks. For a description of these options, see:
-#     http://moin.delph-in.net/AceOptions
+#     https://github.com/delph-in/docs/wiki/AceOptions
 
 # thanks: https://stackoverflow.com/a/14728477/1441112
 class _ACEArgumentParser(argparse.ArgumentParser):

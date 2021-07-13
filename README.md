@@ -10,15 +10,15 @@
 researchers committed to producing precise, high-quality language
 processing tools and resources, primarily in the
 [HPSG](http://hpsg.stanford.edu/) syntactic and
-[MRS](http://moin.delph-in.net/RmrsTop) semantic frameworks, and
-PyDelphin is a suite of Python libraries for processing data and
-interacting with tools in the DELPH-IN ecosystem. PyDelphin's goal is
-to lower the barriers to making use of DELPH-IN resources to help
-users quickly build applications or perform experiments, and it has
-been successfully used for research into machine translation (e.g.,
-[Goodman, 2018]), sentence chunking ([Muszyńska, 2016]), neural
-semantic parsing ([Buys & Blunsom, 2017]), natural language
-generation ([Hajdik et al., 2019]), and more.
+[MRS](https://github.com/delph-in/docs/wiki/RmrsTop) semantic
+frameworks, and PyDelphin is a suite of Python libraries for
+processing data and interacting with tools in the DELPH-IN
+ecosystem. PyDelphin's goal is to lower the barriers to making use of
+DELPH-IN resources to help users quickly build applications or perform
+experiments, and it has been successfully used for research into
+machine translation (e.g., [Goodman, 2018]), sentence chunking
+([Muszyńska, 2016]), neural semantic parsing ([Buys & Blunsom, 2017]),
+natural language generation ([Hajdik et al., 2019]), and more.
 
 [Goodman, 2018]: https://goodmami.org/static/goodman-dissertation.pdf
 [Muszyńska, 2016]: https://www.aclweb.org/anthology/P16-3014
@@ -56,38 +56,38 @@ an issue][issues].
 PyDelphin contains the following modules:
 
 Semantic Representations:
-- [`delphin.mrs`]:  [Minimal Recursion Semantics](http://moin.delph-in.net/MrsRfc)
-- [`delphin.eds`]:  [Elementary Dependency Structures](http://moin.delph-in.net/EdsTop)
-- [`delphin.dmrs`]: [Dependency Minimal Recursion Semantics](http://moin.delph-in.net/RmrsDmrs)
+- [`delphin.mrs`]:  [Minimal Recursion Semantics](https://github.com/delph-in/docs/wiki/MrsRfc)
+- [`delphin.eds`]:  [Elementary Dependency Structures](https://github.com/delph-in/docs/wiki/EdsTop)
+- [`delphin.dmrs`]: [Dependency Minimal Recursion Semantics](https://github.com/delph-in/docs/wiki/RmrsDmrs)
 
 Semantic Components and Interfaces:
-- [`delphin.semi`]:      [Semantic Interface](http://moin.delph-in.net/SemiRfc)
-- [`delphin.vpm`]:       [Variable Property Mapping](http://moin.delph-in.net/RmrsVpm)
+- [`delphin.semi`]:      [Semantic Interface](https://github.com/delph-in/docs/wiki/SemiRfc)
+- [`delphin.vpm`]:       [Variable Property Mapping](https://github.com/delph-in/docs/wiki/RmrsVpm)
 - [`delphin.variable`]:  MRS variables
-- [`delphin.predicate`]: [Semantic Predicates](http://moin.delph-in.net/PredicateRfc)
+- [`delphin.predicate`]: [Semantic Predicates](https://github.com/delph-in/docs/wiki/PredicateRfc)
 - [`delphin.scope`]:     Underspecified scope
 - [`delphin.sembase`]:   Basic semantic structures
 - [`delphin.codecs`]:    A wide variety of serialization codecs for MRS, EDS, and DMRS
 
 Grammar and Parse Inspection:
-- [`delphin.derivation`]: [Derivation trees](http://moin.delph-in.net/ItsdbDerivations)
-- [`delphin.tdl`]:        [Type-Description Language](http://moin.delph-in.net/TdlRfc)
+- [`delphin.derivation`]: [Derivation trees](https://github.com/delph-in/docs/wiki/ItsdbDerivations)
+- [`delphin.tdl`]:        [Type-Description Language](https://github.com/delph-in/docs/wiki/TdlRfc)
 - [`delphin.tfs`]:        Feature structures and type hierarchies
 
 Tokenization:
-- [`delphin.repp`]:   [Regular-Expression PreProcessor](http://moin.delph-in.net/ReppTop)
-- [`delphin.tokens`]: [YY Token lattices](http://moin.delph-in.net/PetInput#YY_Input_Mode)
+- [`delphin.repp`]:   [Regular-Expression PreProcessor](https://github.com/delph-in/docs/wiki/ReppTop)
+- [`delphin.tokens`]: [YY Token lattices](https://github.com/delph-in/docs/wiki/PetInput#yy-input-mode)
 - [`delphin.lnk`]:    Lnk surface alignments
 
 Corpus Management and Processing:
-- [`delphin.itsdb`]: [\[incr tsdb()\]](http://moin.delph-in.net/ItsdbTop) profiles
+- [`delphin.itsdb`]: [\[incr tsdb()\]](https://github.com/delph-in/docs/wiki/ItsdbTop) profiles
 - [`delphin.tsdb`]: Low-level interface to test suite databases
-- [`delphin.tsql`]:  [TSQL](http://moin.delph-in.net/TsqlRfc) test suite queries
+- [`delphin.tsql`]:  [TSQL](https://github.com/delph-in/docs/wiki/TsqlRfc) test suite queries
 
 Interfaces with External Processors:
 - [`delphin.interface`]: Structures for interacting with external processors
 - [`delphin.ace`]:       Python wrapper for common tasks using [ACE](http://sweaglesw.org/linguistics/ace/)
-- [`delphin.web`]:       Client for the [web API](http://moin.delph-in.net/ErgApi)
+- [`delphin.web`]:       Client for the [web API](https://github.com/delph-in/docs/wiki/ErgApi)
 
 Core Components and Command Line Interface:
 - [`delphin.commands`]:   Functional interface to common tasks
@@ -163,20 +163,20 @@ requests. Also thanks to the users of PyDelphin!
 ### Related Software
 
 * Parser/Generators (chronological order)
-  - LKB: http://moin.delph-in.net/LkbTop (also: http://moin.delph-in.net/LkbFos)
-  - PET: http://moin.delph-in.net/PetTop
+  - LKB: https://github.com/delph-in/docs/wiki/LkbTop (also: https://github.com/delph-in/docs/wiki/LkbFos)
+  - PET: https://github.com/delph-in/docs/wiki/PetTop
   - ACE: http://sweaglesw.org/linguistics/ace/
-  - agree: http://moin.delph-in.net/AgreeTop
+  - agree: https://github.com/delph-in/docs/wiki/AgreeTop
 * Grammar profiling, testing, and analysis
   - \[incr tsdb()\]: http://www.delph-in.net/itsdb/
   - gDelta: https://github.com/ned2/gdelta
   - Typediff: https://github.com/ned2/typediff
 * Software libraries and repositories
-  - LOGON: http://moin.delph-in.net/LogonTop
+  - LOGON: https://github.com/delph-in/docs/wiki/LogonTop
   - pydmrs: https://github.com/delph-in/pydmrs
 * Also see (may have overlap with the above):
-  - http://moin.delph-in.net/ToolsTop
-  - http://moin.delph-in.net/DelphinApplications
+  - https://github.com/delph-in/docs/wiki/ToolsTop
+  - https://github.com/delph-in/docs/wiki/DelphinApplications
 
 ### Spelling
 

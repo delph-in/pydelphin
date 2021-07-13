@@ -13,7 +13,7 @@ delphin.derivation
 
    .. seealso::
       More information about derivation trees is found at
-      http://moin.delph-in.net/ItsdbDerivations
+      https://github.com/delph-in/docs/wiki/ItsdbDerivations
 
    For the following Japanese example...
 
@@ -25,8 +25,8 @@ delphin.derivation
      "Shots were heard in the distance."
 
    ... here is the derivation tree of a parse from `Jacy
-   <http://moin.delph-in.net/JacyTop>`_ in the Unified Derivation
-   Format (UDF)::
+   <https://github.com/delph-in/docs/wiki/JacyTop>`_ in the Unified
+   Derivation Format (UDF)::
 
      (utterance-root
       (564 utterance_rule-decl-finite 1.02132 0 6

@@ -149,12 +149,12 @@ Transfer
 --------
 
 ACE also implements most of the `LOGON transfer formalism
-<http://moin.delph-in.net/LogonTransfer>`_, and this functionality is
-available in PyDelphin via the :class:`~delphin.ace.ACETransferer`
-class and related functions. In the current version of ACE, transfer
-does not return as much information as with parsing and generation,
-but the response object in PyDelphin is the same as with the other
-tasks.
+<https://github.com/delph-in/docs/wiki/LogonTransfer>`_, and this
+functionality is available in PyDelphin via the
+:class:`~delphin.ace.ACETransferer` class and related functions. In
+the current version of ACE, transfer does not return as much
+information as with parsing and generation, but the response object in
+PyDelphin is the same as with the other tasks.
 
 >>> j_response = ace.parse('jacy.dat', '雨 が 降る')
 >>> je_response = ace.transfer('jaen.dat', j_response.result(0)['mrs'])

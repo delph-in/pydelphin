@@ -115,7 +115,7 @@ class YYToken(_YYToken):
         return d
 
 
-# from: http://moin.delph-in.net/PetInput
+# from: https://github.com/delph-in/docs/wiki/PetInput
 # (id, start, end, [link,] path+, form [surface], ipos, lrule+[, {pos p}+])
 _yy_re = re.compile(
     r'\(\s*'

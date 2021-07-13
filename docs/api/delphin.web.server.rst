@@ -7,7 +7,7 @@ delphin.web.server
 This module provides classes and functions that implement a subset of
 the DELPH-IN Web API DELPH-IN Web API described here:
 
-    http://moin.delph-in.net/ErgApi
+    https://github.com/delph-in/docs/wiki/ErgApi
 
 .. note::
 

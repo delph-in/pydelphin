@@ -106,8 +106,8 @@ delphin.tsdb
    .. seealso::
 
       See the `TsdbSchemaRfc
-      <http://moin.delph-in.net/TsdbSchemaRfc>`_ wiki for a
-      description of the format of ``relations`` files.
+      <https://github.com/delph-in/docs/wiki/TsdbSchemaRfc>`_ wiki for
+      a description of the format of ``relations`` files.
 
    In PyDelphin, TSDB schemas are represented as dictionaries of lists
    of :class:`Field` objects.

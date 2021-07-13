@@ -49,9 +49,10 @@ Please follow these guidelines for code and repository changes:
   classes when standard Python data structures are sufficient
 * In implementing DELPH-IN formalisms and formats, aim first to be
   correct and complete (according to documentation at
-  http://moin.delph-in.net/; if a wiki doesn't exist, it's a good idea
-  to make one), and secondly convenient. Avoid adding features that
-  aren't part of the spec and would have limited utility.
+  https://github.com/delph-in/docs/wiki/; if a wiki doesn't exist,
+  it's a good idea to make one), and secondly convenient. Avoid adding
+  features that aren't part of the spec and would have limited
+  utility.
 * PyDelphin is primarily a library, not an application, so application
   code in general belongs in separate repositories. Applications can,
   however, make use of the `delphin` namespace.

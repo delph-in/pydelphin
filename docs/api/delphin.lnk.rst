@@ -23,8 +23,8 @@ delphin.lnk
    edge identifiers are only used internally in the `LKB`_ for
    generation. I will therefore focus on the first two kinds.
 
-   .. _`PET`: http://moin.delph-in.net/PetTop
-   .. _`LKB`: http://moin.delph-in.net/LkbTop
+   .. _`PET`: https://github.com/delph-in/docs/wiki/PetTop
+   .. _`LKB`: https://github.com/delph-in/docs/wiki/LkbTop
 
    Character spans (sometimes called "characterization pointers") are by
    far the most commonly used type---possibly even the only type most

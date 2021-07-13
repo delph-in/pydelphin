@@ -56,7 +56,7 @@ you've imported it as follows:
 .. seealso::
 
   - The [incr tsdb()] homepage: http://www.delph-in.net/itsdb/
-  - The [incr tsdb()] wiki: http://moin.delph-in.net/ItsdbTop
+  - The [incr tsdb()] wiki: https://github.com/delph-in/docs/wiki/ItsdbTop
   - The Wikipedia entry on database terminology:
     https://en.wikipedia.org/wiki/Relational_database#Terminology
 
@@ -164,7 +164,7 @@ can help.
 .. seealso::
 
    - :mod:`delphin.tsql` module
-   - The Test Suite Query Language RFC wiki page: http://moin.delph-in.net/TsqlRfc
+   - The Test Suite Query Language RFC wiki page: https://github.com/delph-in/docs/wiki/TsqlRfc
    
 
 Writing Test Suites to Disk
@@ -239,10 +239,11 @@ NOTE: 35 passive, 210 active edges in final generation chart; built 37 passives 
 [...]
 
 PyDelphin also has the ability to do `full-forest
-<http://moin.delph-in.net/FftbTop>`_ parsing. In this mode, results
-(with derivation trees, MRSs, etc.) do not get enumerated in the
-profile but the edges of analyses are stored instead. The results of
-parsing in this mode can be used for full-forest treebanking.
+<https://github.com/delph-in/docs/wiki/FftbTop>`_ parsing. In this
+mode, results (with derivation trees, MRSs, etc.) do not get
+enumerated in the profile but the edges of analyses are stored
+instead. The results of parsing in this mode can be used for
+full-forest treebanking.
 
 >>> with ace.ACEParser('~/grammars/erg.dat', full_forest=True) as cpu:
 ...     ts.process(cpu)
