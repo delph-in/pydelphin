@@ -2,8 +2,9 @@
 
 [![PyPI Version](https://img.shields.io/pypi/v/pydelphin.svg)](https://pypi.org/project/PyDelphin/)
 ![Python Support](https://img.shields.io/pypi/pyversions/pydelphin.svg)
-[![Test Status](https://github.com/delph-in/pydelphin/workflows/tests/badge.svg)](https://github.com/delph-in/pydelphin/actions?query=workflow%3A%22tests%22)
+[![Test Status](https://github.com/delph-in/pydelphin/actions/workflows/checks.yml/badge.svg)](https://github.com/delph-in/pydelphin/actions/workflows/checks.yml)
 [![Documentation Status](https://readthedocs.org/projects/pydelphin/badge/?version=latest)](https://pydelphin.readthedocs.io/en/latest/?badge=latest)
+![Discourse topics](https://img.shields.io/discourse/topics?color=%234b2e83&server=https%3A%2F%2Fdelphinqa.ling.washington.edu)
 
 [DELPH-IN](http://delph-in.net) is an international consortium of
 researchers committed to producing precise, high-quality language
@@ -128,7 +129,7 @@ Core Components and Command Line Interface:
 ### Getting Help
 
 Please use the [issue tracker][issues] for bug reports, feature
-requests, and PyDelphin-specific questions. For more general questions
+requests, and documentation requests. For more general questions
 and support, try one of the following channels maintained by the
 DELPH-IN community:
 

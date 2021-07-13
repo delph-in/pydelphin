@@ -4,6 +4,7 @@ The easiest way to contribute to PyDelphin is to try it out and enter
 bug reports and feature requests. If you're contributing code, fork
 the repository and make pull requests to the `develop` branch.
 
+
 ## Filing issues
 
 File issues here: https://github.com/delph-in/pydelphin/issues
@@ -13,7 +14,10 @@ Please use the issue tracker for:
 * bug reports
 * feature requests
 * documentation requests
-* PyDelphin questions
+
+Questions about PyDelphin can be asked on the [DELPH-IN Discourse
+site](https://delphinqa.ling.washington.edu/) in the "PyDelphin Tools"
+category.
 
 For bug requests, please provide the following, if possible:
 
@@ -23,14 +27,15 @@ For bug requests, please provide the following, if possible:
   ```python
   >>> from delphin.__about__ import __version__
   >>> __version__  # distribution version
-  '1.5.0'
+  '1.6.0'
   >>> from delphin import mrs
   >>> mrs.__version__  # package version
-  '1.5.0'
+  '1.6.0'
   ```
 * Python version (e.g. 3.6, 3.7, etc.)
 
 For feature requests, please provide a use case for the feature.
+
 
 ## Submitting code
 
@@ -55,11 +60,12 @@ Please follow these guidelines for code and repository changes:
   functions. Follow [Google-style docstrings] and use
   [reStructuredText] for formatting.
 
-### Testing
+### Creating a Development Environment
 
-Always run the unit tests before committing. First, from a terminal
-with PyDelphin's top-level directory as the current working directory,
-create a virtual environment (the following assumes you have Python 3
+In order to run the tests and build the documentation you'll need to
+create a development environment: a virtual environment with the
+dependencies installed. First create and activate a virtual
+environment from a terminal (the following assumes you have Python 3
 installed; the commands may differ depending on your operating system
 and choice of shell):
 
@@ -82,35 +88,41 @@ then install PyDelphin's dependencies and run tests with the current
 version of Python:
 
 ```console
-$ pip install .[test]
+$ pip install -e .[dev]
+```
+
+The `-e` option is an "editable" install, meaning that Python will use
+the source files directly (via symlinks) instead of copying them into
+the virtual environment. The benefit is that you won't have to
+reinstall each time you make a change. The `[dev]` extra installs all
+dependencies for testing, building documentation, and uploading
+releases. If you just want to run the unit tests, the `[tests]` extra
+is sufficient.
+
+### Testing
+
+Always run the unit tests before committing. Simply run pytest from
+PyDelphin's top directory to run the unit tests:
+
+```console
 $ pytest
-...
 ```
 
-To run the tests for all supported versions of Python, a tool like
-[Tox](https://tox.readthedocs.io/) is helpful. First install `tox`:
+Note that passing the tests for one version of Python may not be
+sufficient for the code to be accepted; it must pass the tests against
+all supported versions of Python.
+
+The commands for linting (style and type checking) need some
+configuration:
 
 ```console
-$ pip install tox
+$ flake8 delphin --extend-ignore E221
+$ mypy delphin --namespace-packages --explicit-package-bases --ignore-missing-imports
 ```
 
-Then create a `tox.ini` file in the same directory as `setup.py`:
-
-    [tox]
-    envlist = py36,py37,py38,py39
-
-    [testenv]
-    usedevelop = True
-    extras = tests
-    commands = pytest
-
-Then you can run `tox` which will create virtual environments and run
-`pytest` for each version (note: you need to have each of those
-versions of Python installed for it to work):
-
-```console
-$ tox
-```
+These tests will be run automatically when a commit is pushed or pull
+request is submitted against the `develop` branch, but it's often more
+convenient to run it locally before pushing commits.
 
 ### Test Coverage
 
@@ -121,6 +133,7 @@ Compute test coverage by installing
 
 Note that the codebase doesn't yet have full test coverage.
 Contributions of unit tests are very welcome!
+
 
 ## Documentation
 
