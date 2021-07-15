@@ -749,12 +749,9 @@ def _parse_repp_group(
         elif line[0] == '>':
             modname = line[1:].rstrip()
             if modname.isdigit():
-                if modname in igs:
-                    yield igs[modname]
-                else:
-                    raise REPPError(
-                        'Iterative group not defined: ' + modname
-                    )
+                if modname not in igs:
+                    igs[modname] = _REPPIterativeGroup([], modname)
+                yield igs[modname]
             else:
                 if modname not in r.modules:
                     if directory is None:
@@ -770,16 +767,14 @@ def _parse_repp_group(
         elif line[0] == '#':
             igname = line[1:].rstrip()
             if igname.isdigit():
-                if igname in igs:
+                if igname not in igs:
+                    igs[igname] = _REPPIterativeGroup([], igname)
+                ig = igs[igname]
+                if ig.operations:
                     raise REPPError(
                         'Internal group name already defined: ' + igname
                     )
-                igs[igname] = _REPPIterativeGroup(
-                    operations=list(
-                        _parse_repp_group(lines, r, directory)
-                    ),
-                    name=igname
-                )
+                ig.operations.extend(_parse_repp_group(lines, r, directory))
             elif igname == '':
                 return
             else:

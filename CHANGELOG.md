@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+* REPP no longer requires iterative group calls to appear after the
+  group definitions ([#308])
 
 ## [v1.5.1]
 
@@ -1494,6 +1498,7 @@ information about changes, except for
 [#303]: https://github.com/delph-in/pydelphin/issues/303
 [#304]: https://github.com/delph-in/pydelphin/issues/304
 [#306]: https://github.com/delph-in/pydelphin/issues/306
+[#308]: https://github.com/delph-in/pydelphin/issues/308
 [#316]: https://github.com/delph-in/pydelphin/issues/316
 [#319]: https://github.com/delph-in/pydelphin/issues/319
 [#323]: https://github.com/delph-in/pydelphin/issues/323

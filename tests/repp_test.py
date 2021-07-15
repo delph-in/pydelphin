@@ -239,3 +239,17 @@ def test_unmatched_group_issue_301():
     x = r.from_string(r'!(a)(b)*	\1 \2')
     assert x.apply('ab').string == 'a b'
     assert x.apply('a').string == 'a '
+
+
+def test_iterative_group_use_before_define_issue_308():
+    # https://github.com/delph-in/pydelphin/issues/301
+    x = r.from_string(
+        '>1\n'
+        '#1\n'
+        r'!(^| )([()%,])([^ ])	\1\2 \3' '\n'
+        r'!([^ ])([()%,])( |$)	\1 \2\3' '\n'
+        '#\n'
+    ).apply('(42%),')
+    assert x.string == '( 42 % ) ,'
+
+
