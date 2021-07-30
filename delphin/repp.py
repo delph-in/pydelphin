@@ -267,15 +267,6 @@ class _REPPRule(_REPPOperation):
 
         yield REPPStep(s, o, self, applied, smap, emap)
 
-    def _itermatches(
-            self, ms: Iterable[Match[str]]
-    ) -> Iterator[Tuple[int, Match[str]]]:
-        """Yield pairs of the last affected position and a match."""
-        last_pos = 0
-        for m in ms:
-            yield (last_pos, m)
-            last_pos = m.end()
-
     def _itersegments(
             self, m: Match[str]
     ) -> Iterator[Tuple[str, int, int, bool]]:
