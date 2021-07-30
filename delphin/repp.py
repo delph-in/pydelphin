@@ -107,7 +107,7 @@ class REPPStep(NamedTuple):
 _Trace = Iterator[Union[REPPStep, REPPResult]]
 
 
-class _REPPOperation(object):
+class _REPPOperation:
     """
     The supertype of REPP groups and rules.
 
@@ -115,62 +115,9 @@ class _REPPOperation(object):
     which are available in [_REPPRule], [_REPPGroup],
     [_REPPIterativeGroup], and [REPP] instances.
     """
+
     def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
         raise NotImplementedError()
-
-    def apply(self, s: str, active: Iterable[str] = None) -> REPPResult:
-        logger.info('apply(%r)', s)
-        for step in self._trace(s, set(active or []), False):
-            pass  # we only care about the last step
-        assert isinstance(step, REPPResult)
-        return step
-
-    def trace(
-        self, s: str, active: Iterable[str] = None, verbose: bool = False
-    ) -> _Trace:
-        logger.info('trace(%r)', s)
-        yield from self._trace(s, set(active or []), verbose)
-
-    def _trace(
-        self, s: str, active: Set[str], verbose: bool
-    ) -> _Trace:
-        startmap = _zeromap(s)
-        endmap = _zeromap(s)
-        # initial boundaries
-        startmap[0] = 1
-        endmap[-1] = -1
-        step = None
-        for step in self._apply(s, active):
-            if step.applied or verbose:
-                yield step
-            if step.applied:
-                startmap = _mergemap(startmap, step.startmap)
-                endmap = _mergemap(endmap, step.endmap)
-        if step is not None:
-            s = step.output
-        yield REPPResult(s, startmap, endmap)
-
-    def tokenize(
-        self,
-        s: str,
-        pattern: str = DEFAULT_TOKENIZER,
-        active: Iterable[str] = None
-    ) -> YYTokenLattice:
-        logger.info('tokenize(%r, %r)', s, pattern)
-        res = self.apply(s, active=set(active or []))
-        return self.tokenize_result(res, pattern=pattern)
-
-    def tokenize_result(
-            self, result: REPPResult, pattern: str = DEFAULT_TOKENIZER
-    ) -> YYTokenLattice:
-        logger.info('tokenize_result(%r, %r)', result, pattern)
-        tokens = [
-            YYToken(id=i, start=i, end=(i + 1),
-                    lnk=Lnk.charspan(tok[0], tok[1]),
-                    form=tok[2])
-            for i, tok in enumerate(_tokenize(result, pattern))
-        ]
-        return YYTokenLattice(tokens)
 
 
 class _REPPRule(_REPPOperation):
@@ -268,7 +215,7 @@ class _REPPRule(_REPPOperation):
         yield REPPStep(s, o, self, applied, smap, emap)
 
     def _itersegments(
-            self, m: Match[str]
+        self, m: Match[str]
     ) -> Iterator[Tuple[str, int, int, bool]]:
         """Yield tuples of (replacement, start, end, tracked)."""
         start = m.start()
@@ -305,7 +252,7 @@ class _REPPRule(_REPPOperation):
 
 class _REPPGroup(_REPPOperation):
     def __init__(
-            self, operations: List[_REPPOperation] = None, name: str = None
+        self, operations: List[_REPPOperation] = None, name: str = None
     ):
         if operations is None:
             operations = []
@@ -369,7 +316,7 @@ class _REPPIterativeGroup(_REPPGroup):
         logger.debug('>%s (done; iterated %d time(s))', self.name, i)
 
 
-class REPP(object):
+class REPP:
     """
     A Regular Expression Pre-Processor (REPP).
 
@@ -398,10 +345,11 @@ class REPP(object):
     """
 
     def __init__(
-            self,
-            name: str = None,
-            modules: Dict[str, 'REPP'] = None,
-            active: Iterable[str] = None):
+        self,
+        name: str = None,
+        modules: Dict[str, 'REPP'] = None,
+        active: Iterable[str] = None
+    ):
         self.info: Optional[str] = None
         self.tokenize_pattern: Optional[str] = None
         self.group = _REPPGroup(name=name)
@@ -559,11 +507,12 @@ class REPP(object):
             a :class:`REPPResult` object containing the processed
                 string and characterization maps
         """
-        if active is None:
-            active = self.active
-        else:
-            active = set(active)
-        return self.group.apply(s, active=active)
+        logger.info('apply(%r)', s)
+        active = self.active if active is None else set(active)
+        for step in self._trace(s, active, False):
+            pass  # we only care about the last step
+        assert isinstance(step, REPPResult)
+        return step
 
     def trace(
         self, s: str, active: Iterable[str] = None, verbose: bool = False
@@ -582,12 +531,31 @@ class REPP(object):
                 step, and finally a :class:`REPPResult` object after
                 the last rewrite
         """
-        if active is None:
-            active = self.active
-        return self.group.trace(s, active=active, verbose=verbose)
+        logger.info('trace(%r)', s)
+        active = self.active if active is None else set(active)
+        yield from self._trace(s, active, verbose)
+
+    def _trace(
+        self, s: str, active: Set[str], verbose: bool
+    ) -> _Trace:
+        startmap = _zeromap(s)
+        endmap = _zeromap(s)
+        # initial boundaries
+        startmap[0] = 1
+        endmap[-1] = -1
+        step = None
+        for step in self.group._apply(s, active):
+            if step.applied or verbose:
+                yield step
+            if step.applied:
+                startmap = _mergemap(startmap, step.startmap)
+                endmap = _mergemap(endmap, step.endmap)
+        if step is not None:
+            s = step.output
+        yield REPPResult(s, startmap, endmap)
 
     def tokenize(
-            self, s: str, pattern: str = None, active: Iterable[str] = None
+        self, s: str, pattern: str = None, active: Iterable[str] = None
     ) -> YYTokenLattice:
         """
         Rewrite and tokenize the input string *s*.
@@ -602,17 +570,20 @@ class REPP(object):
             a :class:`~delphin.tokens.YYTokenLattice` containing the
             tokens and their characterization information
         """
+        logger.info('tokenize(%r, %r)', s, pattern)
         if pattern is None:
             if self.tokenize_pattern is None:
                 pattern = DEFAULT_TOKENIZER
             else:
                 pattern = self.tokenize_pattern
-        if active is None:
-            active = self.active
-        return self.group.tokenize(s, pattern=pattern, active=active)
+        active = self.active if active is None else set(active)
+        for step in self._trace(s, active, False):
+            pass  # we only care about the last step
+        assert isinstance(step, REPPResult)
+        return self.tokenize_result(step, pattern=pattern)
 
     def tokenize_result(
-            self, result: REPPResult, pattern: str = DEFAULT_TOKENIZER
+        self, result: REPPResult, pattern: str = DEFAULT_TOKENIZER
     ) -> YYTokenLattice:
         """
         Tokenize the result of rule application.
@@ -625,7 +596,14 @@ class REPP(object):
             a :class:`~delphin.tokens.YYTokenLattice` containing the
             tokens and their characterization information
         """
-        return self.group.tokenize_result(result, pattern=pattern)
+        logger.info('tokenize_result(%r, %r)', result, pattern)
+        tokens = [
+            YYToken(id=i, start=i, end=(i + 1),
+                    lnk=Lnk.charspan(tok[0], tok[1]),
+                    form=tok[2])
+            for i, tok in enumerate(_tokenize(result, pattern))
+        ]
+        return YYTokenLattice(tokens)
 
 
 def _compile(pattern: str) -> Pattern[str]:
@@ -662,11 +640,11 @@ def _mergemap(map1: _CMap, map2: _CMap) -> _CMap:
 
 
 def _copy_part(
-        s: str,
-        shift: int,
-        parts: List[str],
-        smap: _CMap,
-        emap: _CMap
+    s: str,
+    shift: int,
+    parts: List[str],
+    smap: _CMap,
+    emap: _CMap
 ) -> None:
     parts.append(s)
     smap.extend([shift] * len(s))
@@ -674,12 +652,12 @@ def _copy_part(
 
 
 def _insert_part(
-        s: str,
-        w: int,
-        shift: int,
-        parts: List[str],
-        smap: _CMap,
-        emap: _CMap
+    s: str,
+    w: int,
+    shift: int,
+    parts: List[str],
+    smap: _CMap,
+    emap: _CMap
 ) -> None:
     parts.append(s)
     a = shift
