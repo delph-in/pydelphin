@@ -108,22 +108,36 @@ def test_local_inline_flags():
 
 
 def test_basic_external_group_active():
-    x = r.from_string(
+    _r = r.from_string(
         '>a',
-        modules={'a': r.from_string(r'!a	b')},
+        modules={'a': r.from_string(r'!a	b'),
+                 'b': r.from_string(r'!b	c')},
         active=['a']
-    ).apply('baba')
+    )
+    print(_r.active)
+    x = _r.apply('baba')
     assert x.string == 'bbbb'
     assert x.startmap.tolist() == [1, 0, 0, 0, 0, 0]
     assert x.endmap.tolist() == [0, 0, 0, 0, 0, -1]
 
     x = r.from_string(
         '>a',
-        modules={'a': r.from_string(r'!a	b')}
+        modules={'a': r.from_string(r'!a	b'),
+                 'b': r.from_string(r'!b	c')},
     ).apply('baba', active=['a'])
     assert x.string == 'bbbb'
     assert x.startmap.tolist() == [1, 0, 0, 0, 0, 0]
     assert x.endmap.tolist() == [0, 0, 0, 0, 0, -1]
+
+
+def test_indirect_external_group_active():
+    a = r.from_string('>b', modules={'b': r.from_string(r'!a	b')})
+    assert a.apply('baba').string == 'baba'
+    assert r.from_string(
+        '>a',
+        modules={'a': a},
+        active=('a', 'b')
+    ).apply('baba').string == 'bbbb'
 
 
 def test_basic_external_group_inactive():

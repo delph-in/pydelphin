@@ -113,7 +113,7 @@ class _REPPOperation:
 
     This class defines the apply(), trace(), and tokenize() methods
     which are available in [_REPPRule], [_REPPGroup],
-    [_REPPIterativeGroup], and [REPP] instances.
+    [_REPPInternalGroup], and [REPP] instances.
     """
 
     def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
@@ -265,9 +265,6 @@ class _REPPGroup(_REPPOperation):
             type(self).__name__, name, id(self)
         )
 
-    def __str__(self):
-        return 'Module {}'.format(self.name if self.name is not None else '')
-
     def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
         o = s
         applied = False
@@ -280,43 +277,26 @@ class _REPPGroup(_REPPOperation):
         yield REPPStep(s, o, self, applied, _zeromap(o), _zeromap(o))
 
 
-class _REPPGroupCall(_REPPOperation):
-    def __init__(self, name: str, modules: Dict[str, 'REPP']):
-        self.name = name
-        self.modules = modules
-
-    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
-        if active is not None and self.name in active:
-            logger.info('>%s', self.name)
-            yield from self.modules[self.name]._apply(s, active)
-            logger.debug('>%s (done)', self.name)
-        else:
-            logger.debug('>%s (inactive)', self.name)
-
-
-class _REPPIterativeGroup(_REPPGroup):
+class _REPPInternalGroup(_REPPGroup):
     def __str__(self):
         return f'Internal group #{self.name}'
 
     def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
         logger.debug('>%s', self.name)
-        o = s
-        applied = False
-        prev = None
         i = 0
-        while prev != o:
+        prev = s
+        for step in super()._apply(prev, active):
+            yield step
+        while step and prev != step.output:
             i += 1
-            prev = o
-            for operation in self.operations:
-                for step in operation._apply(o, active):
-                    yield step
-                    o = step.output
-                    applied |= step.applied
-            yield REPPStep(s, o, self, applied, _zeromap(o), _zeromap(o))
+            prev = step.output
+            for step in super()._apply(prev, active):
+                yield step
+
         logger.debug('>%s (done; iterated %d time(s))', self.name, i)
 
 
-class REPP:
+class REPP(_REPPGroup):
     """
     A Regular Expression Pre-Processor (REPP).
 
@@ -346,22 +326,26 @@ class REPP:
 
     def __init__(
         self,
+        operations: List[_REPPOperation] = None,
         name: str = None,
         modules: Dict[str, 'REPP'] = None,
         active: Iterable[str] = None
     ):
+        super().__init__(operations=operations, name=name)
         self.info: Optional[str] = None
         self.tokenize_pattern: Optional[str] = None
-        self.group = _REPPGroup(name=name)
+        self._loaded = False
 
         if modules is None:
             modules = {}
         self.modules = dict(modules)
+        for modname, mod in self.modules.items():
+            mod.name = modname
         self.active: Set[str] = set()
         if active is None:
             active = []
-        for mod in active:
-            self.activate(mod)
+        for modname in active:
+            self.activate(modname)
 
     @classmethod
     def from_config(cls, path: PathLike, directory=None):
@@ -453,12 +437,7 @@ class REPP:
                 activations
         """
         path = Path(path).expanduser()
-        if directory is not None:
-            directory = Path(directory).expanduser()
-        else:
-            directory = path.parent
-        name = path.with_suffix('').name
-        lines = _repp_lines(path)
+        name, directory, lines = _read_file(path, directory)
         r = cls(name=name, modules=modules, active=active)
         _parse_repp(lines, r, directory)
         return r
@@ -493,7 +472,12 @@ class REPP:
             self.active.remove(mod)
 
     def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
-        return self.group._apply(s, active)
+        if self.name in active:
+            logger.info('>%s', self.name)
+            yield from super()._apply(s, active)
+            logger.debug('>%s (done)', self.name)
+        else:
+            logger.debug('>%s (inactive)', self.name)
 
     def apply(self, s: str, active: Iterable[str] = None) -> REPPResult:
         """
@@ -509,10 +493,8 @@ class REPP:
         """
         logger.info('apply(%r)', s)
         active = self.active if active is None else set(active)
-        for step in self._trace(s, active, False):
-            pass  # we only care about the last step
-        assert isinstance(step, REPPResult)
-        return step
+        result = last(self._trace(s, active, False))
+        return result
 
     def trace(
         self, s: str, active: Iterable[str] = None, verbose: bool = False
@@ -544,7 +526,7 @@ class REPP:
         startmap[0] = 1
         endmap[-1] = -1
         step = None
-        for step in self.group._apply(s, active):
+        for step in super()._apply(s, active):
             if step.applied or verbose:
                 yield step
             if step.applied:
@@ -577,10 +559,8 @@ class REPP:
             else:
                 pattern = self.tokenize_pattern
         active = self.active if active is None else set(active)
-        for step in self._trace(s, active, False):
-            pass  # we only care about the last step
-        assert isinstance(step, REPPResult)
-        return self.tokenize_result(step, pattern=pattern)
+        result = last(self._trace(s, active, False))
+        return self.tokenize_result(result, pattern=pattern)
 
     def tokenize_result(
         self, result: REPPResult, pattern: str = DEFAULT_TOKENIZER
@@ -620,6 +600,13 @@ def _compile(pattern: str) -> Pattern[str]:
             return re.compile(pattern, flags=re.V0)
         else:
             raise
+
+
+def last(steps: _Trace) -> REPPResult:
+    for step in steps:
+        pass
+    assert isinstance(step, REPPResult)
+    return step
 
 
 def _zeromap(s: str) -> _CMap:
@@ -685,6 +672,19 @@ def _tokenize(result: REPPResult, pattern: str) -> List[Tuple[int, int, str]]:
     return toks
 
 
+def _read_file(
+    path: Path,
+    directory: Optional[Path]
+) -> Tuple[str, Path, List[str]]:
+    if directory is not None:
+        directory = Path(directory).expanduser()
+    else:
+        directory = path.parent
+    name = path.with_suffix('').name
+    lines = _repp_lines(path)
+    return name, directory, lines
+
+
 def _repp_lines(path: Path) -> List[str]:
     if not path.is_file():
         raise REPPError(f'REPP file not found: {path!s}')
@@ -692,52 +692,57 @@ def _repp_lines(path: Path) -> List[str]:
 
 
 def _parse_repp(lines: List[str], r: REPP, directory: Path) -> None:
+    r._loaded = True
     ops = list(_parse_repp_group(lines, r, directory))
     if lines:
         raise REPPError('Unexpected termination; maybe the # operator '
                         'appeared without an internal group.')
-    r.group.operations.extend(ops)
+    r.operations.extend(ops)
 
 
 def _parse_repp_group(
     lines: List[str], r: REPP, directory: Path
 ) -> Iterator[_REPPOperation]:
-    igs: Dict[str, _REPPIterativeGroup] = {}  # internal groups
+    igs: Dict[str, _REPPInternalGroup] = {}  # internal groups
     while lines:
         line = lines.pop(0)
+
         if line.startswith(';') or line.strip() == '':
             continue  # skip comments and empty lines
+
         elif line[0] == '!':
             match = re.match(r'([^\t]+)\t+(.*)', line[1:])
             if match is None:
                 raise REPPError(f'Invalid rewrite rule: {line}')
             yield _REPPRule(match.group(1), match.group(2))
+
         elif line[0] == '<':
             fn = directory.joinpath(line[1:].rstrip())
             lines = _repp_lines(fn) + lines
+
         elif line[0] == '>':
             modname = line[1:].rstrip()
             if modname.isdigit():
                 if modname not in igs:
-                    igs[modname] = _REPPIterativeGroup([], modname)
+                    igs[modname] = _REPPInternalGroup([], modname)
                 yield igs[modname]
             else:
                 if modname not in r.modules:
+                    r.modules[modname] = REPP(name=modname, modules=r.modules)
+                mod = r.modules[modname]
+                if not mod._loaded:
                     if directory is None:
                         raise REPPError('Cannot implicitly load modules if '
                                         'a directory is not given.')
-                    mod = REPP.from_file(
-                        directory.joinpath(modname + '.rpp'),
-                        directory=directory,
-                        modules=r.modules
-                    )
-                    r.modules[modname] = mod
-                yield _REPPGroupCall(modname, r.modules)
+                    modpath = directory / (modname + '.rpp')
+                    _parse_repp(_repp_lines(modpath), mod, directory)
+                yield r.modules[modname]
+
         elif line[0] == '#':
             igname = line[1:].rstrip()
             if igname.isdigit():
                 if igname not in igs:
-                    igs[igname] = _REPPIterativeGroup([], igname)
+                    igs[igname] = _REPPInternalGroup([], igname)
                 ig = igs[igname]
                 if ig.operations:
                     raise REPPError(
@@ -748,12 +753,14 @@ def _parse_repp_group(
                 return
             else:
                 raise REPPError('Invalid internal group name: ' + igname)
+
         elif line[0] == ':':
             if r.tokenize_pattern is not None:
                 raise REPPError(
                     'Only one tokenization pattern (:) may be defined.'
                 )
             r.tokenize_pattern = line[1:]
+
         elif line[0] == '@':
             if r.info is not None:
                 raise REPPError(
@@ -761,5 +768,6 @@ def _parse_repp_group(
                     'defined.'
                 )
             r.info = line[1:]
+
         else:
             raise REPPError(f'Invalid declaration: {line}')
