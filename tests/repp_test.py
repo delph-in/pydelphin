@@ -267,3 +267,20 @@ def test_iterative_group_use_before_define_issue_308():
     assert x.string == '( 42 % ) ,'
 
 
+def test_tokenizer_in_top_module_issue_308():
+    # https://github.com/delph-in/pydelphin/issues/301
+    assert len(r.from_string(r':[\t ]').tokenize('a b').tokens) == 2
+    # only one tokenizer pattern allowed
+    with pytest.raises(repp.REPPError):
+        r.from_string(
+            ':[\\t ]\n'
+            ':[\\t\\f\\n ]'
+        )
+    # tokenizer pattern not in top-level is not used
+    assert len(
+        r.from_string(
+            '>a',
+            modules={'a': r.from_string(r':[b]')}
+        ).tokenize('aba').tokens
+    ) == 1
+
