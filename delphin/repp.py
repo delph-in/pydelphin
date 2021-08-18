@@ -727,10 +727,10 @@ def _parse_repp_module(
             operations = stack[-1]
 
         elif operator == ':':
-            _handle_tokenization_pattern(operand, r)
+            _handle_tokenization_pattern(operand, r, len(stack) > 1)
 
         elif operator == '@':
-            _handle_metainfo_declaration(operand, r)
+            _handle_metainfo_declaration(operand, r, len(stack) > 1)
 
         else:
             raise REPPError(f'Invalid declaration: {line}')
@@ -785,13 +785,25 @@ def _handle_internal_group(operand, internal_groups, stack) -> None:
         raise REPPError('Invalid internal group name: ' + operand)
 
 
-def _handle_tokenization_pattern(operand: str, r: REPP) -> None:
+def _handle_tokenization_pattern(
+    operand: str,
+    r: REPP,
+    in_internal_group: bool,
+) -> None:
+    if in_internal_group:
+        raise REPPError('tokenization pattern defined in internal group')
     if r.tokenize_pattern is not None:
         raise REPPError('Only one tokenization pattern (:) may be defined.')
     r.tokenize_pattern = operand
 
 
-def _handle_metainfo_declaration(operand: str, r: REPP) -> None:
+def _handle_metainfo_declaration(
+    operand: str,
+    r: REPP,
+    in_internal_group: bool,
+) -> None:
+    if in_internal_group:
+        raise REPPError('meta-info declaration defined in internal group')
     if r.info is not None:
         raise REPPError('Only one meta-info declaration (@) may be defined.')
     r.info = operand

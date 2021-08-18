@@ -284,3 +284,24 @@ def test_tokenizer_in_top_module_issue_308():
         ).tokenize('aba').tokens
     ) == 1
 
+
+def test_tokenizer_or_meta_not_in_iterative_group_issue_308():
+    # https://github.com/delph-in/pydelphin/issues/301
+    assert len(r.from_string('@meta\n:[\t ]').tokenize('a b').tokens) == 2
+    with pytest.raises(repp.REPPError):
+        r.from_string(
+            '#1\n'
+            '@meta\n'
+            '!a	b\n'
+            '#\n'
+            '>1\n'
+        )
+    with pytest.raises(repp.REPPError):
+        r.from_string(
+            '#1\n'
+            ':[\\t ]\n'
+            '!a	b\n'
+            '#\n'
+            '>1\n'
+        )
+
