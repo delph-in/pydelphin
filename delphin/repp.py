@@ -286,6 +286,7 @@ class _REPPInternalGroup(_REPPGroup):
         logger.debug('>%s', self.name)
         i = 0
         prev = s
+        step = None  # in case _REPPGroup._apply() ever yields nothing
         for step in super()._apply(prev, active):
             yield step
         while step and prev != step.output:

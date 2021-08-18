@@ -174,6 +174,17 @@ def test_multiple_external_groups():
     assert x.endmap.tolist() == [0, 0, 0, 0, 0, -1]
 
 
+def test_basic_internal_groups():
+    rpp = r.from_string(
+        '#1\n'
+        '!a	b\n'
+        '#\n'
+        '>1\n'
+    )
+    assert rpp.apply('aaa').string == 'bbb'
+    assert rpp.apply('ccc').string == 'ccc'
+
+
 def test_without_iterative_groups():
     x = r.from_string(
         r'!(^| )([()%,])([^ ])	\1\2 \3' '\n'
@@ -305,3 +316,74 @@ def test_tokenizer_or_meta_not_in_iterative_group_issue_308():
             '>1\n'
         )
 
+
+def test_global_module_namespace_issue_308_inner():
+    # https://github.com/delph-in/pydelphin/issues/301
+    rpp = r.from_string(
+        '#1\n'
+        '#2\n'
+        '!b	c\n'
+        '#\n'
+        '!a	b\n'
+        '#\n'
+        '>2\n'
+    )
+    assert rpp.apply('aaa').string == 'aaa'
+    assert rpp.apply('bbb').string == 'ccc'
+
+
+def test_global_module_namespace_issue_308_outer():
+    rpp = r.from_string(
+        '#1\n'
+        '#2\n'
+        '!b	c\n'
+        '#\n'
+        '!a	b\n'
+        '#\n'
+        '>1\n'
+    )
+    assert rpp.apply('aaa').string == 'bbb'
+    assert rpp.apply('bbb').string == 'bbb'
+
+
+def test_global_module_namespace_issue_308_multiple():
+    rpp = r.from_string(
+        '#1\n'
+        '!b	c\n'
+        '#\n'
+        '>a\n'
+        '>1\n',
+        modules={
+            'a': r.from_string(
+                '#1\n'
+                '!a	b\n'
+                '#\n'
+                '>1\n'
+            )
+        },
+        active=('a'),
+    )
+    assert rpp.apply('aaa').string == 'ccc'
+
+
+def test_global_module_namespace_issue_308_collision():
+    with pytest.raises(repp.REPPError):
+        r.from_string(
+            '#1\n'
+            '!a	b\n'
+            '#\n'
+            '#1\n'
+            '!b	c\n'
+            '#\n'
+            '>1\n'
+        )
+    with pytest.raises(repp.REPPError):
+        r.from_string(
+            '#1\n'
+            '!a	b\n'
+            '#1\n'
+            '!b	c\n'
+            '#\n'
+            '#\n'
+            '>1\n'
+        )
