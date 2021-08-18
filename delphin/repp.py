@@ -258,6 +258,7 @@ class _REPPGroup(_REPPOperation):
             operations = []
         self.operations: List[_REPPOperation] = operations
         self.name = name
+        self._loaded = False
 
     def __repr__(self):
         name = '("{}") '.format(self.name) if self.name is not None else ''
@@ -334,7 +335,6 @@ class REPP(_REPPGroup):
         super().__init__(operations=operations, name=name)
         self.info: Optional[str] = None
         self.tokenize_pattern: Optional[str] = None
-        self._loaded = False
 
         if modules is None:
             modules = {}
@@ -439,7 +439,7 @@ class REPP(_REPPGroup):
         path = Path(path).expanduser()
         name, directory, lines = _read_file(path, directory)
         r = cls(name=name, modules=modules, active=active)
-        _parse_repp(lines, r, directory)
+        _parse_repp_module(lines, r, directory)
         return r
 
     @classmethod
@@ -455,7 +455,7 @@ class REPP(_REPPGroup):
                 activations
         """
         r = cls(name=name, modules=modules, active=active)
-        _parse_repp(s.splitlines(), r, None)
+        _parse_repp_module(s.splitlines(), r, None)
         return r
 
     def activate(self, mod: str) -> None:
@@ -691,83 +691,107 @@ def _repp_lines(path: Path) -> List[str]:
     return path.read_text(encoding='utf-8').splitlines()
 
 
-def _parse_repp(lines: List[str], r: REPP, directory: Path) -> None:
+def _parse_repp_module(
+    lines: List[str],
+    r: REPP,
+    directory: Path
+) -> None:
     r._loaded = True
-    ops = list(_parse_repp_group(lines, r, directory))
-    if lines:
-        raise REPPError('Unexpected termination; maybe the # operator '
-                        'appeared without an internal group.')
-    r.operations.extend(ops)
 
+    operations: List[_REPPOperation] = r.operations
+    stack: List[List[_REPPOperation]] = [operations]
+    internal_groups: Dict[str, _REPPInternalGroup] = {}
 
-def _parse_repp_group(
-    lines: List[str], r: REPP, directory: Path
-) -> Iterator[_REPPOperation]:
-    igs: Dict[str, _REPPInternalGroup] = {}  # internal groups
     while lines:
         line = lines.pop(0)
-
         if line.startswith(';') or line.strip() == '':
             continue  # skip comments and empty lines
 
-        elif line[0] == '!':
-            match = re.match(r'([^\t]+)\t+(.*)', line[1:])
-            if match is None:
-                raise REPPError(f'Invalid rewrite rule: {line}')
-            yield _REPPRule(match.group(1), match.group(2))
+        operator, operand = line[0], line[1:].rstrip()
 
-        elif line[0] == '<':
-            fn = directory.joinpath(line[1:].rstrip())
+        if operator == '!':
+            # don't use operand because it was rstripped; use line[1:]
+            operations.append(_parse_rewrite_rule(line[1:]))
+
+        elif operator == '<':
+            fn = directory.joinpath(operand)
             lines = _repp_lines(fn) + lines
 
-        elif line[0] == '>':
-            modname = line[1:].rstrip()
-            if modname.isdigit():
-                if modname not in igs:
-                    igs[modname] = _REPPInternalGroup([], modname)
-                yield igs[modname]
-            else:
-                if modname not in r.modules:
-                    r.modules[modname] = REPP(name=modname, modules=r.modules)
-                mod = r.modules[modname]
-                if not mod._loaded:
-                    if directory is None:
-                        raise REPPError('Cannot implicitly load modules if '
-                                        'a directory is not given.')
-                    modpath = directory / (modname + '.rpp')
-                    _parse_repp(_repp_lines(modpath), mod, directory)
-                yield r.modules[modname]
+        elif operator == '>':
+            operations.append(
+                _handle_group_call(operand, internal_groups, r, directory)
+            )
 
-        elif line[0] == '#':
-            igname = line[1:].rstrip()
-            if igname.isdigit():
-                if igname not in igs:
-                    igs[igname] = _REPPInternalGroup([], igname)
-                ig = igs[igname]
-                if ig.operations:
-                    raise REPPError(
-                        'Internal group name already defined: ' + igname
-                    )
-                ig.operations.extend(_parse_repp_group(lines, r, directory))
-            elif igname == '':
-                return
-            else:
-                raise REPPError('Invalid internal group name: ' + igname)
+        elif operator == '#':
+            _handle_internal_group(operand, internal_groups, stack)
+            operations = stack[-1]
 
-        elif line[0] == ':':
-            if r.tokenize_pattern is not None:
-                raise REPPError(
-                    'Only one tokenization pattern (:) may be defined.'
-                )
-            r.tokenize_pattern = line[1:]
+        elif operator == ':':
+            _handle_tokenization_pattern(operand, r)
 
-        elif line[0] == '@':
-            if r.info is not None:
-                raise REPPError(
-                    'No more than one meta-info declaration (@) may be '
-                    'defined.'
-                )
-            r.info = line[1:]
+        elif operator == '@':
+            _handle_metainfo_declaration(operand, r)
 
         else:
             raise REPPError(f'Invalid declaration: {line}')
+
+
+def _parse_rewrite_rule(operand: str) -> _REPPRule:
+    match = re.match(r'([^\t]+)\t+(.*)', operand)
+    if match is None:
+        raise REPPError(f'Invalid rewrite rule: !{operand}')
+    return _REPPRule(match.group(1), match.group(2))
+
+
+def _handle_group_call(
+    operand: str,
+    internal_groups,
+    r: REPP,
+    directory: Optional[Path],
+) -> _REPPGroup:
+    if operand.isdigit():
+        if operand not in internal_groups:
+            internal_groups[operand] = _REPPInternalGroup(operations=[],
+                                                          name=operand)
+        return internal_groups[operand]
+    elif not operand:
+        raise REPPError('Missing group name')
+    else:
+        if operand not in r.modules:
+            r.modules[operand] = REPP(name=operand, modules=r.modules)
+        mod = r.modules[operand]
+        if not mod._loaded:
+            if directory is None:
+                raise REPPError('Cannot implicitly load modules if '
+                                'a directory is not given.')
+            modpath = directory / (operand + '.rpp')
+            _parse_repp_module(_repp_lines(modpath), mod, directory)
+        return mod
+
+
+def _handle_internal_group(operand, internal_groups, stack) -> None:
+    if operand.isdigit():
+        if operand not in internal_groups:
+            internal_groups[operand] = _REPPInternalGroup(operations=[],
+                                                          name=operand)
+        ig = internal_groups[operand]
+        if ig._loaded:
+            raise REPPError(f'Internal group name already defined: {operand}')
+        ig._loaded = True
+        stack.append(ig.operations)
+    elif operand == '':
+        stack.pop()
+    else:
+        raise REPPError('Invalid internal group name: ' + operand)
+
+
+def _handle_tokenization_pattern(operand: str, r: REPP) -> None:
+    if r.tokenize_pattern is not None:
+        raise REPPError('Only one tokenization pattern (:) may be defined.')
+    r.tokenize_pattern = operand
+
+
+def _handle_metainfo_declaration(operand: str, r: REPP) -> None:
+    if r.info is not None:
+        raise REPPError('Only one meta-info declaration (@) may be defined.')
+    r.info = operand
