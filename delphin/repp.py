@@ -736,6 +736,8 @@ def _parse_repp_module(
         else:
             raise REPPError(f'Invalid declaration: {line}')
 
+    _verify_internal_groups(internal_groups)
+
 
 def _parse_rewrite_rule(operand: str) -> _REPPRule:
     match = re.match(r'([^\t]+)\t+(.*)', operand)
@@ -808,3 +810,9 @@ def _handle_metainfo_declaration(
     if r.info is not None:
         raise REPPError('Only one meta-info declaration (@) may be defined.')
     r.info = operand
+
+
+def _verify_internal_groups(internal_groups):
+    for grpname, grp in internal_groups.items():
+        if not grp._loaded:
+            raise REPPError(f'internal group not defined: #{grpname}')

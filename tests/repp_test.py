@@ -278,6 +278,20 @@ def test_iterative_group_use_before_define_issue_308():
     assert x.string == '( 42 % ) ,'
 
 
+def test_iterative_group_in_other_module_issue_308():
+    # https://github.com/delph-in/pydelphin/issues/301
+    grp = (
+        '#1\n'
+        r'!(^| )([()%,])([^ ])	\1\2 \3' '\n'
+        r'!([^ ])([()%,])( |$)	\1 \2\3' '\n'
+        '#\n'
+    )
+    with pytest.raises(repp.REPPError):
+        r.from_string('>1\n', modules={'i': r.from_string(grp)})
+    with pytest.raises(repp.REPPError):
+        r.from_string(grp, modules={'i': r.from_string('>1\n')})
+
+
 def test_tokenizer_in_top_module_issue_308():
     # https://github.com/delph-in/pydelphin/issues/301
     assert len(r.from_string(r':[\t ]').tokenize('a b').tokens) == 2
