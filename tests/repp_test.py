@@ -235,6 +235,45 @@ def test_with_iterative_groups():
     assert x.tokens[4].lnk == Lnk.charspan(5, 6)
 
 
+def test_mask_values():
+    rpp = r.from_string('=ab*\n'
+                        '!_	--\n'
+                        '!--	\n')
+    assert next(rpp.trace('b')).mask.tolist() == [0, 0, 0]
+    assert next(rpp.trace('a')).mask.tolist() == [0, 1, 0]
+    assert next(rpp.trace('ab')).mask.tolist() == [0, 1, 2, 0]
+    assert next(rpp.trace('aa')).mask.tolist() == [0, 1, 1, 0]
+    assert next(rpp.trace('aba')).mask.tolist() == [0, 1, 2, 1, 0]
+
+    steps = rpp.trace('_ab')
+    assert next(steps).mask.tolist() == [0, 0, 1, 2, 0]     # mask op
+    assert next(steps).mask.tolist() == [0, 0, 0, 1, 2, 0]  # rewrite 1
+    assert next(steps).mask.tolist() == [0, 1, 2, 0]        # rewrite 2
+
+    steps = rpp.trace('ab_')
+    assert next(steps).mask.tolist() == [0, 1, 2, 0, 0]     # mask op
+    assert next(steps).mask.tolist() == [0, 1, 2, 0, 0, 0]  # rewrite 1
+    assert next(steps).mask.tolist() == [0, 1, 2, 0]        # rewrite 2
+
+
+def test_mask_basic():
+    rpp = r.from_string('!_	-\n'
+                        '=[0-9]-[0-9]\n'
+                        '!~	    \n'
+                        '!-	 \n'
+                        '!(?<=[0-9])~*(?=[0-9])	=\n')
+    assert rpp.apply('0-a').string == '0 a'  # mask doesn't match
+    assert rpp.apply('0_a').string == '0 a'  # mask doesn't match
+    assert rpp.apply('0-2').string == '0-2'  # mask matches
+    assert rpp.apply('0_2').string == '0-2'  # mask matches after rewrite
+    assert rpp.apply('0-2-3').string == '0-2 3'  # mask matches once
+    assert rpp.apply('0-2-3-4').string == '0-2 3-4'  # mask matches twice
+    # between-mask insertion (without capturing)
+    assert rpp.apply('0-23-4').string == '0-2=3-4'
+    # mask is intact after shifting
+    assert rpp.apply('~0-1').string == '    0-1'
+
+
 def test_trace():
     x = r.from_string(r'''
 !(\w+)	[\1]

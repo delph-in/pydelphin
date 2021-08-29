@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+* REPP mask (`=`) operator with basic masking support ([#331])
+
 ### Changed
 
 * REPP no longer requires iterative group calls to appear after the
@@ -1503,3 +1507,4 @@ information about changes, except for
 [#319]: https://github.com/delph-in/pydelphin/issues/319
 [#323]: https://github.com/delph-in/pydelphin/issues/323
 [#324]: https://github.com/delph-in/pydelphin/issues/324
+[#331]: https://github.com/delph-in/pydelphin/issues/331

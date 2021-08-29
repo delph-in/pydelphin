@@ -95,6 +95,7 @@ class REPPStep(NamedTuple):
         applied (bool): `True` if the rule was applied
         startmap (:py:class:`array`): integer array of start offsets
         endmap (:py:class:`array`): integer array of end offsets
+        mask (:py:class:`array`): integer array of mask indicators
     """
     input: str
     output: str
@@ -102,6 +103,7 @@ class REPPStep(NamedTuple):
     applied: bool
     startmap: _CMap
     endmap: _CMap
+    mask: _CMap  # BIO scheme, B=1, I=2, O=0
 
 
 _Trace = Iterator[Union[REPPStep, REPPResult]]
@@ -116,7 +118,12 @@ class _REPPOperation:
     [_REPPInternalGroup], and [REPP] instances.
     """
 
-    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
+    def _apply(
+        self,
+        s: str,
+        active: Set[str],
+        mask: _CMap
+    ) -> Iterator[REPPStep]:
         raise NotImplementedError()
 
 
@@ -167,7 +174,12 @@ class _REPPRule(_REPPOperation):
     def __str__(self):
         return f'!{self.pattern}\t\t{self.replacement}'
 
-    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
+    def _apply(
+        self,
+        s: str,
+        active: Set[str],
+        mask: _CMap
+    ) -> Iterator[REPPStep]:
         logger.debug(' %s', self)
 
         ms = list(self._re.finditer(s))
@@ -178,21 +190,30 @@ class _REPPRule(_REPPOperation):
             parts: List[str] = []
             smap = array('i', [0])
             emap = array('i', [0])
+            _msk = array('i', [0])
 
             for m in ms:
                 start = m.start()
+
+                if any(mask[(start+1):(m.end()+1)]):
+                    continue
+
                 if pos < start:
                     _copy_part(s[pos:start], shift, parts, smap, emap)
+                    _msk.extend(mask[pos+1:start+1])
 
                 if self._segments:
                     for literal, start, end, tracked in self._itersegments(m):
+                        litlen = len(literal)
                         if tracked:
                             _copy_part(literal, shift, parts, smap, emap)
+                            _msk.extend(mask[pos+1:pos+litlen+1])
                         else:
                             width = end - start
                             _insert_part(literal, width, shift, parts,
                                          smap, emap)
-                            shift += width - len(literal)
+                            _msk.extend([0] * litlen)
+                            shift += width - litlen
                 else:
                     # the replacement is empty (match is deleted)
                     shift += m.end() - start
@@ -201,8 +222,10 @@ class _REPPRule(_REPPOperation):
 
             if pos < len(s):
                 _copy_part(s[pos:], shift, parts, smap, emap)
+                _msk.extend(mask[pos+1:len(s)+1])
             smap.append(shift)
             emap.append(shift - 1)
+            _msk.append(0)
             o = ''.join(parts)
             applied = True
 
@@ -210,9 +233,10 @@ class _REPPRule(_REPPOperation):
             o = s
             smap = _zeromap(o)
             emap = _zeromap(o)
+            _msk = mask
             applied = False
 
-        yield REPPStep(s, o, self, applied, smap, emap)
+        yield REPPStep(s, o, self, applied, smap, emap, _msk)
 
     def _itersegments(
         self, m: Match[str]
@@ -250,6 +274,39 @@ class _REPPRule(_REPPOperation):
             yield (literal, start, m.end(), False)
 
 
+class _REPPMask(_REPPOperation):
+    """
+    A REPP masking rule.
+
+    When a mask is applied and matches a substring, the substring is
+    blocked from further modification.
+
+    Args:
+        pattern: the regular expression pattern to match
+    """
+    def __init__(self, pattern: str):
+        self.pattern = pattern
+        self._re = _compile(pattern)
+
+    def __str__(self):
+        return f'={self.pattern}'
+
+    def _apply(
+        self,
+        s: str,
+        active: Set[str],
+        mask: _CMap
+    ) -> Iterator[REPPStep]:
+        logger.debug(' %s', self)
+        newmask = array('i', mask)  # make a copy
+        for m in self._re.finditer(s):
+            start = m.start() + 1
+            newmask[start] = max(1, mask[start])
+            for i in range(start + 1, m.end() + 1):
+                newmask[i] = 2
+        yield REPPStep(s, s, self, True, _zeromap(s), _zeromap(s), newmask)
+
+
 class _REPPGroup(_REPPOperation):
     def __init__(
         self, operations: List[_REPPOperation] = None, name: str = None
@@ -266,34 +323,47 @@ class _REPPGroup(_REPPOperation):
             type(self).__name__, name, id(self)
         )
 
-    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
+    def _apply(
+        self,
+        s: str,
+        active: Set[str],
+        mask: _CMap
+    ) -> Iterator[REPPStep]:
         o = s
         applied = False
         for operation in self.operations:
-            for step in operation._apply(o, active):
+            for step in operation._apply(o, active, mask):
                 yield step
                 o = step.output
+                mask = step.mask
                 applied |= step.applied
 
-        yield REPPStep(s, o, self, applied, _zeromap(o), _zeromap(o))
+        yield REPPStep(s, o, self, applied, _zeromap(o), _zeromap(o), mask)
 
 
 class _REPPInternalGroup(_REPPGroup):
     def __str__(self):
         return f'Internal group #{self.name}'
 
-    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
+    def _apply(
+        self,
+        s: str,
+        active: Set[str],
+        mask: _CMap
+    ) -> Iterator[REPPStep]:
         logger.debug('>%s', self.name)
         i = 0
         prev = s
         step = None  # in case _REPPGroup._apply() ever yields nothing
-        for step in super()._apply(prev, active):
+        for step in super()._apply(prev, active, mask):
             yield step
+            mask = step.mask
         while step and prev != step.output:
             i += 1
             prev = step.output
-            for step in super()._apply(prev, active):
+            for step in super()._apply(prev, active, mask):
                 yield step
+                mask = step.mask
 
         logger.debug('>%s (done; iterated %d time(s))', self.name, i)
 
@@ -472,10 +542,17 @@ class REPP(_REPPGroup):
         if mod in self.active:
             self.active.remove(mod)
 
-    def _apply(self, s: str, active: Set[str]) -> Iterator[REPPStep]:
+    def _apply(
+        self,
+        s: str,
+        active: Set[str],
+        mask: _CMap
+    ) -> Iterator[REPPStep]:
         if self.name in active:
             logger.info('>%s', self.name)
-            yield from super()._apply(s, active)
+            for step in super()._apply(s, active, mask):
+                yield step
+                mask = step.mask
             logger.debug('>%s (done)', self.name)
         else:
             logger.debug('>%s (inactive)', self.name)
@@ -523,11 +600,12 @@ class REPP(_REPPGroup):
     ) -> _Trace:
         startmap = _zeromap(s)
         endmap = _zeromap(s)
+        mask = _zeromap(s)
         # initial boundaries
         startmap[0] = 1
         endmap[-1] = -1
         step = None
-        for step in super()._apply(s, active):
+        for step in super()._apply(s, active, mask):
             if step.applied or verbose:
                 yield step
             if step.applied:
@@ -722,6 +800,10 @@ def _parse_repp_module(
             operations.append(
                 _handle_group_call(operand, internal_groups, r, directory)
             )
+
+        elif operator == '=':
+            # don't use operand because it was rstripped; use line[1:]
+            operations.append(_REPPMask(line[1:]))
 
         elif operator == '#':
             _handle_internal_group(operand, internal_groups, stack)
