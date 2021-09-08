@@ -144,32 +144,9 @@ class _REPPRule(_REPPOperation):
         self.pattern = pattern
         self.replacement = replacement
         self._re = _compile(pattern)
-
-        groups, literals = parse_template(replacement, self._re)
-        # if a literal is None then it has a group, so make this
-        # easier to iterate over by making pairs of (literal, None) or
-        # (None, group)
-        group_map = dict(groups)
-        self._segments: List[Tuple[Optional[str], Optional[int]]] = [
-            (literal, group_map.get(i))
-            for i, literal
-            in enumerate(literals)
-        ]
-        # either literal or group must be None, but not both
-        assert all((lit is None) != (grp is None)
-                   for lit, grp in self._segments)
-
-        # Get "trackable" capture groups; i.e., those that are
-        # transparent for characterization. For PET behavior, these
-        # must appear in strictly increasing order with no gaps
-        self._last_trackable = -1  # index of trackable segment, not group id
-        last_trackable_group = 0
-        for i, group in groups:
-            if group == last_trackable_group + 1:
-                self._last_trackable = i
-                last_trackable_group = group
-            else:
-                break
+        tracked, untracked = _get_segments(replacement, self._re)
+        self._tracked = tracked
+        self._untracked = untracked
 
     def __str__(self):
         return f'!{self.pattern}\t\t{self.replacement}'
@@ -202,7 +179,7 @@ class _REPPRule(_REPPOperation):
                     _copy_part(s[pos:start], shift, parts, smap, emap)
                     _msk.extend(mask[pos+1:start+1])
 
-                if self._segments:
+                if self._tracked or self._untracked:
                     for literal, start, end, tracked in self._itersegments(m):
                         litlen = len(literal)
                         if tracked:
@@ -245,7 +222,7 @@ class _REPPRule(_REPPOperation):
         start = m.start()
 
         # first yield segments that might be trackable
-        tracked = self._segments[:self._last_trackable + 1]
+        tracked = self._tracked
         if tracked:
             spans = {group: m.span(group)
                      for _, group in tracked
@@ -266,7 +243,7 @@ class _REPPRule(_REPPOperation):
         # then group all remaining segments together
         remaining: List[Optional[str]] = [
             m.group(grp) if grp is not None else lit
-            for lit, grp in self._segments[self._last_trackable + 1:]
+            for lit, grp in self._untracked
         ]
         if remaining:
             # in some cases m.group(grp) can return None, so replace with ''
@@ -679,6 +656,33 @@ def _compile(pattern: str) -> Pattern[str]:
             return re.compile(pattern, flags=re.V0)
         else:
             raise
+
+
+def _get_segments(replacement: str, _re):
+    # parse_template() is an undocumented function in the standard library
+    groups, literals = parse_template(replacement, _re)
+    # literals is a list of strings or None (group position);
+    # groups is a list of (i, g) where i is the index in literals
+    # and g is the capturing group number.
+
+    # first determine the last trackable group, where trackable
+    # segments are transparent for characterization. For PET behavior,
+    # these must appear in strictly increasing order with no gaps
+    last_trackable = 0
+    for expected, (i, grp) in zip(range(1, len(groups)+1), groups):
+        if grp == expected:
+            last_trackable = i + 1  # +1 for slice end
+
+    # we can also combine groups and literals into a single list of
+    # (literal, None) or (None, group) pairs for convenience
+    group_map = dict(groups)
+    segments: List[Tuple[Optional[str], Optional[int]]] = [
+        (literal, group_map.get(i))
+        for i, literal
+        in enumerate(literals)
+    ]
+    # Divide the segments into trackable/untrackable
+    return segments[:last_trackable], segments[last_trackable:]
 
 
 def last(steps: _Trace) -> REPPResult:
