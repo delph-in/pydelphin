@@ -4,7 +4,7 @@
 
 ### Added
 
-* REPP mask (`=`) operator with basic masking support ([#331])
+* REPP mask (`=`) operator and full masking support ([#331])
 
 ### Changed
 

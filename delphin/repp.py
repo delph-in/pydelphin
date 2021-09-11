@@ -21,6 +21,7 @@ from typing import (
 from sre_parse import parse_template
 from pathlib import Path
 from array import array
+from itertools import takewhile
 import warnings
 import logging
 
@@ -52,6 +53,11 @@ if TYPE_CHECKING:
     _CMap = array[int]  # characterization map
 else:
     _CMap = array
+
+# Mask values
+_MASK_B = 1  # start of mask
+_MASK_I = 2  # inside mask
+_MASK_O = 0  # not masked
 
 
 class REPPError(PyDelphinException):
@@ -144,9 +150,7 @@ class _REPPRule(_REPPOperation):
         self.pattern = pattern
         self.replacement = replacement
         self._re = _compile(pattern)
-        tracked, untracked = _get_segments(replacement, self._re)
-        self._tracked = tracked
-        self._untracked = untracked
+        self._tracked, self._untracked = _get_segments(replacement, self._re)
 
     def __str__(self):
         return f'!{self.pattern}\t\t{self.replacement}'
@@ -159,6 +163,7 @@ class _REPPRule(_REPPOperation):
     ) -> Iterator[REPPStep]:
         logger.debug(' %s', self)
 
+        applied = False
         ms = list(self._re.finditer(s))
 
         if ms:
@@ -167,88 +172,46 @@ class _REPPRule(_REPPOperation):
             parts: List[str] = []
             smap = array('i', [0])
             emap = array('i', [0])
-            _msk = array('i', [0])
+            new_mask = array('i', [_MASK_O])
 
             for m in ms:
+                sub, _smap, _emap, _mask, delta, blocked = _process_match(
+                    m, mask, shift, self._tracked, self._untracked
+                )
+                if blocked:
+                    continue
+                applied = True
+
                 start = m.start()
 
-                if any(mask[(start+1):(m.end()+1)]):
-                    continue
-
+                # copy up to point of match
                 if pos < start:
                     _copy_part(s[pos:start], shift, parts, smap, emap)
-                    _msk.extend(mask[pos+1:start+1])
+                    new_mask.extend(mask[pos+1:start+1])
 
-                if self._tracked or self._untracked:
-                    for literal, start, end, tracked in self._itersegments(m):
-                        litlen = len(literal)
-                        if tracked:
-                            _copy_part(literal, shift, parts, smap, emap)
-                            _msk.extend(mask[pos+1:pos+litlen+1])
-                        else:
-                            width = end - start
-                            _insert_part(literal, width, shift, parts,
-                                         smap, emap)
-                            _msk.extend([0] * litlen)
-                            shift += width - litlen
-                else:
-                    # the replacement is empty (match is deleted)
-                    shift += m.end() - start
-
+                parts.append(sub)
+                smap.extend(_smap)
+                emap.extend(_emap)
+                new_mask.extend(_mask)
+                shift += delta
                 pos = m.end()
 
             if pos < len(s):
                 _copy_part(s[pos:], shift, parts, smap, emap)
-                _msk.extend(mask[pos+1:len(s)+1])
+                new_mask.extend(mask[pos+1:len(s)+1])
+
             smap.append(shift)
             emap.append(shift - 1)
-            _msk.append(0)
+            new_mask.append(_MASK_O)
+            mask = new_mask
             o = ''.join(parts)
-            applied = True
 
         else:
             o = s
             smap = _zeromap(o)
             emap = _zeromap(o)
-            _msk = mask
-            applied = False
 
-        yield REPPStep(s, o, self, applied, smap, emap, _msk)
-
-    def _itersegments(
-        self, m: Match[str]
-    ) -> Iterator[Tuple[str, int, int, bool]]:
-        """Yield tuples of (replacement, start, end, tracked)."""
-        start = m.start()
-
-        # first yield segments that might be trackable
-        tracked = self._tracked
-        if tracked:
-            spans = {group: m.span(group)
-                     for _, group in tracked
-                     if group is not None}
-            end = m.start(1)  # if literal before tracked group
-            for literal, group in tracked:
-                if literal is None:
-                    assert group is not None
-                    start, end = spans[group]
-                    yield (m.group(group) or '', start, end, True)
-                    start = end
-                    if group + 1 in spans:
-                        end = spans[group + 1][0]
-                else:
-                    assert literal is not None
-                    yield (literal, start, end, False)
-
-        # then group all remaining segments together
-        remaining: List[Optional[str]] = [
-            m.group(grp) if grp is not None else lit
-            for lit, grp in self._untracked
-        ]
-        if remaining:
-            # in some cases m.group(grp) can return None, so replace with ''
-            literal = ''.join(segment or '' for segment in remaining)
-            yield (literal, start, m.end(), False)
+        yield REPPStep(s, o, self, applied, smap, emap, mask)
 
 
 class _REPPMask(_REPPOperation):
@@ -278,9 +241,9 @@ class _REPPMask(_REPPOperation):
         newmask = array('i', mask)  # make a copy
         for m in self._re.finditer(s):
             start = m.start() + 1
-            newmask[start] = max(1, mask[start])
+            newmask[start] = max(_MASK_B, mask[start])
             for i in range(start + 1, m.end() + 1):
-                newmask[i] = 2
+                newmask[i] = _MASK_I
         yield REPPStep(s, s, self, True, _zeromap(s), _zeromap(s), newmask)
 
 
@@ -717,25 +680,164 @@ def _copy_part(
     emap: _CMap
 ) -> None:
     parts.append(s)
-    smap.extend([shift] * len(s))
-    emap.extend([shift] * len(s))
+    map_part = [shift] * len(s)
+    smap.extend(map_part)
+    emap.extend(map_part)
 
 
 def _insert_part(
     s: str,
-    w: int,
+    width: int,
     shift: int,
     parts: List[str],
     smap: _CMap,
     emap: _CMap
 ) -> None:
     parts.append(s)
-    a = shift
-    b = a - len(s)
-    smap.extend(range(a, b, -1))
-    a = shift + w - 1
-    b = a - len(s)
-    emap.extend(range(a, b, -1))
+    endshift = shift - len(s)
+    _width = width - 1
+    smap.extend(range(shift, endshift, -1))
+    emap.extend(range(shift + _width, endshift + _width, -1))
+
+
+def _process_match(
+    m: Match[str],
+    prev_mask: _CMap,
+    shift: int,
+    tracked,
+    untracked
+) -> Tuple[str, _CMap, _CMap, _CMap, int, bool]:
+    parts: List[str] = []
+    smap = array('i', [])
+    emap = array('i', [])
+    mask = array('i', [])
+    delta = 0
+    blocked = False
+
+    if tracked or untracked:
+        start = m.start()
+        # for literals, the end is the start of the next backreference
+        end = next((m.start(g) for _, g in tracked if g), m.end())
+
+        for literal, group in tracked:
+            if literal is None:
+                literal = m.group(group) or ''
+                _copy_part(literal, shift + delta, parts, smap, emap)
+                mask.extend(prev_mask[(start+1):(start+len(literal)+1)])
+                end = m.start(group+1) if group < m.lastindex else m.end()
+            else:
+                # block if overlap with mask
+                if any(prev_mask[start+1:end+1]):
+                    blocked = True
+                    break
+                width = end - start
+                litlen = len(literal)
+                _insert_part(literal, width, shift + delta, parts, smap, emap)
+                mask.extend([_MASK_O] * litlen)
+                delta += width - litlen
+
+            start = end
+
+        if untracked:
+            # block if untracked overlaps with mask, including backreferences
+            if (any(prev_mask[start+1:m.end()+1])
+                or any(any(prev_mask[m.start(grp)+1:m.end(grp)+1])
+                       for lit, grp in untracked if grp)):
+                blocked = True
+            else:
+                # untracked segments can be collapsed into one substring
+                literal = ''.join(
+                    m.group(group) or '' if literal is None else literal
+                    for literal, group in untracked
+                )
+                width = m.end() - start
+                litlen = len(literal)
+                _insert_part(literal, width, shift+delta, parts, smap, emap)
+                mask.extend([_MASK_O] * litlen)
+                delta += width - litlen
+    else:
+        # the replacement is empty (match is deleted)
+        delta = m.end() - m.start()
+
+    substring = ''.join(parts)
+    if not blocked:
+        blocked = _check_mask(substring, m, smap, emap, mask, prev_mask)
+
+    return substring, smap, emap, mask, delta, blocked
+
+
+def _check_mask(
+    s: str,
+    m: Match[str],
+    smap: _CMap,
+    emap: _CMap,
+    mask: _CMap,
+    prev_mask: _CMap
+) -> bool:
+    """Returns True if any masked material has changed.
+
+    There are three contexts for mask checks:
+
+      1. The first character in the match is a mask continuation
+      2. The first character after the end of the match is a mask continuation
+      3. The whole mask is contained within the match
+
+    For (1) and (2), the mask must not change nor move around. For (1)
+    it cannot change but it can move.
+
+    """
+    start, end = m.span()
+    mstart, mend = start + 1, end + 1
+    orig = m.group(0)
+    # no masked material; no problem
+    if not any(prev_mask[mstart:mend]):
+        return False
+    # whether the final mask is fixed depends on the next mask value;
+    # check now as the _make_mask_info() function won't see it
+    end_fixed = prev_mask[mend] == _MASK_I
+    # prev/next left, middle, right
+    pl, pm, pr = _make_mask_info(orig, prev_mask[mstart:mend], end_fixed)
+    nl, nm, nr = _make_mask_info(s, mask, end_fixed)
+
+    # check fixed start/end masks
+    if pl != nl or pr != nr:
+        return True
+    # other masks just need to be present in equal number
+    for substr in set(pm).union(nm):
+        if pm.get(substr, 0) != nm.get(substr, 0):
+            return True
+
+    return False
+
+
+def _make_mask_info(
+    s: str,
+    mask: _CMap,
+    end_fixed: bool
+) -> Tuple[str, Dict[str, int], str]:
+    if not mask:
+        return '', {}, ''
+    left = s[:_get_mask_len(mask, 0)] if mask[0] == _MASK_I else ''
+    right = s[-_get_mask_len(mask[::-1], 0) or len(s):] if end_fixed else ''
+    middle: Dict[str, int] = {}
+    i = len(left)
+    j = len(s) - len(right)
+    while i < j:
+        if mask[i] == _MASK_B:
+            mlen = _get_mask_len(mask, i+1) + 1
+            substr = s[i:mlen]
+            if substr not in middle:
+                middle[substr] = 1
+            else:
+                middle[substr] += 1
+            i += mlen
+        else:
+            i += 1
+    return left, middle, right
+
+
+def _get_mask_len(mask: _CMap, i: int):
+    return sum(1 for _ in takewhile(lambda v: v == _MASK_I, mask[i:]))
 
 
 def _tokenize(result: REPPResult, pattern: str) -> List[Tuple[int, int, str]]:

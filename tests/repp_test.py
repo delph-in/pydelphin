@@ -114,7 +114,6 @@ def test_basic_external_group_active():
                  'b': r.from_string(r'!b	c')},
         active=['a']
     )
-    print(_r.active)
     x = _r.apply('baba')
     assert x.string == 'bbbb'
     assert x.startmap.tolist() == [1, 0, 0, 0, 0, 0]
@@ -261,7 +260,8 @@ def test_mask_basic():
                         '=[0-9]-[0-9]\n'
                         '!~	    \n'
                         '!-	 \n'
-                        '!(?<=[0-9])~*(?=[0-9])	=\n')
+                        '!(?<=[0-9])~*(?=[0-9])	=\n'
+                        '!8[-+]9	\n')
     assert rpp.apply('0-a').string == '0 a'  # mask doesn't match
     assert rpp.apply('0_a').string == '0 a'  # mask doesn't match
     assert rpp.apply('0-2').string == '0-2'  # mask matches
@@ -272,6 +272,22 @@ def test_mask_basic():
     assert rpp.apply('0-23-4').string == '0-2=3-4'
     # mask is intact after shifting
     assert rpp.apply('~0-1').string == '    0-1'
+    # mask may not be deleted
+    assert rpp.apply('8-9 8+9').string == '8-9 '
+
+
+def test_mask_captures():
+    rpp = r.from_string('=[0-9]-[0-9]\n'
+                        '!([0-9])([0-9])	\\1 \\2\n'
+                        r'!([^=]+)=(.*)$	\2=\1')
+    assert rpp.apply('123-4').string == '1 23-4'  # mask not captured
+    assert rpp.apply('12-3').string == '1 2-3'  # mask partially captured
+    assert rpp.apply('01-23-45').string == '0 1-2 3-4 5'  # adjacent masks
+    assert rpp.apply('1-2=3-4').string == '1-2=3-4'  # no swapping
+
+    rpp = r.from_string('=[0-9]\n'
+                        '!([0-9A-Fa-f])	\\1\\1\n')
+    assert rpp.apply('1a').string == '1aa'  # no duplication of masks
 
 
 def test_trace():
