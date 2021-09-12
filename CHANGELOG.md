@@ -6,10 +6,16 @@
 
 * REPP mask (`=`) operator and full masking support ([#331])
 
+### Fixed
+
+* SimpleDMRS no longer requires `index` or `top` to be specified when
+  decoding ([#334])
+
 ### Changed
 
 * REPP no longer requires iterative group calls to appear after the
   group definitions ([#308])
+
 
 ## [v1.5.1]
 
@@ -1508,3 +1514,4 @@ information about changes, except for
 [#323]: https://github.com/delph-in/pydelphin/issues/323
 [#324]: https://github.com/delph-in/pydelphin/issues/324
 [#331]: https://github.com/delph-in/pydelphin/issues/331
+[#334]: https://github.com/delph-in/pydelphin/issues/334

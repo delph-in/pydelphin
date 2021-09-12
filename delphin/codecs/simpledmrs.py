@@ -193,8 +193,8 @@ def _decode_dmrs(lexer):
             links.append(_decode_link(nodeid, lexer))
     lexer.expect_type(RBRACE)
 
-    return DMRS(top=int(top),
-                index=int(index),
+    return DMRS(top=int(top) if top is not None else None,
+                index=int(index) if index is not None else None,
                 nodes=nodes,
                 links=links,
                 lnk=lnk,
