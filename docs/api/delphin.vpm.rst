@@ -10,7 +10,7 @@ delphin.vpm
    `PERS: 1` and `NUM: pl`).
 
    .. seealso::
-      - Wiki about VPM: http://moin.delph-in.net/RmrsVpm
+      - Wiki about VPM: https://github.com/delph-in/docs/wiki/RmrsVpm
 
 
    Module functions

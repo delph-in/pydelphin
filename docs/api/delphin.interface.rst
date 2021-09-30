@@ -7,11 +7,12 @@ delphin.interface
 This module manages the communication between data providers, namely
 processors like `ACE <http://sweaglesw.org/linguistics/ace/>`_ or
 remote services like the `DELPH-IN Web API
-<http://moin.delph-in.net/ErgApi>`_, and user code or storage
-backends, namely [incr tsdb()] :doc:`test suites <delphin.itsdb>`. An
-interface sends requests to a provider, then receives and interprets
-the response. The interface may also detect and deserialize supported
-DELPH-IN formats if the appropriate modules are available.
+<https://github.com/delph-in/docs/wiki/ErgApi>`_, and user code or
+storage backends, namely [incr tsdb()] :doc:`test suites
+<delphin.itsdb>`. An interface sends requests to a provider, then
+receives and interprets the response. The interface may also detect
+and deserialize supported DELPH-IN formats if the appropriate modules
+are available.
 
 
 Classes
@@ -73,8 +74,9 @@ underlying processor. The following example wraps an
 <Mrs object (unknown proper compound udef named hire parg named) at 140488736004864>
 NOTE: parsed 1 / 1 sentences, avg 1173k, time 0.00986s
 
-A similar technique could be used to manage external processes, such as
-`MeCab <http://taku910.github.io/mecab/>`_ for morphological
-segmentation of Japanese for `Jacy <http://moin.delph-in.net/JacyTop>`_.
-It could also be used to make a postprocessor, a backoff mechanism in
-case an input fails to parse, etc.
+A similar technique could be used to manage external processes, such
+as `MeCab <http://taku910.github.io/mecab/>`_ for morphological
+segmentation of Japanese for `Jacy
+<https://github.com/delph-in/docs/wiki/JacyTop>`_.  It could also be
+used to make a postprocessor, a backoff mechanism in case an input
+fails to parse, etc.

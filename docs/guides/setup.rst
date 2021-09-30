@@ -151,9 +151,4 @@ PyDelphin to ensure that the local Python environment is not
 conflicting with PyDelphin's dependencies and also to ensure that
 PyDelphin specifies all its dependencies.
 
-If you find it inconvenient to activate several virtual environments
-to test the supported Python versions, you may find :command:`tox`
-useful. See tox_\ 's website for more information.
-
 .. _pytest: http://pytest.org/
-.. _tox: https://tox.readthedocs.io/en/latest/

@@ -7,7 +7,7 @@ delphin.web.client
 This module provides classes and functions for making requests to
 servers that implement the DELPH-IN Web API described here:
 
-    http://moin.delph-in.net/ErgApi
+    https://github.com/delph-in/docs/wiki/ErgApi
 
 .. note::
 
@@ -31,8 +31,8 @@ Response({'input': '[ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: past MOOD: indicati
 
 If the `server` parameter is not provided to `parse()`, the default
 ERG server (as used above) is used by default. Request parameters
-(described at http://moin.delph-in.net/ErgApi) can be provided via the
-`params` argument.
+(described at https://github.com/delph-in/docs/wiki/ErgApi) can be
+provided via the `params` argument.
 
 These functions instantiate and use subclasses of :class:`Client`,
 which manages the connections to a server. They can also be used

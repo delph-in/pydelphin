@@ -13,8 +13,8 @@ delphin.semi
    .. seealso::
       The following DELPH-IN wikis contain more information:
 
-      - Technical specifications: http://moin.delph-in.net/SemiRfc
-      - Overview and usage: http://moin.delph-in.net/RmrsSemi
+      - Technical specifications: https://github.com/delph-in/docs/wiki/SemiRfc
+      - Overview and usage: https://github.com/delph-in/docs/wiki/RmrsSemi
 
 
    Loading a SEM-I from a File

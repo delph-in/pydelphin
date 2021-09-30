@@ -32,16 +32,17 @@ means that PyDelphin implements according to specifications (e.g.,
 research papers or wiki specifications), and creates those
 specifications if the technology is not sufficiently documented. For
 some concrete examples, the wikis for `MRS
-<http://moin.delph-in.net/MrsRfc>`_, `TDL
-<http://moin.delph-in.net/TdlRfc>`_, `TSQL
-<http://moin.delph-in.net/TsqlRfc>`_, and `SEM-I
-<http://moin.delph-in.net/SemiRfc>`_ (among others) were created, in
-part, to establish the specification for PyDelphin to implement. Much
-of the information in those wikis was pieced together from various
-places, such as other wikis, Lisp and C code, publications, and actual
-examples of the respective technologies. PyDelphin generally should
-*not* include novel and experimental techniques or representations
-(but it can certainly be *used* to create such things!).
+<https://github.com/delph-in/docs/wiki/MrsRfc>`_, `TDL
+<https://github.com/delph-in/docs/wiki/TdlRfc>`_, `TSQL
+<https://github.com/delph-in/docs/wiki/TsqlRfc>`_, and `SEM-I
+<https://github.com/delph-in/docs/wiki/SemiRfc>`_ (among others) were
+created, in part, to establish the specification for PyDelphin to
+implement. Much of the information in those wikis was pieced together
+from various places, such as other wikis, Lisp and C code,
+publications, and actual examples of the respective
+technologies. PyDelphin generally should *not* include novel and
+experimental techniques or representations (but it can certainly be
+*used* to create such things!).
 
 The API documentation of PyDelphin is almost as important as the code
 itself. Every class, method, function, attribute, and module that is

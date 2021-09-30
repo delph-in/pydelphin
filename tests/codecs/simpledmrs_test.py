@@ -71,6 +71,7 @@ def test_encode(it_rains_heavily_dmrs, abrams_barked_dmrs):
         ' 30:ARG1/NEQ -> 20;'
         ' }')
 
+
 def test_decode(it_rains_heavily_dmrs):
     d = simpledmrs.decode(
         'dmrs {'
@@ -129,3 +130,22 @@ def test_loads(it_rains_heavily_dmrs):
     assert ds[1].index == it_rains_heavily_dmrs.index
     assert ds[1].nodes == it_rains_heavily_dmrs.nodes
     assert ds[1].links == it_rains_heavily_dmrs.links
+
+
+def test_decode_no_index_issue_334():
+    # https://github.com/delph-in/pydelphin/issues/334
+    d = simpledmrs.decode(
+        'dmrs {'
+        ' [top=10]'
+        ' 10 [_rain_v_1<3:9> e TENSE=past];'
+        '}'
+    )
+    assert d.index is None
+
+    d = simpledmrs.decode(
+        'dmrs {'
+        ' 10 [_rain_v_1<3:9> e TENSE=past];'
+        '}'
+    )
+    assert d.top is None
+    assert d.index is None

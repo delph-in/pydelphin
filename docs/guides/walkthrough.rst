@@ -13,7 +13,7 @@ some data to play with is to parse a sentence. PyDelphin doesn't parse
 things on its own, but it provides two interfaces to external
 processors: one for the `ACE <http://sweaglesw.org/linguistics/ace/>`_
 processor and another for the `HTTP-based "Web API"
-<http://moin.delph-in.net/ErgApi>`_. I'll first show the Web API
+<https://github.com/delph-in/docs/wiki/ErgApi>`_. I'll first show the Web API
 as it's the simplest for parsing a single sentence:
 
 >>> from delphin.web import client
@@ -28,7 +28,7 @@ thus currently the only way to dynamically retrieve parses in PyDelphin
 on a Windows machine.
 
 .. seealso::
-  - Wiki for the Web API: http://moin.delph-in.net/ErgApi
+  - Wiki for the Web API: https://github.com/delph-in/docs/wiki/ErgApi
   - Bottlenose server: https://github.com/delph-in/bottlenose
   - :mod:`delphin.web` module
   - :mod:`delphin.interface` module
@@ -83,7 +83,7 @@ is in modeling DELPH-IN Semantics representations such as MRS.
 [('h0', 'qeq', 'h1'), ('h5', 'qeq', 'h7'), ('h11', 'qeq', 'h13')]
 
 .. seealso::
-  - Wiki of MRS topics: http://moin.delph-in.net/RmrsTop
+  - Wiki of MRS topics: https://github.com/delph-in/docs/wiki/RmrsTop
   - :mod:`delphin.mrs` module
   - :doc:`semantics`
 
@@ -101,7 +101,7 @@ True
 True
 
 .. seealso::
-  - MRS isomorphism wiki: http://moin.delph-in.net/MrsIsomorphism
+  - MRS isomorphism wiki: https://github.com/delph-in/docs/wiki/MrsIsomorphism
 
 Scoping semantic structures such as MRS and DMRS can make use of the
 :mod:`delphin.scope` module, which allows for inspection of the scope
@@ -192,7 +192,7 @@ To serialize a different representation you must convert it first:
 
 
 .. seealso::
-  - Wiki of MRS formats: http://moin.delph-in.net/MrsRfc
+  - Wiki of MRS formats: https://github.com/delph-in/docs/wiki/MrsRfc
   - :doc:`../api/delphin.codecs` namespace
 
 Some formats are currently export-only:
@@ -235,7 +235,7 @@ The Response object from the interface can return both the initial
 (3, 2, 3, <14:20>, 1, "Browne", 0, "null", "NNP" 1.0000)
 
 .. seealso::
-  - Wiki about YY tokens: http://moin.delph-in.net/PetInput
+  - Wiki about YY tokens: https://github.com/delph-in/docs/wiki/PetInput
   - :mod:`delphin.tokens` module
 
 
@@ -256,7 +256,7 @@ specific grammar version) are fully modeled:
 [<UDFNode object (71, abrams, 0.0, 0, 1) at 139897041214040>, <UDFNode object (52, chase_v1, 0.0, 1, 2) at 139897041214376>, <UDFNode object (70, browne, 0.0, 2, 3) at 139897041214712>]
 
 .. seealso::
-  - Wiki about derivations: http://moin.delph-in.net/ItsdbDerivations
+  - Wiki about derivations: https://github.com/delph-in/docs/wiki/ItsdbDerivations
   - :mod:`delphin.derivation` module
 
 
@@ -286,7 +286,7 @@ testsuites:
 NOTE: parsed 107 / 107 sentences, avg 4744k, time 2.93924s
 
 .. seealso::
-  - [incr tsdb()] wiki: http://moin.delph-in.net/ItsdbTop
+  - [incr tsdb()] wiki: https://github.com/delph-in/docs/wiki/ItsdbTop
   - :mod:`delphin.itsdb` module
   - :mod:`delphin.tsdb` module, for a low-level API
   - :doc:`itsdb`
@@ -313,7 +313,7 @@ Regular Expression Preprocessors (REPP)
 
 PyDelphin provides a full implementation of Regular Expression
 Preprocessors (REPP), including correct characterization and the
-loading from `PET <http://moin.delph-in.net/PetTop>`_ configuration
+loading from `PET <https://github.com/delph-in/docs/wiki/PetTop>`_ configuration
 files. Unique to PyDelphin (I think) is the ability to trace through
 an application of the tokenization rules.
 
@@ -349,8 +349,8 @@ Note that the trace shows the sequential order of rule applications,
 but not the tree-like branching of REPP modules.
 
 .. seealso::
-  - REPP wiki: http://moin.delph-in.net/ReppTop
-  - Wiki for PET's REPP configuration: http://moin.delph-in.net/ReppPet
+  - REPP wiki: https://github.com/delph-in/docs/wiki/ReppTop
+  - Wiki for PET's REPP configuration: https://github.com/delph-in/docs/wiki/ReppPet
   - :mod:`delphin.repp` module
 
 
@@ -392,8 +392,8 @@ cactus_n1 := n_-_c_le &
              PHON.ONSET con ] ].
 
 .. seealso::
-  - A semi-formal specification of TDL: http://moin.delph-in.net/TdlRfc
-  - A grammar-engineering FAQ about TDL: http://moin.delph-in.net/GeFaqTdlSyntax
+  - A semi-formal specification of TDL: https://github.com/delph-in/docs/wiki/TdlRfc
+  - A grammar-engineering FAQ about TDL: https://github.com/delph-in/docs/wiki/GeFaqTdlSyntax
   - :mod:`delphin.tdl` module
 
 
@@ -433,7 +433,7 @@ grammar. PyDelphin supports the reading and inspection of SEM-Is.
 .. seealso::
   - The SEM-I wikis:
 
-    - http://moin.delph-in.net/SemiRfc
-    - http://moin.delph-in.net/RmrsSemi
+    - https://github.com/delph-in/docs/wiki/SemiRfc
+    - https://github.com/delph-in/docs/wiki/RmrsSemi
 
   - :mod:`delphin.semi` module

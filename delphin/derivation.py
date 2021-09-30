@@ -36,7 +36,7 @@ def from_string(s):
     Instantiate a Derivation from a UDF or UDX string representation.
 
     The UDF/UDX representations are as output by a processor like the
-    `LKB <http://moin.delph-in.net/LkbTop>`_ or
+    `LKB <https://github.com/delph-in/docs/wiki/LkbTop>`_ or
     `ACE <http://sweaglesw.org/linguistics/ace/>`_, or from the
     :meth:`UDFNode.to_udf` or :meth:`UDFNode.to_udx` methods.
 
@@ -52,8 +52,8 @@ def from_dict(d):
     Instantiate a Derivation from a dictionary representation.
 
     The dictionary representation may come from the HTTP interface
-    (see the `ErgApi <http://moin.delph-in.net/ErgApi>`_ wiki) or
-    from the :meth:`UDFNode.to_dict` method. Note that in the
+    (see the `ErgApi <https://github.com/delph-in/docs/wiki/ErgApi>`_
+    wiki) or from the :meth:`UDFNode.to_dict` method. Note that in the
     former case, the JSON response should have already been decoded
     into a Python dictionary.
 
@@ -156,7 +156,7 @@ class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', 'form tokens')):
 
     The *form* field is always set, but *tokens* may be `None`.
 
-    See: http://moin.delph-in.net/ItsdbDerivations
+    See: https://github.com/delph-in/docs/wiki/ItsdbDerivations
 
     Args:
         form (str): surface form of the terminal

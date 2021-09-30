@@ -54,8 +54,8 @@ apply.
 .. [COP2002] Ann Copestake. Implementing typed feature structure
   grammars, volume 110. CSLI publications Stanford, 2002.
 
-.. _TdlRfc: http://moin.delph-in.net/TdlRfc
-.. _`DELPH-IN Wiki`: http://moin.delph-in.net/
+.. _TdlRfc: https://github.com/delph-in/docs/wiki/TdlRfc
+.. _`DELPH-IN Wiki`: https://github.com/delph-in/docs/wiki/
 .. _ERG: http://www.delph-in.net/erg/
 
 

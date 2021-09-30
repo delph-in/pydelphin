@@ -135,7 +135,7 @@ The :command:`select` subcommand selects data from an [incr tsdb()]
 profile using TSQL_ queries. For example, if you want to get the
 ``i-id`` and ``i-input`` fields from a profile, do this:
 
-.. _TSQL: http://moin.delph-in.net/TsqlRfc
+.. _TSQL: https://github.com/delph-in/docs/wiki/TsqlRfc
 
 .. code:: console
 
@@ -252,8 +252,9 @@ Try `delphin process --help` for more information.
 
 .. seealso::
 
-  The `art <http://sweaglesw.org/linguistics/libtsdb/art>`_ utility and
-  `[incr tsdb()] <http://moin.delph-in.net/ItsdbTop>`_ are other
+  The `art <http://sweaglesw.org/linguistics/libtsdb/art>`_ utility
+  and `[incr tsdb()]
+  <https://github.com/delph-in/docs/wiki/ItsdbTop>`_ are other
   testsuite processors with different kinds of functionality.
 
 .. _compare-tutorial:
@@ -279,8 +280,8 @@ Try ``delphin compare --help`` for more information.
 .. seealso::
 
   The `gTest <https://github.com/goodmami/gtest>`_ application is a
-  more fully-featured profile comparer, as is
-  `[incr tsdb()] <http://moin.delph-in.net/ItsdbTop>`_ itself.
+  more fully-featured profile comparer, as is `[incr tsdb()]
+  <https://github.com/delph-in/docs/wiki/ItsdbTop>`_ itself.
 
 
 .. _repp-tutorial:
@@ -345,4 +346,4 @@ Try ``delphin repp --help`` for more information.
 .. seealso::
 
    - The C++ REPP implementation:
-     http://moin.delph-in.net/ReppTop#REPP_in_PET_and_Stand-Alone
+     https://github.com/delph-in/docs/wiki/ReppTop#repp-in-pet-and-stand-alone

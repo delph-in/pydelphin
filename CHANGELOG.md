@@ -1,6 +1,24 @@
 # Change Log
 
-## Unreleased
+## [v1.6.0]
+
+**Release date: 2021-09-30**
+
+### Added
+
+* REPP mask (`=`) operator and full masking support ([#331])
+
+### Fixed
+
+* SimpleDMRS no longer requires `index` or `top` to be specified when
+  decoding ([#334])
+* DMRX codec now conforms to the DTD regarding the upper/lower case of
+  attributes ([#333])
+
+### Changed
+
+* REPP no longer requires iterative group calls to appear after the
+  group definitions ([#308])
 
 
 ## [v1.5.1]
@@ -488,17 +506,18 @@ documented.
 **Release date: 2018-10-20**
 
 This release introduces a completely redone TDL parser that follows
-the description of TDL syntax at http://moin.delph-in.net/TdlRfc based
-on recent discussions on the DELPH-IN mailing list (links to these
-discussions are at the bottom of the linked wiki). In addition, there
-are three other major introductions: `delphin.commands`, which gives
+the description of TDL syntax at
+https://github.com/delph-in/docs/wiki/TdlRFC based on recent
+discussions on the DELPH-IN mailing list (links to these discussions
+are at the bottom of the linked wiki). In addition, there are three
+other major introductions: `delphin.commands`, which gives
 programmatic access to the `delphin` command-line utilities;
 `delphin.tsql`, which implements a subset of the TSQL query language
-(see http://moin.delph-in.net/TsqlRfc) that now replace the --filter
-options for certain commands; and the new `TypeHierarchy` class in
-`delphin.tfs`. Improvements to the `delphin.itsdb.TestSuite` class
-now give it feature-parity with the `ItsdbProfile` class it replaces.
-See the rest of the changelog for additional improvements.
+(see https://github.com/delph-in/docs/wiki/TsqlRfc) that now replace
+the --filter options for certain commands; and the new `TypeHierarchy`
+class in `delphin.tfs`. Improvements to the `delphin.itsdb.TestSuite`
+class now give it feature-parity with the `ItsdbProfile` class it
+replaces.  See the rest of the changelog for additional improvements.
 
 ### Fixed
 
@@ -1327,6 +1346,7 @@ There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
 [commit messages](../../commits/v0.2).
 
+[v1.6.0]: ../../releases/tag/v1.6.0
 [v1.5.1]: ../../releases/tag/v1.5.1
 [v1.5.0]: ../../releases/tag/v1.5.0
 [v1.4.1]: ../../releases/tag/v1.4.1
@@ -1493,7 +1513,11 @@ information about changes, except for
 [#303]: https://github.com/delph-in/pydelphin/issues/303
 [#304]: https://github.com/delph-in/pydelphin/issues/304
 [#306]: https://github.com/delph-in/pydelphin/issues/306
+[#308]: https://github.com/delph-in/pydelphin/issues/308
 [#316]: https://github.com/delph-in/pydelphin/issues/316
 [#319]: https://github.com/delph-in/pydelphin/issues/319
 [#323]: https://github.com/delph-in/pydelphin/issues/323
 [#324]: https://github.com/delph-in/pydelphin/issues/324
+[#331]: https://github.com/delph-in/pydelphin/issues/331
+[#333]: https://github.com/delph-in/pydelphin/issues/333
+[#334]: https://github.com/delph-in/pydelphin/issues/334

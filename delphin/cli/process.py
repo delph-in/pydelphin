@@ -57,7 +57,7 @@ parser.add_argument(
 )
 parser.add_argument(
     '-o', '--options', metavar='OPTIONS', type=str, default='',
-    help='ACE options (see http://moin.delph-in.net/AceOptions)'
+    help='ACE options (see https://github.com/delph-in/docs/wiki/AceOptions)'
 )
 parser.add_argument(
     '-s', '--source', metavar='PATH',

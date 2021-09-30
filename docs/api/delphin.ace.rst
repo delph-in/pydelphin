@@ -15,7 +15,7 @@ delphin.ace
    is not included with PyDelphin. Pre-compiled binaries are available
    for Linux and MacOS at http://sweaglesw.org/linguistics/ace/, and
    for installation instructions see
-   http://moin.delph-in.net/AceInstall.
+   https://github.com/delph-in/docs/wiki/AceInstall.
 
    The :class:`ACEParser`, :class:`ACETransferer`, and
    :class:`ACEGenerator` classes are used for parsing, transferring, and
@@ -143,12 +143,12 @@ delphin.ace
    <delphin.codecs.simplemrs>` format, additional content used in
    ACE's stdout protocols can complicate tasks such as format or
    represenation conversion. The user can provide some options to ACE
-   (see http://moin.delph-in.net/AceOptions), such as :command:`-T`,
-   to filter the non-MRS content, but for convenience PyDelphin also
-   provides the `ace` :doc:`codec <delphin.codecs>`, available at
-   :mod:`delphin.codecs.ace`. The codec ignores the non-MRS content in
-   ACE's stdout so the user can use ACE output as a stream or as a
-   corpus of MRS representations. For example:
+   (see https://github.com/delph-in/docs/wiki/AceOptions), such as
+   :command:`-T`, to filter the non-MRS content, but for convenience
+   PyDelphin also provides the `ace` :doc:`codec <delphin.codecs>`,
+   available at :mod:`delphin.codecs.ace`. The codec ignores the
+   non-MRS content in ACE's stdout so the user can use ACE output as a
+   stream or as a corpus of MRS representations. For example:
 
    .. code-block:: console
 

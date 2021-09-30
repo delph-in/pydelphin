@@ -25,7 +25,7 @@ delphin.predicate
 
    .. seealso::
       - The DELPH-IN wiki about predicates:
-	http://moin.delph-in.net/PredicateRfc
+	https://github.com/delph-in/docs/wiki/PredicateRfc
 
    In DELPH-IN there is the concept of "real predicates" which are
    surface predicates decomposed into their lemma, part-of-speech, and
