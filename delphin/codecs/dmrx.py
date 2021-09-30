@@ -183,7 +183,7 @@ def _decode_node(elem):
     sortinfo = _decode_sortinfo(elem.find('sortinfo'))
     type = None
     if CVARSORT in sortinfo:
-        type = sortinfo.pop(CVARSORT)
+        type = sortinfo.pop(CVARSORT).lower()
     return Node(id=int(elem.get('nodeid')),
                 predicate=_decode_pred(elem.find('*[1]')),
                 type=type,
@@ -202,11 +202,12 @@ def _decode_pred(elem):
     #           sense CDATA #IMPLIED >
     # <!ELEMENT gpred (#PCDATA)>
     if elem.tag == 'gpred':
-        return elem.text
+        pred = elem.text
     elif elem.tag == 'realpred':
-        return predicate.create(elem.get('lemma'),
+        pred = predicate.create(elem.get('lemma'),
                                 elem.get('pos'),
                                 elem.get('sense'))
+    return predicate.normalize(pred)
 
 
 def _decode_sortinfo(elem):
@@ -224,7 +225,8 @@ def _decode_sortinfo(elem):
     #           perf (plus|minus|u) #IMPLIED
     #           ind  (plus|minus|u) #IMPLIED >
     # note: Just accept any properties, since these are ERG-specific
-    return elem.attrib
+    return {(key.upper() if key != CVARSORT else key): val.lower()
+            for key, val in elem.attrib.items()}
 
 
 def _decode_link(elem):
@@ -295,12 +297,17 @@ def _encode_node(node, properties, lnk):
         attributes['carg'] = node.carg
     e = etree.Element('node', attrib=attributes)
     e.append(_encode_pred(node.predicate))
-    e.append(etree.Element('sortinfo',
-                           attrib=node.sortinfo if properties else {}))
+    if properties:
+        sortinfo = {key.lower(): val.lower()
+                    for key, val in node.sortinfo.items()}
+    else:
+        sortinfo = {}
+    e.append(etree.Element('sortinfo', attrib=sortinfo))
     return e
 
 
 def _encode_pred(pred):
+    pred = predicate.normalize(pred)
     if predicate.is_surface(pred):
         lemma, pos, sense = predicate.split(pred)
         attributes = {'lemma': lemma, 'pos': pos}

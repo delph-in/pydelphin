@@ -10,6 +10,8 @@
 
 * SimpleDMRS no longer requires `index` or `top` to be specified when
   decoding ([#334])
+* DMRX codec now conforms to the DTD regarding the upper/lower case of
+  attributes ([#333])
 
 ### Changed
 
@@ -1514,4 +1516,5 @@ information about changes, except for
 [#323]: https://github.com/delph-in/pydelphin/issues/323
 [#324]: https://github.com/delph-in/pydelphin/issues/324
 [#331]: https://github.com/delph-in/pydelphin/issues/331
+[#333]: https://github.com/delph-in/pydelphin/issues/333
 [#334]: https://github.com/delph-in/pydelphin/issues/334
