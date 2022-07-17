@@ -1,5 +1,13 @@
 # Change Log
 
+## Unreleased
+
+### Python Versions
+
+* Removed Python 3.6 support ([#343])
+* Added Python 3.10 support ([#343])
+
+
 ## [v1.6.0]
 
 **Release date: 2021-09-30**
@@ -1521,3 +1529,4 @@ information about changes, except for
 [#331]: https://github.com/delph-in/pydelphin/issues/331
 [#333]: https://github.com/delph-in/pydelphin/issues/333
 [#334]: https://github.com/delph-in/pydelphin/issues/334
+[#343]: https://github.com/delph-in/pydelphin/issues/343

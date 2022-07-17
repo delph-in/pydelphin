@@ -495,8 +495,6 @@ def test_parse_cons_list():
         tdlparse('a := b & [ ATTR < [] [] > ].')
 
 
-@pytest.mark.skipif(sys.version_info < (3, 7),
-                    reason='recursion test is flaky on Python 3.6')
 @pytest.mark.slow
 def test_issue_294():
     # check for recursion error
