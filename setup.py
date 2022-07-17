@@ -69,6 +69,7 @@ setup(
     install_requires=[
         'penman==1.1.0',
         'progress==1.5',
+        'Pygments >= 2.3.1',
     ],
     extras_require={
         'docs': docs_require,

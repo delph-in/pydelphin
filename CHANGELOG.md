@@ -2,10 +2,19 @@
 
 ## Unreleased
 
+Updates Python support to currently active releases. Includes
+`delphin.highlight` directly instead of as a separate plugin (adds a
+dependency on Pygments).
+
 ### Python Versions
 
 * Removed Python 3.6 support ([#343])
 * Added Python 3.10 support ([#343])
+
+### Added
+
+* `delphin.highlight` for syntax highlighting; it is no longer
+  necessary to install this as a plugin ([#344])
 
 
 ## [v1.6.0]
@@ -1530,3 +1539,4 @@ information about changes, except for
 [#333]: https://github.com/delph-in/pydelphin/issues/333
 [#334]: https://github.com/delph-in/pydelphin/issues/334
 [#343]: https://github.com/delph-in/pydelphin/issues/343
+[#344]: https://github.com/delph-in/pydelphin/issues/344

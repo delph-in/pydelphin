@@ -704,26 +704,20 @@ def import_codec(name: str):
 
 
 def make_highlighter(fmt):
-    try:
-        import pygments
-        from pygments.formatters import Terminal256Formatter as _formatter
-    except ImportError:
-        return str
+    import pygments
+    from pygments.formatters import Terminal256Formatter as _formatter
 
     highlight = str  # backoff function
 
     if fmt == 'simplemrs':
-        try:
-            import delphin.highlight
-        except ImportError:
-            pass
-        else:
+        import delphin.highlight
 
-            def highlight(text):
-                return pygments.highlight(
-                    text,
-                    delphin.highlight.SimpleMRSLexer(),
-                    _formatter(style=delphin.highlight.MRSStyle))
+        def highlight(text):
+            return pygments.highlight(
+                text,
+                delphin.highlight.SimpleMRSLexer(),
+                _formatter(style=delphin.highlight.MRSStyle),
+            )
 
     elif fmt == 'diff':
         from pygments.lexers.diff import DiffLexer
@@ -733,6 +727,7 @@ def make_highlighter(fmt):
             return pygments.highlight(
                 text,
                 DiffLexer(),
-                _formatter()).rstrip('\n')
+                _formatter(),
+            ).rstrip('\n')
 
     return highlight
