@@ -74,12 +74,6 @@ grammar.
 
 Try ``delphin compare --help`` for more information.
 
-.. seealso::
-
-  The `gTest <https://github.com/goodmami/gtest>`_ application is a
-  more fully-featured profile comparer, as is `[incr tsdb()]
-  <https://github.com/delph-in/docs/wiki/ItsdbTop>`_ itself.
-
 
 .. _convert-tutorial:
 
