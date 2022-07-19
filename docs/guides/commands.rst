@@ -6,7 +6,7 @@ PyDelphin is primarily a library for creating more complex software,
 but some functions are directly useful as commands. To facilitate this
 usage, the :command:`delphin` command (:command:`delphin.exe` on
 Windows) provides an entry point to a number of subcommands,
-including: `convert`_, `select`_, `mkprof`_, `process`_, `compare`_,
+including: `compare`_, `convert`_, `mkprof`_, `process`_, `select`_,
 and `repp`_. These subcommands are command-line front-ends to the
 functions defined in :mod:`delphin.commands`.
 
@@ -53,6 +53,33 @@ This guide assumes you have installed PyDelphin and thus have the
 
 Subcommands
 -----------
+
+.. _compare-tutorial:
+
+compare
+'''''''
+
+The ``compare`` subcommand is a lightweight way to compare bags of MRSs,
+e.g., to detect changes in a profile run with different versions of the
+grammar.
+
+.. code:: console
+
+   $ delphin compare ~/grammars/jacy/tsdb/current/mrs/ \
+   >                 ~/grammars/jacy/tsdb/gold/mrs/
+   11  <1,0,1>
+   21  <1,0,1>
+   31  <3,0,1>
+   [..]
+
+Try ``delphin compare --help`` for more information.
+
+.. seealso::
+
+  The `gTest <https://github.com/goodmami/gtest>`_ application is a
+  more fully-featured profile comparer, as is `[incr tsdb()]
+  <https://github.com/delph-in/docs/wiki/ItsdbTop>`_ itself.
+
 
 .. _convert-tutorial:
 
@@ -123,48 +150,6 @@ indicates if they can read (``r``) or write (``w``) the format.
 	simplemrs   	r/w
 
 Try ``delphin convert --help`` for more information.
-
-
-.. _select-tutorial:
-
-select
-''''''
-
-The :command:`select` subcommand selects data from an [incr tsdb()]
-profile using TSQL_ queries. For example, if you want to get the
-``i-id`` and ``i-input`` fields from a profile, do this:
-
-.. _TSQL: https://github.com/delph-in/docs/wiki/TsqlRfc
-
-.. code:: console
-
-   $ delphin select 'i-id i-input from item' ~/grammars/jacy/tsdb/gold/mrs/
-   11@雨 が 降っ た ．
-   21@太郎 が 吠え た ．
-   [..]
-
-
-In many cases, the ``from`` clause of the query is not necessary, and
-the appropriate tables will be selected automatically.  Fields from
-multiple tables can be used and the tables containing them will be
-automatically joined:
-
-.. code:: console
-
-   $ delphin select 'i-id mrs' ~/grammars/jacy/tsdb/gold/mrs/
-   11@[ LTOP: h1 INDEX: e2 ... ]
-   [..]
-
-The results can be filtered by providing ``where`` clauses:
-
-.. code:: console
-
-   $ delphin select 'i-id i-input where i-input ~ "雨"' ~/grammars/jacy/tsdb/gold/mrs/
-   11@雨 が 降っ た ．
-   71@太郎 が タバコ を 次郎 に 雨 が 降る と 賭け た ．
-   81@太郎 が 雨 が 降っ た こと を 知っ て い た ．
-
-Try ``delphin select --help`` for more information.
 
 
 .. _mkprof-tutorial:
@@ -256,31 +241,47 @@ Try `delphin process --help` for more information.
   <https://github.com/delph-in/docs/wiki/ItsdbTop>`_ are other
   testsuite processors with different kinds of functionality.
 
-.. _compare-tutorial:
 
-compare
-'''''''
+.. _select-tutorial:
 
-The ``compare`` subcommand is a lightweight way to compare bags of MRSs,
-e.g., to detect changes in a profile run with different versions of the
-grammar.
+select
+''''''
+
+The :command:`select` subcommand selects data from an [incr tsdb()]
+profile using TSQL_ queries. For example, if you want to get the
+``i-id`` and ``i-input`` fields from a profile, do this:
+
+.. _TSQL: https://github.com/delph-in/docs/wiki/TsqlRfc
 
 .. code:: console
 
-   $ delphin compare ~/grammars/jacy/tsdb/current/mrs/ \
-   >                 ~/grammars/jacy/tsdb/gold/mrs/
-   11  <1,0,1>
-   21  <1,0,1>
-   31  <3,0,1>
+   $ delphin select 'i-id i-input from item' ~/grammars/jacy/tsdb/gold/mrs/
+   11@雨 が 降っ た ．
+   21@太郎 が 吠え た ．
    [..]
 
-Try ``delphin compare --help`` for more information.
 
-.. seealso::
+In many cases, the ``from`` clause of the query is not necessary, and
+the appropriate tables will be selected automatically.  Fields from
+multiple tables can be used and the tables containing them will be
+automatically joined:
 
-  The `gTest <https://github.com/goodmami/gtest>`_ application is a
-  more fully-featured profile comparer, as is `[incr tsdb()]
-  <https://github.com/delph-in/docs/wiki/ItsdbTop>`_ itself.
+.. code:: console
+
+   $ delphin select 'i-id mrs' ~/grammars/jacy/tsdb/gold/mrs/
+   11@[ LTOP: h1 INDEX: e2 ... ]
+   [..]
+
+The results can be filtered by providing ``where`` clauses:
+
+.. code:: console
+
+   $ delphin select 'i-id i-input where i-input ~ "雨"' ~/grammars/jacy/tsdb/gold/mrs/
+   11@雨 が 降っ た ．
+   71@太郎 が タバコ を 次郎 に 雨 が 降る と 賭け た ．
+   81@太郎 が 雨 が 降っ た こと を 知っ て い た ．
+
+Try ``delphin select --help`` for more information.
 
 
 .. _repp-tutorial:
