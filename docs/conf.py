@@ -15,6 +15,7 @@
 #
 import os
 import sys
+sys.path.insert(0, os.path.join(os.path.abspath('.'), '_extensions'))
 sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
@@ -47,6 +48,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
+    'wiki',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -198,3 +200,8 @@ napoleon_use_rtype = False
 # disable type hints
 
 autodoc_typehints = 'none'
+
+
+# -- Options for wikis -------------------------------------------------------
+
+wiki_url = 'https://github.com/delph-in/docs/wiki/'
