@@ -414,7 +414,7 @@ def _lines_to_records(lineiter, colnames, split, fields):
             i_ids.add(colmap['i-id'])
 
         if with_i_length and 'i-length' not in colmap and 'i-input' in colmap:
-            colmap['i-length'] = len(colmap['i-input'].split())
+            colmap['i-length'] = len((colmap['i-input'] or '').split())
 
         yield tsdb.make_record(colmap, fields)
 

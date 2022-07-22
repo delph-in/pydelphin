@@ -20,6 +20,11 @@ and `delphin.codecs.dmrstikz` directly instead of as separate plugins.
 * `delphin.codecs.dmrstikz` for exporting DMRS with tikz-dependency;
   it is no longer necessary to install this as a plugin ([#344])
 
+### Fixed
+
+* The `mkprof` command no longer raises an error on an empty sentence ([#335])
+
+
 ## [v1.6.0]
 
 **Release date: 2021-09-30**
@@ -1541,5 +1546,6 @@ information about changes, except for
 [#331]: https://github.com/delph-in/pydelphin/issues/331
 [#333]: https://github.com/delph-in/pydelphin/issues/333
 [#334]: https://github.com/delph-in/pydelphin/issues/334
+[#335]: https://github.com/delph-in/pydelphin/issues/335
 [#343]: https://github.com/delph-in/pydelphin/issues/343
 [#344]: https://github.com/delph-in/pydelphin/issues/344
