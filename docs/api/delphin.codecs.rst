@@ -35,6 +35,7 @@ DMRS:
    delphin.codecs.dmrx
    delphin.codecs.dmrsjson
    delphin.codecs.dmrspenman
+   delphin.codecs.dmrstikz
 
 EDS:
 
@@ -86,10 +87,8 @@ values will be used.
 
    The string to output before any of semantic representations are
    serialized. For example, in :mod:`delphin.codecs.mrx`, the value of
-   `HEADER` is `<mrs-list>`, and in the `delphin.codecs.dmrstikz`
-   module of the `delphin-latex
-   <https://github.com/delph-in/delphin-latex>`_ plugin it is an
-   entire LaTeX preamble followed by `\begin{document}`.
+   `HEADER` is `<mrs-list>`, and in :mod:`delphin.codecs.dmrstikz` it
+   is an entire LaTeX preamble followed by `\begin{document}`.
 
 .. data:: JOINER
 
@@ -103,7 +102,7 @@ values will be used.
 
    The string to output after all semantic representations have been
    serialized. For example, in :mod:`delphin.codecs.mrx`, it is
-   `</mrs-list>`, and in `delphin.codecs.dmrstikz` it is
+   `</mrs-list>`, and in :mod:`delphin.codecs.dmrstikz` it is
    `\end{document}`.
 
 
@@ -260,7 +259,7 @@ optional. Here are some examples of variations in PyDelphin:
 * :mod:`delphin.codecs.eds` allows a `show_status` keyword argument
   to turn on graph connectedness markers on serialization.
 
-* :mod:`delphin.codecs.mrsprolog` and `delphin.codecs.dmrstikz`
+* :mod:`delphin.codecs.mrsprolog` and :mod:`delphin.codecs.dmrstikz`
   are export-only codecs and do not provide :func:`load`,
   :func:`loads`, or :func:`decode` functions.
 

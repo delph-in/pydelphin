@@ -3,8 +3,8 @@
 ## Unreleased
 
 Updates Python support to currently active releases. Includes
-`delphin.highlight` directly instead of as a separate plugin (adds a
-dependency on Pygments).
+`delphin.highlight` (adds a dependency on Pygments), `delphin.edm`,
+and `delphin.codecs.dmrstikz` directly instead of as separate plugins.
 
 ### Python Versions
 
@@ -15,7 +15,10 @@ dependency on Pygments).
 
 * `delphin.highlight` for syntax highlighting; it is no longer
   necessary to install this as a plugin ([#344])
-
+* `delphin.edm` for elementary dependency matching; it is no longer
+  necessary to install this as a plugin ([#344])
+* `delphin.codecs.dmrstikz` for exporting DMRS with tikz-dependency;
+  it is no longer necessary to install this as a plugin ([#344])
 
 ## [v1.6.0]
 
