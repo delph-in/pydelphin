@@ -53,7 +53,7 @@ delphin.codecs.eds
       :param bool show_status: if `True`, indicate disconnected
                                components
 
-   .. function:: dumps(ms, properties=True, lnk=True, show_status=False, indent=False, encoding='utf-8')
+   .. function:: dumps(ms, properties=True, lnk=True, show_status=False, indent=False)
 
       See the :func:`dumps` codec API documentation.
 
@@ -62,7 +62,7 @@ delphin.codecs.eds
       :param bool show_status: if `True`, indicate disconnected
                                components
 
-   .. function:: encode(m, properties=True, lnk=True, show_status=False, indent=False, encoding='utf-8')
+   .. function:: encode(m, properties=True, lnk=True, show_status=False, indent=False)
 
       See the :func:`encode` codec API documentation.
 
