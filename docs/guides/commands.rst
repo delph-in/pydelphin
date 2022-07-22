@@ -146,6 +146,48 @@ indicates if they can read (``r``) or write (``w``) the format.
 Try ``delphin convert --help`` for more information.
 
 
+edm
+'''
+
+The :command:`edm` subcommand performs Elementary Dependency Matching
+(`Dridan and Oepen, 2011`_) on two files of serialized semantic
+representations or on two [incr tsdb()] profiles containing those
+representations.
+
+.. code:: console
+
+   $ cat <<EOS >gold.eds
+   {e2:
+    _1:_the_q<0:3>[BV x3]
+    x3:_sun_n_1<4:7>{x PERS 3, NUM sg}[]
+    e2:_rise_v_1<8:14>{e SF prop, TENSE pres, MOOD indicative, PROG -, PERF -}[ARG1 x3]
+   }
+   EOS
+   $ cat <<EOS >test.eds
+   {e2:
+    _1:_the_q<0:3>[BV x3]
+    x3:_sun_n_1<4:7>{x PERS 3, NUM sg}[]
+    e2:_set_v_1<8:13>{e SF prop, TENSE pres, MOOD indicative, PROG -, PERF -}[ARG1 x3]
+   }
+   EOS
+   $ delphin edm gold.eds test.eds
+   Precision:	0.38461538461538464
+      Recall:	0.38461538461538464
+     F-score:	0.38461538461538464
+
+If the semantic representations are not in the EDS native format, use
+the ``--format`` option to select one of the other codecs. There are
+also options for adjusting the weights of various aspects of the
+comparison. Try ``delphin edm --help`` for more information.
+
+.. seealso::
+
+   The :doc:`edm` guide has a fuller description of how to use the
+   tool.
+
+.. _Dridan and Oepen, 2011: https://aclanthology.org/W11-2927/
+
+
 .. _mkprof-tutorial:
 
 mkprof

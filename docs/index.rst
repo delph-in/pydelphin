@@ -25,6 +25,7 @@ PyDelphin
   guides/ace.rst
   guides/commands.rst
   guides/itsdb.rst
+  guides/edm.rst
   guides/developer.rst
 
 .. toctree::
@@ -38,6 +39,7 @@ PyDelphin
   api/delphin.commands.rst
   api/delphin.derivation.rst
   api/delphin.dmrs.rst
+  api/delphin.edm.rst
   api/delphin.eds.rst
   api/delphin.exceptions.rst
   api/delphin.hierarchy.rst
