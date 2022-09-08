@@ -252,7 +252,10 @@ class ACEProcess(interface.Processor):
         Returns:
             :class:`~delphin.interface.Response`
         """
-        validated = self._validate_input(datum)
+        try:
+            validated = self._validate_input(datum)
+        except TypeError:
+            print("TypeError: MRS object not serialized")
         if validated:
             self.send(validated)
             result = self.receive()
