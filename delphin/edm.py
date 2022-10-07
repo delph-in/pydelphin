@@ -3,7 +3,7 @@
 Elementary Dependency Matching
 """
 
-from typing import Union, List, Tuple, Iterable, Any, NamedTuple
+from typing import Union, List, Tuple, Iterable, Any, NamedTuple, Optional
 import logging
 from collections import Counter
 from itertools import zip_longest
@@ -145,7 +145,12 @@ def _count(func, gold, test) -> _Count:
     return _Count(len(gold_triples), len(test_triples), both)
 
 
-def _accumulate(golds, tests, ignore_missing_gold, ignore_missing_test):
+def _accumulate(
+    golds: Iterable[Optional[_SemanticRepresentation]],
+    tests: Iterable[Optional[_SemanticRepresentation]],
+    ignore_missing_gold: bool,
+    ignore_missing_test: bool,
+) -> _Match:
     """
     Sum the matches for all *golds* and *tests*.
     """
@@ -177,6 +182,7 @@ def _accumulate(golds, tests, ignore_missing_gold, ignore_missing_test):
                 logger.debug('missing test representation')
                 test = EDS()
 
+        assert isinstance(gold, (EDS, DMRS)) and isinstance(test, (EDS, DMRS))
         result = _match(gold, test)
 
         if info:
@@ -199,8 +205,8 @@ def _accumulate(golds, tests, ignore_missing_gold, ignore_missing_test):
     return totals
 
 
-def compute(golds: Iterable[_SemanticRepresentation],
-            tests: Iterable[_SemanticRepresentation],
+def compute(golds: Iterable[Optional[_SemanticRepresentation]],
+            tests: Iterable[Optional[_SemanticRepresentation]],
             name_weight: float = 1.0,
             argument_weight: float = 1.0,
             property_weight: float = 1.0,

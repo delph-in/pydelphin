@@ -9,15 +9,24 @@ number. GOLD and TEST should contain the same number of items. MRS
 representations will be converted to EDS for comparison.
 """
 
+from typing import Optional, Iterator, Union
 import argparse
 from pathlib import Path
+import warnings
+import logging
 
 from delphin import util
 from delphin import tsdb
 from delphin import itsdb
-from delphin.eds import from_mrs
 from delphin import edm
+from delphin import mrs
+from delphin import eds
+from delphin import dmrs
 
+
+logger = logging.getLogger(__name__)
+
+_SemanticRepresentation = Union[eds.EDS, dmrs.DMRS]
 
 parser = argparse.ArgumentParser(add_help=False)
 
@@ -47,8 +56,13 @@ def call_compute(args):
     print(f'  F-score:\t{f}')
 
 
-def _iter_representations(path: Path, fmt: str, p: int):
+def _iter_representations(
+    path: Path,
+    fmt: str,
+    p: int
+) -> Iterator[Optional[_SemanticRepresentation]]:
     if tsdb.is_database_directory(path):
+        logger.debug('reading MRSs from profile: %s', (path,))
         ts = itsdb.TestSuite(path)
         for response in ts.processed_items():
             try:
@@ -56,14 +70,15 @@ def _iter_representations(path: Path, fmt: str, p: int):
             except IndexError:
                 yield None
             else:
-                yield from_mrs(result.mrs(), predicate_modifiers=True)
+                yield _eds_from_mrs(result.mrs(), predicate_modifiers=True)
 
     elif path.is_file():
+        logger.debug('reading %s from file: %s', (fmt, path,))
         codec = util.import_codec(fmt)
         rep = codec.CODEC_INFO.get('representation', '').lower()
         if rep == 'mrs':
-            for mrs in codec.load(path):
-                yield from_mrs(mrs, predicate_modifiers=True)
+            for sr in codec.load(path):
+                yield _eds_from_mrs(sr, predicate_modifiers=True)
         elif rep in ('dmrs', 'eds'):
             for sr in codec.load(path):
                 yield sr
@@ -72,6 +87,23 @@ def _iter_representations(path: Path, fmt: str, p: int):
 
     else:
         raise ValueError(f'not a file or TSDB database: {path}')
+
+
+def _eds_from_mrs(
+    m: mrs.MRS,
+    predicate_modifiers: bool,
+    errors: str = 'warn',
+) -> Optional[eds.EDS]:
+    try:
+        e = eds.from_mrs(m, predicate_modifiers=predicate_modifiers)
+    except Exception:
+        logger.debug('could not convert MRS to EDS')
+        if errors == 'warn':
+            warnings.warn("error in EDS conversion; skipping entry")
+        elif errors == 'strict':
+            raise
+        e = None
+    return e
 
 
 parser.set_defaults(func=call_compute)
