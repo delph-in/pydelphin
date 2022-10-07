@@ -19,10 +19,13 @@ and `delphin.codecs.dmrstikz` directly instead of as separate plugins.
   necessary to install this as a plugin ([#344])
 * `delphin.codecs.dmrstikz` for exporting DMRS with tikz-dependency;
   it is no longer necessary to install this as a plugin ([#344])
+* `executable` parameter to `delphin.commands.process()` ([#352])
+* `--executable` option to `delphin process` command ([#352])
 
 ### Fixed
 
 * The `mkprof` command no longer raises an error on an empty sentence ([#335])
+* EDS conversion in `delphin.edm` now more robustly handles errors
 
 
 ## [v1.6.0]
@@ -1549,3 +1552,4 @@ information about changes, except for
 [#335]: https://github.com/delph-in/pydelphin/issues/335
 [#343]: https://github.com/delph-in/pydelphin/issues/343
 [#344]: https://github.com/delph-in/pydelphin/issues/344
+[#352]: https://github.com/delph-in/pydelphin/issues/352
