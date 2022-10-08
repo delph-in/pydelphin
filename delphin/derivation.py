@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
 Classes and functions related to derivation trees.
 """

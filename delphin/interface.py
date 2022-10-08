@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Interfaces for external data providers.
 """

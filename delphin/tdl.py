@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
 Classes and functions for parsing and inspecting TDL.
 """

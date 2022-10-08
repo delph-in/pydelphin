@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 EDS-JSON serialization and deserialization.
 """

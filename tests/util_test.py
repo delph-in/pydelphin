@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import codecs
 
 from delphin.util import safe_int, SExpr, detect_encoding, LookaheadIterator

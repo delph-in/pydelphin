@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Serialization functions for the SimpleMRS format.
 """

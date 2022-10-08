@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Serialization for the SimpleDMRS format.
 """

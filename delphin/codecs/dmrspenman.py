@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 DMRS-PENMAN serialization and deserialization.
 """
