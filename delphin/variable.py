@@ -84,7 +84,7 @@ def is_valid(var):
     return _variable_re.match(var) is not None
 
 
-class VariableFactory(object):
+class VariableFactory:
     """
     Simple class to produce variables by incrementing the variable id.
 

@@ -384,7 +384,7 @@ def _SExpr_parse_symbol(s: str, i: int) -> Tuple[str, int]:
     return _SExpr_unescape_symbol(m.group(0)), m.end()
 
 
-class _SExprParser(object):
+class _SExprParser:
 
     def parse(self, s: str) -> SExprResult:
         return _SExpr_parse(s.lstrip())
@@ -403,7 +403,7 @@ class _SExprParser(object):
 SExpr = _SExprParser()
 
 
-class LookaheadIterator(object):
+class LookaheadIterator:
     """
     Wrapper around an iterator or generator that allows for peeking
     at the nth token of any n, and the ability to skip intervening
@@ -554,7 +554,7 @@ class LookaheadLexer(LookaheadIterator):
         return self.choice(*((None, arg) for arg in args), skip=skip)
 
 
-class Lexer(object):
+class Lexer:
     def __init__(self, tokens, error_class=None):
         self.tokens = tokens
         self.tokentypes = None

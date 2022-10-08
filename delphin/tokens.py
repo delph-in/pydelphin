@@ -140,7 +140,7 @@ _yy_re = re.compile(
 )
 
 
-class YYTokenLattice(object):
+class YYTokenLattice:
     """
     A lattice of YY Tokens.
 

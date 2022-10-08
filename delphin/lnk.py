@@ -12,7 +12,7 @@ class LnkError(PyDelphinException):
     """Raised on invalid Lnk values or operations."""
 
 
-class Lnk(object):
+class Lnk:
     """
     Surface-alignment information for predications.
 
@@ -164,7 +164,7 @@ class Lnk(object):
         return True
 
 
-class LnkMixin(object):
+class LnkMixin:
     """
     A mixin class for adding `cfrom` and `cto` properties on structures.
     """

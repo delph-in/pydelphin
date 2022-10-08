@@ -47,7 +47,7 @@ class ITSDBError(tsdb.TSDBError):
 Transaction = List[Tuple[str, tsdb.ColumnMap]]
 
 
-class FieldMapper(object):
+class FieldMapper:
     """
     A class for mapping between response objects and test suites.
 

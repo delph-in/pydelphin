@@ -92,7 +92,7 @@ def _load(fh, semi):
     return VPM(typemap, propmap, semi)
 
 
-class VPM(object):
+class VPM:
     """
     A variable-property mapping.
 

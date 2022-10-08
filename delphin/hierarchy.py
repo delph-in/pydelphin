@@ -17,7 +17,7 @@ def _norm_id(id):
     return id
 
 
-class MultiHierarchy(object):
+class MultiHierarchy:
     """
     A Multiply-inheriting Hierarchy.
 

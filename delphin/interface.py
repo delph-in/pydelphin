@@ -15,7 +15,7 @@ class InterfaceError(exceptions.PyDelphinException):
     """Raised on invalid interface operations."""
 
 
-class Processor(object):
+class Processor:
     """
     Base class for processors.
 

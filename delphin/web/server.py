@@ -82,7 +82,7 @@ def configure(api, parser=None, generator=None, testsuites=None):
     api.resp_options.media_handlers['application/json'] = _json_handler
 
 
-class ProcessorServer(object):
+class ProcessorServer:
     """
     A server for results from an ACE processor.
 
@@ -199,7 +199,7 @@ def _make_response(inp, ace_response, params):
     return response
 
 
-class TestSuiteServer(object):
+class TestSuiteServer:
     """
     A server for a collection of test suites.
 

@@ -13,7 +13,7 @@ class TFSError(PyDelphinException):
     """Raised on invalid feature structure operations."""
 
 
-class FeatureStructure(object):
+class FeatureStructure:
     """
     A feature structure.
 

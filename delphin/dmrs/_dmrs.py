@@ -87,7 +87,7 @@ class Node(Predication):
                 and self.carg == other.carg)
 
 
-class Link(object):
+class Link:
     """
     DMRS-style dependency link.
 

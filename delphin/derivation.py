@@ -61,7 +61,7 @@ def from_dict(d):
     return Derivation(*_from_dict(d))
 
 
-class _UDFNodeBase(object):
+class _UDFNodeBase:
     """
     Base class for :class:`UDFNode` and :class:`UDFTerminal`.
     """

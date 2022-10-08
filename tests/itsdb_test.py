@@ -21,7 +21,7 @@ def empty_item_table(empty_testsuite):
     return table
 
 
-class TestTestSuite(object):
+class TestTestSuite:
     def test_init(self, single_item_profile):
         with pytest.raises(itsdb.ITSDBError):
             itsdb.TestSuite()
@@ -139,7 +139,7 @@ def test_Row(empty_alt_testsuite):
     assert r['i-date'] is None
 
 
-class TestTable(object):
+class TestTable:
     def test_init(self, empty_item_table):
         dir = empty_item_table.dir
         fields = empty_item_table.fields

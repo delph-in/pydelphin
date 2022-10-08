@@ -112,7 +112,7 @@ def test_TypedFeatureStructure():
     assert fs != tfs.TypedFeatureStructure('typename', [('A', 1), ('B', 3)])
 
 
-class TestTypeHierarchy(object):
+class TestTypeHierarchy:
     def test_update(self):
         th = tfs.TypeHierarchy('*top*')
         # invalid parent data type
