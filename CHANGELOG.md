@@ -1,6 +1,8 @@
 # Change Log
 
-## Unreleased
+## [v1.7.0]
+
+**Release date: 2022-10-13**
 
 Updates Python support to currently active releases. Includes
 `delphin.highlight` (adds a dependency on Pygments), `delphin.edm`,
@@ -1374,6 +1376,7 @@ There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
 [commit messages](../../commits/v0.2).
 
+[v1.7.0]: ../../releases/tag/v1.7.0
 [v1.6.0]: ../../releases/tag/v1.6.0
 [v1.5.1]: ../../releases/tag/v1.5.1
 [v1.5.0]: ../../releases/tag/v1.5.0
