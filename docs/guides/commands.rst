@@ -6,7 +6,7 @@ PyDelphin is primarily a library for creating more complex software,
 but some functions are directly useful as commands. To facilitate this
 usage, the :command:`delphin` command (:command:`delphin.exe` on
 Windows) provides an entry point to a number of subcommands,
-including: `convert`_, `select`_, `mkprof`_, `process`_, `compare`_,
+including: `compare`_, `convert`_, `mkprof`_, `process`_, `select`_,
 and `repp`_. These subcommands are command-line front-ends to the
 functions defined in :mod:`delphin.commands`.
 
@@ -54,6 +54,27 @@ This guide assumes you have installed PyDelphin and thus have the
 Subcommands
 -----------
 
+.. _compare-tutorial:
+
+compare
+'''''''
+
+The ``compare`` subcommand is a lightweight way to compare bags of MRSs,
+e.g., to detect changes in a profile run with different versions of the
+grammar.
+
+.. code:: console
+
+   $ delphin compare ~/grammars/jacy/tsdb/current/mrs/ \
+   >                 ~/grammars/jacy/tsdb/gold/mrs/
+   11  <1,0,1>
+   21  <1,0,1>
+   31  <3,0,1>
+   [..]
+
+Try ``delphin compare --help`` for more information.
+
+
 .. _convert-tutorial:
 
 convert
@@ -74,9 +95,8 @@ both is `simplemrs`). Here is an example of converting :mod:`SimpleMRS
 
 As the default for ``--from`` and ``--to`` is ``simplemrs``, it can be
 used to easily "pretty-print" an MRS (if you execute this in a
-terminal and have `delphin.highlight
-<https://github.com/delph-in/delphin.highlight>`_ installed, you'll
-notice syntax highlighting as well):
+terminal with `--color=auto` or `--color=always`, you'll notice syntax
+highlighting as well):
 
 .. code:: console
 
@@ -126,46 +146,46 @@ indicates if they can read (``r``) or write (``w``) the format.
 Try ``delphin convert --help`` for more information.
 
 
-.. _select-tutorial:
+edm
+'''
 
-select
-''''''
-
-The :command:`select` subcommand selects data from an [incr tsdb()]
-profile using TSQL_ queries. For example, if you want to get the
-``i-id`` and ``i-input`` fields from a profile, do this:
-
-.. _TSQL: https://github.com/delph-in/docs/wiki/TsqlRfc
+The :command:`edm` subcommand performs Elementary Dependency Matching
+(`Dridan and Oepen, 2011`_) on two files of serialized semantic
+representations or on two [incr tsdb()] profiles containing those
+representations.
 
 .. code:: console
 
-   $ delphin select 'i-id i-input from item' ~/grammars/jacy/tsdb/gold/mrs/
-   11@雨 が 降っ た ．
-   21@太郎 が 吠え た ．
-   [..]
+   $ cat <<EOS >gold.eds
+   {e2:
+    _1:_the_q<0:3>[BV x3]
+    x3:_sun_n_1<4:7>{x PERS 3, NUM sg}[]
+    e2:_rise_v_1<8:14>{e SF prop, TENSE pres, MOOD indicative, PROG -, PERF -}[ARG1 x3]
+   }
+   EOS
+   $ cat <<EOS >test.eds
+   {e2:
+    _1:_the_q<0:3>[BV x3]
+    x3:_sun_n_1<4:7>{x PERS 3, NUM sg}[]
+    e2:_set_v_1<8:13>{e SF prop, TENSE pres, MOOD indicative, PROG -, PERF -}[ARG1 x3]
+   }
+   EOS
+   $ delphin edm gold.eds test.eds
+   Precision:	0.38461538461538464
+      Recall:	0.38461538461538464
+     F-score:	0.38461538461538464
 
+If the semantic representations are not in the EDS native format, use
+the ``--format`` option to select one of the other codecs. There are
+also options for adjusting the weights of various aspects of the
+comparison. Try ``delphin edm --help`` for more information.
 
-In many cases, the ``from`` clause of the query is not necessary, and
-the appropriate tables will be selected automatically.  Fields from
-multiple tables can be used and the tables containing them will be
-automatically joined:
+.. seealso::
 
-.. code:: console
+   The :doc:`edm` guide has a fuller description of how to use the
+   tool.
 
-   $ delphin select 'i-id mrs' ~/grammars/jacy/tsdb/gold/mrs/
-   11@[ LTOP: h1 INDEX: e2 ... ]
-   [..]
-
-The results can be filtered by providing ``where`` clauses:
-
-.. code:: console
-
-   $ delphin select 'i-id i-input where i-input ~ "雨"' ~/grammars/jacy/tsdb/gold/mrs/
-   11@雨 が 降っ た ．
-   71@太郎 が タバコ を 次郎 に 雨 が 降る と 賭け た ．
-   81@太郎 が 雨 が 降っ た こと を 知っ て い た ．
-
-Try ``delphin select --help`` for more information.
+.. _Dridan and Oepen, 2011: https://aclanthology.org/W11-2927/
 
 
 .. _mkprof-tutorial:
@@ -257,31 +277,47 @@ Try `delphin process --help` for more information.
   <https://github.com/delph-in/docs/wiki/ItsdbTop>`_ are other
   testsuite processors with different kinds of functionality.
 
-.. _compare-tutorial:
 
-compare
-'''''''
+.. _select-tutorial:
 
-The ``compare`` subcommand is a lightweight way to compare bags of MRSs,
-e.g., to detect changes in a profile run with different versions of the
-grammar.
+select
+''''''
+
+The :command:`select` subcommand selects data from an [incr tsdb()]
+profile using TSQL_ queries. For example, if you want to get the
+``i-id`` and ``i-input`` fields from a profile, do this:
+
+.. _TSQL: https://github.com/delph-in/docs/wiki/TsqlRfc
 
 .. code:: console
 
-   $ delphin compare ~/grammars/jacy/tsdb/current/mrs/ \
-   >                 ~/grammars/jacy/tsdb/gold/mrs/
-   11  <1,0,1>
-   21  <1,0,1>
-   31  <3,0,1>
+   $ delphin select 'i-id i-input from item' ~/grammars/jacy/tsdb/gold/mrs/
+   11@雨 が 降っ た ．
+   21@太郎 が 吠え た ．
    [..]
 
-Try ``delphin compare --help`` for more information.
 
-.. seealso::
+In many cases, the ``from`` clause of the query is not necessary, and
+the appropriate tables will be selected automatically.  Fields from
+multiple tables can be used and the tables containing them will be
+automatically joined:
 
-  The `gTest <https://github.com/goodmami/gtest>`_ application is a
-  more fully-featured profile comparer, as is `[incr tsdb()]
-  <https://github.com/delph-in/docs/wiki/ItsdbTop>`_ itself.
+.. code:: console
+
+   $ delphin select 'i-id mrs' ~/grammars/jacy/tsdb/gold/mrs/
+   11@[ LTOP: h1 INDEX: e2 ... ]
+   [..]
+
+The results can be filtered by providing ``where`` clauses:
+
+.. code:: console
+
+   $ delphin select 'i-id i-input where i-input ~ "雨"' ~/grammars/jacy/tsdb/gold/mrs/
+   11@雨 が 降っ た ．
+   71@太郎 が タバコ を 次郎 に 雨 が 降る と 賭け た ．
+   81@太郎 が 雨 が 降っ た こと を 知っ て い た ．
+
+Try ``delphin select --help`` for more information.
 
 
 .. _repp-tutorial:

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Structures and operations for quantifier scope in DELPH-IN semantics.
 """

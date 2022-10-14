@@ -389,7 +389,7 @@ class Synopsis(tuple):
         return True
 
 
-class SemI(object):
+class SemI:
     """
     A semantic interface.
 

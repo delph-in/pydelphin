@@ -127,11 +127,11 @@ delphin.codecs.edsjson
 
       See the :func:`dump` codec API documentation.
 
-   .. function:: dumps(ms, properties=True, lnk=True, indent=False, encoding='utf-8')
+   .. function:: dumps(ms, properties=True, lnk=True, indent=False)
 
       See the :func:`dumps` codec API documentation.
 
-   .. function:: encode(m, properties=True, lnk=True, indent=False, encoding='utf-8')
+   .. function:: encode(m, properties=True, lnk=True, indent=False)
 
       See the :func:`encode` codec API documentation.
 

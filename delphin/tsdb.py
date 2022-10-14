@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Test Suite Database (TSDB) Primitives
 """
@@ -89,7 +87,7 @@ class TSDBWarning(PyDelphinWarning):
 #############################################################################
 # Database Schema
 
-class Field(object):
+class Field:
     '''
     A tuple describing a column in a TSDB database relation.
 
@@ -275,7 +273,7 @@ class Relation(Records):
         self._generator.close()
 
 
-class Database(object):
+class Database:
     """
     A basic abstraction of a TSDB database.
 

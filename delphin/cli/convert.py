@@ -32,17 +32,6 @@ def call_convert(args):
     else:
         color = (args.color == 'always'
                  or (args.color == 'auto' and sys.stdout.isatty()))
-        if color:
-            try:
-                import delphin.highlight  # noqa: F401
-            except ImportError:
-                # don't warn if color=auto
-                if args.color == 'always':
-                    warnings.warn(
-                        'delphin.highlight must be installed for '
-                        'syntax highlighting',
-                        PyDelphinWarning)
-                color = False
         if args.indent and args.indent is not True:
             if args.indent.lower() in ('no', 'none'):
                 args.indent = None

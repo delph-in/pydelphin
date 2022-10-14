@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Deserialization of MRSs in ACE's stdout protocols.
 """

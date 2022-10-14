@@ -43,7 +43,8 @@ def call_process(args):
         options=shlex.split(args.options),
         all_items=args.all_items,
         result_id=args.p,
-        gzip=args.gzip)
+        gzip=args.gzip,
+        executable=args.executable)
 
 
 # process subparser
@@ -92,3 +93,6 @@ parser.add_argument(
 )
 parser.add_argument(
     '-z', '--gzip', action='store_true', help='compress table files with gzip')
+parser.add_argument(
+    '--executable', metavar='PATH', default='ace',
+    help='path to ACE executable (default: ace)')

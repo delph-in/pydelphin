@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-#
+
 # Configuration file for the Sphinx documentation builder.
 #
 # This file does only contain a selection of the most common options. For a
@@ -15,6 +14,7 @@
 #
 import os
 import sys
+sys.path.insert(0, os.path.join(os.path.abspath('.'), '_extensions'))
 sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
@@ -47,6 +47,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
+    'wiki',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -66,7 +67,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -198,3 +199,8 @@ napoleon_use_rtype = False
 # disable type hints
 
 autodoc_typehints = 'none'
+
+
+# -- Options for wikis -------------------------------------------------------
+
+wiki_url = 'https://github.com/delph-in/docs/wiki/'

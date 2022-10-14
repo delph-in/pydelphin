@@ -40,7 +40,7 @@ def check_token(t, id, start, end, lnk, paths, form, surf, ipos, lrules, pos):
     assert t.pos == pos
 
 
-class TestYYToken(object):
+class TestYYToken:
     def test_init(self):
         with pytest.raises(TypeError):
             YYToken()
@@ -89,7 +89,7 @@ class TestYYToken(object):
         }
 
 
-class TestYYTokenLattice(object):
+class TestYYTokenLattice:
 
     def test_fromstring(self):
         assert len(YY.from_string(token_v1_basic).tokens) == 1

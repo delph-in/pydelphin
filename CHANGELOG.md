@@ -1,5 +1,35 @@
 # Change Log
 
+## [v1.7.0]
+
+**Release date: 2022-10-13**
+
+Updates Python support to currently active releases. Includes
+`delphin.highlight` (adds a dependency on Pygments), `delphin.edm`,
+and `delphin.codecs.dmrstikz` directly instead of as separate plugins.
+
+### Python Versions
+
+* Removed Python 3.6 support ([#343])
+* Added Python 3.10 support ([#343])
+
+### Added
+
+* `delphin.highlight` for syntax highlighting; it is no longer
+  necessary to install this as a plugin ([#344])
+* `delphin.edm` for elementary dependency matching; it is no longer
+  necessary to install this as a plugin ([#344])
+* `delphin.codecs.dmrstikz` for exporting DMRS with tikz-dependency;
+  it is no longer necessary to install this as a plugin ([#344])
+* `executable` parameter to `delphin.commands.process()` ([#352])
+* `--executable` option to `delphin process` command ([#352])
+
+### Fixed
+
+* The `mkprof` command no longer raises an error on an empty sentence ([#335])
+* EDS conversion in `delphin.edm` now more robustly handles errors
+
+
 ## [v1.6.0]
 
 **Release date: 2021-09-30**
@@ -1346,6 +1376,7 @@ There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
 [commit messages](../../commits/v0.2).
 
+[v1.7.0]: ../../releases/tag/v1.7.0
 [v1.6.0]: ../../releases/tag/v1.6.0
 [v1.5.1]: ../../releases/tag/v1.5.1
 [v1.5.0]: ../../releases/tag/v1.5.0
@@ -1521,3 +1552,7 @@ information about changes, except for
 [#331]: https://github.com/delph-in/pydelphin/issues/331
 [#333]: https://github.com/delph-in/pydelphin/issues/333
 [#334]: https://github.com/delph-in/pydelphin/issues/334
+[#335]: https://github.com/delph-in/pydelphin/issues/335
+[#343]: https://github.com/delph-in/pydelphin/issues/343
+[#344]: https://github.com/delph-in/pydelphin/issues/344
+[#352]: https://github.com/delph-in/pydelphin/issues/352

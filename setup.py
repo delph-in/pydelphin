@@ -47,10 +47,10 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Text Processing :: Linguistic',
@@ -69,6 +69,7 @@ setup(
     install_requires=[
         'penman==1.1.0',
         'progress==1.5',
+        'Pygments >= 2.3.1',
     ],
     extras_require={
         'docs': docs_require,

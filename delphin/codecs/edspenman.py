@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 EDS-PENMAN serialization and deserialization.
 """

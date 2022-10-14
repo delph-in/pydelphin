@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 MRX (XML for MRS) serialization and deserialization.
 """

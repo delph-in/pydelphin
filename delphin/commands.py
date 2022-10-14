@@ -56,13 +56,6 @@ def convert(path: Union[util.PathLike, IO[str]],
     *source_fmt* and *target_fmt* arguments are then downcased and
     hyphens are removed to normalize the codec name.
 
-    Note:
-
-        For syntax highlighting, `delphin.highlight`_ must be
-        installed, and it is only available for select target formats.
-
-        .. _delphin.highlight: https://github.com/delph-in/delphin.highlight
-
     Args:
         path (str, ~pathlib.Path, open file): filename, testsuite
             directory, open file, or stream of input representations
@@ -421,7 +414,7 @@ def _lines_to_records(lineiter, colnames, split, fields):
             i_ids.add(colmap['i-id'])
 
         if with_i_length and 'i-length' not in colmap and 'i-input' in colmap:
-            colmap['i-length'] = len(colmap['i-input'].split())
+            colmap['i-length'] = len((colmap['i-input'] or '').split())
 
         yield tsdb.make_record(colmap, fields)
 
@@ -544,7 +537,7 @@ def _mkprof_summarize(destination, schema):
 def process(grammar, testsuite, source=None, select=None,
             generate=False, transfer=False, full_forest=False,
             options=None, all_items=False, result_id=None, gzip=False,
-            stderr=None, report_progress=True):
+            executable='ace', stderr=None, report_progress=True):
     """
     Process the [incr tsdb()] profile *testsuite* with *grammar*.
 
@@ -593,6 +586,7 @@ def process(grammar, testsuite, source=None, select=None,
             specified ``result-id`` (transfer and generation)
         gzip (bool): if `True`, non-empty tables will be compressed
             with gzip
+        executable (str): path to the ACE executable (default: ace)
         stderr (file): stream for ACE's stderr
         report_progress (bool): print a progress bar to stderr if
             `True` and logging verbosity is at WARNING or lower;
@@ -606,8 +600,10 @@ def process(grammar, testsuite, source=None, select=None,
     if not grammar.is_file():
         raise CommandError(f'{grammar} is not a file')
 
-    kwargs = {}
-    kwargs['stderr'] = stderr
+    kwargs = {
+        'stderr': stderr,
+        'executable': executable,
+    }
     if sum(1 if mode else 0 for mode in (generate, transfer, full_forest)) > 1:
         raise CommandError("'generate', 'transfer', and 'full-forest' "
                            "are mutually exclusive")

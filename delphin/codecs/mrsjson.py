@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 MRS-JSON serialization and deserialization.
 """

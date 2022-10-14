@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Minimal Recursion Semantics ([MRS]_).
 

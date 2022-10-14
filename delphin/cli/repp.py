@@ -30,16 +30,6 @@ COMMAND_INFO = {
 def call_repp(args):
     color = (args.color == 'always'
              or (args.color == 'auto' and sys.stdout.isatty()))
-    if color:
-        try:
-            import pygments  # noqa: F401
-        except ImportError:
-            # don't warn if color=auto
-            if args.color == 'always':
-                warnings.warn(
-                    'Pygments must be installed for diff highlighting',
-                    PyDelphinWarning)
-            color = False
     return repp(
         args.FILE or sys.stdin,
         config=args.config,

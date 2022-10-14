@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Interfaces for external data providers.
 """
@@ -17,7 +15,7 @@ class InterfaceError(exceptions.PyDelphinException):
     """Raised on invalid interface operations."""
 
 
-class Processor(object):
+class Processor:
     """
     Base class for processors.
 

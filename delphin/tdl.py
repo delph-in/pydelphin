@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
 Classes and functions for parsing and inspecting TDL.
 """
@@ -50,7 +48,7 @@ class TDLWarning(PyDelphinWarning):
 
 # Classes for TDL entities
 
-class Term(object):
+class Term:
     """
     Base class for the terms of a TDL conjunction.
 
@@ -455,7 +453,7 @@ class Coreference(Term):
         return ''
 
 
-class Conjunction(object):
+class Conjunction:
     """
     Conjunction of TDL terms.
 
@@ -609,7 +607,7 @@ class Conjunction(object):
         return None  # conjunction does not have a string type (not an error)
 
 
-class TypeDefinition(object):
+class TypeDefinition:
     """
     A top-level Conjunction with an identifier.
 
@@ -749,7 +747,7 @@ class LexicalRuleDefinition(TypeDefinition):
         self.patterns = patterns
 
 
-class _MorphSet(object):
+class _MorphSet:
     def __init__(self, var, characters):
         self.var = var
         self.characters = characters
@@ -798,7 +796,7 @@ class WildCard(_MorphSet):
     pass
 
 
-class _Environment(object):
+class _Environment:
     """
     TDL environment.
     """
@@ -830,7 +828,7 @@ class InstanceEnvironment(_Environment):
         self.status = status
 
 
-class FileInclude(object):
+class FileInclude:
     """
     Include other TDL files in the current environment.
 

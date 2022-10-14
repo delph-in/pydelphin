@@ -75,7 +75,7 @@ delphin.codecs.indexedmrs
       :param SemI semi: the semantic interface for the grammar
 			that produced the MRS
 
-   .. function:: dumps(ms, semi, properties=True, lnk=True, indent=False, encoding='utf-8')
+   .. function:: dumps(ms, semi, properties=True, lnk=True, indent=False)
 
       See the :func:`dumps` codec API documentation.
 
@@ -84,7 +84,7 @@ delphin.codecs.indexedmrs
       :param SemI semi: the semantic interface for the grammar
 			that produced the MRS
 
-   .. function:: encode(m, semi, properties=True, lnk=True, indent=False, encoding='utf-8')
+   .. function:: encode(m, semi, properties=True, lnk=True, indent=False)
 
       See the :func:`encode` codec API documentation.
 

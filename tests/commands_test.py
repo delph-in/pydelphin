@@ -226,6 +226,20 @@ def test_mkprof_issue_288(item_relations, tmp_path):
         '2@1@Dog barked.@2@0@25-may-2020\n')
 
 
+def test_mkprof_issue_335(item_relations, tmp_path):
+    ts = tmp_path / 'ts335'
+    txt = tmp_path / 'input.txt'
+    txt.write_text('i-id@i-input@i-date\n'
+                   '10@A dog barked.@22-jul-2022\n'
+                   '20@@22-jul-2022\n'
+                   '30@A cat meowed.@22-jul-2022\n')
+    mkprof(ts, source=txt, delimiter='@', schema=item_relations)
+    assert (ts / 'item').read_text() == (
+        '10@1@A dog barked.@3@1@22-jul-2022\n'
+        '20@1@@0@1@22-jul-2022\n'
+        '30@1@A cat meowed.@3@1@22-jul-2022\n')
+
+
 def test_process(mini_testsuite):
     with pytest.raises(TypeError):
         process('grm.dat')

@@ -384,7 +384,7 @@ def _SExpr_parse_symbol(s: str, i: int) -> Tuple[str, int]:
     return _SExpr_unescape_symbol(m.group(0)), m.end()
 
 
-class _SExprParser(object):
+class _SExprParser:
 
     def parse(self, s: str) -> SExprResult:
         return _SExpr_parse(s.lstrip())
@@ -403,7 +403,7 @@ class _SExprParser(object):
 SExpr = _SExprParser()
 
 
-class LookaheadIterator(object):
+class LookaheadIterator:
     """
     Wrapper around an iterator or generator that allows for peeking
     at the nth token of any n, and the ability to skip intervening
@@ -554,7 +554,7 @@ class LookaheadLexer(LookaheadIterator):
         return self.choice(*((None, arg) for arg in args), skip=skip)
 
 
-class Lexer(object):
+class Lexer:
     def __init__(self, tokens, error_class=None):
         self.tokens = tokens
         self.tokentypes = None
@@ -704,26 +704,20 @@ def import_codec(name: str):
 
 
 def make_highlighter(fmt):
-    try:
-        import pygments
-        from pygments.formatters import Terminal256Formatter as _formatter
-    except ImportError:
-        return str
+    import pygments
+    from pygments.formatters import Terminal256Formatter as _formatter
 
     highlight = str  # backoff function
 
     if fmt == 'simplemrs':
-        try:
-            import delphin.highlight
-        except ImportError:
-            pass
-        else:
+        import delphin.highlight
 
-            def highlight(text):
-                return pygments.highlight(
-                    text,
-                    delphin.highlight.SimpleMRSLexer(),
-                    _formatter(style=delphin.highlight.MRSStyle))
+        def highlight(text):
+            return pygments.highlight(
+                text,
+                delphin.highlight.SimpleMRSLexer(),
+                _formatter(style=delphin.highlight.MRSStyle),
+            )
 
     elif fmt == 'diff':
         from pygments.lexers.diff import DiffLexer
@@ -733,6 +727,7 @@ def make_highlighter(fmt):
             return pygments.highlight(
                 text,
                 DiffLexer(),
-                _formatter()).rstrip('\n')
+                _formatter(),
+            ).rstrip('\n')
 
     return highlight
