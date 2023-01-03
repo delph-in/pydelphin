@@ -253,6 +253,10 @@ class AVM(FeatureStructure, Term):
         return fs
 
 
+class _ImplicitAVM(AVM):
+    """AVM implicitly constructed by list syntax."""
+
+
 class ConsList(AVM):
     """
     AVM subclass for cons-lists (``< ... >``)
@@ -308,12 +312,7 @@ class ConsList(AVM):
         if self._avm is None:
             return []
         else:
-            vals = [val for _, val in _collect_list_items(self)]
-            # the < a . b > notation puts b on the last REST path,
-            # which is not returned by _collect_list_items()
-            if self.terminated and self[self._last_path] is not None:
-                vals.append(self[self._last_path])
-            return vals
+            return [val for _, val in _collect_list_items(self)]
 
     def append(self, value):
         """
@@ -330,7 +329,7 @@ class ConsList(AVM):
                 path += '.'
             self[path + LIST_HEAD] = value
             self._last_path = path + LIST_TAIL
-            self[self._last_path] = AVM()
+            self[self._last_path] = _ImplicitAVM()
         else:
             raise TDLError('Cannot append to a closed list.')
 
@@ -395,7 +394,7 @@ class DiffList(AVM):
         if values:
             # use ConsList to construct the list, but discard the class
             tmplist = ConsList(values, end=cr)
-            dl_list = AVM()
+            dl_list = _ImplicitAVM()
             dl_list._avm.update(tmplist._avm)
             dl_list._feats = tmplist._feats
             self.last = 'LIST.' + tmplist._last_path
@@ -416,16 +415,25 @@ class DiffList(AVM):
         """
         Return the list of values in the DiffList feature structure.
         """
-        return [val for _, val
-                in _collect_list_items(self.get(DIFF_LIST_LIST))]
+        if isinstance(self[DIFF_LIST_LIST], Coreference):
+            vals = []
+        else:
+            vals = [val for _, val
+                    in _collect_list_items(self.get(DIFF_LIST_LIST))]
+            vals.pop()  # last item of diff list is coreference
+        return vals
 
 
 def _collect_list_items(d):
-    if d is None or not isinstance(d, AVM) or d.get(LIST_HEAD) is None:
+    if not isinstance(d, AVM) or d.get(LIST_HEAD) is None:
         return []
     vals = [(LIST_HEAD, d[LIST_HEAD])]
-    vals.extend((LIST_TAIL + '.' + path, val)
-                for path, val in _collect_list_items(d.get(LIST_TAIL)))
+    rest = d[LIST_TAIL]
+    if isinstance(rest, _ImplicitAVM):
+        vals.extend((LIST_TAIL + '.' + path, val)
+                    for path, val in _collect_list_items(rest))
+    elif rest is not None:
+        vals.append((LIST_TAIL, rest))
     return vals
 
 

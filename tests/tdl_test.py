@@ -960,3 +960,18 @@ def test_format_environments():
         '  :end :instance.\n'
         '  :include "another.tdl".\n'
         ':end :type.')
+
+
+def test_issue_357():
+    # https://github.com/delph-in/pydelphin/issues/357
+    t = TypeDefinition(
+        'id',
+        ConsList(
+            [TypeIdentifier('a')],
+            end=ConsList([TypeIdentifier('b')], end=TypeIdentifier('c'))
+        )
+    )
+    c = t.conjunction.terms[0]
+    assert isinstance(c, ConsList)
+    assert len(c.values()) == 2
+    assert tdl.format(t) == 'id := < a . < b . c > >.'
