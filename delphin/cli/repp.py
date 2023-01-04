@@ -11,9 +11,7 @@ useful for debugging REPP modules.
 
 import sys
 import argparse
-import warnings
 
-from delphin.exceptions import PyDelphinWarning
 from delphin.commands import repp
 
 

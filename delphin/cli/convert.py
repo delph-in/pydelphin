@@ -9,9 +9,7 @@ with "-lines" to enable line-based reading/writing, in which case the
 
 import sys
 import argparse
-import warnings
 
-from delphin.exceptions import PyDelphinWarning
 from delphin.commands import convert
 from delphin import util
 
