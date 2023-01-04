@@ -3,6 +3,7 @@
 Semantic predicates.
 """
 
+from typing import Tuple, Optional
 import re
 
 from delphin.exceptions import PyDelphinException
@@ -40,7 +41,7 @@ _robust_predicate_re = re.compile(
     flags=re.IGNORECASE)
 
 
-def _strip_predicate(s):
+def _strip_predicate(s: str) -> str:
     """Remove quotes and _rel suffix from predicate *s*"""
     if s.startswith('"') and s.endswith('"'):
         s = s[1:-1]
@@ -51,7 +52,7 @@ def _strip_predicate(s):
     return s
 
 
-def split(s):
+def split(s: str) -> Tuple[str, Optional[str], Optional[str]]:
     """
     Split predicate string *s* and return the lemma, pos, and sense.
 
@@ -78,7 +79,7 @@ def split(s):
     return (match.group('lemma'), match.group('pos'), match.group('sense'))
 
 
-def create(lemma, pos, sense=None):
+def create(lemma: str, pos: str, sense: Optional[str] = None) -> str:
     """
     Create a surface predicate string from its *lemma*, *pos*, and *sense*.
 
@@ -105,7 +106,7 @@ def create(lemma, pos, sense=None):
     return '_' + '_'.join(parts)
 
 
-def normalize(s):
+def normalize(s: str) -> str:
     """
     Normalize the predicate string *s* to a conventional form.
 
@@ -123,7 +124,7 @@ def normalize(s):
     return _s
 
 
-def is_valid(s):
+def is_valid(s: str) -> bool:
     """
     Return `True` if *s* is a valid predicate string.
 
@@ -141,7 +142,7 @@ def is_valid(s):
     return _strict_predicate_re.match(_s) is not None
 
 
-def is_surface(s):
+def is_surface(s: str) -> bool:
     """
     Return `True` if *s* is a valid surface predicate string.
 
@@ -160,7 +161,7 @@ def is_surface(s):
     return m is not None and m.lastindex == 1
 
 
-def is_abstract(s):
+def is_abstract(s: str) -> bool:
     """
     Return `True` if *s* is a valid abstract predicate string.
 
