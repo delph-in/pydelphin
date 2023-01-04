@@ -37,4 +37,4 @@ jobs:
         pytest .
     - name: Type-check with mypy
       run: |
-        mypy delphin --namespace-packages --explicit-package-bases --ignore-missing-imports
+        mypy delphin --namespace-packages --explicit-package-bases --ignore-missing-imports --implicit-optional

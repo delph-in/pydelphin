@@ -1,5 +1,14 @@
 # Change Log
 
+## Unreleased
+
+### Fixed
+
+* `delphin.tdl.ConsList.values()` and `delphin.tdl.DiffList.values()`
+  now treat explicit sublists as regular items instead of descending
+  into their structures ([#357])
+
+
 ## [v1.7.0]
 
 **Release date: 2022-10-13**
@@ -1556,3 +1565,4 @@ information about changes, except for
 [#343]: https://github.com/delph-in/pydelphin/issues/343
 [#344]: https://github.com/delph-in/pydelphin/issues/344
 [#352]: https://github.com/delph-in/pydelphin/issues/352
+[#357]: https://github.com/delph-in/pydelphin/issues/357
