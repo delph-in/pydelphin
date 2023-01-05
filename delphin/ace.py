@@ -4,7 +4,8 @@ An interface for the ACE processor.
 """
 
 from typing import (
-    Any, Iterator, Iterable, Mapping, Dict, List, Tuple, Pattern, IO)
+    Any, Iterator, Iterable, Mapping, Dict, List, Tuple, Pattern, IO, Optional
+)
 import logging
 import os
 from pathlib import Path
@@ -77,12 +78,12 @@ class ACEProcess(interface.Processor):
 
     def __init__(self,
                  grm: util.PathLike,
-                 cmdargs: List[str] = None,
-                 executable: util.PathLike = None,
-                 env: Mapping[str, str] = None,
+                 cmdargs: Optional[List[str]] = None,
+                 executable: Optional[util.PathLike] = None,
+                 env: Optional[Mapping[str, str]] = None,
                  tsdbinfo: bool = True,
                  full_forest: bool = False,
-                 stderr: IO[Any] = None):
+                 stderr: Optional[IO[Any]] = None):
         self.grm = str(Path(grm).expanduser())
 
         self.cmdargs = cmdargs or []
@@ -149,7 +150,10 @@ class ACEProcess(interface.Processor):
         self.close()
         return False  # don't try to handle any exceptions
 
-    def _result_lines(self, termini: List[Pattern[str]] = None) -> List[str]:
+    def _result_lines(
+        self,
+        termini: Optional[List[Pattern[str]]] = None
+    ) -> List[str]:
         poll = self._p.poll
         assert self._p.stdout is not None, 'cannot receive output from ACE'
         next_line = self._p.stdout.readline
@@ -270,7 +274,8 @@ class ACEProcess(interface.Processor):
 
     def process_item(self,
                      datum: str,
-                     keys: Dict[str, Any] = None) -> interface.Response:
+                     keys: Optional[Dict[str, Any]] = None
+                     ) -> interface.Response:
         """
         Send *datum* to ACE and return the response with context.
 
@@ -348,10 +353,10 @@ class ACETransferer(ACEProcess):
 
     def __init__(self,
                  grm: util.PathLike,
-                 cmdargs: List[str] = None,
-                 executable: util.PathLike = None,
-                 env: Mapping[str, str] = None,
-                 stderr: IO[Any] = None):
+                 cmdargs: Optional[List[str]] = None,
+                 executable: Optional[util.PathLike] = None,
+                 env: Optional[Mapping[str, str]] = None,
+                 stderr: Optional[IO[Any]] = None):
         super().__init__(grm, cmdargs=cmdargs, executable=executable, env=env,
                          tsdbinfo=False, full_forest=False, stderr=stderr)
 
@@ -378,11 +383,11 @@ class ACEGenerator(ACEProcess):
 
     def __init__(self,
                  grm: util.PathLike,
-                 cmdargs: List[str] = None,
-                 executable: util.PathLike = None,
-                 env: Mapping[str, str] = None,
+                 cmdargs: Optional[List[str]] = None,
+                 executable: Optional[util.PathLike] = None,
+                 env: Optional[Mapping[str, str]] = None,
                  tsdbinfo: bool = True,
-                 stderr: IO[Any] = None):
+                 stderr: Optional[IO[Any]] = None):
         super().__init__(grm, cmdargs=cmdargs, executable=executable, env=env,
                          tsdbinfo=tsdbinfo, full_forest=False, stderr=stderr)
 
@@ -422,10 +427,10 @@ class ACEGenerator(ACEProcess):
 
 def compile(cfg_path: util.PathLike,
             out_path: util.PathLike,
-            executable: util.PathLike = None,
-            env: Mapping[str, str] = None,
-            stdout: IO[Any] = None,
-            stderr: IO[Any] = None) -> None:
+            executable: Optional[util.PathLike] = None,
+            env: Optional[Mapping[str, str]] = None,
+            stdout: Optional[IO[Any]] = None,
+            stderr: Optional[IO[Any]] = None) -> None:
     """
     Use ACE to compile a grammar.
 
