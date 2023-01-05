@@ -3,7 +3,7 @@
 Operations on DMRS structures
 """
 
-from typing import Optional, Dict, List, Callable
+from typing import Optional, Dict, List, Callable, cast
 import warnings
 
 from delphin import variable
@@ -17,7 +17,7 @@ _IdMap = Dict[str, int]
 
 
 def from_mrs(
-    m: mrs.MRS, representative_priority: Callable = None
+    m: mrs.MRS, representative_priority: Optional[Callable] = None
 ) -> dmrs.DMRS:
     """
     Create a DMRS by converting from MRS *m*.
@@ -123,11 +123,13 @@ def _mrs_to_links(
     # links from arguments
     for src, roleargs in m.arguments().items():
         start = id_to_nid[src]
+        src_ep = cast(mrs.EP, m[src])
         for role, tgt in roleargs:
             # non-scopal arguments
             if tgt in iv_to_nid:
+                tgt_ep = cast(mrs.EP, m[tgt])
                 end = iv_to_nid[tgt]
-                if m[src].label == m[tgt].label:
+                if src_ep.label == tgt_ep.label:
                     post = dmrs.EQ_POST
                 else:
                     post = dmrs.NEQ_POST
