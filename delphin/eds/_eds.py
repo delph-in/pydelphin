@@ -3,7 +3,7 @@
 Elementary Dependency Structures (EDS).
 """
 
-from typing import Iterable
+from typing import Iterable, Optional
 
 from delphin.lnk import Lnk
 from delphin.sembase import Predication, SemanticStructure
@@ -50,11 +50,11 @@ class Node(Predication):
     def __init__(self,
                  id: int,
                  predicate: str,
-                 type: str = None,
-                 edges: dict = None,
-                 properties: dict = None,
-                 carg: str = None,
-                 lnk: Lnk = None,
+                 type: Optional[str] = None,
+                 edges: Optional[dict] = None,
+                 properties: Optional[dict] = None,
+                 carg: Optional[str] = None,
+                 lnk: Optional[Lnk] = None,
                  surface=None,
                  base=None):
 
@@ -98,9 +98,9 @@ class EDS(SemanticStructure):
     __slots__ = ()
 
     def __init__(self,
-                 top: str = None,
-                 nodes: Iterable[Node] = None,
-                 lnk: Lnk = None,
+                 top: Optional[str] = None,
+                 nodes: Optional[Iterable[Node]] = None,
+                 lnk: Optional[Lnk] = None,
                  surface=None,
                  identifier=None):
         if nodes is None:
