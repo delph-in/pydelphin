@@ -853,6 +853,14 @@ class FileInclude:
         self.path = Path(basedir, value).with_suffix('.tdl')
 
 
+class LineComment(str):
+    """Single-line comments in TDL."""
+
+
+class BlockComment(str):
+    """Multi-line comments in TDL."""
+
+
 # NOTE: be careful rearranging subpatterns in _tdl_lex_re; some must
 #       appear before others, e.g., """ before ", <! before <, etc.,
 #       to prevent short-circuiting from blocking the larger patterns
@@ -1055,9 +1063,9 @@ def _parse_tdl(tokens, path):
             except StopIteration:  # normal EOF
                 break
             if gid == 2:
-                yield ('BlockComment', token, line_no)
+                yield ('BlockComment', BlockComment(token), line_no)
             elif gid == 3:
-                yield ('LineComment', token, line_no)
+                yield ('LineComment', LineComment(token), line_no)
             elif gid == 20:
                 obj = _parse_letterset(token, line_no)
                 yield (obj.__class__.__name__, obj, line_no)
@@ -1371,6 +1379,10 @@ def format(obj, indent=0):
         return _format_environment(obj, indent)
     elif isinstance(obj, FileInclude):
         return _format_include(obj, indent)
+    elif isinstance(obj, LineComment):
+        return _format_linecomment(obj, indent)
+    elif isinstance(obj, BlockComment):
+        return _format_blockcomment(obj, indent)
     else:
         raise ValueError(f'cannot format object as TDL: {obj!r}')
 
@@ -1584,3 +1596,11 @@ def _format_environment(env, indent):
 
 def _format_include(fi, indent):
     return '{}:include "{}".'.format(' ' * indent, fi.value)
+
+
+def _format_linecomment(obj, indent):
+    return '{};{}'.format(' ' * indent, str(obj))
+
+
+def _format_blockcomment(obj, indent):
+    return '{}#|{}|#'.format(' ' * indent, str(obj))

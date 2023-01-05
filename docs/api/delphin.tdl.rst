@@ -166,6 +166,16 @@ Environments and File Inclusion
    :members:
 
 
+Comments
+''''''''
+
+.. autoclass:: LineComment
+   :members:
+
+.. autoclass:: BlockComment
+   :members:
+
+
 Exceptions and Warnings
 -----------------------
 
