@@ -247,7 +247,9 @@ class _REPPMask(_REPPOperation):
 
 class _REPPGroup(_REPPOperation):
     def __init__(
-        self, operations: List[_REPPOperation] = None, name: str = None
+        self,
+        operations: Optional[List[_REPPOperation]] = None,
+        name: Optional[str] = None
     ):
         if operations is None:
             operations = []
@@ -336,10 +338,10 @@ class REPP(_REPPGroup):
 
     def __init__(
         self,
-        operations: List[_REPPOperation] = None,
-        name: str = None,
-        modules: Dict[str, 'REPP'] = None,
-        active: Iterable[str] = None
+        operations: Optional[List[_REPPOperation]] = None,
+        name: Optional[str] = None,
+        modules: Optional[Dict[str, 'REPP']] = None,
+        active: Optional[Iterable[str]] = None
     ):
         super().__init__(operations=operations, name=name)
         self.info: Optional[str] = None
@@ -495,7 +497,11 @@ class REPP(_REPPGroup):
         else:
             logger.debug('>%s (inactive)', self.name)
 
-    def apply(self, s: str, active: Iterable[str] = None) -> REPPResult:
+    def apply(
+        self,
+        s: str,
+        active: Optional[Iterable[str]] = None
+    ) -> REPPResult:
         """
         Apply the REPP's rewrite rules to the input string *s*.
 
@@ -513,7 +519,10 @@ class REPP(_REPPGroup):
         return result
 
     def trace(
-        self, s: str, active: Iterable[str] = None, verbose: bool = False
+        self,
+        s: str,
+        active: Optional[Iterable[str]] = None,
+        verbose: bool = False
     ) -> _Trace:
         """
         Rewrite string *s* like `apply()`, but yield each rewrite step.
@@ -554,7 +563,10 @@ class REPP(_REPPGroup):
         yield REPPResult(s, startmap, endmap)
 
     def tokenize(
-        self, s: str, pattern: str = None, active: Iterable[str] = None
+        self,
+        s: str,
+        pattern: Optional[str] = None,
+        active: Optional[Iterable[str]] = None
     ) -> YYTokenLattice:
         """
         Rewrite and tokenize the input string *s*.
