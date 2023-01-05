@@ -149,7 +149,7 @@ class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', 'form tokens')):
 
     def __new__(cls,
                 form: str,
-                tokens: Optional[Sequence[UDFToken]] = None,
+                tokens: Optional[SequenceType[UDFToken]] = None,
                 parent=None):
         if tokens is None:
             tokens = []
