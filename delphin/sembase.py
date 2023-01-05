@@ -169,10 +169,12 @@ class SemanticStructure(LnkMixin):
         return (self.top == other.top
                 and self.predications == other.predications)
 
-    def __contains__(self, id: Identifier):
+    def __contains__(self, id: Optional[Identifier]):
         return id in self._pidx
 
-    def __getitem__(self, id: Identifier) -> Predication:
+    def __getitem__(self, id: Optional[Identifier]) -> Predication:
+        if id is None:
+            raise KeyError(id)
         return self._pidx[id]
 
     def arguments(self,
@@ -193,11 +195,11 @@ class SemanticStructure(LnkMixin):
         """
         raise NotImplementedError()
 
-    def properties(self, id: Identifier) -> PropertyMap:
+    def properties(self, id: Optional[Identifier]) -> PropertyMap:
         """Return the morphosemantic properties for *id*."""
         raise NotImplementedError()
 
-    def is_quantifier(self, id: Identifier) -> bool:
+    def is_quantifier(self, id: Optional[Identifier]) -> bool:
         """Return `True` if *id* represents a quantifier."""
         raise NotImplementedError()
 
