@@ -217,7 +217,7 @@ class UDFNode(_UDFNodeBase,
                 score: Optional[float] = None,
                 start: Optional[int] = None,
                 end: Optional[int] = None,
-                daughters: Optional[Sequence[_UDFNodeBase]] = None,
+                daughters: Optional[SequenceType[_UDFNodeBase]] = None,
                 head: Optional[bool] = None,
                 type: Optional[str] = None,
                 parent: Optional['UDFNode'] = None):
