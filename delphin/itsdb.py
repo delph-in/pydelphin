@@ -85,7 +85,7 @@ class FieldMapper:
         affected_tables: list of tables that are affected by the
             processing
     """
-    def __init__(self, source: tsdb.Database = None):
+    def __init__(self, source: Optional[tsdb.Database] = None):
         # the parse keys exclude some that are handled specially
         self._parse_keys = '''
             ninputs ntokens readings first total tcpu tgc treal words
@@ -318,7 +318,7 @@ class Row(tsdb.Record):
     def __init__(self,
                  fields: tsdb.Fields,
                  data: Sequence[tsdb.Value],
-                 field_index: tsdb.FieldIndex = None):
+                 field_index: Optional[tsdb.FieldIndex] = None):
         if len(data) != len(fields):
             raise ITSDBError(
                 'number of columns ({}) != number of fields ({})'
@@ -640,7 +640,8 @@ class Table(tsdb.Relation):
 
     def _enum_rows(self,
                    fh: IO[str],
-                   _slice: slice = None) -> Iterator[Tuple[int, Row]]:
+                   _slice: Optional[slice] = None
+                   ) -> Iterator[Tuple[int, Row]]:
         """Enumerate on-disk and in-memory rows."""
         if _slice is None:
             _slice = slice(None)
@@ -690,8 +691,8 @@ class TestSuite(tsdb.Database):
     """
 
     def __init__(self,
-                 path: util.PathLike = None,
-                 schema: tsdb.SchemaLike = None,
+                 path: Optional[util.PathLike] = None,
+                 schema: Optional[tsdb.SchemaLike] = None,
                  encoding: str = 'utf-8') -> None:
         # Virtual test suites use a temporary directory
         if path is None:
@@ -733,7 +734,7 @@ class TestSuite(tsdb.Database):
 
     def select_from(self,
                     name: str,
-                    columns: Iterable[str] = None,
+                    columns: Optional[Iterable[str]] = None,
                     cast: bool = True):
         """
         Select fields given by *names* from each row in table *name*.
@@ -801,7 +802,8 @@ class TestSuite(tsdb.Database):
 
     def processed_items(
             self,
-            fieldmapper: FieldMapper = None) -> Iterator[interface.Response]:
+            fieldmapper: Optional[FieldMapper] = None
+    ) -> Iterator[interface.Response]:
         """
         Iterate over the data as :class:`Response` objects.
         """
@@ -812,12 +814,12 @@ class TestSuite(tsdb.Database):
     def process(
             self,
             cpu: interface.Processor,
-            selector: Tuple[str, str] = None,
-            source: tsdb.Database = None,
-            fieldmapper: FieldMapper = None,
+            selector: Optional[Tuple[str, str]] = None,
+            source: Optional[tsdb.Database] = None,
+            fieldmapper: Optional[FieldMapper] = None,
             gzip: bool = False,
             buffer_size: int = 1000,
-            callback: Callable[[interface.Response], Any] = None,
+            callback: Optional[Callable[[interface.Response], Any]] = None,
     ) -> None:
         """
         Process each item in a [incr tsdb()] test suite.

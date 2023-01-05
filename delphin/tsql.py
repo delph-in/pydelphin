@@ -48,7 +48,7 @@ class _Record(tsdb.Record):
     def __new__(cls,
                 fields: tsdb.Fields,
                 data: tsdb.Record,
-                field_index: tsdb.FieldIndex = None):
+                field_index: Optional[tsdb.FieldIndex] = None):
         return tuple(data)
 
 

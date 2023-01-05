@@ -2,6 +2,7 @@
 Functions for working with MRS variables.
 """
 
+from typing import Tuple, Dict, List, Optional
 import re
 
 # Default modules need to import the PyDelphin version
@@ -21,9 +22,11 @@ HANDLE             = 'h'
 _variable_re = re.compile(r'^([-\w]*[^\s\d])(\d+)$')
 
 
-def split(var):
+def split(var: str) -> Tuple[str, str]:
     """
     Split a valid variable string into its variable type and id.
+
+    Note that, unlike :func:`id`, the id is returned as a string.
 
     Examples:
         >>> variable.split('h3')
@@ -35,10 +38,10 @@ def split(var):
     if match is None:
         raise ValueError(f'Invalid variable string: {var!s}')
     else:
-        return match.groups()
+        return match.group(1), match.group(2)
 
 
-def type(var):
+def type(var: str) -> str:
     """
     Return the type (i.e., sort) of a valid variable string.
 
@@ -56,7 +59,7 @@ def type(var):
 sort = type  #: :func:`sort` is an alias for :func:`type`.
 
 
-def id(var):
+def id(var: str) -> int:
     """
     Return the integer id of a valid variable string.
 
@@ -69,7 +72,7 @@ def id(var):
     return int(split(var)[1])
 
 
-def is_valid(var):
+def is_valid(var: str) -> bool:
     """
     Return `True` if *var* is a valid variable string.
 
@@ -100,12 +103,12 @@ class VariableFactory:
         store (dict): a mapping of variables to associated properties
     """
 
-    def __init__(self, starting_vid=1):
+    def __init__(self, starting_vid: int = 1):
         self.vid = starting_vid
-        self.index = {}  # to map vid to created variable
-        self.store = {}  # to recall properties from varstrings
+        self.index: Dict[int, str] = {}  # to map vid to created variable
+        self.store: Dict[str, List[str]] = {}  # variable to prop list
 
-    def new(self, type, properties=None):
+    def new(self, type: str, properties: Optional[List[str]] = None) -> str:
         """
         Create a new variable for the given *type*.
 

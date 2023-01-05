@@ -3,7 +3,17 @@
 Basic classes and functions for semantic representations.
 """
 
-from typing import (Optional, Mapping, Tuple, List, Union, Sequence)
+from typing import (
+    Any,
+    Optional,
+    Iterable,
+    Mapping,
+    Tuple,
+    List,
+    Dict,
+    Union,
+    Sequence,
+)
 
 from delphin.lnk import Lnk, LnkMixin
 # Default modules need to import the PyDelphin version
@@ -142,7 +152,9 @@ class SemanticStructure(LnkMixin):
         super().__init__(lnk, surface)
         self.top = top
         self.predications = predications
-        self._pidx = {p.id: p for p in predications}
+        self._pidx: Dict[Identifier, Predication] = {
+            p.id: p for p in predications
+        }
         self.identifier = identifier
 
     def __repr__(self):
@@ -151,19 +163,24 @@ class SemanticStructure(LnkMixin):
             ' '.join(p.predicate for p in self.predications),
             id(self))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         if not isinstance(other, self.__class__):
             return NotImplemented
         return (self.top == other.top
                 and self.predications == other.predications)
 
-    def __contains__(self, id):
+    def __contains__(self, id: Optional[Identifier]):
         return id in self._pidx
 
-    def __getitem__(self, id):
+    def __getitem__(self, id: Optional[Identifier]) -> Predication:
+        if id is None:
+            raise KeyError(id)
         return self._pidx[id]
 
-    def arguments(self, types=None, expressed=None) -> ArgumentStructure:
+    def arguments(self,
+                  types: Optional[Iterable[str]] = None,
+                  expressed: Optional[bool] = None
+                  ) -> ArgumentStructure:
         """
         Return a mapping of the argument structure.
 
@@ -178,11 +195,11 @@ class SemanticStructure(LnkMixin):
         """
         raise NotImplementedError()
 
-    def properties(self, id: Identifier) -> PropertyMap:
+    def properties(self, id: Optional[Identifier]) -> PropertyMap:
         """Return the morphosemantic properties for *id*."""
         raise NotImplementedError()
 
-    def is_quantifier(self, id: Identifier) -> bool:
+    def is_quantifier(self, id: Optional[Identifier]) -> bool:
         """Return `True` if *id* represents a quantifier."""
         raise NotImplementedError()
 

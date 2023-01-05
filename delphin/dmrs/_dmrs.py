@@ -1,5 +1,5 @@
 
-from typing import Iterable
+from typing import Iterable, Optional
 
 from delphin import variable
 from delphin.lnk import Lnk
@@ -55,10 +55,10 @@ class Node(Predication):
     def __init__(self,
                  id: int,
                  predicate: str,
-                 type: str = None,
-                 properties: dict = None,
-                 carg: str = None,
-                 lnk: Lnk = None,
+                 type: Optional[str] = None,
+                 properties: Optional[dict] = None,
+                 carg: Optional[str] = None,
+                 lnk: Optional[Lnk] = None,
                  surface=None,
                  base=None):
         id = int(id)
@@ -173,11 +173,11 @@ class DMRS(scope.ScopingSemanticStructure):
     __slots__ = ('links')
 
     def __init__(self,
-                 top: int = None,
-                 index: int = None,
-                 nodes: Iterable[Node] = None,
-                 links: Iterable[Link] = None,
-                 lnk: Lnk = None,
+                 top: Optional[int] = None,
+                 index: Optional[int] = None,
+                 nodes: Optional[Iterable[Node]] = None,
+                 links: Optional[Iterable[Link]] = None,
+                 lnk: Optional[Lnk] = None,
                  surface=None,
                  identifier=None):
 

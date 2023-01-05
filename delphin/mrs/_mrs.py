@@ -1,5 +1,5 @@
 
-from typing import Optional, Iterable, Mapping
+from typing import Optional, Iterable, Mapping, Dict
 
 from delphin.lnk import Lnk
 from delphin import variable
@@ -52,8 +52,8 @@ class EP(sembase.Predication):
     def __init__(self,
                  predicate: str,
                  label: str,
-                 args: dict = None,
-                 lnk: Lnk = None,
+                 args: Optional[Dict[str, str]] = None,
+                 lnk: Optional[Lnk] = None,
                  surface=None,
                  base=None):
         self.id: str  # further constrain for EPs
@@ -63,6 +63,7 @@ class EP(sembase.Predication):
         # EPs formally do not have identifiers but they are very useful
         # note that the ARG0 may be unspecified, so use a default
         iv = args.get(INTRINSIC_ROLE, '_0')
+        type: Optional[str]
         type, vid = variable.split(iv)
         if type == '_':
             type = None
@@ -222,13 +223,13 @@ class MRS(scope.ScopingSemanticStructure):
     __slots__ = ('hcons', 'icons', 'variables')
 
     def __init__(self,
-                 top: str = None,
-                 index: str = None,
-                 rels: Iterable[EP] = None,
-                 hcons: Iterable[HCons] = None,
-                 icons: Iterable[ICons] = None,
-                 variables: Mapping[str, Mapping[str, str]] = None,
-                 lnk: Lnk = None,
+                 top: Optional[str] = None,
+                 index: Optional[str] = None,
+                 rels: Optional[Iterable[EP]] = None,
+                 hcons: Optional[Iterable[HCons]] = None,
+                 icons: Optional[Iterable[ICons]] = None,
+                 variables: Optional[Mapping[str, Mapping[str, str]]] = None,
+                 lnk: Optional[Lnk] = None,
                  surface=None,
                  identifier=None):
 

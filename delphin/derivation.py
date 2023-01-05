@@ -2,6 +2,15 @@
 Classes and functions related to derivation trees.
 """
 
+from typing import (
+    Optional,
+    Union,
+    List,
+    Dict,
+    Any,
+    Iterable,
+    Sequence as SequenceType,
+)
 import re
 from collections import namedtuple
 from collections.abc import Sequence
@@ -29,58 +38,32 @@ _all_fields = (
 )
 
 
-def from_string(s):
-    """
-    Instantiate a Derivation from a UDF or UDX string representation.
-
-    The UDF/UDX representations are as output by a processor like the
-    `LKB <https://github.com/delph-in/docs/wiki/LkbTop>`_ or
-    `ACE <http://sweaglesw.org/linguistics/ace/>`_, or from the
-    :meth:`UDFNode.to_udf` or :meth:`UDFNode.to_udx` methods.
-
-    Args:
-        s (str): UDF or UDX serialization
-    """
-    udfnode = _from_string(s)
-    return Derivation(*udfnode, head=udfnode._head, type=udfnode.type)
-
-
-def from_dict(d):
-    """
-    Instantiate a Derivation from a dictionary representation.
-
-    The dictionary representation may come from the HTTP interface
-    (see the `ErgApi <https://github.com/delph-in/docs/wiki/ErgApi>`_
-    wiki) or from the :meth:`UDFNode.to_dict` method. Note that in the
-    former case, the JSON response should have already been decoded
-    into a Python dictionary.
-
-    Args:
-        d (dict): dictionary representation of a derivation
-    """
-    return Derivation(*_from_dict(d))
-
-
 class _UDFNodeBase:
     """
     Base class for :class:`UDFNode` and :class:`UDFTerminal`.
     """
+    _parent: Optional['_UDFNodeBase']
+
     def __str__(self):
         return self.to_udf(indent=None)
 
     # cannot rely on default __ne__ while namedtuple is a shared base class
-    def __ne__(self, other):
+    def __ne__(self, other: Any):
         if not isinstance(other, _UDFNodeBase):
             return NotImplemented
         return not (self == other)
 
     @property
-    def parent(self):
+    def parent(self) -> Optional['_UDFNodeBase']:
         return self._parent
+
+    def is_root(self):
+        """Return True if the node is a root node."""
+        raise NotImplementedError()
 
     # serialization
 
-    def to_udf(self, indent=1):
+    def to_udf(self, indent: int = 1) -> str:
         """
         Encode the node and its descendants in the UDF format.
 
@@ -91,7 +74,7 @@ class _UDFNodeBase:
         """
         return _to_udf(self, indent, 1)
 
-    def to_udx(self, indent=1):
+    def to_udx(self, indent: int = 1) -> str:
         """
         Encode the node and its descendants in the UDF export format.
 
@@ -102,12 +85,16 @@ class _UDFNodeBase:
         """
         return _to_udf(self, indent, 1, udx=True)
 
-    def to_dict(self, fields=_all_fields, labels=None):
+    def to_dict(
+        self,
+        fields: Iterable[str] = _all_fields,
+        labels: Optional[SequenceType] = None
+    ) -> Dict[str, Any]:
         """
         Encode the node as a dictionary suitable for JSON serialization.
 
         Args:
-            fields: if given, this is a whitelist of fields to include
+            fields: if given, this is an allowlist of fields to include
                 on nodes (`daughters` and `form` are always shown)
             labels: optional label annotations to embed in the
                 derivation dict; the value is a list of lists matching
@@ -128,13 +115,11 @@ class UDFToken(namedtuple('UDFToken', 'id tfs')):
     multi-word entities (e.g. "ad hoc") will have more than one.
 
     Args:
-        id (int): token identifier
-        tfs (str): the feature structure for the token
+        id: token identifier
+        tfs: the feature structure for the token
     """
-    def __new__(cls, id, tfs):
-        if id is not None:
-            id = int(id)
-        return super(UDFToken, cls).__new__(cls, id, tfs)
+    def __new__(cls, id: Union[int, str], tfs: str):
+        return super(UDFToken, cls).__new__(cls, int(id), tfs)
 
     def __repr__(self):
         return f'<UDFToken object ({self.id} {self.tfs!r}) at {id(self)}>'
@@ -162,7 +147,10 @@ class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', 'form tokens')):
         parent (UDFNode, optional): parent node in derivation
     """
 
-    def __new__(cls, form, tokens=None, parent=None):
+    def __new__(cls,
+                form: str,
+                tokens: Optional[SequenceType[UDFToken]] = None,
+                parent=None):
         if tokens is None:
             tokens = []
         t = super(UDFTerminal, cls).__new__(cls, form, tokens)
@@ -209,23 +197,30 @@ class UDFNode(_UDFNodeBase,
     daughters are terminal nodes.
 
     Args:
-        id (int): unique node identifier
-        entity (str): grammar entity represented by the node
-        score (float, optional): probability or weight of the node
-        start (int, optional): start position of tokens encompassed by
-            the node
-        end (int, optional): end position of tokens encompassed by the
-            node
-        daughters (list, optional): iterable of daughter nodes
-        head (bool, optional): `True` if the node is a syntactic head
-            node
-        type (str, optional): grammar type name
-        parent (UDFNode, optional): parent node in derivation
+        id: unique node identifier
+        entity: grammar entity represented by the node
+        score: probability or weight of the node
+        start: start position of tokens encompassed by the node
+        end: end position of tokens encompassed by the node
+        daughters: iterable of daughter nodes
+        head: `True` if the node is a syntactic head node
+        type: grammar type name
+        parent: parent node in derivation
     """
 
-    def __new__(cls, id, entity,
-                score=None, start=None, end=None, daughters=None,
-                head=None, type=None, parent=None):
+    _head: Optional[bool]
+    type: Optional[str]
+
+    def __new__(cls,
+                id: Optional[int],
+                entity: str,
+                score: Optional[float] = None,
+                start: Optional[int] = None,
+                end: Optional[int] = None,
+                daughters: Optional[SequenceType[_UDFNodeBase]] = None,
+                head: Optional[bool] = None,
+                type: Optional[str] = None,
+                parent: Optional['UDFNode'] = None):
         # numeric fields can be underspecified as -1 if not a root
         if id is not None:
             id = int(id)
@@ -379,6 +374,38 @@ class Derivation(UDFNode):
                 )
 
 
+def from_string(s: str) -> Derivation:
+    """
+    Instantiate a Derivation from a UDF or UDX string representation.
+
+    The UDF/UDX representations are as output by a processor like the
+    `LKB <https://github.com/delph-in/docs/wiki/LkbTop>`_ or
+    `ACE <http://sweaglesw.org/linguistics/ace/>`_, or from the
+    :meth:`UDFNode.to_udf` or :meth:`UDFNode.to_udx` methods.
+
+    Args:
+        s (str): UDF or UDX serialization
+    """
+    udfnode = _from_string(s)
+    return Derivation(*udfnode, head=udfnode._head, type=udfnode.type)
+
+
+def from_dict(d: Dict[str, Any]) -> Derivation:
+    """
+    Instantiate a Derivation from a dictionary representation.
+
+    The dictionary representation may come from the HTTP interface
+    (see the `ErgApi <https://github.com/delph-in/docs/wiki/ErgApi>`_
+    wiki) or from the :meth:`UDFNode.to_dict` method. Note that in the
+    former case, the JSON response should have already been decoded
+    into a Python dictionary.
+
+    Args:
+        d (dict): dictionary representation of a derivation
+    """
+    return Derivation(*_from_dict(d))
+
+
 ###############################################################################
 # Deserialization
 
@@ -408,13 +435,13 @@ _udf_re = re.compile(
 )
 
 
-def _from_string(s):
+def _from_string(s) -> UDFNode:
     if not (s.startswith('(') and s.endswith(')')):
         raise DerivationSyntaxError(
             'missing opening or closing parentheses', text=s)
     s_ = s[1:]  # get rid of initial open-parenthesis
-    stack = []
-    deriv = None
+    stack: List[UDFNode] = []
+    deriv: Optional[UDFNode] = None
     matches = _udf_re.finditer(s_)
     for match in matches:
         if match.group('done'):
@@ -429,7 +456,7 @@ def _from_string(s):
             # ignore LKB-style start/end data if it exists on gd
             term = UDFTerminal(
                 _unquote(gd['form']),
-                tokens=_udf_tokens(gd.get('tokens')),
+                tokens=_udf_tokens(gd.get('tokens', '')),
                 parent=stack[-1] if stack else None
             )
             stack[-1].daughters.append(term)
@@ -442,9 +469,13 @@ def _from_string(s):
                 head = True
             if type == '':
                 type = None
-            udf = UDFNode(gd['id'], entity, gd['score'],
-                          gd['start'], gd['end'],
-                          head=head, type=type,
+            udf = UDFNode(int(gd['id']),
+                          entity,
+                          score=float(gd['score']) if gd['score'] else None,
+                          start=int(gd['start']) if gd['start'] else None,
+                          end=int(gd['end']) if gd['end'] else None,
+                          head=head,
+                          type=type,
                           parent=stack[-1] if stack else None)
             stack.append(udf)
         elif match.group('root'):
@@ -458,14 +489,14 @@ def _from_string(s):
     return deriv
 
 
-def _unquote(s):
+def _unquote(s: str) -> str:
     if s is not None:
         return re.sub(r'^"(.*)"$', r'\1', s)
     return None
 
 
-def _udf_tokens(tokenstring):
-    tokens = []
+def _udf_tokens(tokenstring: str) -> List[UDFToken]:
+    tokens: List[UDFToken] = []
     if tokenstring:
         toks = re.findall(
             r'\s*({id})\s+({tfs})'
@@ -477,7 +508,7 @@ def _udf_tokens(tokenstring):
     return tokens
 
 
-def _from_dict(d, parent=None):
+def _from_dict(d: Dict[str, Any], parent: Optional[UDFNode] = None) -> UDFNode:
     if 'daughters' in d:
         n = UDFNode(
             d.get('id'),
@@ -513,6 +544,8 @@ def _from_dict(d, parent=None):
             )
         )
         return n
+    else:
+        raise ValueError(f"invalid UDF node: {d}")
 
 
 ###############################################################################

@@ -128,7 +128,7 @@ def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
 
 
 def descendants(x: ScopingSemanticStructure,
-                scopes: ScopeMap = None) -> DescendantMap:
+                scopes: Optional[ScopeMap] = None) -> DescendantMap:
     """
     Return a mapping of predication ids to their scopal descendants.
 

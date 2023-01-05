@@ -109,8 +109,8 @@ class Field:
     def __init__(self,
                  name: str,
                  datatype: str,
-                 flags: Iterable[str] = None,
-                 comment: str = None) -> None:
+                 flags: Optional[Iterable[str]] = None,
+                 comment: Optional[str] = None) -> None:
         self.name = name
         self.datatype = datatype
         self.flags = tuple(flags or [])
@@ -335,7 +335,7 @@ class Database:
         return len(self.schema)
 
     def select_from(self, name: str,
-                    columns: Iterable[str] = None,
+                    columns: Optional[Iterable[str]] = None,
                     cast: bool = False) -> Generator[Record, None, None]:
         """
         Yield values for *columns* from relation *name*.
@@ -360,7 +360,8 @@ class Database:
     def _select_raw(
             self,
             name: str,
-            columns: Iterable[str] = None) -> Generator[RawRecord, None, None]:
+            columns: Optional[Iterable[str]] = None
+    ) -> Generator[RawRecord, None, None]:
         if name not in self.schema:
             raise TSDBError(f'relation not defined in schema: {name}')
         fields = self.schema[name]
@@ -438,7 +439,7 @@ def unescape(string: str) -> str:
 
 
 def split(line: str,
-          fields: Fields = None) -> Record:
+          fields: Optional[Fields] = None) -> Record:
     """
     Split a raw line from a relation into a list of column values.
 
@@ -468,7 +469,7 @@ def split(line: str,
 
 
 def join(values: Record,
-         fields: Fields = None) -> str:
+         fields: Optional[Fields] = None) -> str:
     """
     Join a list of column values into a string for a relation file.
 
@@ -770,7 +771,7 @@ def open(dir: util.PathLike,
 def write(dir: util.PathLike,
           name: str,
           records: Iterable[Record],
-          fields: Fields = None,
+          fields: Optional[Fields] = None,
           append: bool = False,
           gzip: bool = False,
           encoding: str = 'utf-8') -> None:
@@ -906,8 +907,8 @@ def initialize_database(path: util.PathLike,
 
 def write_database(db: Database,
                    path: util.PathLike,
-                   names: Iterable[str] = None,
-                   schema: SchemaLike = None,
+                   names: Optional[Iterable[str]] = None,
+                   schema: Optional[SchemaLike] = None,
                    gzip: bool = False,
                    encoding: str = 'utf-8') -> None:
     """

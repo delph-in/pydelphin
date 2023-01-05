@@ -3,7 +3,7 @@
 PyDelphin API counterparts to the ``delphin`` commands.
 """
 
-from typing import Union, Iterator, IO, Dict, Any
+from typing import Union, Iterator, IO, Dict, Any, Optional
 import sys
 from pathlib import Path
 import tempfile
@@ -41,10 +41,10 @@ def convert(path: Union[util.PathLike, IO[str]],
             properties: bool = True,
             lnk: bool = True,
             color: bool = False,
-            indent: int = None,
+            indent: Optional[int] = None,
             show_status: bool = False,
             predicate_modifiers: bool = False,
-            semi: Union[SemI, util.PathLike] = None) -> str:
+            semi: Optional[Union[SemI, util.PathLike]] = None) -> str:
     """
     Convert between various DELPH-IN Semantics representations.
 

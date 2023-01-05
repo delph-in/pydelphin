@@ -3,6 +3,8 @@
 Surface alignment for semantic entities.
 """
 
+from typing import Optional, Tuple, Union, Iterable, overload
+
 from delphin.exceptions import PyDelphinException
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -54,6 +56,9 @@ class Lnk:
 
     __slots__ = ('type', 'data')
 
+    type: int
+    data: Union[int, Tuple[int, ...]]
+
     # These types determine how a lnk on an EP or MRS are to be
     # interpreted, and thus determine the data type/structure of the
     # lnk data.
@@ -62,6 +67,20 @@ class Lnk:
     CHARTSPAN = 2  # Chart vertex span: a pair of indices
     TOKENS = 3  # Token numbers: a list of indices
     EDGE = 4  # An edge identifier: a number
+
+    @overload
+    def __init__(self, arg: None, data: None = None):
+        ...
+
+    @overload
+    def __init__(self, arg: str, data: None = None):
+        ...
+
+    @overload
+    def __init__(self,
+                 arg: int,
+                 data: Union[None, int, Tuple[int, ...]] = None):
+        ...
 
     def __init__(self, arg, data=None):
         if not arg:
@@ -97,7 +116,7 @@ class Lnk:
         return cls(None)
 
     @classmethod
-    def charspan(cls, start, end):
+    def charspan(cls, start: Union[str, int], end: Union[str, int]):
         """
         Create a Lnk object for a character span.
 
@@ -108,7 +127,7 @@ class Lnk:
         return cls(Lnk.CHARSPAN, (int(start), int(end)))
 
     @classmethod
-    def chartspan(cls, start, end):
+    def chartspan(cls, start: Union[str, int], end: Union[str, int]):
         """
         Create a Lnk object for a chart span.
 
@@ -119,7 +138,7 @@ class Lnk:
         return cls(Lnk.CHARTSPAN, (int(start), int(end)))
 
     @classmethod
-    def tokens(cls, tokens):
+    def tokens(cls, tokens: Iterable[Union[str, int]]):
         """
         Create a Lnk object for a token range.
 
@@ -129,7 +148,7 @@ class Lnk:
         return cls(Lnk.TOKENS, tuple(map(int, tokens)))
 
     @classmethod
-    def edge(cls, edge):
+    def edge(cls, edge: Union[str, int]):
         """
         Create a Lnk object for an edge (used internally in generation).
 
@@ -171,14 +190,16 @@ class LnkMixin:
 
     __slots__ = ('lnk', 'surface')
 
-    def __init__(self, lnk=None, surface=None):
+    def __init__(self,
+                 lnk: Optional[Lnk] = None,
+                 surface: Optional[str] = None):
         if lnk is None:
             lnk = Lnk.default()
         self.lnk = lnk
         self.surface = surface
 
     @property
-    def cfrom(self):
+    def cfrom(self) -> int:
         """
         The initial character position in the surface string.
 
@@ -187,13 +208,13 @@ class LnkMixin:
         cfrom = -1
         try:
             if self.lnk.type == Lnk.CHARSPAN:
-                cfrom = self.lnk.data[0]
+                cfrom = self.lnk.data[0]  # type: ignore
         except AttributeError:
             pass  # use default cfrom of -1
         return cfrom
 
     @property
-    def cto(self):
+    def cto(self) -> int:
         """
         The final character position in the surface string.
 
@@ -202,7 +223,7 @@ class LnkMixin:
         cto = -1
         try:
             if self.lnk.type == Lnk.CHARSPAN:
-                cto = self.lnk.data[1]
+                cto = self.lnk.data[1]  # type: ignore
         except AttributeError:
             pass  # use default cto of -1
         return cto

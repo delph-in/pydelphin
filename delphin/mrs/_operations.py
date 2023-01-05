@@ -3,7 +3,7 @@
 Operations on MRS structures
 """
 
-from typing import Iterable, Dict, Set, Optional
+from typing import Iterable, Dict, Set, cast
 
 from delphin import variable
 from delphin import predicate
@@ -118,8 +118,9 @@ def plausibly_scopes(m: mrs.MRS) -> bool:
         return False
     seen = set([m.top])
     for id, roleargs in m.arguments(types='h').items():
+        ep = cast(mrs.EP, m[id])
         for _, handle in roleargs:
-            if handle == m[id].label:
+            if handle == ep.label:
                 return False
             elif handle in hcmap:
                 if handle in seen:
@@ -168,8 +169,8 @@ def is_isomorphic(m1: mrs.MRS,
     return set(iso) == set(g1)
 
 
-def _make_mrs_isograph(x, properties):
-    g: Dict[Identifier, Dict[Optional[Identifier], str]] = {}
+def _make_mrs_isograph(x: mrs.MRS, properties: bool) -> util._IsoGraph:
+    g: util._IsoGraph = {}
     g.update((v, {}) for v in x.variables)
     g.update((ep.id, {}) for ep in x.rels)
 
