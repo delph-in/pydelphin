@@ -2,12 +2,22 @@
 
 ## Unreleased
 
+### Added
+
+* `delphin.tdl.LineComment` class ([#356])
+* `delphin.tdl.BlockComment` class ([#356])
+
 ### Fixed
 
 * `delphin.tdl.ConsList.values()` and `delphin.tdl.DiffList.values()`
   now treat explicit sublists as regular items instead of descending
   into their structures ([#357])
 * Implicit optional types are made explicit ([#360])
+
+### Changed
+
+* TDL parsing now models line and block comments ([#356])
+* TDL formatting now formats `LineComment` and `BlockComment` classes ([#356])
 
 
 ## [v1.7.0]
@@ -1566,5 +1576,6 @@ information about changes, except for
 [#343]: https://github.com/delph-in/pydelphin/issues/343
 [#344]: https://github.com/delph-in/pydelphin/issues/344
 [#352]: https://github.com/delph-in/pydelphin/issues/352
+[#356]: https://github.com/delph-in/pydelphin/issues/356
 [#357]: https://github.com/delph-in/pydelphin/issues/357
 [#360]: https://github.com/delph-in/pydelphin/issues/360

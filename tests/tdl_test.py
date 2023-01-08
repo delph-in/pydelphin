@@ -24,6 +24,8 @@ from delphin.tdl import (
     TypeEnvironment,
     InstanceEnvironment,
     FileInclude,
+    LineComment,
+    BlockComment,
     TDLError,
     TDLSyntaxError,
     TDLWarning)
@@ -721,11 +723,13 @@ def test_parse_wildcard():
 def test_parse_linecomment():
     lc = tdlparse('; this is a comment\n')
     assert lc == ' this is a comment'
+    assert isinstance(lc, LineComment)
 
 
 def test_parse_blockcomment():
     bc = tdlparse('#| this is a comment\n   on multiple lines|#')
     assert bc == ' this is a comment\n   on multiple lines'
+    assert isinstance(bc, BlockComment)
 
 
 def test_parse_environments():
@@ -960,6 +964,24 @@ def test_format_environments():
         '  :end :instance.\n'
         '  :include "another.tdl".\n'
         ':end :type.')
+
+
+def test_format_fileinclude():
+    assert tdl.format(FileInclude('foo.tdl')) == ':include "foo.tdl".'
+
+
+def test_format_linecomment():
+    assert tdl.format(LineComment(' a comment')) == '; a comment'
+    assert tdl.format(LineComment('; two semicolons')) == ';; two semicolons'
+
+
+def test_format_blockcomment():
+    assert tdl.format(
+        BlockComment(' a block comment ')
+    ) == '#| a block comment |#'
+    assert tdl.format(
+        BlockComment('\n  one\n  two\n')
+    ) == '#|\n  one\n  two\n|#'
 
 
 def test_issue_357():
