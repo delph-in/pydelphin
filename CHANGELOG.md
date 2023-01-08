@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Python Versions
+
+* Added Python 3.11 support
+
 ### Added
 
 * `delphin.tdl.LineComment` class ([#356])
