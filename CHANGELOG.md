@@ -6,6 +6,10 @@
 
 * Bump versions of `actions/setup-python` (and others) in actions ([#364])
 
+### Fixed
+
+* Escape/unescape quoted strings in SimpleMRS ([#367])
+
 
 ## [v1.8.0]
 
@@ -1592,3 +1596,4 @@ information about changes, except for
 [#357]: https://github.com/delph-in/pydelphin/issues/357
 [#360]: https://github.com/delph-in/pydelphin/issues/360
 [#364]: https://github.com/delph-in/pydelphin/issues/364
+[#367]: https://github.com/delph-in/pydelphin/issues/367

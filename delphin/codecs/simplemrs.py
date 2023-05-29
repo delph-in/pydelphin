@@ -3,6 +3,7 @@ Serialization functions for the SimpleMRS format.
 """
 
 from pathlib import Path
+from typing import Optional
 
 from delphin.util import Lexer
 from delphin import predicate
@@ -184,7 +185,7 @@ def _decode_mrs(lexer):
     variables = {}
     lexer.expect_type(LBRACK)
     lnk = _decode_lnk(lexer)
-    surface = lexer.accept_type(DQSTRING)
+    surface = _decode_dqstring(lexer.accept_type(DQSTRING))
     feature = lexer.accept_type(FEATURE)
     while feature is not None:
         feature = feature.upper()
@@ -223,6 +224,12 @@ def _decode_lnk(lexer):
     return lnk
 
 
+def _decode_dqstring(dqstring: Optional[str]) -> Optional[str]:
+    if dqstring is not None:
+        dqstring = _unescape(dqstring)
+    return dqstring
+
+
 def _decode_variable(lexer, variables):
     var = lexer.expect_type(SYMBOL).lower()
     if var not in variables:
@@ -243,17 +250,16 @@ def _decode_rel(lexer, variables):
     args = {}
     surface = None
     lexer.expect_type(LBRACK)
-    pred = predicate.normalize(
-        lexer.choice_type(DQSTRING, SQSYMBOL, PREDICATE, SYMBOL)[1])
+    pred = _decode_predicate(lexer)
     lnk = _decode_lnk(lexer)
-    surface = lexer.accept_type(DQSTRING)
+    surface = _decode_dqstring(lexer.accept_type(DQSTRING))
     _, label = lexer.expect((FEATURE, 'LBL'), (SYMBOL, None))
     # any remaining are arguments or a constant
     role = lexer.accept_type(FEATURE)
     while role is not None:
         role = role.upper()
         if role == 'CARG':
-            value = lexer.expect_type(DQSTRING)
+            value = _decode_dqstring(lexer.expect_type(DQSTRING))
         else:
             value = _decode_variable(lexer, variables)
         args[role] = value
@@ -265,6 +271,15 @@ def _decode_rel(lexer, variables):
               lnk=lnk,
               surface=surface,
               base=None)
+
+
+def _decode_predicate(lexer) -> str:
+    predstring = lexer.accept_type(DQSTRING)
+    if predstring is not None:
+        predstring = _decode_dqstring(predstring)
+    else:
+        predstring = lexer.choice_type(SQSYMBOL, PREDICATE, SYMBOL)[1]
+    return predicate.normalize(predstring)
 
 
 def _decode_cons(lexer, cls, variables):
@@ -312,7 +327,7 @@ def _encode_surface_info(m, lnk):
         if m.lnk:
             tokens.append(str(m.lnk))
         if m.surface is not None:
-            tokens.append('"{}"'.format(m.surface))
+            tokens.append('"{}"'.format(_escape(m.surface)))
     return tokens
 
 
@@ -351,12 +366,12 @@ def _encode_rels(rels, varprops, lnk, indent):
             pred += str(rel.lnk)
         reltoks = ['[', pred]
         if lnk and rel.surface is not None:
-            reltoks.append('"{}"'.format(rel.surface))
+            reltoks.append('"{}"'.format(_escape(rel.surface)))
         reltoks.extend(('LBL:', rel.label))
         for role in sorted(rel.args, key=role_priority):
             arg = rel.args[role]
             if role == CONSTANT_ROLE:
-                arg = '"{}"'.format(arg)
+                arg = '"{}"'.format(_escape(arg))
             else:
                 arg = _encode_variable(arg, varprops)
             reltoks.extend((role + ':', arg))
@@ -383,3 +398,37 @@ def _encode_icons(icons, varprops):
     if tokens:
         tokens = ['ICONS: <'] + [' '.join(tokens)] + ['>']
     return tokens
+
+
+# Character Escaping
+
+
+_ESCAPES = {
+    '\\': '\\\\',
+    '"': '\\"',
+}
+
+
+_UNESCAPES = {
+    '\\\\': '\\',
+    '\\"': '"',
+}
+
+
+def _escape(s: str) -> str:
+    return "".join(_ESCAPES.get(c, c) for c in s)
+
+
+def _unescape(s: str) -> str:
+    if not s:
+        return s
+    cs = []
+    i = 0
+    while i < len(s):
+        if s[i] == '\\' and (i + 1) < len(s):
+            cs.append(s[i+1])
+            i += 2
+        else:
+            cs.append(s[i])
+            i += 1
+    return "".join(cs)

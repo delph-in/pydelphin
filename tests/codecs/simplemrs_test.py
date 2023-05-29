@@ -60,3 +60,23 @@ def test_decode_issue_302():
     assert_predicate(r'_24/7_n_1')
     assert_predicate(r'_foo<bar_n_1')
     assert_predicate(r'_foo_n_<1:3')
+
+
+def test_escapes_issue_367():
+    # https://github.com/delph-in/pydelphin/issues/367
+    m = simplemrs.decode(
+        '[ TOP: h0'
+        ' INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]'
+        ' RELS: < [ udef_q<0:6> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: sg ] RSTR: h5 BODY: h6 ]'
+        '         [ _blue_a_1<0:6> LBL: h7 ARG0: x3 ARG1: i8 ]'
+        '         [ _in_p_loc<10:12> LBL: h1 ARG0: e2 ARG1: x3 ARG2: x9 [ x PERS: 3 NUM: sg IND: + ] ]'
+        '         [ _this_q_dem<13:17> LBL: h10 ARG0: x9 RSTR: h11 BODY: h12 ]'
+        '         [ _folder_n_of<18:25> LBL: h13 ARG0: x9 ARG1: i14 ] >'
+        ' HCONS: < h0 qeq h1 h5 qeq h7 h11 qeq h13 > ]'
+    )
+    m.surface = '"Blue" is in this folder.'
+    s = simplemrs.encode(m)
+    assert '\\"Blue\\" is in this folder.' in s
+    m2 = simplemrs.decode(s)
+    assert m == m2
+    assert m.surface == m2.surface
