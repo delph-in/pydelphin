@@ -1,6 +1,8 @@
 # Change Log
 
-## [Unreleased]
+## [v1.8.1]
+
+**Release date: 2023-05-29**
 
 ### Maintenance
 
@@ -12,6 +14,8 @@
 
 
 ## [v1.8.0]
+
+**Release date: 2023-01-08**
 
 ### Python Versions
 
