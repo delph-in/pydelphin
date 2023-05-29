@@ -1,5 +1,12 @@
 # Change Log
 
+## [Unreleased]
+
+### Maintenance
+
+* Bump versions of `actions/setup-python` (and others) in actions ([#364])
+
+
 ## [v1.8.0]
 
 ### Python Versions
@@ -1584,3 +1591,4 @@ information about changes, except for
 [#356]: https://github.com/delph-in/pydelphin/issues/356
 [#357]: https://github.com/delph-in/pydelphin/issues/357
 [#360]: https://github.com/delph-in/pydelphin/issues/360
+[#364]: https://github.com/delph-in/pydelphin/issues/364
