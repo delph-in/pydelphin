@@ -1415,6 +1415,7 @@ There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
 [commit messages](../../commits/v0.2).
 
+[v1.8.1]: ../../releases/tag/v1.8.1
 [v1.8.0]: ../../releases/tag/v1.8.0
 [v1.7.0]: ../../releases/tag/v1.7.0
 [v1.6.0]: ../../releases/tag/v1.6.0
