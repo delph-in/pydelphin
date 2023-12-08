@@ -43,6 +43,7 @@ PyDelphin
   api/delphin.eds.rst
   api/delphin.exceptions.rst
   api/delphin.hierarchy.rst
+  api/delphin.highlight.rst
   api/delphin.interface.rst
   api/delphin.itsdb.rst
   api/delphin.lnk.rst
@@ -96,6 +97,7 @@ Semantics
 '''''''''
 
 - :doc:`api/delphin.dmrs` -- Dependency Minimal Recursion Semantics
+- :doc:`api/delphin.edm` -- Elementary Dependency Matching
 - :doc:`api/delphin.eds` -- Elementary Dependency Structures
 - :doc:`api/delphin.predicate` -- Semantic predicates
 - :doc:`api/delphin.mrs` -- Minimal Recursion Semantics
@@ -119,6 +121,10 @@ Grammars
 - :doc:`api/delphin.tdl` -- Type Description Language
 - :doc:`api/delphin.tfs` -- Typed feature structures
 
+Miscellaneous
+'''''''''''''
+
+- :doc:`api/delphin.highlight` -- Pygments highlighters for TDL and MRS
 
 
 Indices and tables
