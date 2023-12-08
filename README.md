@@ -4,13 +4,11 @@
 ![Python Support](https://img.shields.io/pypi/pyversions/pydelphin.svg)
 [![Test Status](https://github.com/delph-in/pydelphin/actions/workflows/checks.yml/badge.svg)](https://github.com/delph-in/pydelphin/actions/workflows/checks.yml)
 [![Documentation Status](https://readthedocs.org/projects/pydelphin/badge/?version=latest)](https://pydelphin.readthedocs.io/en/latest/?badge=latest)
-![Discourse topics](https://img.shields.io/discourse/topics?color=%234b2e83&server=https%3A%2F%2Fdelphinqa.ling.washington.edu)
+[![Discourse](https://img.shields.io/badge/discourse-purple?logo=discourse)](https://delphinqa.ling.washington.edu/)
 
-[DELPH-IN](http://delph-in.net) is an international consortium of
-researchers committed to producing precise, high-quality language
-processing tools and resources, primarily in the
-[HPSG](http://hpsg.stanford.edu/) syntactic and
-[MRS](https://github.com/delph-in/docs/wiki/RmrsTop) semantic
+[DELPH-IN][] is an international consortium of researchers committed
+to producing precise, high-quality language processing tools and
+resources, primarily in the [HPSG][] syntactic and [MRS][] semantic
 frameworks, and PyDelphin is a suite of Python libraries for
 processing data and interacting with tools in the DELPH-IN
 ecosystem. PyDelphin's goal is to lower the barriers to making use of
@@ -20,6 +18,9 @@ machine translation (e.g., [Goodman, 2018]), sentence chunking
 ([Muszyńska, 2016]), neural semantic parsing ([Buys & Blunsom, 2017]),
 natural language generation ([Hajdik et al., 2019]), and more.
 
+[DELPH-IN]: https://delph-in.github.io/docs/home/Home/
+[HPSG]: https://en.wikipedia.org/wiki/Head-driven_phrase_structure_grammar
+[MRS]: https://github.com/delph-in/docs/wiki/RmrsTop
 [Goodman, 2018]: https://goodmami.org/static/goodman-dissertation.pdf
 [Muszyńska, 2016]: https://www.aclweb.org/anthology/P16-3014
 [Buys & Blunsom,  2017]: https://www.aclweb.org/anthology/P17-1112
@@ -60,7 +61,7 @@ Semantic Representations:
 - [`delphin.eds`]:  [Elementary Dependency Structures](https://github.com/delph-in/docs/wiki/EdsTop)
 - [`delphin.dmrs`]: [Dependency Minimal Recursion Semantics](https://github.com/delph-in/docs/wiki/RmrsDmrs)
 
-Semantic Components and Interfaces:
+Semantic Components, Interfaces, and Metrics:
 - [`delphin.semi`]:      [Semantic Interface](https://github.com/delph-in/docs/wiki/SemiRfc)
 - [`delphin.vpm`]:       [Variable Property Mapping](https://github.com/delph-in/docs/wiki/RmrsVpm)
 - [`delphin.variable`]:  MRS variables
@@ -68,6 +69,7 @@ Semantic Components and Interfaces:
 - [`delphin.scope`]:     Underspecified scope
 - [`delphin.sembase`]:   Basic semantic structures
 - [`delphin.codecs`]:    A wide variety of serialization codecs for MRS, EDS, and DMRS
+- [`delphin.edm`]:       [Elementary Dependency Match](https://github.com/delph-in/docs/wiki/ElementaryDependencyMatch)
 
 Grammar and Parse Inspection:
 - [`delphin.derivation`]: [Derivation trees](https://github.com/delph-in/docs/wiki/ItsdbDerivations)
@@ -95,15 +97,20 @@ Core Components and Command Line Interface:
 - [`delphin.hierarchy`]:  Multiple-inheritance hierarchies
 - [`delphin.exceptions`]: PyDelphin's basic exception classes
 
+Miscellaneous:
+- [`delphin.highlight`]: [Pygments](https://pygments.org/) lexers and styles for highlighting MRS and TDL
+
 
 [`delphin.cli`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.cli.html
 [`delphin.codecs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.codecs.html
 [`delphin.commands`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.commands.html
 [`delphin.derivation`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.derivation.html
 [`delphin.dmrs`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.dmrs.html
+[`delphin.edm`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.edm.html
 [`delphin.eds`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.eds.html
 [`delphin.exceptions`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.exceptions.html
 [`delphin.hierarchy`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.hierarchy.html
+[`delphin.highlight`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.highlight.html
 [`delphin.interface`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.interface.html
 [`delphin.ace`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.ace.html
 [`delphin.web`]: https://pydelphin.readthedocs.io/en/latest/api/delphin.web.html
