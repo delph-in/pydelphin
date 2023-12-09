@@ -1,3 +1,86 @@
 [build-system]
-requires = ["setuptools>=40.8.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "PyDelphin"
+dynamic = ["version"]
+description = "Libraries and scripts for DELPH-IN data"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+  {name = "Michael Wayne Goodman", email = "goodman.m.w@gmail.com"}
+]
+keywords = ["nlp", "semantics", "hpsg", "delph-in", "linguistics"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Text Processing :: Linguistic",
+  "Topic :: Utilities",
+]
+dependencies = [
+  "penman",
+  "progress",
+  "Pygments",
+]
+
+[project.optional-dependencies]
+web = [
+  "falcon",
+  "requests",
+]
+repp = [
+  "regex"
+]
+
+[projects.scripts]
+delphin = "delphin.main:main"
+
+[project.urls]
+Homepage = "https://github.com/delph-in/pydelphin"
+Documentation = "https://pydelphin.readthedocs.io"
+Changelog = "https://github.com/delph-in/pydelphin/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "delphin/__about__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+]
+
+[tool.hatch.envs.dev]
+dependencies = [
+  "pytest",
+  "flake8",
+  "mypy",
+  "types-requests",
+]
+[tool.hatch.envs.dev.scripts]
+test = "pytest {args:.}"
+lint = "flake8 delphin --count --exit-zero --extend-ignore=E221 --max-line-length=99 --statistics"
+typecheck = "mypy delphin --namespace-packages --explicit-package-bases --ignore-missing-imports"
+
+[tool.hatch.envs.docs]
+dependencies = [
+  "sphinx",
+  "sphinx-rtd-theme",
+  "requests",
+  "falcon",
+]
+[tool.hatch.envs.docs.scripts]
+build = "make -C docs html"
+clean = "make -C docs clean"
