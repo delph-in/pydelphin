@@ -707,8 +707,6 @@ def make_highlighter(fmt):
     import pygments
     from pygments.formatters import Terminal256Formatter as _formatter
 
-    highlight = str  # backoff function
-
     if fmt == 'simplemrs':
         import delphin.highlight
 
@@ -729,5 +727,10 @@ def make_highlighter(fmt):
                 DiffLexer(),
                 _formatter(),
             ).rstrip('\n')
+
+    else:
+
+        def highlight(text):
+            return text
 
     return highlight
