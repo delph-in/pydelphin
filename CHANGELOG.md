@@ -1,5 +1,13 @@
 # Change Log
 
+### Unreleased
+
+### Python Versions
+
+* Removed Python 3.7 support
+* Added Python 3.12 support
+
+
 ## [v1.8.1]
 
 **Release date: 2023-05-29**
