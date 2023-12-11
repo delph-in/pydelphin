@@ -4,8 +4,12 @@
 
 ### Python Versions
 
-* Removed Python 3.7 support
-* Added Python 3.12 support
+* Removed Python 3.7 support ([#376])
+* Added Python 3.12 support ([#376])
+
+### Maintenance
+
+* Migrate to a hatch-based build ([#374])
 
 ### Fixed
 
@@ -1615,5 +1619,7 @@ information about changes, except for
 [#360]: https://github.com/delph-in/pydelphin/issues/360
 [#364]: https://github.com/delph-in/pydelphin/issues/364
 [#367]: https://github.com/delph-in/pydelphin/issues/367
+[#374]: https://github.com/delph-in/pydelphin/issues/374
+[#376]: https://github.com/delph-in/pydelphin/issues/376
 [#378]: https://github.com/delph-in/pydelphin/issues/378
 [#379]: https://github.com/delph-in/pydelphin/issues/379
