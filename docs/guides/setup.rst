@@ -19,7 +19,7 @@ its source files.
 Requirements
 ------------
 
-PyDelphin works with Python 3.7 and higher, regardless of the
+PyDelphin works with Python 3.8 and higher, regardless of the
 platform. Certain features, however, may require additional
 dependencies or may be platform specific, as shown in the table below:
 
@@ -27,6 +27,7 @@ dependencies or may be platform specific, as shown in the table below:
 Module or Function                 Dependencies  Notes
 =================================  ============  ===========================
 :mod:`delphin.ace`                 ACE_          Linux and Mac only
+:mod:`delphin.highlight`           Pygments_
 :mod:`delphin.web.client`          requests_     ``[web]`` extra
 :mod:`delphin.web.server`          Falcon_       ``[web]`` extra
 :mod:`delphin.codecs.dmrspenman`   Penman_
@@ -39,6 +40,7 @@ with "extras", including those needed for PyDelphin development (which
 are not listed in the table above).
 
 .. _ACE: http://sweaglesw.org/linguistics/ace/
+.. _Pygments: https://pygments.org/
 .. _requests: http://python-requests.org/
 .. _Falcon: https://falcon.readthedocs.io/
 .. _Penman: https://github.com/goodmami/penman
@@ -91,12 +93,6 @@ dependencies but uses the local source files for PyDelphin's code,
 otherwise changes you make to PyDelphin won't be reflected in your
 (virtual) environment unless you reinstall PyDelphin.
 
-.. warning::
-
-   It is not recommended to install from source using ``$ setup.py
-   install``, because uninstalling or updating PyDelphin and its
-   dependencies becomes more difficult.
-
 
 Installing Extra Dependencies
 -----------------------------
@@ -111,15 +107,12 @@ If you need to use some of these features, such as `delphin.web` and
 before but with an install parameter in brackets after
 ``pydelphin``. For instance::
 
-  [~]$ pip install pydelphin[web,repp]
+  [~]$ pip install "pydelphin[web,repp]"
 
 Without the install parameter, the PyDelphin code will still be
 installed but its dependencies will not be. The rest of PyDelphin will
 work but those features may raise an :exc:`ImportError` or issue a
 warning.
-
-In addition, there are some dependencies that are only necessary for
-developers of PyDelphin to run unit tests and build documentation.
 
 The extras that PyDelphin defines are as follows:
 
@@ -128,27 +121,26 @@ Extra        Description
 ===========  ================================================================
 ``[web]``    Required for using the :mod:`delphin.web` client and server
 ``[repp]``   Optional for advanced regex features with :mod:`delphin.repp`
-``[docs]``   Required for building documentation
-``[tests]``  Required for running tests
-``[dev]``    Required for making releases (includes ``tests`` and ``docs``)
 ===========  ================================================================
 
-Running Unit Tests
-------------------
 
-PyDelphin's unit tests are not distributed on PyPI, so if you wish to
-run the unit tests you'll need to get the source code. The tests are
-written for pytest_, which is installed if you used the `test` or
-`dev` install parameters described above. Once :command:`pytest` is
-installed (note: it may also be called :command:`py.test`), run it to
-perform the unit tests::
+For Contributors
+----------------
 
-  [~/pydelphin]$ pytest
+PyDelphin is built using Hatch_, which also manages dependencies and
+commands for testing the code. You will need to `install
+<https://hatch.pypa.io/latest/install/>`_ Hatch. Rather than
+installing PyDelphin as described above, use the :command:`hatch run`
+command to test things, as follows:
 
-This will detect and run any unit tests it finds. It is best to run
-the :command:`pytest` in a virtual environment with a clean install of
-PyDelphin to ensure that the local Python environment is not
-conflicting with PyDelphin's dependencies and also to ensure that
-PyDelphin specifies all its dependencies.
+  [~/pydelphin]$ hatch run dev:lint  # Linting
+  [~/pydelphin]$ hatch run dev:typecheck  # Type-checking
+  [~/pydelphin]$ hatch run dev:test  # Unit tests
+  [~/pydelphin]$ hatch run docs:build  # Build documentation
+  [~/pydelphin]$ hatch build  # build a source distribution and wheel
 
-.. _pytest: http://pytest.org/
+Hatch will create the ``dev`` and ``docs`` environments as
+appropriate, so you do not need to manage virtual environments
+yourself for these tasks.
+
+.. _Hatch: https://hatch.pypa.io/

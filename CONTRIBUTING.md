@@ -2,7 +2,7 @@
 
 The easiest way to contribute to PyDelphin is to try it out and enter
 bug reports and feature requests. If you're contributing code, fork
-the repository and make pull requests to the `develop` branch.
+the repository and make pull requests to the `main` branch.
 
 
 ## Filing issues
@@ -27,12 +27,12 @@ For bug requests, please provide the following, if possible:
   ```python
   >>> from delphin.__about__ import __version__
   >>> __version__  # distribution version
-  '1.8.0'
+  '1.8.1'
   >>> from delphin import mrs
   >>> mrs.__version__  # package version
-  '1.8.0'
+  '1.8.1'
   ```
-* Python version (e.g. 3.7, 3.8, etc.)
+* Python version (e.g. 3.9, 3.10, etc.)
 
 For feature requests, please provide a use case for the feature.
 
@@ -61,80 +61,24 @@ Please follow these guidelines for code and repository changes:
   functions. Follow [Google-style docstrings] and use
   [reStructuredText] for formatting.
 
-### Creating a Development Environment
+### Testing the code
 
-In order to run the tests and build the documentation you'll need to
-create a development environment: a virtual environment with the
-dependencies installed. First create and activate a virtual
-environment from a terminal (the following assumes you have Python 3
-installed; the commands may differ depending on your operating system
-and choice of shell):
-
-* Linux/macOS
-
-  ```console
-  $ python3 -m venv env
-  $ source env/bin/activate
-  ```
-
-* Windows
-
-  ```console
-  > py -3 -m venv env
-  > .\env\Scripts\Activate.ps1
-  ```
-
-Once activated, you should see `(env)` in the shell prompt. You can
-then install PyDelphin's dependencies and run tests with the current
-version of Python:
+PyDelphin uses [Hatch](https://hatch.pypa.io/) for managing builds and
+dependencies. Install Hatch and use the following commands for testing
+your code locally:
 
 ```console
-$ pip install -e .[dev]
+$ hatch shell  # activate a virtual environment with PyDelphin installed
+$ hatch run dev:lint  # lint the code
+$ hatch run dev:typecheck  # type-check the code
+$ hatch run dev:test  # run unit tests
+$ hatch build  # build a source distribution and wheel
 ```
 
-The `-e` option is an "editable" install, meaning that Python will use
-the source files directly (via symlinks) instead of copying them into
-the virtual environment. The benefit is that you won't have to
-reinstall each time you make a change. The `[dev]` extra installs all
-dependencies for testing, building documentation, and uploading
-releases. If you just want to run the unit tests, the `[tests]` extra
-is sufficient.
-
-### Testing
-
-Always run the unit tests before committing. Simply run pytest from
-PyDelphin's top directory to run the unit tests:
-
-```console
-$ pytest
-```
-
-Note that passing the tests for one version of Python may not be
-sufficient for the code to be accepted; it must pass the tests against
-all supported versions of Python.
-
-The commands for linting (style and type checking) need some
-configuration:
-
-```console
-$ flake8 delphin --extend-ignore E221
-$ mypy delphin --namespace-packages --explicit-package-bases --ignore-missing-imports
-```
-
-These tests will be run automatically when a commit is pushed or pull
-request is submitted against the `develop` branch, but it's often more
-convenient to run it locally before pushing commits.
-
-### Test Coverage
-
-Compute test coverage by installing
-[pytest-cov](https://github.com/pytest-dev/pytest-cov) and running:
-
-    pytest --cov-report=html --cov=delphin
-
-Note that the codebase doesn't yet have full test coverage.
-Contributions of unit tests are very welcome!
-
+Always run the linting, type-checking, and testing commands before
+committing. They will be run automatically on pull requests, but its
+convenient to make sure everything looks good locally before opening a
+pull request.
 
 ## Documentation
 
@@ -152,35 +96,12 @@ and generated using [Sphinx] on the [Read the Docs] service.
 Repository files, such as the README, CHANGELOG, and CONTRIBUTING
 files, are written in [Markdown].
 
-For instructions on building the documentation, see [docs/](docs).
+To build the documentation, run the following command:
+
+```console
+$ hatch run docs:build
+```
+
 Do not check in the generated documentation files (e.g., `*.html`);
 only documentation source files belong, as the rest will be
 generated automatically by [Read the Docs].
-
-
-# Release Checklist
-
-Do the following tasks prior to releasing on GitHub and PyPI.
-
-- [ ] Create a branch for the release (e.g., `vX.Y.Z`)
-- [ ] Merge into the release branch all features and fixes slated for the release
-- [ ] Create a pull request for the version
-  - [ ] Ensure all related [issues] are resolved (check [milestones])
-  - [ ] Ensure tests pass
-  - [ ] Ensure the documentation builds without error (see above)
-  - [ ] Bump the version in `delphin/__about__.py`
-  - [ ] Update `README.md` if necessary
-  - [ ] Update `CHANGELOG.md` (header for version with release date)
-  - [ ] Merge
-- [ ] [Make a new release](https://github.com/delph-in/pydelphin/releases/new)
-- [ ] Ensure PyPI release was uploaded automatically (see [actions])
-- [ ] Announce
-
-[issues]: https://github.com/delph-in/pydelphin/issues
-[milestones]: https://github.com/delph-in/pydelphin/milestones
-[actions]: https://github.com/delph-in/pydelphin/actions
-[Google-style docstrings]: https://google.github.io/styleguide/pyguide.html?showone=Comments#Comments
-[Sphinx]: http://www.sphinx-doc.org/
-[reStructuredText]: http://docutils.sourceforge.net/
-[Read the Docs]: https://readthedocs.org/
-[Markdown]: https://github.github.com/gfm/

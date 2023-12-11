@@ -16,7 +16,6 @@ from typing import (
     Iterable,
     Iterator,
 )
-from sre_parse import parse_template
 from pathlib import Path
 from array import array
 from itertools import takewhile
@@ -56,6 +55,26 @@ else:
 _MASK_B = 1  # start of mask
 _MASK_I = 2  # inside mask
 _MASK_O = 0  # not masked
+
+# For parsing replacement templates
+_replacements_re = re.compile(
+    r"\\(?:"
+    r"(?P<dec>[1-9][0-9]?)"  # decimal numbered group: \1, \2
+    r"|g<(?P<grp>[^>]+)>"  # \g named or numbered group: \g<foo>, \g<1>
+    r"|(?P<oct>[0-7]{,3})"  # octal character: \07, \123
+    r"|(?P<esc>[abfnrtv\\])"  # ASCII escape sequences
+    r")"
+)
+_ascii_escapes = {
+    "a": "\a",
+    "b": "\b",
+    "f": "\f",
+    "n": "\n",
+    "r": "\r",
+    "t": "\t",
+    "v": "\v",
+    "\\": "\\",
+}
 
 
 class REPPError(PyDelphinException):
@@ -632,8 +651,7 @@ def _compile(pattern: str) -> Pattern[str]:
 
 
 def _get_segments(replacement: str, _re):
-    # parse_template() is an undocumented function in the standard library
-    groups, literals = parse_template(replacement, _re)
+    groups, literals = _parse_template(replacement, _re)
     # literals is a list of strings or None (group position);
     # groups is a list of (i, g) where i is the index in literals
     # and g is the capturing group number.
@@ -656,6 +674,49 @@ def _get_segments(replacement: str, _re):
     ]
     # Divide the segments into trackable/untrackable
     return segments[:last_trackable], segments[last_trackable:]
+
+
+def _parse_template(replacement: str, _re: Pattern[str]):
+    """Parse a regex replacement template to find groups.
+
+    This is based on Python's parse_template function prior to 3.12.
+    """
+    _re.sub(replacement, "")  # check for errors; no need to validate after
+
+    pos = 0
+    groupindex = _re.groupindex
+    literals: List[Optional[str]] = []
+    groups: List[Tuple[int, int]] = []
+
+    for m in _replacements_re.finditer(replacement):
+        mstart = m.start()
+        if mstart > pos:
+            literals.append(replacement[pos:mstart])
+
+        if dec := m.group("dec"):
+            index = int(dec)
+        elif grp := m.group("grp"):
+            if grp in groupindex:
+                index = groupindex[grp]
+            else:
+                index = int(grp)
+        elif oct := m.group("oct"):
+            literals.append(chr(int(oct, 8) & 0xff))
+            continue
+        elif esc := m.group("esc"):
+            literals.append(_ascii_escapes[esc])
+            continue
+        else:
+            raise REPPError(f"unexpected replacement pattern: {replacement!r}")
+
+        groups.append((len(literals), index))
+        literals.append(None)
+        pos = m.end()
+
+    if pos < len(replacement):
+        literals.append(replacement[pos:])
+
+    return groups, literals
 
 
 def last(steps: _Trace) -> REPPResult:
