@@ -80,3 +80,9 @@ def test_escapes_issue_367():
     m2 = simplemrs.decode(s)
     assert m == m2
     assert m.surface == m2.surface
+
+
+def test_legacy_single_quote_predicates_issue_373():
+    # https://github.com/delph-in/pydelphin/issues/373
+    m = simplemrs.decode("[ RELS: < [ 'single+quoted LBL: h0 ] > ]")
+    assert m.rels[0].predicate == "single+quoted"
