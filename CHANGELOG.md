@@ -7,6 +7,11 @@
 * Removed Python 3.7 support
 * Added Python 3.12 support
 
+### Fixed
+
+* Stop using Python's undocumented parse_template re function ([#378])
+* Resolved newline and encoding issues for running tests on Windows ([#379])
+
 
 ## [v1.8.1]
 
@@ -1610,3 +1615,5 @@ information about changes, except for
 [#360]: https://github.com/delph-in/pydelphin/issues/360
 [#364]: https://github.com/delph-in/pydelphin/issues/364
 [#367]: https://github.com/delph-in/pydelphin/issues/367
+[#378]: https://github.com/delph-in/pydelphin/issues/378
+[#379]: https://github.com/delph-in/pydelphin/issues/379
