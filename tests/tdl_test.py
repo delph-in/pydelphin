@@ -34,7 +34,7 @@ from delphin.tdl import (
 def _iterparse(s):
     with tempfile.TemporaryDirectory() as dir:
         path = os.path.join(dir, 'tmp.tdl')
-        with open(path, 'w') as fh:
+        with open(path, 'w', encoding="utf-8") as fh:
             print(s, file=fh)
         yield from tdl.iterparse(path)
 
