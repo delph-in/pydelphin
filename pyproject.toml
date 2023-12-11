@@ -61,6 +61,8 @@ path = "delphin/__about__.py"
 exclude = [
   "/.github",
 ]
+[tool.hatch.build.targets.wheel]
+packages = ["delphin"]
 
 [tool.hatch.envs.dev]
 dependencies = [
