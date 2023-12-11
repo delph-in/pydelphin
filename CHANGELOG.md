@@ -10,6 +10,7 @@
 ### Maintenance
 
 * Migrate to a hatch-based build ([#374])
+* Use standard `__main__.py` module ([#375])
 
 ### Fixed
 
@@ -1620,6 +1621,7 @@ information about changes, except for
 [#364]: https://github.com/delph-in/pydelphin/issues/364
 [#367]: https://github.com/delph-in/pydelphin/issues/367
 [#374]: https://github.com/delph-in/pydelphin/issues/374
+[#375]: https://github.com/delph-in/pydelphin/issues/375
 [#376]: https://github.com/delph-in/pydelphin/issues/376
 [#378]: https://github.com/delph-in/pydelphin/issues/378
 [#379]: https://github.com/delph-in/pydelphin/issues/379
