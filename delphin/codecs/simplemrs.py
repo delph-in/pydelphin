@@ -140,7 +140,7 @@ SimpleMRSLexer = Lexer(
          r'|@\d+'
          r'|\d+(?: +\d+)*)>', 'LNK:a lnk value'),
         (r'"([^"\\]*(?:\\.[^"\\]*)*)"', 'DQSTRING:a string'),
-        (r"'([^ \n:<>\[\]])", 'SQSYMBOL:a quoted symbol'),
+        (r"'([^ \n:<>\[\]]+)", 'SQSYMBOL:a quoted symbol'),
         (r'_[^\s_]+'  # lemma
          r'_[nvajrscpqxud]'  # pos
          r'(?:_(?:[^\s_<]|<(?![-0-9:#@ ]*>\s))+)?'  # optional sense
