@@ -685,8 +685,8 @@ def _parse_template(replacement: str, _re: Pattern[str]):
 
     pos = 0
     groupindex = _re.groupindex
-    literals: list[Optional[str]] = []
-    groups: list[tuple[int, int]] = []
+    literals: List[Optional[str]] = []
+    groups: List[Tuple[int, int]] = []
 
     for m in _replacements_re.finditer(replacement):
         mstart = m.start()
