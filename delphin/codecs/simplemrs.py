@@ -4,6 +4,7 @@ Serialization functions for the SimpleMRS format.
 
 from pathlib import Path
 from typing import Optional
+import re
 
 from delphin.util import Lexer
 from delphin import predicate
@@ -361,7 +362,7 @@ def _encode_rels(rels, varprops, lnk, indent):
     delim = ('\n  ' + ' ' * len('RELS: < ')) if indent else ' '
     tokens = []
     for rel in rels:
-        pred = rel.predicate
+        pred = _encode_predicate(rel.predicate)
         if lnk:
             pred += str(rel.lnk)
         reltoks = ['[', pred]
@@ -380,6 +381,12 @@ def _encode_rels(rels, varprops, lnk, indent):
     if tokens:
         tokens = ['RELS: <'] + [delim.join(tokens)] + ['>']
     return tokens
+
+
+def _encode_predicate(predicate: str) -> str:
+    if re.search(r"[\s\"':<>[\]]", predicate):
+        return f'"{_escape(predicate)}"'
+    return predicate
 
 
 def _encode_hcons(hcons):
