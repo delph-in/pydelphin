@@ -224,7 +224,11 @@ def _read_file(path, basedir, encoding):
 
 def _incorporate(d, key, val, path):
     if key in d:
-        warnings.warn(f"'{key}' redefined in {path}", SemIWarning)
+        warnings.warn(
+            f"'{key}' redefined in {path}",
+            SemIWarning,
+            stacklevel=2,
+        )
     d[key] = val
 
 
@@ -492,7 +496,9 @@ class SemI:
                         warnings.warn(
                             "{}: property '{}' not allowed on '{}'"
                             .format(pred, k, role.value),
-                            SemIWarning)
+                            SemIWarning,
+                            stacklevel=2,
+                        )
                     else:
                         _v = propcache[role.value][k]
                         if not self.properties.compatible(v, _v):

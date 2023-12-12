@@ -74,7 +74,11 @@ def _mrs_get_top(
             assert isinstance(rep, mrs.EP)
             top = id_to_nid[rep.id]
         else:
-            warnings.warn(f'unusable TOP: {top_var}', dmrs.DMRSWarning)
+            warnings.warn(
+                f'unusable TOP: {top_var}',
+                dmrs.DMRSWarning,
+                stacklevel=2,
+            )
             top = None
     return top
 
@@ -90,7 +94,9 @@ def _mrs_to_nodes(m: mrs.MRS, id_to_nid: _IdMap) -> List[dmrs.Node]:
                 warnings.warn(
                     f'missing intrinsic variable for {ep!r}; morphosemantic '
                     'properties and node type information will be lost',
-                    dmrs.DMRSWarning)
+                    dmrs.DMRSWarning,
+                    stacklevel=2,
+                )
                 properties = {}
                 type = variable.UNSPECIFIC
             else:
@@ -137,7 +143,8 @@ def _mrs_to_links(
                     if lbl not in reps:
                         warnings.warn(
                             f'broken handle constraint: {hcmap[tgt]}',
-                            dmrs.DMRSWarning
+                            dmrs.DMRSWarning,
+                            stacklevel=2,
                         )
                 else:
                     lbl = tgt

@@ -1112,7 +1112,9 @@ def _parse_tdl_definition(identifier, tokens):
                 'Subtype operator :< encountered at line {} for '
                 '{}; Continuing as if it were the := operator.'
                 .format(line_no, identifier),
-                TDLWarning)
+                TDLWarning,
+                stacklevel=2,
+            )
         conjunction, nextgid = _parse_tdl_conjunction(tokens)
         if isinstance(conjunction, Term):
             conjunction = Conjunction([conjunction])
@@ -1204,7 +1206,9 @@ def _parse_tdl_term(tokens):
         warnings.warn(
             f'Single-quoted symbol encountered at line {line_no}; '
             'Continuing as if it were a regular symbol.',
-            TDLWarning)
+            TDLWarning,
+            stacklevel=2,
+        )
         term = TypeIdentifier(token, docstring=doc)
     elif gid == 6:  # regex
         term = Regex(token, docstring=doc)

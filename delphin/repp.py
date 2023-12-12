@@ -89,7 +89,9 @@ if not _regex_available:
         "The 'regex' library is not installed, so some regular expression "
         "features may not work as expected. Install PyDelphin with the "
         "[repp] extra to include the 'regex' library.",
-        REPPWarning)
+        REPPWarning,
+        stacklevel=1,
+    )
 
 
 class REPPResult(NamedTuple):
@@ -640,10 +642,14 @@ def _compile(pattern: str) -> Pattern[str]:
         if _regex_available and '[' in pattern or ']' in pattern:
             warnings.warn(
                 'Invalid regex in REPP; see warning log for details.',
-                REPPWarning)
-            logger.warn("Possible unescaped brackets in %r; "
-                        "attempting to parse in compatibility mode",
-                        pattern)
+                REPPWarning,
+                stacklevel=2,
+            )
+            logger.warn(
+                "Possible unescaped brackets in %r; "
+                "attempting to parse in compatibility mode",
+                pattern,
+            )
             return re.compile(pattern, flags=re.V0)
         else:
             raise
