@@ -2,21 +2,20 @@
 Structures and operations for quantifier scope in DELPH-IN semantics.
 """
 
-from typing import (Optional, Mapping, Iterable, List, Tuple, Dict)
+from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+from delphin.exceptions import PyDelphinException
 from delphin.lnk import Lnk
 from delphin.sembase import (
     Identifier,
-    Role,
     Predication,
     Predications,
-    SemanticStructure
+    Role,
+    SemanticStructure,
 )
-from delphin.exceptions import PyDelphinException
 from delphin.util import _connected_components
-# Default modules need to import the PyDelphin version
-from delphin.__about__ import __version__  # noqa: F401
-
 
 # Constants
 

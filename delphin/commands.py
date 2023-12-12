@@ -3,24 +3,25 @@
 PyDelphin API counterparts to the ``delphin`` commands.
 """
 
-from typing import Union, Iterator, IO, Dict, Any, Optional
-import sys
-from pathlib import Path
-import tempfile
 import logging
+import sys
+import tempfile
 import warnings
+from pathlib import Path
+from typing import IO, Any, Dict, Iterator, Optional, Union
 
 from progress.bar import Bar as ProgressBar
 
-from delphin import exceptions
-from delphin import tsdb, itsdb, tsql
-from delphin.lnk import Lnk
-from delphin.semi import SemI, load as load_semi
-from delphin import util
-from delphin.exceptions import PyDelphinException
+from delphin import exceptions, itsdb, tsdb, tsql, util
+
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
-
+from delphin.exceptions import PyDelphinException
+from delphin.lnk import Lnk
+from delphin.semi import (
+    SemI,
+    load as load_semi,
+)
 
 logger = logging.getLogger(__name__)
 

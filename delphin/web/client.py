@@ -9,7 +9,6 @@ import requests
 
 from delphin import interface
 
-
 DEFAULT_SERVER = 'http://erg.delph-in.net/rest/0.9/'
 
 

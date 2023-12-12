@@ -1,10 +1,9 @@
 
 from typing import Iterable, Optional
 
-from delphin import variable
+from delphin import scope, variable
 from delphin.lnk import Lnk
 from delphin.sembase import Predication
-from delphin import scope
 
 TOP_NODE_ID      = 0
 FIRST_NODE_ID    = 10000

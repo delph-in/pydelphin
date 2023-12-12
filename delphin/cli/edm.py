@@ -9,20 +9,13 @@ number. GOLD and TEST should contain the same number of items. MRS
 representations will be converted to EDS for comparison.
 """
 
-from typing import Optional, Iterator, Union
 import argparse
-from pathlib import Path
-import warnings
 import logging
+import warnings
+from pathlib import Path
+from typing import Iterator, Optional, Union
 
-from delphin import util
-from delphin import tsdb
-from delphin import itsdb
-from delphin import edm
-from delphin import mrs
-from delphin import eds
-from delphin import dmrs
-
+from delphin import dmrs, edm, eds, itsdb, mrs, tsdb, util
 
 logger = logging.getLogger(__name__)
 

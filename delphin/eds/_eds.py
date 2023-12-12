@@ -8,7 +8,6 @@ from typing import Iterable, Optional
 from delphin.lnk import Lnk
 from delphin.sembase import Predication, SemanticStructure
 
-
 BOUND_VARIABLE_ROLE = 'BV'
 PREDICATE_MODIFIER_ROLE = 'ARG1'
 

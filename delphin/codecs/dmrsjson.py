@@ -2,17 +2,16 @@
 DMRS-JSON serialization and deserialization.
 """
 
-from pathlib import Path
 import json
+from pathlib import Path
 
-from delphin.lnk import Lnk
 from delphin.dmrs import (
-    DMRS,
-    Node,
-    Link,
     CVARSORT,
+    DMRS,
+    Link,
+    Node,
 )
-
+from delphin.lnk import Lnk
 
 CODEC_INFO = {
     'representation': 'dmrs',

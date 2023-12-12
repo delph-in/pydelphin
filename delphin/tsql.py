@@ -3,20 +3,28 @@
 TSQL -- Test Suite Query Language
 """
 
-from typing import (
-    List, Tuple, Dict, Set, Optional, Union, Any, Type,
-    Iterator, Callable, cast as typing_cast)
 import operator
 import re
 from datetime import datetime
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast as typing_cast,
+)
 
-from delphin.exceptions import PyDelphinException, PyDelphinSyntaxError
-from delphin import util
-from delphin import tsdb
+from delphin import tsdb, util
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
-
+from delphin.exceptions import PyDelphinException, PyDelphinSyntaxError
 
 # CUSTOM EXCEPTIONS ###########################################################
 

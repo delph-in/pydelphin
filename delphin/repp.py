@@ -2,25 +2,25 @@
 Regular Expression Preprocessor (REPP)
 """
 
-from typing import (
-    TYPE_CHECKING,
-    Optional,
-    Union,
-    NamedTuple,
-    List,
-    Tuple,
-    Dict,
-    Set,
-    Pattern,
-    Match,
-    Iterable,
-    Iterator,
-)
-from pathlib import Path
+import logging
+import warnings
 from array import array
 from itertools import takewhile
-import warnings
-import logging
+from pathlib import Path
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Match,
+    NamedTuple,
+    Optional,
+    Pattern,
+    Set,
+    Tuple,
+    Union,
+)
 
 # use regex library if available; otherwise warn
 try:
@@ -31,13 +31,12 @@ except ImportError:
     import re  # type: ignore
     _regex_available = False
 
-from delphin.util import PathLike
-from delphin.tokens import YYToken, YYTokenLattice
-from delphin.lnk import Lnk
-from delphin.exceptions import PyDelphinException, PyDelphinWarning
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
-
+from delphin.exceptions import PyDelphinException, PyDelphinWarning
+from delphin.lnk import Lnk
+from delphin.tokens import YYToken, YYTokenLattice
+from delphin.util import PathLike
 
 logger = logging.getLogger(__name__)
 

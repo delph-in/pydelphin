@@ -7,7 +7,6 @@ from pathlib import Path
 from delphin.codecs import simplemrs
 from delphin.util import SExpr
 
-
 CODEC_INFO = {
     'representation': 'mrs',
 }

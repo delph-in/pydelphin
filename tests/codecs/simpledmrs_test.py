@@ -1,9 +1,9 @@
 
 import pytest
 
-from delphin.lnk import Lnk
-from delphin.dmrs import DMRS, Node, Link
 from delphin.codecs import simpledmrs
+from delphin.dmrs import DMRS, Link, Node
+from delphin.lnk import Lnk
 
 
 @pytest.fixture

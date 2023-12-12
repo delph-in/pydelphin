@@ -3,28 +3,22 @@
 DELPH-IN Web API Server
 """
 
-from typing import Optional, Type
+import datetime
+import functools
+import json
 import pathlib
 import urllib.parse
-import datetime
-import json
-import functools
+from typing import Optional, Type
 
 import falcon
 
-from delphin import interface
-from delphin import ace
-from delphin import derivation
-from delphin import dmrs
-from delphin import eds
+from delphin import ace, derivation, dmrs, eds, interface, itsdb, tokens
 from delphin.codecs import (
-    simplemrs,
-    mrsjson,
     dmrsjson,
     edsjson,
+    mrsjson,
+    simplemrs,
 )
-from delphin import itsdb
-from delphin import tokens
 
 
 def configure(api, parser=None, generator=None, testsuites=None):

@@ -1,8 +1,8 @@
 
 import pytest
 
-from delphin.codecs import simplemrs
 from delphin import dmrs
+from delphin.codecs import simplemrs
 
 
 @pytest.fixture

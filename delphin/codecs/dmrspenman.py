@@ -2,18 +2,17 @@
 DMRS-PENMAN serialization and deserialization.
 """
 
-from pathlib import Path
 import logging
+from pathlib import Path
 
 import penman
 
+from delphin.dmrs import CVARSORT, DMRS, Link, Node
+from delphin.dmrs._dmrs import FIRST_NODE_ID
 from delphin.exceptions import PyDelphinException
 from delphin.lnk import Lnk
-from delphin.dmrs import DMRS, Node, Link, CVARSORT
-from delphin.dmrs._dmrs import FIRST_NODE_ID
 from delphin.sembase import property_priority
 from delphin.util import _bfs
-
 
 logger = logging.getLogger(__name__)
 

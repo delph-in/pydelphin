@@ -2,21 +2,22 @@
 Classes and functions for parsing and inspecting TDL.
 """
 
-from typing import Tuple, Union, Generator
 import re
-from pathlib import Path
 import textwrap
 import warnings
+from pathlib import Path
+from typing import Generator, Tuple, Union
 
+from delphin import util
+
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
 from delphin.exceptions import (
     PyDelphinException,
     PyDelphinSyntaxError,
-    PyDelphinWarning)
+    PyDelphinWarning,
+)
 from delphin.tfs import FeatureStructure
-from delphin import util
-# Default modules need to import the PyDelphin version
-from delphin.__about__ import __version__  # noqa: F401
-
 
 # Values for list expansion
 LIST_TYPE = '*list*'        #: type of lists in TDL

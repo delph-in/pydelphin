@@ -2,13 +2,11 @@
 EDS-JSON serialization and deserialization.
 """
 
+import json
 from pathlib import Path
 
-import json
-
-from delphin.lnk import Lnk
 from delphin.eds import EDS, Node
-
+from delphin.lnk import Lnk
 
 CODEC_INFO = {
     'representation': 'eds',

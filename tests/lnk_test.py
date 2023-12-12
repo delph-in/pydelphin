@@ -1,7 +1,7 @@
 
 import pytest
 
-from delphin.lnk import Lnk, LnkMixin, LnkError
+from delphin.lnk import Lnk, LnkError, LnkMixin
 
 
 class TestLnk():

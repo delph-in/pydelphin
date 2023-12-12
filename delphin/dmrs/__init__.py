@@ -9,28 +9,27 @@ Dependency Minimal Recursion Semantics ([DMRS]_)
   Association for Computational Linguistics, 2009.
 """
 
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+from delphin.dmrs._dmrs import (
+    BARE_EQ_ROLE,
+    CVARSORT,
+    DMRS,
+    EQ_POST,
+    FIRST_NODE_ID,
+    H_POST,
+    HEQ_POST,
+    NEQ_POST,
+    RESTRICTION_ROLE,
+    Link,
+    Node,
+)
 from delphin.dmrs._exceptions import (
     DMRSError,
     DMRSSyntaxError,
     DMRSWarning,
 )
-from delphin.dmrs._dmrs import (
-    DMRS,
-    Node,
-    Link,
-    FIRST_NODE_ID,
-    RESTRICTION_ROLE,
-    BARE_EQ_ROLE,
-    EQ_POST,
-    HEQ_POST,
-    NEQ_POST,
-    H_POST,
-    CVARSORT,
-)
 from delphin.dmrs._operations import from_mrs
-# Default modules need to import the PyDelphin version
-from delphin.__about__ import __version__  # noqa: F401
-
 
 __all__ = [
     'FIRST_NODE_ID',

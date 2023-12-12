@@ -5,11 +5,10 @@ Serialization functions for the "native" EDS format.
 from pathlib import Path
 
 from delphin import variable
+from delphin.eds import EDS, EDSSyntaxError, Node
 from delphin.lnk import Lnk
-from delphin.sembase import (role_priority, property_priority)
-from delphin.eds import (EDS, Node, EDSSyntaxError)
-from delphin.util import (_bfs, Lexer)
-
+from delphin.sembase import property_priority, role_priority
+from delphin.util import Lexer, _bfs
 
 CODEC_INFO = {
     'representation': 'eds',

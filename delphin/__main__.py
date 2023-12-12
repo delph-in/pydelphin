@@ -4,18 +4,18 @@
 Entry-point for the 'delphin' command.
 """
 
-import sys
-import os
-import importlib
 import argparse
+import importlib
 import logging
+import os
+import sys
 
-from delphin.exceptions import PyDelphinException
-from delphin import util
 import delphin.cli
+from delphin import util
+
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__
-
+from delphin.exceptions import PyDelphinException
 
 logging.basicConfig()  # just use defaults here
 logger = logging.getLogger(__name__)  # for this module
@@ -81,7 +81,7 @@ for name, fullname in util.namespace_modules(delphin.cli).items():
         continue
 
     try:
-        INFO = getattr(mod, 'COMMAND_INFO')
+        INFO = mod.COMMAND_INFO
     except AttributeError:
         logger.exception('%s does not define COMMAND_INFO', fullname)
         continue

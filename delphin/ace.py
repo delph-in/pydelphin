@@ -3,33 +3,41 @@
 An interface for the ACE processor.
 """
 
-from typing import (
-    Any, Iterator, Iterable, Mapping, Dict, List, Tuple, Pattern, IO, Optional
-)
+import argparse
+import locale
 import logging
 import os
-from pathlib import Path
-import argparse
 import re
+from datetime import datetime
+from getpass import getuser  # portable way to get username
+from pathlib import Path
+from platform import platform  # portable system information
+from socket import gethostname  # portable way to get host name
 from subprocess import (
-    check_call,
-    check_output,
+    PIPE,
     CalledProcessError,
     Popen,
-    PIPE
+    check_call,
+    check_output,
 )
-from platform import platform   # portable system information
-from getpass import getuser     # portable way to get username
-from socket import gethostname  # portable way to get host name
-from datetime import datetime
-import locale
+from typing import (
+    IO,
+    Any,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Pattern,
+    Tuple,
+)
 
-from delphin import interface
-from delphin import util
-from delphin.exceptions import PyDelphinException
+from delphin import interface, util
+
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
-
+from delphin.exceptions import PyDelphinException
 
 logger = logging.getLogger(__name__)
 
@@ -99,11 +107,11 @@ class ACEProcess(interface.Processor):
             self.cmdargs.append('--tsdb-notes')
         if tsdbinfo and ace_version >= (0, 9, 24):
             self.cmdargs.extend(['--tsdb-stdout', '--report-labels'])
-            setattr(self, 'receive', self._tsdb_receive)
+            self.receive = self._tsdb_receive
             if full_forest:
                 self._cmdargs.append('--itsdb-forest')
         else:
-            setattr(self, 'receive', self._default_receive)
+            self.receive = self._default_receive
         self.env = env or os.environ
         self._run_id = -1
         self.run_infos: List[Dict[str, Any]] = []

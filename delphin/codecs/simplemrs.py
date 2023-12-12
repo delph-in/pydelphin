@@ -2,23 +2,15 @@
 Serialization functions for the SimpleMRS format.
 """
 
+import re
 from pathlib import Path
 from typing import Optional
-import re
 
-from delphin.util import Lexer
-from delphin import predicate
+from delphin import predicate, variable
 from delphin.lnk import Lnk
-from delphin.sembase import (role_priority, property_priority)
-from delphin import variable
-from delphin.mrs import (
-    EP,
-    HCons,
-    ICons,
-    MRS,
-    MRSSyntaxError,
-    CONSTANT_ROLE)
-
+from delphin.mrs import CONSTANT_ROLE, EP, MRS, HCons, ICons, MRSSyntaxError
+from delphin.sembase import property_priority, role_priority
+from delphin.util import Lexer
 
 CODEC_INFO = {
     'representation': 'mrs',

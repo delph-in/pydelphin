@@ -1,34 +1,35 @@
-import sys
 import os
+import sys
 import tempfile
 
 import pytest
 
-from delphin.tfs import TFSError
 from delphin import tdl
 from delphin.tdl import (
-    Term,
+    AVM,
+    BlockComment,
+    Conjunction,
+    ConsList,
+    Coreference,
+    DiffList,
+    FileInclude,
+    InstanceEnvironment,
+    LetterSet,
+    LexicalRuleDefinition,
+    LineComment,
     Regex,
     String,
-    TypeIdentifier,
-    AVM,
-    ConsList,
-    DiffList,
-    Coreference,
-    Conjunction,
-    LetterSet,
-    WildCard,
-    TypeDefinition,
-    TypeAddendum,
-    LexicalRuleDefinition,
-    TypeEnvironment,
-    InstanceEnvironment,
-    FileInclude,
-    LineComment,
-    BlockComment,
     TDLError,
     TDLSyntaxError,
-    TDLWarning)
+    TDLWarning,
+    Term,
+    TypeAddendum,
+    TypeDefinition,
+    TypeEnvironment,
+    TypeIdentifier,
+    WildCard,
+)
+from delphin.tfs import TFSError
 
 
 def _iterparse(s):

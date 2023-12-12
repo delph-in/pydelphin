@@ -4,22 +4,22 @@ Semantic Interface (SEM-I)
 """
 
 import re
-from pathlib import Path
-from operator import itemgetter
 import warnings
-from collections.abc import Sequence, Mapping
+from collections.abc import Mapping, Sequence
 from itertools import zip_longest
+from operator import itemgetter
+from pathlib import Path
 
-from delphin.predicate import normalize as normalize_predicate
 from delphin import hierarchy
+
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
 from delphin.exceptions import (
     PyDelphinException,
     PyDelphinSyntaxError,
-    PyDelphinWarning
+    PyDelphinWarning,
 )
-# Default modules need to import the PyDelphin version
-from delphin.__about__ import __version__  # noqa: F401
-
+from delphin.predicate import normalize as normalize_predicate
 
 TOP_TYPE = '*top*'
 STRING_TYPE = 'string'

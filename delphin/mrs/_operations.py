@@ -3,14 +3,10 @@
 Operations on MRS structures
 """
 
-from typing import Iterable, Dict, Set, cast
+from typing import Dict, Iterable, Set, cast
 
-from delphin import variable
-from delphin import predicate
+from delphin import mrs, predicate, scope, util, variable
 from delphin.sembase import Identifier, property_priority
-from delphin import scope
-from delphin import mrs
-from delphin import util
 
 
 def is_connected(m: mrs.MRS) -> bool:

@@ -2,12 +2,11 @@
 Functions for working with MRS variables.
 """
 
-from typing import Tuple, Dict, List, Optional
 import re
+from typing import Dict, List, Optional, Tuple
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
-
 
 UNSPECIFIC         = 'u'  # also 'unbound'; previously 'unknown'
 INDIVIDUAL         = 'i'
