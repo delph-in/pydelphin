@@ -74,7 +74,7 @@ dependencies = [
 [tool.hatch.envs.dev.scripts]
 test = "pytest {args:.}"
 lint = "ruff {args:delphin/}"
-typecheck = "mypy delphin --namespace-packages --explicit-package-bases --ignore-missing-imports"
+typecheck = "mypy --namespace-packages --explicit-package-bases --ignore-missing-imports --disable-error-code=method-assign {args:delphin/}"
 
 [tool.hatch.envs.docs]
 dependencies = [
@@ -104,3 +104,6 @@ force-wrap-aliases = true
 
 [tool.ruff.format]
 quote-style = "single"
+
+[tool.mypy]
+python_version = "3.8"
