@@ -2,6 +2,10 @@
 
 ### Unreleased
 
+## [v1.9.0]
+
+**Release date: 2023-12-11**
+
 ### Python Versions
 
 * Removed Python 3.7 support ([#376])
@@ -1436,6 +1440,7 @@ There was no CHANGELOG file prior to this release, so I don't have much
 information about changes, except for
 [commit messages](../../commits/v0.2).
 
+[v1.9.0]: ../../releases/tag/v1.9.0
 [v1.8.1]: ../../releases/tag/v1.8.1
 [v1.8.0]: ../../releases/tag/v1.8.0
 [v1.7.0]: ../../releases/tag/v1.7.0
