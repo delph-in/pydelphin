@@ -67,13 +67,13 @@ packages = ["delphin"]
 [tool.hatch.envs.dev]
 dependencies = [
   "pytest",
-  "flake8",
+  "ruff",
   "mypy",
   "types-requests",
 ]
 [tool.hatch.envs.dev.scripts]
 test = "pytest {args:.}"
-lint = "flake8 delphin --count --exit-zero --extend-ignore=E221 --max-line-length=99 --statistics"
+lint = "ruff {args:delphin/}"
 typecheck = "mypy delphin --namespace-packages --explicit-package-bases --ignore-missing-imports"
 
 [tool.hatch.envs.docs]
@@ -86,3 +86,23 @@ dependencies = [
 [tool.hatch.envs.docs.scripts]
 build = "make -C docs html"
 clean = "make -C docs clean"
+
+[tool.ruff]
+target-version = "py38"
+line-length = 79
+select = [
+  "B",    # flake8-bugbear
+  "C90",  # McCabe cyclomatic complexity
+  "E",    # pycodestyle errors
+  "I",    # isort
+  "F",    # Pyflakes
+  "N",    # PEP-8 naming
+  "W",    # pycodestyle warnings
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-wrap-aliases = true
+
+[tool.ruff.format]
+quote-style = "single"
