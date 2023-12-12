@@ -989,7 +989,8 @@ def _bounded(p1, p2, line, pos, line_no, lines):
                 pattern = 'docstring' if p1 == '"""' else 'block comment'
                 raise TDLSyntaxError(
                     f'unterminated {pattern}',
-                    lineno=start_line_no)
+                    lineno=start_line_no
+                ) from None
             pos = end = 0
     substrings.append(line[pos:end])
     end += len(p2)
@@ -1094,7 +1095,7 @@ def _parse_tdl(tokens, path):
             if environment is not None and obj is not None:
                 environment.entries.append(obj)
     except StopIteration:
-        raise TDLSyntaxError('unexpected end of input.')
+        raise TDLSyntaxError('unexpected end of input.') from None
 
 
 def _parse_tdl_definition(identifier, tokens):

@@ -447,12 +447,12 @@ class LookaheadIterator:
                     popleft()
                 except IndexError:
                     if not self._buffer_fill():
-                        raise StopIteration
+                        raise StopIteration from None
         try:
             datum = popleft()
         except IndexError:
             if not self._buffer_fill():
-                raise StopIteration
+                raise StopIteration from None
             datum = popleft()
         return datum
 
@@ -471,7 +471,7 @@ class LookaheadIterator:
                     datum = popleft()
                 except IndexError:
                     if not self._buffer_fill():
-                        raise StopIteration
+                        raise StopIteration from None
                     datum = popleft()
                 if not skip(datum):
                     n -= 1
