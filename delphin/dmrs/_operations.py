@@ -151,7 +151,7 @@ def _mrs_to_links(
                     continue
             links.append(dmrs.Link(start, end, role, post))
     # MOD/EQ links for shared labels without argumentation
-    for label, eps in reps.items():
+    for _label, eps in reps.items():
         if len(eps) > 1:
             ep = eps[0]
             assert isinstance(ep, mrs.EP)

@@ -168,7 +168,7 @@ def _descendants(descs: Dict[Identifier, List[Predication]],
     if id in descs:
         return
     descs[id] = []
-    for role, relation, label in scargs[id]:
+    for _role, _relation, label in scargs[id]:
         assert isinstance(label, str)
         for p in scopes.get(label, []):
             descs[id].append(p)

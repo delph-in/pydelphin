@@ -316,7 +316,7 @@ def _plan_joins(projection, condition_fields, relations, db):
 
 def _make_keymap(db):
     keymap = {}
-    for rel, fields in db.schema.items():
+    for rel, _fields in db.schema.items():
         keys = [field.name for field in db.schema[rel] if field.is_key]
         keymap[rel] = keys
     return keymap

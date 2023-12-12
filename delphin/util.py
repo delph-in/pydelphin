@@ -422,7 +422,7 @@ class LookaheadIterator:
         iterable = self._iterable
         buffer = self._buffer
         append = buffer.append
-        for i in range(max(n - len(buffer), 0)):
+        for _ in range(max(n - len(buffer), 0)):
             try:
                 datum = next(iterable)
                 append(datum)
@@ -568,7 +568,7 @@ class Lexer:
         patterns = []
         types = []
         desc = {}
-        for group, token in enumerate(self.tokens, 1):
+        for token in self.tokens:
             pattern, name = token
 
             numgroups = re.compile(pattern).groups

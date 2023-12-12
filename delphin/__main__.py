@@ -73,7 +73,7 @@ common_parser.add_argument(
 
 # Dynamically add subparsers from delphin.cli namespace
 subparser = parser.add_subparsers(title='available subcommands', metavar='')
-for name, fullname in util.namespace_modules(delphin.cli).items():
+for _name, fullname in util.namespace_modules(delphin.cli).items():
     try:
         mod = importlib.import_module(fullname)
     except ImportError:
