@@ -204,7 +204,7 @@ def find_predicate_modifiers(e, m, representatives=None):
 
     addl = {}
     if len(components) > 1:
-        for label, eps in representatives.items():
+        for _label, eps in representatives.items():
             if len(eps) > 1:
                 first = eps[0]
                 joined = set([ccmap[first.id]])

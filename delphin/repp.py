@@ -719,8 +719,7 @@ def _parse_template(replacement: str, _re: Pattern[str]):
 
 
 def last(steps: _Trace) -> REPPResult:
-    for step in steps:
-        pass
+    *_, step = steps
     assert isinstance(step, REPPResult)
     return step
 

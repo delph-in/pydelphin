@@ -29,7 +29,7 @@ def is_connected(m: mrs.MRS) -> bool:
     # arguments may link EPs with IVs or labels (or qeq) as targets
     hcmap = {hc.hi: hc.lo for hc in m.hcons}
     for id, roleargs in m.arguments().items():
-        for role, value in roleargs:
+        for _role, value in roleargs:
             value = hcmap.get(value, value)  # resolve qeq if any
             if value in g:
                 g[id].add(value)

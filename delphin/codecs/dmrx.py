@@ -341,8 +341,8 @@ def _indent(elem, indent, maxdepth, level):
         if not elem.text and level + 1 < maxdepth:
             elem.text = nxtind
         elem.tail = curind
-        for elem in elem:
-            _indent(elem, indent, maxdepth, level + 1)
+        for subelem in elem:
+            _indent(subelem, indent, maxdepth, level + 1)
         if level + 1 < maxdepth:
             elem.tail = curind
         else:

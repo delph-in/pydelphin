@@ -460,7 +460,8 @@ class Table(tsdb.Relation):
         with tsdb.open(self.dir,
                        self.name,
                        encoding=self.encoding) as lines:
-            for i, line in enumerate(lines):
+            for _ in lines:
+                i += 1
                 self._rows.append(None)
         self._persistent_count = i + 1
         self._volatile_index = i + 1
