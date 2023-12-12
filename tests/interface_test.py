@@ -1,11 +1,7 @@
 
+from delphin import derivation, tokens
+from delphin.codecs import dmrsjson, edsjson, simplemrs
 from delphin.interface import Response, Result
-from delphin.codecs import (
-    edsjson,
-    simplemrs,
-    dmrsjson)
-from delphin import derivation
-from delphin import tokens
 
 
 def test_Result():

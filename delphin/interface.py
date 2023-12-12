@@ -2,11 +2,11 @@
 Interfaces for external data providers.
 """
 
-from typing import Optional
 from collections.abc import Sequence
+from typing import Optional
 
-from delphin import util
-from delphin import exceptions
+from delphin import exceptions, util
+
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 

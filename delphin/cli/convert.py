@@ -7,12 +7,11 @@ with "-lines" to enable line-based reading/writing, in which case the
 --indent option is ignored.
 """
 
-import sys
 import argparse
+import sys
 
-from delphin.commands import convert
 from delphin import util
-
+from delphin.commands import convert
 
 parser = argparse.ArgumentParser(add_help=False)  # filled out below
 

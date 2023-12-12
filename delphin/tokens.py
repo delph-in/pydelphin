@@ -3,12 +3,12 @@
 YY tokens and token lattices.
 """
 
-from typing import NamedTuple, Optional, List, Tuple
 import re
+from typing import List, NamedTuple, Optional, Tuple
 
-from delphin.lnk import Lnk
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
+from delphin.lnk import Lnk
 
 
 class _YYToken(NamedTuple):

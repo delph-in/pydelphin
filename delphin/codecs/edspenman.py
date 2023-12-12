@@ -2,17 +2,16 @@
 EDS-PENMAN serialization and deserialization.
 """
 
-from pathlib import Path
 import logging
+from pathlib import Path
 
 import penman
 
+from delphin.eds import EDS, Node
 from delphin.exceptions import PyDelphinException
 from delphin.lnk import Lnk
-from delphin.sembase import (role_priority, property_priority)
-from delphin.eds import (EDS, Node)
+from delphin.sembase import property_priority, role_priority
 from delphin.util import _bfs
-
 
 logger = logging.getLogger(__name__)
 

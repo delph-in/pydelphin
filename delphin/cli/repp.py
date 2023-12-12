@@ -9,11 +9,10 @@ the application of REPP rules with the --trace option, which can be
 useful for debugging REPP modules.
 """
 
-import sys
 import argparse
+import sys
 
 from delphin.commands import repp
-
 
 parser = argparse.ArgumentParser(add_help=False)  # filled out below
 

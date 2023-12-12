@@ -2,23 +2,32 @@
 [incr tsdb()] Test Suites
 """
 
-from typing import (
-    Union, Iterable, Sequence, Tuple, List, Dict, Any,
-    Iterator, Optional, IO, overload, Callable, cast as typing_cast
-)
-from pathlib import Path
-import tempfile
-from datetime import datetime
-import logging
 import collections
 import itertools
+import logging
+import tempfile
+from datetime import datetime
+from pathlib import Path
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast as typing_cast,
+    overload,
+)
 
-from delphin import util
-from delphin import tsdb
-from delphin import interface
+from delphin import interface, tsdb, util
+
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
-
 
 logger = logging.getLogger(__name__)
 

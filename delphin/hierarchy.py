@@ -3,9 +3,9 @@
 Basic support for hierarchies.
 """
 
-from delphin.exceptions import PyDelphinException
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
+from delphin.exceptions import PyDelphinException
 
 
 class HierarchyError(PyDelphinException):

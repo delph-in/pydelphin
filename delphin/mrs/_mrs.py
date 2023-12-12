@@ -1,11 +1,8 @@
 
-from typing import Optional, Iterable, Mapping, Dict
+from typing import Dict, Iterable, Mapping, Optional
 
+from delphin import scope, sembase, variable
 from delphin.lnk import Lnk
-from delphin import variable
-from delphin import sembase
-from delphin import scope
-
 
 INTRINSIC_ROLE   = 'ARG0'
 RESTRICTION_ROLE = 'RSTR'

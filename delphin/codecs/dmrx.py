@@ -2,13 +2,12 @@
 DMRX (XML for DMRS) serialization and deserialization.
 """
 
-from pathlib import Path
 import xml.etree.ElementTree as etree
+from pathlib import Path
 
 from delphin import predicate
-from delphin.dmrs import (DMRS, Node, Link, CVARSORT)
+from delphin.dmrs import CVARSORT, DMRS, Link, Node
 from delphin.lnk import Lnk
-
 
 CODEC_INFO = {
     'representation': 'dmrs',

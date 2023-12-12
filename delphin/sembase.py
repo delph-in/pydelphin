@@ -5,20 +5,19 @@ Basic classes and functions for semantic representations.
 
 from typing import (
     Any,
-    Optional,
-    Iterable,
-    Mapping,
-    Tuple,
-    List,
     Dict,
-    Union,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
     Sequence,
+    Tuple,
+    Union,
 )
 
-from delphin.lnk import Lnk, LnkMixin
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
-
+from delphin.lnk import Lnk, LnkMixin
 
 # Basic Types
 

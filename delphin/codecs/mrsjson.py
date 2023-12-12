@@ -2,13 +2,12 @@
 MRS-JSON serialization and deserialization.
 """
 
-from pathlib import Path
 import json
+from pathlib import Path
 
-from delphin.lnk import Lnk
 from delphin import variable
-from delphin.mrs import (MRS, EP, HCons, ICons)
-
+from delphin.lnk import Lnk
+from delphin.mrs import EP, MRS, HCons, ICons
 
 CODEC_INFO = {
     'representation': 'mrs',

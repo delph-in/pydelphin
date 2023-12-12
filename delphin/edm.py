@@ -3,17 +3,16 @@
 Elementary Dependency Matching
 """
 
-from typing import Union, List, Tuple, Iterable, Any, NamedTuple, Optional
 import logging
 from collections import Counter
 from itertools import zip_longest
-
-from delphin.lnk import LnkMixin
-from delphin.eds import EDS
-from delphin.dmrs import DMRS
+from typing import Any, Iterable, List, NamedTuple, Optional, Tuple, Union
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
+from delphin.dmrs import DMRS
+from delphin.eds import EDS
+from delphin.lnk import LnkMixin
 
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)

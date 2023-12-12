@@ -2,24 +2,38 @@
 Test Suite Database (TSDB) Primitives
 """
 
-from typing import (
-    Union, Iterator, Iterable, Sequence, Mapping, Dict, Tuple, List, Set,
-    Optional, Generator, IO, cast as typing_cast
-)
 import re
-from pathlib import Path
-from collections import OrderedDict
-from gzip import open as gzopen, GzipFile
-import tempfile
 import shutil
-from datetime import datetime, date
+import tempfile
 import warnings
+from collections import OrderedDict
+from datetime import date, datetime
+from gzip import (
+    GzipFile,
+    open as gzopen,
+)
+from pathlib import Path
+from typing import (
+    IO,
+    Dict,
+    Generator,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast as typing_cast,
+)
 
-from delphin.exceptions import PyDelphinException, PyDelphinWarning
 from delphin import util
+
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
-
+from delphin.exceptions import PyDelphinException, PyDelphinWarning
 
 #############################################################################
 # Constants

@@ -4,16 +4,15 @@ Serialization for the SimpleDMRS format.
 
 from pathlib import Path
 
-from delphin.lnk import Lnk
 from delphin.dmrs import (
     DMRS,
-    Node,
-    Link,
     EQ_POST,
     DMRSSyntaxError,
+    Link,
+    Node,
 )
+from delphin.lnk import Lnk
 from delphin.util import Lexer
-
 
 CODEC_INFO = {
     'representation': 'dmrs',

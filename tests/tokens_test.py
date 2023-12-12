@@ -1,8 +1,11 @@
 
 import pytest
 
-from delphin.tokens import YYTokenLattice as YY, YYToken
 from delphin.lnk import Lnk
+from delphin.tokens import (
+    YYToken,
+    YYTokenLattice as YY,
+)
 
 token_v1_basic = '(1, 0, 1, 1, "dog", 0, "null")'
 token_v1_surface = '(1, 0, 1, 1, "dog" "Dog", 0, "null")'

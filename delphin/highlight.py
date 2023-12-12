@@ -5,12 +5,18 @@ Pygments-based highlighting lexers for DELPH-IN formats.
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups
+from pygments.lexer import RegexLexer, bygroups, include
 from pygments.style import Style
 from pygments.token import (
-    Text, Number, String,
-    Keyword, Name, Operator, Punctuation,
-    Comment, Error
+    Comment,
+    Error,
+    Keyword,
+    Name,
+    Number,
+    Operator,
+    Punctuation,
+    String,
+    Text,
 )
 
 # Default modules need to import the PyDelphin version

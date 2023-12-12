@@ -23,7 +23,6 @@ import argparse
 
 from delphin.commands import mkprof
 
-
 parser = argparse.ArgumentParser(add_help=False)  # filled out below
 
 COMMAND_INFO = {

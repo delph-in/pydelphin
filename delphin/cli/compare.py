@@ -11,7 +11,6 @@ import argparse
 
 from delphin.commands import compare
 
-
 parser = argparse.ArgumentParser(add_help=False)  # filled out below
 
 COMMAND_INFO = {

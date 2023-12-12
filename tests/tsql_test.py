@@ -3,8 +3,7 @@ from datetime import datetime
 
 import pytest
 
-from delphin import tsql
-from delphin import itsdb
+from delphin import itsdb, tsql
 
 
 def test_inspect_query():

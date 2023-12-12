@@ -2,8 +2,9 @@
 import pytest
 
 from delphin.hierarchy import (
+    HierarchyError,
     MultiHierarchy as MH,
-    HierarchyError)
+)
 
 
 @pytest.fixture

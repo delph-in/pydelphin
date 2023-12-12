@@ -7,13 +7,13 @@ import pathlib
 import pytest
 
 from delphin.commands import (
+    CommandError,
+    compare,
     convert,
     mkprof,
     process,
-    select,
-    compare,
     repp,
-    CommandError
+    select,
 )
 
 

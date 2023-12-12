@@ -2,18 +2,18 @@
 Classes and functions related to derivation trees.
 """
 
-from typing import (
-    Optional,
-    Union,
-    List,
-    Dict,
-    Any,
-    Iterable,
-    Sequence as SequenceType,
-)
 import re
 from collections import namedtuple
 from collections.abc import Sequence
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence as SequenceType,
+    Union,
+)
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401

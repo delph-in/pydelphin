@@ -4,8 +4,7 @@ Serialize DMRS objects into LaTeX code for visualization.
 
 from pathlib import Path
 
-from delphin import predicate
-from delphin import dmrs
+from delphin import dmrs, predicate
 
 __version__ = '1.0.0'
 

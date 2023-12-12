@@ -3,8 +3,7 @@ from datetime import datetime
 
 import pytest
 
-from delphin import tsdb
-from delphin import itsdb
+from delphin import itsdb, tsdb
 
 
 @pytest.fixture

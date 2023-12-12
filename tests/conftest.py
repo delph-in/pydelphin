@@ -1,7 +1,7 @@
 
-from datetime import datetime
-import io
 import gzip
+import io
+from datetime import datetime
 from pathlib import Path
 
 import pytest

@@ -3,14 +3,10 @@
 Operations on DMRS structures
 """
 
-from typing import Optional, Dict, List, Callable, cast
 import warnings
+from typing import Callable, Dict, List, Optional, cast
 
-from delphin import variable
-from delphin import scope
-from delphin import mrs
-from delphin import dmrs
-
+from delphin import dmrs, mrs, scope, variable
 
 _HCMap = Dict[str, mrs.HCons]
 _IdMap = Dict[str, int]

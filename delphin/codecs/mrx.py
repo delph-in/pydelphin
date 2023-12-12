@@ -4,15 +4,13 @@ MRX (XML for MRS) serialization and deserialization.
 
 import io
 import re
-from pathlib import Path
 import xml.etree.ElementTree as etree
+from pathlib import Path
 
-from delphin.mrs import MRS, EP, HCons, ICons, CONSTANT_ROLE
-from delphin import predicate
+from delphin import predicate, variable
 from delphin.lnk import Lnk
-from delphin import variable
-from delphin.sembase import role_priority, property_priority
-
+from delphin.mrs import CONSTANT_ROLE, EP, MRS, HCons, ICons
+from delphin.sembase import property_priority, role_priority
 
 CODEC_INFO = {
     'representation': 'mrs',

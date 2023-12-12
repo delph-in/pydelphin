@@ -12,25 +12,24 @@ Elementary Dependency Structures ([EDS]_)
 
 """
 
+# Default modules need to import the PyDelphin version
+from delphin.__about__ import __version__  # noqa: F401
+from delphin.eds._eds import (
+    BOUND_VARIABLE_ROLE,
+    EDS,
+    PREDICATE_MODIFIER_ROLE,
+    Node,
+)
 from delphin.eds._exceptions import (
     EDSError,
     EDSSyntaxError,
     EDSWarning,
 )
-from delphin.eds._eds import (
-    BOUND_VARIABLE_ROLE,
-    PREDICATE_MODIFIER_ROLE,
-    EDS,
-    Node,
-)
 from delphin.eds._operations import (
-    from_mrs,
     find_predicate_modifiers,
-    make_ids_unique
+    from_mrs,
+    make_ids_unique,
 )
-# Default modules need to import the PyDelphin version
-from delphin.__about__ import __version__  # noqa: F401
-
 
 __all__ = [
     'BOUND_VARIABLE_ROLE',

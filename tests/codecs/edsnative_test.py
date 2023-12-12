@@ -1,8 +1,8 @@
 
 import pytest
 
-from delphin.eds import EDS, Node
 from delphin.codecs import eds as edsnative
+from delphin.eds import EDS, Node
 
 
 @pytest.fixture

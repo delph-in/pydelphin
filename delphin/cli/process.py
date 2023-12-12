@@ -20,7 +20,6 @@ import shlex
 
 from delphin.commands import process
 
-
 parser = argparse.ArgumentParser(add_help=False)  # filled out below
 
 COMMAND_INFO = {

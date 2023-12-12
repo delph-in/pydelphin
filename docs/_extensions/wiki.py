@@ -1,5 +1,5 @@
-from urllib.parse import urljoin
 import re
+from urllib.parse import urljoin
 
 from docutils import nodes
 

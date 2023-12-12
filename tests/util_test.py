@@ -1,8 +1,8 @@
 import codecs
 
-from delphin.util import safe_int, SExpr, detect_encoding, LookaheadIterator
-
 import pytest
+
+from delphin.util import LookaheadIterator, SExpr, detect_encoding, safe_int
 
 
 def test_safe_int():

@@ -6,10 +6,7 @@ Operations on EDS
 import warnings
 from itertools import count
 
-from delphin import variable
-from delphin import scope
-from delphin import eds
-from delphin import util
+from delphin import eds, scope, util, variable
 
 
 def from_mrs(m, predicate_modifiers=True, unique_ids=True,

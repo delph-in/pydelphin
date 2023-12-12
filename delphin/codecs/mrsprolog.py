@@ -4,9 +4,8 @@ Serialization functions for the MRS-Prolog format.
 
 from pathlib import Path
 
-from delphin.sembase import role_priority
 from delphin.mrs import CONSTANT_ROLE
-
+from delphin.sembase import role_priority
 
 CODEC_INFO = {
     'representation': 'mrs',

@@ -3,30 +3,29 @@
 Utility functions.
 """
 
-from typing import (
-    Any,
-    Union,
-    Iterable,
-    Iterator,
-    Set,
-    Dict,
-    List,
-    Tuple,
-    NamedTuple,
-)
-from pathlib import Path
-import warnings
+import codecs
 import importlib
 import pkgutil
-import codecs
 import re
-from collections import deque, defaultdict
-from functools import wraps
+import warnings
+from collections import defaultdict, deque
 from enum import IntEnum
+from functools import wraps
+from pathlib import Path
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    NamedTuple,
+    Set,
+    Tuple,
+    Union,
+)
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
-
 
 PathLike = Union[str, Path]
 

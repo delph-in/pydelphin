@@ -5,17 +5,10 @@ Serialization for the Indexed MRS format.
 
 from pathlib import Path
 
-from delphin.lnk import Lnk
-from delphin.mrs import (
-    MRS,
-    EP,
-    HCons,
-    ICons,
-    CONSTANT_ROLE)
 from delphin import variable
-from delphin.mrs import MRSSyntaxError
+from delphin.lnk import Lnk
+from delphin.mrs import CONSTANT_ROLE, EP, MRS, HCons, ICons, MRSSyntaxError
 from delphin.util import Lexer
-
 
 CODEC_INFO = {
     'representation': 'mrs',

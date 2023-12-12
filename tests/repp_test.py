@@ -1,5 +1,6 @@
 
 import pytest
+
 # The regex library should be used if available; if not, tests may
 # need to be skipped.
 try:

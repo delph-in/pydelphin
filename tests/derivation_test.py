@@ -2,13 +2,13 @@
 import pytest
 
 from delphin.derivation import (
-    from_string,
-    from_dict,
-    DerivationSyntaxError,
     Derivation as D,
+    DerivationSyntaxError,
     UDFNode as N,
     UDFTerminal as T,
-    UDFToken as Tk
+    UDFToken as Tk,
+    from_dict,
+    from_string,
 )
 
 

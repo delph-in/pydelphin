@@ -1,8 +1,8 @@
 
 import pytest
 
-from delphin.eds import EDS, Node, from_mrs, EDSWarning
-from delphin.mrs import MRS, EP, HCons
+from delphin.eds import EDS, EDSWarning, Node, from_mrs
+from delphin.mrs import EP, MRS, HCons
 
 
 @pytest.fixture
