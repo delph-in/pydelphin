@@ -73,7 +73,8 @@ def _mrs_get_top(top, hcmap, reps, index, ivmap):
         if top in hcmap:
             warnings.warn(
                 f'broken handle constraint: {hcmap[top]}',
-                eds.EDSWarning
+                eds.EDSWarning,
+                stacklevel=2,
             )
         if top in reps:
             top = reps[top][0].id
@@ -81,7 +82,11 @@ def _mrs_get_top(top, hcmap, reps, index, ivmap):
             lbl = ivmap[index][0].label
             top = reps[lbl][0].id
         else:
-            warnings.warn('unable to find a suitable TOP', eds.EDSWarning)
+            warnings.warn(
+                'unable to find a suitable TOP',
+                eds.EDSWarning,
+                stacklevel=2,
+            )
             top = None
     return top
 
@@ -102,7 +107,8 @@ def _mrs_args_to_basic_deps(m, hcmap, ivmap, reps):
                     else:
                         warnings.warn(
                             f'broken handle constraint: {hcmap[tgt]}',
-                            eds.EDSWarning
+                            eds.EDSWarning,
+                            stacklevel=2,
                         )
                         continue
                 # label arg

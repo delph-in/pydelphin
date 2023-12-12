@@ -640,7 +640,7 @@ def _parse_datetime(s: str) -> Union[datetime, None]:
     try:
         return datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
     except ValueError:
-        warnings.warn(f'Invalid date field: {s!r}', TSDBWarning)
+        warnings.warn(f'Invalid date field: {s!r}', TSDBWarning, stacklevel=2)
         return None
 
 

@@ -92,7 +92,10 @@ def _eds_from_mrs(
     except Exception:
         logger.debug('could not convert MRS to EDS')
         if errors == 'warn':
-            warnings.warn("error in EDS conversion; skipping entry")
+            warnings.warn(
+                "error in EDS conversion; skipping entry",
+                stacklevel=2,
+            )
         elif errors == 'strict':
             raise
         e = None
