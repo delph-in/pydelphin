@@ -92,11 +92,9 @@ target-version = "py38"
 line-length = 79
 select = [
   "B",    # flake8-bugbear
-  "C90",  # McCabe cyclomatic complexity
   "E",    # pycodestyle errors
   "I",    # isort
   "F",    # Pyflakes
-  "N",    # PEP-8 naming
   "W",    # pycodestyle warnings
 ]
 
