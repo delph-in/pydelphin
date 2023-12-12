@@ -17,6 +17,7 @@
 * Stop using Python's undocumented parse_template re function ([#378])
 * Resolved newline and encoding issues for running tests on Windows ([#379])
 * Capture legacy single-quoted predicates longer than 1 character ([#373])
+* Quote SimpleMRS predicates with reserved characters ([#372])
 
 
 ## [v1.8.1]
@@ -1621,6 +1622,7 @@ information about changes, except for
 [#360]: https://github.com/delph-in/pydelphin/issues/360
 [#364]: https://github.com/delph-in/pydelphin/issues/364
 [#367]: https://github.com/delph-in/pydelphin/issues/367
+[#372]: https://github.com/delph-in/pydelphin/issues/372
 [#373]: https://github.com/delph-in/pydelphin/issues/373
 [#374]: https://github.com/delph-in/pydelphin/issues/374
 [#375]: https://github.com/delph-in/pydelphin/issues/375

@@ -86,3 +86,24 @@ def test_legacy_single_quote_predicates_issue_373():
     # https://github.com/delph-in/pydelphin/issues/373
     m = simplemrs.decode("[ RELS: < [ 'single+quoted LBL: h0 ] > ]")
     assert m.rels[0].predicate == "single+quoted"
+
+
+def test_quote_reserved_characters_issue_372():
+    # https://github.com/delph-in/pydelphin/issues/372
+
+    def assert_quoted(p: str, escape: bool = False):
+        m = simplemrs.decode(f'[ RELS: < [ "{p}"<1:2> LBL: h0 ] > ]')
+        _p = m.rels[0].predicate
+        assert (_p.replace('"', r'\"') if escape else _p) == p
+        s = simplemrs.encode(m)
+        assert f'"{p}"' in s
+        simplemrs.decode(s)  # confirm it roundtrips without error
+
+    assert_quoted("a space")
+    assert_quoted("a:colon")
+    assert_quoted(r'double\"quotes', escape=True)
+    assert_quoted("single'quotes")
+    assert_quoted("left<angle")
+    assert_quoted("right>angle")
+    assert_quoted("left[bracket")
+    assert_quoted("right]bracket")
