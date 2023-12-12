@@ -11,6 +11,7 @@
 
 * Migrate to a hatch-based build ([#374])
 * Use standard `__main__.py` module ([#375])
+* Switch to Ruff for linting ([#383])
 
 ### Fixed
 
@@ -1629,3 +1630,4 @@ information about changes, except for
 [#376]: https://github.com/delph-in/pydelphin/issues/376
 [#378]: https://github.com/delph-in/pydelphin/issues/378
 [#379]: https://github.com/delph-in/pydelphin/issues/379
+[#383]: https://github.com/delph-in/pydelphin/issues/383
