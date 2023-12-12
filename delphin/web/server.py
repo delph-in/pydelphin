@@ -226,8 +226,8 @@ class TestSuiteServer:
     def on_get_name(self, req, resp, name):
         try:
             entry = self.index[name]
-        except KeyError:
-            raise falcon.HTTPNotFound()
+        except KeyError as e:
+            raise falcon.HTTPNotFound() from e
         ts = itsdb.TestSuite(entry['path'])
         quote = urllib.parse.quote
         base = req.uri
@@ -238,8 +238,8 @@ class TestSuiteServer:
     def on_get_table(self, req, resp, name, table):
         try:
             entry = self.index[name]
-        except KeyError:
-            raise falcon.HTTPNotFound()
+        except KeyError as e:
+            raise falcon.HTTPNotFound() from e
         ts = itsdb.TestSuite(entry['path'])
         table_ = ts[table]
 
