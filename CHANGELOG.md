@@ -2,6 +2,11 @@
 
 ### Unreleased
 
+### Fixed
+
+* Properly define `delphin` command in pyproject.toml ([#386])
+
+
 ## [v1.9.0]
 
 **Release date: 2023-12-11**
@@ -1636,3 +1641,4 @@ information about changes, except for
 [#378]: https://github.com/delph-in/pydelphin/issues/378
 [#379]: https://github.com/delph-in/pydelphin/issues/379
 [#383]: https://github.com/delph-in/pydelphin/issues/383
+[#386]: https://github.com/delph-in/pydelphin/issues/386
