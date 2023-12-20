@@ -46,7 +46,7 @@ repp = [
   "regex"
 ]
 
-[projects.scripts]
+[project.scripts]
 delphin = "delphin.main:main"
 
 [project.urls]
