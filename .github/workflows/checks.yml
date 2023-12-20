@@ -35,5 +35,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Hatch
         run: pipx install hatch
+      - name: Check Command and Version
+        run: hatch run delphin -V
       - name: Test
         run: hatch run dev:test
