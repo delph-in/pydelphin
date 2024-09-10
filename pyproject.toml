@@ -73,7 +73,7 @@ dependencies = [
 ]
 [tool.hatch.envs.dev.scripts]
 test = "pytest {args:.}"
-lint = "ruff {args:delphin/}"
+lint = "ruff check {args:delphin/}"
 typecheck = "mypy --namespace-packages --explicit-package-bases --ignore-missing-imports --disable-error-code=method-assign {args:delphin/}"
 
 [tool.hatch.envs.docs]
@@ -90,6 +90,8 @@ clean = "make -C docs clean"
 [tool.ruff]
 target-version = "py38"
 line-length = 79
+
+[tool.ruff.lint]
 select = [
   "B",    # flake8-bugbear
   "E",    # pycodestyle errors
