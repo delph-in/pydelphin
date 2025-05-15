@@ -891,7 +891,7 @@ _tdl_lex_re = re.compile(
     |(!>)                            #  17  diff list close
     |(>)                             #  18  cons list close
     |\#({identifier})                #  19  coreference
-    |%\s*\((.*)\)\s*$                #  20  letter-set or wild-card
+    |%\s*\((.*)\)                    #  20  letter-set or wild-card
     |%(prefix|suffix)                #  21  start of affixing pattern
     |\(([^ ]+\s+(?:[^ )\\]|\\.)+)\)  #  22  affix subpattern
     |(\/)                            #  23  defaults (currently unused)
@@ -1148,7 +1148,7 @@ def _parse_tdl_definition(identifier, tokens):
 
 
 def _parse_letterset(token, line_no):
-    end = r'\s+((?:[^) \\]|\\.)+)\)\s*$'
+    end = r'\s+((?:[^) \\]|\\.)+)\)'
     m = re.match(r'\s*letter-set\s*\((!.)' + end, token)
     if m is not None:
         chars = re.sub(r'\\(.)', r'\1', m.group(2))

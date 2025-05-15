@@ -721,6 +721,16 @@ def test_parse_wildcard():
         tdlparse('%(wild-card (?a ab c))')
 
 
+def test_parse_comment_issue_395():
+    # https://github.com/delph-in/pydelphin/issues/395
+    ls = tdlparse(r'%(letter-set (!a abc))  ; comment')
+    assert ls.characters == 'abc'
+    ls = tdlparse(r'%(letter-set (!a abc))  #| comment |#')
+    assert ls.characters == 'abc'
+    wc = tdlparse(r'%(wild-card (?a abc))  ; comment')
+    assert wc.characters == 'abc'
+
+
 def test_parse_linecomment():
     lc = tdlparse('; this is a comment\n')
     assert lc == ' this is a comment'
