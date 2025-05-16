@@ -3,6 +3,9 @@
 Basic classes for modeling feature structures.
 """
 
+from collections.abc import Mapping, Sequence
+from typing import Any, Callable, Iterable, Optional, Union
+
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 from delphin.exceptions import PyDelphinException
@@ -11,6 +14,14 @@ from delphin.hierarchy import MultiHierarchy
 
 class TFSError(PyDelphinException):
     """Raised on invalid feature structure operations."""
+
+
+# generic input argument types
+FeatureSeq = Sequence[tuple[str, Any]]
+FeatureMap = Mapping[str, Any]
+# explicit types
+FeatureList = list[tuple[str, Any]]
+FeatureDict = dict[str, Any]
 
 
 class FeatureStructure:
@@ -27,27 +38,33 @@ class FeatureStructure:
 
     __slots__ = ('_avm', '_feats')
 
-    def __init__(self, featvals=None):
+    _avm: FeatureDict
+    _feats: list[str]
+
+    def __init__(
+        self,
+        featvals: Union[FeatureSeq, FeatureMap, None] = None,
+    ) -> None:
         self._avm = {}
         self._feats = []
-        if isinstance(featvals, dict):
-            featvals = featvals.items()
+        if featvals and hasattr(featvals, 'items'):
+            featvals = list(featvals.items())
         for feat, val in list(featvals or []):
             self[feat] = val
 
     @classmethod
-    def _default(cls):
+    def _default(cls) -> 'FeatureStructure':
         return cls(None)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<{} object at {}>'.format(self.__class__.__name__, id(self))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, FeatureStructure):
             return NotImplemented
         return self._avm == other._avm
 
-    def __setitem__(self, key, val):
+    def __setitem__(self, key: str, val: Any) -> None:
         avm = self._avm
         subkeys = key.split('.', 1)
         subkey = subkeys[0].upper()
@@ -66,14 +83,14 @@ class FeatureStructure:
                 subdef = avm[subkey] = self._default()
             subdef[subkeys[1]] = val
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         first, _, remainder = key.partition('.')
         val = self._avm[first.upper()]
         if remainder:
             val = val[remainder]
         return val
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
         first, _, remainder = key.partition('.')
         if remainder:
             fs = self._avm[first.upper()]
@@ -81,7 +98,7 @@ class FeatureStructure:
         else:
             del self._avm[first.upper()]
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         subkeys = key.split('.', 1)
         subkey = subkeys[0].upper()
         if subkey in self._avm:
@@ -91,7 +108,7 @@ class FeatureStructure:
                 return True
         return False
 
-    def get(self, key, default=None):
+    def get(self, key: str, default: Any = None) -> Any:
         """
         Return the value for *key* if it exists, otherwise *default*.
         """
@@ -101,7 +118,7 @@ class FeatureStructure:
             val = default
         return val
 
-    def _is_notable(self):
+    def _is_notable(self) -> bool:
         """
         Notability determines if the FeatureStructure should be listed as
         the value of a feature or if the feature should just "pass
@@ -110,7 +127,7 @@ class FeatureStructure:
         """
         return self._avm is None or len(self._avm) != 1
 
-    def features(self, expand=False):
+    def features(self, expand: bool = False) -> FeatureList:
         """
         Return the list of tuples of feature paths and feature values.
 
@@ -153,92 +170,73 @@ class TypedFeatureStructure(FeatureStructure):
     """
     __slots__ = '_type'
 
-    def __init__(self, type, featvals=None):
+    _type: str
+
+    def __init__(
+        self,
+        type: str,
+        featvals: Union[FeatureSeq, FeatureMap, None] = None,
+    ) -> None:
         self._type = type
         super().__init__(featvals)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<TypedFeatureStructure object ({}) at {}>'.format(
             self.type, id(self)
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, TypedFeatureStructure):
             return NotImplemented
         return self._type == other._type and self._avm == other._avm
 
     @property
-    def type(self):
+    def type(self) -> str:
         """The type assigned to the feature structure."""
         return self._type
 
     @type.setter
-    def type(self, value):
+    def type(self, value: str) -> None:
         self._type = value
 
 
-class TypeHierarchy(MultiHierarchy):
+class TypeHierarchy(MultiHierarchy[str]):
     """
     A Type Hierarchy.
 
-    Type hierarchies have certain properties, such as a unique top
-    node, multiple inheritance, case insensitivity, and unique
-    greatest-lower-bound (glb) types.
+    Type hierarchies are instances of
+    :class:`delphin.hierarchy.MultiHierarchy` constrained to use
+    case-insensitive (downcased) strings for node identifiers and
+    unique greatest-lower-bound (glb) types.
 
     Note:
         Checks for unique glbs is not yet implemented.
 
-    TypeHierarchies may be constructed when instantiating the class or
-    via the :meth:`update` method using a dictionary mapping type
-    names to node values, or one-by-one using dictionary-like access.
-    In both cases, the node values may be an individual parent name,
-    an iterable of parent names, or a :class:`TypeHierarchyNode`
-    object. Retrieving a node via dictionary access on the typename
-    returns a :class:`TypeHierarchyNode` regardless of the method used
-    to create the node.
+    >>> th = TypeHierarchy(
+    ...     '*top*',
+    ...     {'can-fly': '*top*', 'can-swim': '*top*', 'can-walk': '*top*'}
+    ... )
+    >>> th.update({'butterfly': ('can-fly', 'can-walk')})
+    >>> th['butterfly'] = 'some info relating to butterflies'
+    >>> th.update(
+    ...     {'duck': ('can-fly', 'can-swim', 'can-walk')},
+    ...     data={'duck': 'some info relating to ducks...'}
+    ... )
 
-    >>> th = TypeHierarchy('*top*', {'can-fly': '*top*'})
-    >>> th.update({'can-swim': '*top*', 'can-walk': '*top*'})
-    >>> th['butterfly'] = ('can-fly', 'can-walk')
-    >>> th['duck'] = TypeHierarchyNode(
-    ...     ('can-fly', 'can-swim', 'can-walk'),
-    ...     data='some info relating to ducks...')
-    >>> th['butterfly'].data = 'some info relating to butterflies'
-
-    In some ways the TypeHierarchy behaves like a dictionary, but it
-    is not a subclass of :py:class:`dict` and does not implement all
-    its methods. Also note that some methods ignore the top node,
-    which make certain actions easier:
-
-    >>> th = TypeHierarchy('*top*', {'a': '*top*', 'b': 'a', 'c': 'a'})
-    >>> len(th)
-    3
-    >>> list(th)
-    ['a', 'b', 'c']
-    >>> TypeHierarchy('*top*', dict(th.items())) == th
-    True
-
-    But others do not ignore the top node, namely those where you can
-    request it specifically:
-
-    >>> '*top*' in th
-    True
-    >>> th['*top*']
-    <TypeHierarchyNode ... >
-
-    Args:
-        top (str): unique top type
-        hierarchy (dict): mapping of `{child: node}` (see description
-            above concerning the `node` values)
-    Attributes:
-        top: the hierarchy's top type
     """
 
-    def __init__(self, top, hierarchy=None, data=None,
-                 normalize_identifier=None):
+    def __init__(
+        self,
+        top: str,
+        hierarchy: Optional[Mapping[str, Iterable[str]]] = None,
+        data: Optional[Mapping[str, Any]] = None,
+        normalize_identifier: Optional[Callable[[str], str]] = None
+    ) -> None:
         if not normalize_identifier:
             normalize_identifier = str.lower
-        super().__init__(top,
-                         hierarchy=hierarchy,
-                         data=data,
-                         normalize_identifier=normalize_identifier)
+        super().__init__(
+            top,
+            hierarchy=hierarchy,
+            data=data,
+            normalize_identifier=normalize_identifier
+        )
