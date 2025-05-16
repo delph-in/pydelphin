@@ -2,6 +2,11 @@
 
 ### Unreleased
 
+### Python Versions
+
+* Removed Python 3.8 support ([#396])
+* Added Python 3.13 support ([#396])
+
 
 ## [v1.9.1]
 
@@ -1648,3 +1653,4 @@ information about changes, except for
 [#379]: https://github.com/delph-in/pydelphin/issues/379
 [#383]: https://github.com/delph-in/pydelphin/issues/383
 [#386]: https://github.com/delph-in/pydelphin/issues/386
+[#396]: https://github.com/delph-in/pydelphin/issues/396
