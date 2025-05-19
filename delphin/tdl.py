@@ -397,7 +397,6 @@ class DiffList(AVM):
             tmplist = ConsList(values, end=cr)
             dl_list = _ImplicitAVM()
             dl_list._avm.update(tmplist._avm)
-            dl_list._feats = tmplist._feats
             self.last = 'LIST.' + tmplist._last_path
         else:
             dl_list = cr

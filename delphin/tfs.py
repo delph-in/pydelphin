@@ -36,17 +36,15 @@ class FeatureStructure:
             to feature values
     """
 
-    __slots__ = ('_avm', '_feats')
+    __slots__ = '_avm',
 
     _avm: FeatureDict
-    _feats: list[str]
 
     def __init__(
         self,
         featvals: Union[FeatureSeq, FeatureMap, None] = None,
     ) -> None:
         self._avm = {}
-        self._feats = []
         if featvals and hasattr(featvals, 'items'):
             featvals = list(featvals.items())
         for feat, val in list(featvals or []):
@@ -68,8 +66,6 @@ class FeatureStructure:
         avm = self._avm
         subkeys = key.split('.', 1)
         subkey = subkeys[0].upper()
-        if subkey not in avm:
-            self._feats.append(subkey)
         if len(subkeys) == 1:
             avm[subkey] = val
         else:
@@ -142,12 +138,7 @@ class FeatureStructure:
         """
         fs = []
         if self._avm is not None:
-            if len(self._feats) == len(self._avm):
-                feats = self._feats
-            else:
-                feats = list(self._avm)
-            for feat in feats:
-                val = self._avm[feat]
+            for feat, val in self._avm.items():
                 if isinstance(val, FeatureStructure):
                     if not expand and val._is_notable():
                         fs.append((feat, val))
