@@ -7,11 +7,17 @@
 * Removed Python 3.9 support ([#403])
 * Added Python 3.14 support ([#403])
 
+### Added
+
+* Provisional support for TDL config environments ([#391])
+
 ### Maintenance
 
 * Removed `requirements.txt`; it was unnecessary and out of date
 * Replaced `requests` dependency with `httpx`
 * Change docs theme to furo, use sphinx-copybutton & autodoc-typehints
+* Changed `delphin.tdl` from a simple module to a backwards-compatible
+  package
 
 ### Changed
 
@@ -1701,6 +1707,7 @@ information about changes, except for
 [#379]: https://github.com/delph-in/pydelphin/issues/379
 [#383]: https://github.com/delph-in/pydelphin/issues/383
 [#386]: https://github.com/delph-in/pydelphin/issues/386
+[#391]: https://github.com/delph-in/pydelphin/issues/391
 [#395]: https://github.com/delph-in/pydelphin/issues/395
 [#396]: https://github.com/delph-in/pydelphin/issues/396
 [#402]: https://github.com/delph-in/pydelphin/issues/402
