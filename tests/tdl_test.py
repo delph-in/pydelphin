@@ -721,6 +721,16 @@ def test_parse_wildcard():
         tdlparse('%(wild-card (?a ab c))')
 
 
+def test_parse_comment_issue_395():
+    # https://github.com/delph-in/pydelphin/issues/395
+    ls = tdlparse(r'%(letter-set (!a abc))  ; comment')
+    assert ls.characters == 'abc'
+    ls = tdlparse(r'%(letter-set (!a abc))  #| comment |#')
+    assert ls.characters == 'abc'
+    wc = tdlparse(r'%(wild-card (?a abc))  ; comment')
+    assert wc.characters == 'abc'
+
+
 def test_parse_linecomment():
     lc = tdlparse('; this is a comment\n')
     assert lc == ' this is a comment'
@@ -998,3 +1008,20 @@ def test_issue_357():
     assert isinstance(c, ConsList)
     assert len(c.values()) == 2
     assert tdl.format(t) == 'id := < a . < b . c > >.'
+
+
+def test_promote_conjunction_issue_395():
+    t = tdlparse('a := b & [ ABC x, ABC [ DEF y ] ].')
+    assert tdl.format(t) == 'a := b &\n  [ ABC x & [ DEF y ] ].'
+    t = tdlparse('a := b & [ ABC x, ABC.DEF y ].')
+    assert tdl.format(t) == 'a := b &\n  [ ABC x & [ DEF y ] ].'
+    t = tdlparse('a := b & [ ABC.DEF y, ABC x ].')
+    assert tdl.format(t) == 'a := b &\n  [ ABC [ DEF y ] & x ].'
+    t = tdlparse('a := b & [ ABC [ DEF x ], ABC [ GHI y ] ].')
+    assert tdl.format(t) == 'a := b &\n  [ ABC [ DEF x ] & [ GHI y ] ].'
+    t = tdlparse('a := b & [ ABC [ DEF x ], ABC.DEF y ].')
+    assert tdl.format(t) == 'a := b &\n  [ ABC [ DEF x ] & [ DEF y ] ].'
+    t = tdlparse('a := b & [ ABC [ DEF x ], ABC.GHI y ].')
+    assert tdl.format(t) == 'a := b &\n  [ ABC [ DEF x ] & [ GHI y ] ].'
+    t = tdlparse('a := b & [ ABC x & [ DEF y ], ABC z ].')
+    assert tdl.format(t) == 'a := b &\n  [ ABC x & [ DEF y ] & z ].'
