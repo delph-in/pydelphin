@@ -49,6 +49,11 @@
 * `tdl.AVM` initialization uses `AVM.aggregate()` instead of
   assignment of values on features ([#395])
 
+### Maintenance
+
+* Changed `delphin.tdl` from a simple module to a backwards-compatible
+  package
+
 
 ## [v1.9.1]
 
