@@ -5,8 +5,9 @@ Classes and functions for parsing and inspecting TDL.
 import re
 import textwrap
 import warnings
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Generator, Tuple, Union
+from typing import Generator, Optional, Tuple, Union
 
 from delphin import util
 
@@ -32,6 +33,9 @@ _base_indent = 2  # indent when an AVM starts on the next line
 _max_inline_list_items = 3  # number of list items that may appear inline
 _line_width = 79  # try not to go beyond this number of characters
 
+
+AttrSeq = Sequence[tuple[str, Union['Conjunction', 'Term']]]
+AttrMap = Mapping[str, Union['Conjunction', 'Term']]
 
 # Exceptions
 
@@ -190,20 +194,77 @@ class AVM(FeatureStructure, Term):
         docstring (str): documentation string
     """
 
-    def __init__(self, featvals=None, docstring=None):
+    def __init__(
+        self,
+        featvals: Union[AttrSeq, AttrMap, None] = None,
+        docstring=None,
+    ) -> None:
         # super() doesn't work because I need to split the parameters
-        FeatureStructure.__init__(self, featvals)
+        FeatureStructure.__init__(self)
         Term.__init__(self, docstring=docstring)
+        if featvals is not None:
+            self.aggregate(featvals)
 
     @classmethod
     def _default(cls):
-        return AVM()
+        return _ImplicitAVM()
 
-    def __setitem__(self, key, val):
+    def __setitem__(self, key: str, val: Union['Conjunction', Term]) -> None:
         if not (val is None or isinstance(val, (Term, Conjunction))):
-            raise TypeError('invalid attribute value type: {}'.format(
-                type(val).__name__))
+            raise TypeError(
+                'invalid attribute value type: {}'.format(type(val).__name__)
+            )
         super(AVM, self).__setitem__(key, val)
+
+    def aggregate(self, featvals: Union[AttrSeq, AttrMap]) -> None:
+        """Combine features in a single AVM.
+
+        This function takes feature paths and values and merges them
+        into the AVM, but does not do full unification. For example:
+
+        >>> avm = tdl.AVM([("FEAT", tdl.TypeIdentifier("val1"))])
+        >>> avm.aggregate([
+        ...     ("FEAT", tdl.TypeIdentifier("val2")),
+        ...     ("FEAT.SUB", tdl.TypeIdentifier("val3")),
+        ... ])
+        >>> print(tdl.format(avm))
+        [ FEAT val1 & val2 & [ SUB val3 ] ]
+
+        The *featvals* argument may be an sequence of (feature, value)
+        pairs or a mapping of features to values.
+
+        """
+        if hasattr(featvals, 'items'):
+            featvals = list(featvals.items())
+        for feat, val in featvals:
+            avm = self
+            feat = feat.upper()
+            while feat:
+                subkey, _, rest = feat.partition(".")
+                cur_val = avm.get(subkey)
+                # new feature, just assign
+                if subkey not in avm:
+                    avm[feat] = val
+                    break
+                # last feature on path, conjoin
+                elif not rest:
+                    avm[subkey] = cur_val & val
+                # non-conjunction implicit AVM; follow the dots
+                elif isinstance(cur_val, _ImplicitAVM):
+                    avm = cur_val
+                # conjunction with implicit AVM; follow the AVM's dots
+                elif (
+                    isinstance(cur_val, Conjunction)
+                    and (avm_ := cur_val._last_avm())
+                    and isinstance(avm_, _ImplicitAVM)
+                ):
+                    avm = avm_
+                # some other term; create conjunction with implicit AVM
+                else:
+                    avm_ = _ImplicitAVM()
+                    avm[subkey] = cur_val & avm_
+                    avm = avm_
+                feat = rest
 
     def normalize(self):
         """
@@ -255,7 +316,7 @@ class AVM(FeatureStructure, Term):
 
 
 class _ImplicitAVM(AVM):
-    """AVM implicitly constructed by list syntax."""
+    """AVM implicitly constructed by dot-notation and list syntax."""
 
 
 class ConsList(AVM):
@@ -514,13 +575,10 @@ class Conjunction:
 
     def __setitem__(self, key, val):
         """Set *key* to *val* in the last AVM in the conjunction"""
-        avm = None
-        for term in self._terms:
-            if isinstance(term, AVM):
-                avm = term
-        if avm is None:
+        if avm := self._last_avm():
+            avm[key] = val
+        else:
             raise TDLError('no AVM in Conjunction')
-        avm[key] = val
 
     def __delitem__(self, key):
         """Delete *key* from all AVMs in the conjunction"""
@@ -613,6 +671,12 @@ class Conjunction:
             if isinstance(term, String):
                 return str(term)
         return None  # conjunction does not have a string type (not an error)
+
+    def _last_avm(self) -> Optional[AVM]:
+        for term in reversed(self._terms):
+            if isinstance(term, AVM):
+                return term
+        return None
 
 
 class TypeDefinition:
@@ -1399,6 +1463,7 @@ def _format_term(term, indent):
         Regex: _format_regex,
         Coreference: _format_coref,
         AVM: _format_avm,
+        _ImplicitAVM: _format_avm,
         ConsList: _format_conslist,
         DiffList: _format_difflist,
     }.get(term.__class__, None)

@@ -7,9 +7,19 @@
 * Removed Python 3.8 support ([#396])
 * Added Python 3.13 support ([#396])
 
+### Added
+
+* `delphin.tdl.AVM.aggregate()` ([#395])
+
 ### Fixed
 
 * Parse TDL comments after letter-sets and wild-cards ([#395])
+* Repeated features in AVMs get merged instead of reassigned ([#395])
+
+### Changed
+
+* `tdl.AVM` initialization uses `AVM.aggregate()` instead of
+  assignment of values on features ([#395])
 
 
 ## [v1.9.1]

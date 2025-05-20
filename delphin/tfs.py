@@ -64,9 +64,9 @@ class FeatureStructure:
 
     def __setitem__(self, key: str, val: Any) -> None:
         avm = self._avm
-        subkeys = key.split('.', 1)
-        subkey = subkeys[0].upper()
-        if len(subkeys) == 1:
+        subkey, _, rest = key.partition(".")
+        subkey = subkey.upper()
+        if not rest:
             avm[subkey] = val
         else:
             if subkey in avm:
@@ -77,7 +77,7 @@ class FeatureStructure:
                         f'{subkey} does not support item assignment')
             else:
                 subdef = avm[subkey] = self._default()
-            subdef[subkeys[1]] = val
+            subdef[rest] = val
 
     def __getitem__(self, key: str) -> Any:
         first, _, remainder = key.partition('.')
