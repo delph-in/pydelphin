@@ -2,7 +2,7 @@ falcon==2.0.0
 penman==1.1.0
 progress==1.5
 regex==2020.1.8
-requests==2.32.0
+requests==2.32.4
 setuptools>=38.6.0
 sphinx==2.2.0
 sphinx-rtd-theme==0.4.3
