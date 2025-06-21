@@ -2,6 +2,10 @@
 
 ### Unreleased
 
+### Maintenance
+
+* Removed `requirements.txt`; it was unnecessary and out of date
+
 
 ## [v1.10.0]
 
