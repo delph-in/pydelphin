@@ -29,7 +29,7 @@ such as the following example:
 
    from delphin.web import server
 
-   application = falcon.API()
+   application = falcon.App()
 
    server.configure(
        application,

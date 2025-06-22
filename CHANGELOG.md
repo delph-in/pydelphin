@@ -5,6 +5,7 @@
 ### Maintenance
 
 * Removed `requirements.txt`; it was unnecessary and out of date
+* Replaced `requests` dependency with `httpx`
 
 
 ## [v1.10.0]

@@ -1,4 +1,4 @@
 sphinx
 sphinx-rtd-theme
-requests
+httpx
 falcon
