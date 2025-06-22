@@ -28,7 +28,7 @@ Module or Function                 Dependencies  Notes
 =================================  ============  ===========================
 :mod:`delphin.ace`                 ACE_          Linux and Mac only
 :mod:`delphin.highlight`           Pygments_
-:mod:`delphin.web.client`          requests_     ``[web]`` extra
+:mod:`delphin.web.client`          httpx_        ``[web]`` extra
 :mod:`delphin.web.server`          Falcon_       ``[web]`` extra
 :mod:`delphin.codecs.dmrspenman`   Penman_
 :mod:`delphin.codecs.edspenman`    Penman_
@@ -41,7 +41,7 @@ are not listed in the table above).
 
 .. _ACE: http://sweaglesw.org/linguistics/ace/
 .. _Pygments: https://pygments.org/
-.. _requests: http://python-requests.org/
+.. _httpx: https://www.python-httpx.org/
 .. _Falcon: https://falcon.readthedocs.io/
 .. _Penman: https://github.com/goodmami/penman
 .. _regex: https://bitbucket.org/mrabarnett/mrab-regex/

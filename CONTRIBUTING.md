@@ -19,7 +19,7 @@ Questions about PyDelphin can be asked on the [DELPH-IN Discourse
 site](https://delphinqa.ling.washington.edu/) in the "PyDelphin Tools"
 category.
 
-For bug requests, please provide the following, if possible:
+For bug reports, please provide the following, if possible:
 
 * a minimal working example
 * version of PyDelphin (and relevant dependencies)

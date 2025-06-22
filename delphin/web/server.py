@@ -37,7 +37,7 @@ def configure(api, parser=None, generator=None, testsuites=None):
     :class:`GenerationServer` instances directly.
 
     Args:
-        api: an instance of :class:`falcon.API`
+        api: an instance of :class:`falcon.App`
         parser: a path to a grammar or a :class:`ParseServer` instance
         generator: a path to a grammar or a :class:`GenerationServer`
             instance

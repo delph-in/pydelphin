@@ -5,7 +5,7 @@ DELPH-IN Web API Client
 
 from urllib.parse import urljoin
 
-import requests
+import httpx
 
 from delphin import interface
 
@@ -60,7 +60,7 @@ class Client(interface.Processor):
             A Response containing the results, if the request was
             successful.
         Raises:
-            requests.HTTPError: if the status code was not 200
+            httpx.HTTPError: if the status code was not 200
         """
         if params is None:
             params = {}
@@ -71,11 +71,10 @@ class Client(interface.Processor):
             hdrs.update(headers)
 
         url = urljoin(self.server, self.task)
-        r = requests.get(url, params=params, headers=hdrs)
-        if r.status_code == 200:
-            return _HTTPResponse(r.json())
-        else:
-            r.raise_for_status()
+        with httpx.Client() as client:
+            r = client.get(url, params=params, headers=hdrs)
+        r.raise_for_status()
+        return _HTTPResponse(r.json())
 
     def process_item(self, datum, keys=None, params=None, headers=None):
         """
@@ -132,7 +131,7 @@ def parse(input, server=DEFAULT_SERVER, params=None, headers=None):
         A Response containing the results, if the request was
         successful.
     Raises:
-        requests.HTTPError: if the status code was not 200
+        httpx.HTTPError: if the status code was not 200
     """
     return next(parse_from_iterable([input], server, params, headers), None)
 
@@ -154,7 +153,7 @@ def parse_from_iterable(
     Yields:
         Response objects for each successful response.
     Raises:
-        requests.HTTPError: for the first response with a status code
+        httpx.HTTPError: for the first response with a status code
             that is not 200
     """
     client = Parser(server)
@@ -176,7 +175,7 @@ def generate(input, server=DEFAULT_SERVER, params=None, headers=None):
         A Response containing the results, if the request was
         successful.
     Raises:
-        requests.HTTPError: if the status code was not 200
+        httpx.HTTPError: if the status code was not 200
     """
     return next(generate_from_iterable([input], server, params, headers), None)
 
@@ -198,7 +197,7 @@ def generate_from_iterable(
     Yields:
         Response objects for each successful response.
     Raises:
-        requests.HTTPError: for the first response with a status code
+        httpx.HTTPError: for the first response with a status code
             that is not 200
     """
     client = Generator(server)

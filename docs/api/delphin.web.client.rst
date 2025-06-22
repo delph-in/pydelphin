@@ -11,7 +11,7 @@ servers that implement the DELPH-IN Web API described here:
 
 .. note::
 
-   Requires `requests` (https://pypi.python.org/pypi/requests). This
+   Requires `httpx` (https://www.python-httpx.org/). This
    dependency is satisfied if you install PyDelphin with the ``[web]``
    extra (see :doc:`../guides/setup`).
 

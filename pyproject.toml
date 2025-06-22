@@ -40,7 +40,7 @@ dependencies = [
 [project.optional-dependencies]
 web = [
   "falcon",
-  "requests",
+  "httpx",
 ]
 repp = [
   "regex"
@@ -69,7 +69,6 @@ dependencies = [
   "pytest",
   "ruff",
   "mypy",
-  "types-requests",
 ]
 [tool.hatch.envs.dev.scripts]
 test = "pytest {args:.}"
@@ -80,7 +79,7 @@ typecheck = "mypy --namespace-packages --explicit-package-bases --ignore-missing
 dependencies = [
   "sphinx",
   "sphinx-rtd-theme",
-  "requests",
+  "httpx",
   "falcon",
 ]
 [tool.hatch.envs.docs.scripts]
