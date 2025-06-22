@@ -4,12 +4,12 @@ Operations on DMRS structures
 """
 
 import warnings
-from typing import Callable, Dict, List, Optional, cast
+from typing import Callable, Optional, cast
 
 from delphin import dmrs, mrs, scope, variable
 
-_HCMap = Dict[str, mrs.HCons]
-_IdMap = Dict[str, int]
+_HCMap = dict[str, mrs.HCons]
+_IdMap = dict[str, int]
 
 
 def from_mrs(
@@ -32,7 +32,11 @@ def from_mrs(
         DMRSError when conversion fails.
     """
     hcmap: _HCMap = {hc.hi: hc for hc in m.hcons}
-    reps = scope.representatives(m, priority=representative_priority)
+    # TODO: fix type annotation with scope.representatives overloads?
+    reps = cast(
+        dict[str, list[mrs.EP]],
+        scope.representatives(m, priority=representative_priority)
+    )
     # EP id to node id map; create now to keep ids consistent
     id_to_nid: _IdMap = {ep.id: i
                          for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)}
@@ -83,7 +87,7 @@ def _mrs_get_top(
     return top
 
 
-def _mrs_to_nodes(m: mrs.MRS, id_to_nid: _IdMap) -> List[dmrs.Node]:
+def _mrs_to_nodes(m: mrs.MRS, id_to_nid: _IdMap) -> list[dmrs.Node]:
     nodes = []
     for ep in m.rels:
         node_id = id_to_nid[ep.id]
@@ -117,10 +121,10 @@ def _mrs_to_nodes(m: mrs.MRS, id_to_nid: _IdMap) -> List[dmrs.Node]:
 def _mrs_to_links(
         m: mrs.MRS,
         hcmap: _HCMap,
-        reps: scope.ScopeMap,
+        reps: dict[str, list[mrs.EP]],  # MRS-specific ScopeMap
         iv_to_nid: _IdMap,
         id_to_nid: _IdMap
-) -> List[dmrs.Link]:
+) -> list[dmrs.Link]:
     links = []
     # links from arguments
     for src, roleargs in m.arguments().items():

@@ -2,7 +2,7 @@
 Structures and operations for quantifier scope in DELPH-IN semantics.
 """
 
-from typing import Dict, Iterable, List, Mapping, Optional, Tuple
+from typing import Iterable, Mapping, Optional
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -29,11 +29,11 @@ QEQ = 'qeq'              # equality modulo quantifiers (hole-to-label)
 ScopeLabel = str
 ScopeRelation = str
 ScopeMap = Mapping[ScopeLabel, Predications]
-DescendantMap = Mapping[Identifier, List[Predication]]
-ScopalRoleArgument = Tuple[Role, ScopeRelation, Identifier]
-ScopalArgumentStructure = Mapping[Identifier, List[ScopalRoleArgument]]
+DescendantMap = Mapping[Identifier, list[Predication]]
+ScopalRoleArgument = tuple[Role, ScopeRelation, Identifier]
+ScopalArgumentStructure = Mapping[Identifier, list[ScopalRoleArgument]]
 # Regarding literal types, see: https://www.python.org/dev/peps/pep-0563/
-ScopeEqualities = Iterable[Tuple[ScopeLabel, ScopeLabel]]
+ScopeEqualities = Iterable[tuple[ScopeLabel, ScopeLabel]]
 
 
 # Exceptions
@@ -87,7 +87,7 @@ class ScopingSemanticStructure(SemanticStructure):
         """
         raise NotImplementedError()
 
-    def scopes(self) -> Tuple[ScopeLabel, ScopeMap]:
+    def scopes(self) -> tuple[ScopeLabel, ScopeMap]:
         """
         Return a tuple containing the top label and the scope map.
 
@@ -117,7 +117,7 @@ def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
         >>> {lbl: [p.id for p in ps] for lbl, ps in conjoined.items()}
         {'h1': ['e2'], 'h2': ['x4', 'e6']}
     """
-    scopemap: Dict[ScopeLabel, List[Predication]] = {}
+    scopemap: dict[ScopeLabel, list[Predication]] = {}
     for component in _connected_components(list(scopes), leqs):
         chosen_label = next(iter(component))
         scopemap[chosen_label] = []
@@ -155,13 +155,13 @@ def descendants(x: ScopingSemanticStructure,
     if scopes is None:
         _, scopes = x.scopes()
     scargs = x.scopal_arguments(scopes=scopes)
-    descs: Dict[Identifier, List[Predication]] = {}
+    descs: dict[Identifier, list[Predication]] = {}
     for p in x.predications:
         _descendants(descs, p.id, scargs, scopes)
     return descs
 
 
-def _descendants(descs: Dict[Identifier, List[Predication]],
+def _descendants(descs: dict[Identifier, list[Predication]],
                  id: Identifier,
                  scargs: ScopalArgumentStructure,
                  scopes: ScopeMap) -> None:
@@ -203,7 +203,7 @@ def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
 
     3. Prefer tensed over untensed eventualities
 
-    4. Finally, prefer prefer those appearing first in *x*
+    4. Finally, prefer those appearing first in *x*
 
     The definition of "tensed" vs "untensed" eventualities is
     grammar-specific, but it is used by several large grammars. If a
@@ -233,7 +233,7 @@ def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
     descs = {id: set(d.id for d in ds)
              for id, ds in descendants(x, scopes).items()}
 
-    reps: Dict[ScopeLabel, List[Predication]] = {
+    reps: dict[ScopeLabel, list[Predication]] = {
         label: [] for label in scopes
     }
     for label, scope in scopes.items():
