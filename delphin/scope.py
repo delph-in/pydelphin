@@ -2,38 +2,56 @@
 Structures and operations for quantifier scope in DELPH-IN semantics.
 """
 
-from typing import Iterable, Mapping, Optional
+from __future__ import annotations
 
-# Default modules need to import the PyDelphin version
+__all__ = [
+    "ScopeError",
+    "conjoin",
+    "descendants",
+    "representatives",
+    # below for backward compatibility
+    "LEQ",
+    "LHEQ",
+    "OUTSCOPES",
+    "QEQ",
+    "ScopingSemanticStructure",
+]
+
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterable,
+    Optional,
+    TypeVar,
+    overload,
+)
+
 from delphin.__about__ import __version__  # noqa: F401
 from delphin.exceptions import PyDelphinException
-from delphin.lnk import Lnk
 from delphin.sembase import (
     Identifier,
     Predication,
-    Predications,
-    Role,
-    SemanticStructure,
+    ScopalArgumentMap,
+    ScopeLabel,
+    ScopeMap,
+    Scopes,
+    ScopingSemanticStructure,
 )
 from delphin.util import _connected_components
 
-# Constants
-
-LEQ = 'leq'              # label equality (label-to-label)
-LHEQ = 'lheq'            # label-handle equality (hole-to-label)
-OUTSCOPES = 'outscopes'  # directly or indirectly takes scope over
-QEQ = 'qeq'              # equality modulo quantifiers (hole-to-label)
+if TYPE_CHECKING:
+    from delphin import dmrs, mrs
 
 
-# Types
-ScopeLabel = str
-ScopeRelation = str
-ScopeMap = Mapping[ScopeLabel, Predications]
-DescendantMap = Mapping[Identifier, list[Predication]]
-ScopalRoleArgument = tuple[Role, ScopeRelation, Identifier]
-ScopalArgumentStructure = Mapping[Identifier, list[ScopalRoleArgument]]
-# Regarding literal types, see: https://www.python.org/dev/peps/pep-0563/
+# Type Aliases
+
+ID = TypeVar('ID', bound=Identifier)
+P = TypeVar('P', bound=Predication)
+
+Descendants = dict[ID, list[P]]
 ScopeEqualities = Iterable[tuple[ScopeLabel, ScopeLabel]]
+PredicationPriority = Callable[[P], Any]  # Any should be sortable
 
 
 # Exceptions
@@ -42,64 +60,17 @@ class ScopeError(PyDelphinException):
     """Raised on invalid scope operations."""
 
 
-# Classes
-
-class ScopingSemanticStructure(SemanticStructure):
-    """
-    A semantic structure that encodes quantifier scope.
-
-    This is a base class for semantic representations, namely
-    :class:`~delphin.mrs.MRS` and :class:`~delphin.dmrs.DMRS`, that
-    distinguish scopal and non-scopal arguments. In addition to the
-    attributes and methods of the
-    :class:`~delphin.sembase.SemanticStructure` class, it also
-    includes an :attr:`index` which indicates the non-scopal top of
-    the structure, :meth:`scopes` for describing the labeled scopes of
-    a structure, and :meth:`scopal_arguments` for describing the
-    arguments that select scopes.
-
-    Attributes:
-        index: The non-scopal top of the structure.
-    """
-
-    __slots__ = ('index',)
-
-    def __init__(self,
-                 top: Optional[Identifier],
-                 index: Optional[Identifier],
-                 predications: Predications,
-                 lnk: Optional[Lnk],
-                 surface,
-                 identifier):
-        super().__init__(top, predications, lnk, surface, identifier)
-        self.index = index
-
-    def scopal_arguments(self, scopes=None) -> ScopalArgumentStructure:
-        """
-        Return a mapping of the scopal argument structure.
-
-        Unlike :meth:`SemanticStructure.arguments`, the list of
-        arguments is a 3-tuple including the scopal relation: (role,
-        scope_relation, scope_label).
-
-        Args:
-            scopes: mapping of scope labels to lists of predications
-        """
-        raise NotImplementedError()
-
-    def scopes(self) -> tuple[ScopeLabel, ScopeMap]:
-        """
-        Return a tuple containing the top label and the scope map.
-
-        The top label is the label of the top scope in the scope map.
-
-        The scope map is a dictionary mapping scope labels to the
-        lists of predications sharing a scope.
-        """
-        raise NotImplementedError()
-
-
 # Module Functions
+
+@overload
+def conjoin(scopes: ScopeMap[mrs.EP], leqs: ScopeEqualities) -> Scopes[mrs.EP]:
+    ...
+
+@overload
+def conjoin(
+    scopes: ScopeMap[dmrs.Node], leqs: ScopeEqualities
+) -> Scopes[dmrs.Node]:
+    ...
 
 def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
     """
@@ -126,8 +97,10 @@ def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
     return scopemap
 
 
-def descendants(x: ScopingSemanticStructure,
-                scopes: Optional[ScopeMap] = None) -> DescendantMap:
+def descendants(
+    x: ScopingSemanticStructure[ID, P],
+    scopes: Optional[ScopeMap[P]] = None,
+) -> Descendants[ID, P]:
     """
     Return a mapping of predication ids to their scopal descendants.
 
@@ -155,16 +128,18 @@ def descendants(x: ScopingSemanticStructure,
     if scopes is None:
         _, scopes = x.scopes()
     scargs = x.scopal_arguments(scopes=scopes)
-    descs: dict[Identifier, list[Predication]] = {}
+    descs: dict[ID, list[P]] = {}
     for p in x.predications:
         _descendants(descs, p.id, scargs, scopes)
     return descs
 
 
-def _descendants(descs: dict[Identifier, list[Predication]],
-                 id: Identifier,
-                 scargs: ScopalArgumentStructure,
-                 scopes: ScopeMap) -> None:
+def _descendants(
+    descs: dict[ID, list[P]],
+    id: ID,
+    scargs: ScopalArgumentMap[ID],
+    scopes: ScopeMap[P],
+) -> None:
     if id in descs:
         return
     descs[id] = []
@@ -176,7 +151,24 @@ def _descendants(descs: dict[Identifier, list[Predication]],
             descs[id].extend(descs[p.id])
 
 
-def representatives(x: ScopingSemanticStructure, priority=None) -> ScopeMap:
+@overload
+def representatives(
+    x: mrs.MRS,
+    priority: Optional[PredicationPriority[mrs.EP]] = None,
+) -> Scopes[mrs.EP]:
+    ...
+
+@overload
+def representatives(
+    x: dmrs.DMRS,
+    priority: Optional[PredicationPriority[dmrs.Node]] = None,
+) -> Scopes[dmrs.Node]:
+    ...
+
+def representatives(
+    x: ScopingSemanticStructure,
+    priority: Optional[PredicationPriority] = None,
+) -> ScopeMap:
     """
     Find the scope representatives in *x* sorted by *priority*.
 
@@ -272,7 +264,7 @@ def _make_representative_priority(x: ScopingSemanticStructure):
     """
     index = {p.id: i for i, p in enumerate(x.predications, 1)}
 
-    def representative_priority(p: Predication):
+    def representative_priority(p: Predication) -> tuple[int, Identifier]:
         id = p.id
         type = p.type
 
@@ -289,3 +281,11 @@ def _make_representative_priority(x: ScopingSemanticStructure):
         return rank, index[id]
 
     return representative_priority
+
+
+# for backward compatibility
+from delphin.sembase import ScopeRelation  # noqa
+LEQ = ScopeRelation.LEQ
+LHEQ = ScopeRelation.LHEQ
+OUTSCOPES = ScopeRelation.OUTSCOPES
+QEQ = ScopeRelation.QEQ

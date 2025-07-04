@@ -172,7 +172,7 @@ def _decode(lineiter):
         pass
 
 
-def _decode_eds(lexer):
+def _decode_eds(lexer) -> EDS:
     identifier = lexer.accept_type(IDENTIFIER)
     lexer.expect_type(LBRACE)
 
@@ -207,7 +207,10 @@ def _decode_eds(lexer):
 
 def _decode_node(start, lexer):
     predicate = lexer.expect_type(SYMBOL).lower()
-    lnk = Lnk(lexer.accept_type(LNK))
+    if (lnkstr := lexer.accept_type(LNK)) is not None:
+        lnk = Lnk(lnkstr)
+    else:
+        lnk = Lnk.default()
     carg = lexer.accept_type(CARG)
     nodetype, properties = _decode_properties(start, lexer)
     edges = _decode_edges(start, lexer)

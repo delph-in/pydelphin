@@ -1,9 +1,16 @@
 
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from delphin import scope, variable
 from delphin.lnk import Lnk
-from delphin.sembase import Predication
+from delphin.sembase import (
+    ArgumentStructure,
+    Predication,
+    ScopalArguments,
+    ScopeMap,
+    ScopeRelation,
+    ScopingSemanticStructure,
+)
 
 TOP_NODE_ID      = 0
 FIRST_NODE_ID    = 10000
@@ -17,7 +24,7 @@ NIL_POST         = 'NIL'
 CVARSORT         = 'cvarsort'
 
 
-class Node(Predication):
+class Node(Predication[int]):
     """
     A DMRS node.
 
@@ -40,7 +47,6 @@ class Node(Predication):
         predicate: semantic predicate
         type: node type (corresponds to the intrinsic variable type in MRS)
         properties: morphosemantic properties
-        sortinfo: properties with the node type at key `"cvarsort"`
         carg: constant value (e.g., for named entities)
         lnk: surface alignment
         cfrom: surface alignment starting position
@@ -51,15 +57,19 @@ class Node(Predication):
 
     __slots__ = ('properties', 'carg')
 
-    def __init__(self,
-                 id: int,
-                 predicate: str,
-                 type: Optional[str] = None,
-                 properties: Optional[dict] = None,
-                 carg: Optional[str] = None,
-                 lnk: Optional[Lnk] = None,
-                 surface=None,
-                 base=None):
+    properties: dict[str, str]
+
+    def __init__(
+        self,
+        id: int,
+        predicate: str,
+        type: Optional[str] = None,
+        properties: Optional[dict[str, str]] = None,
+        carg: Optional[str] = None,
+        lnk: Optional[Lnk] = None,
+        surface=None,
+        base=None,
+    ) -> None:
         id = int(id)
         super().__init__(id, predicate, type, lnk, surface, base)
         if not properties:
@@ -68,16 +78,18 @@ class Node(Predication):
         self.carg = carg
 
     @property
-    def sortinfo(self):
+    def sortinfo(self) -> dict[str, str]:
         """
-        Morphosemantic property mapping with cvarsort.
+        Morphosemantic property mapping including ``"cvarsort"``.
+
+        The ``"cvarsort"`` key encodes :data:`Node.type`.
         """
         d = dict(self.properties)
         if self.type is not None:
             d[CVARSORT] = self.type
         return d
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Node):
             return NotImplemented
         return (self.predicate == other.predicate
@@ -112,18 +124,18 @@ class Link:
 
     __slots__ = ('start', 'end', 'role', 'post')
 
-    def __init__(self, start: int, end: int, role: str, post: str):
+    def __init__(self, start: int, end: int, role: str, post: str) -> None:
         self.start = int(start)
         self.end = int(end)
         self.role = role
         self.post = post
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<Link object ({} :{}/{} {}) at {}>'.format(
             self.start, self.role or '', self.post, self.end, id(self)
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Link):
             return NotImplemented
         return (self.start == other.start
@@ -132,7 +144,7 @@ class Link:
                 and self.post == other.post)
 
 
-class DMRS(scope.ScopingSemanticStructure):
+class DMRS(ScopingSemanticStructure[int, Node]):
     """
     Dependency Minimal Recursion Semantics (DMRS) class.
 
@@ -166,20 +178,23 @@ class DMRS(scope.ScopingSemanticStructure):
     >>> rain = Node(10000, '_rain_v_1', type='e')
     >>> heavy = Node(10001, '_heavy_a_1', type='e')
     >>> arg1_link = Link(10000, 10001, role='ARG1', post='EQ')
-    >>> d = DMRS(top=10000, index=10000, [rain], [arg1_link])
+    >>> d = DMRS(top=10000, index=10000, [rain, heavy], [arg1_link])
     """
 
-    __slots__ = ('links')
+    __slots__ = ('links',)
 
-    def __init__(self,
-                 top: Optional[int] = None,
-                 index: Optional[int] = None,
-                 nodes: Optional[Iterable[Node]] = None,
-                 links: Optional[Iterable[Link]] = None,
-                 lnk: Optional[Lnk] = None,
-                 surface=None,
-                 identifier=None):
+    links: list[Link]
 
+    def __init__(
+        self,
+        top: Optional[int] = None,
+        index: Optional[int] = None,
+        nodes: Optional[Iterable[Node]] = None,
+        links: Optional[Iterable[Link]] = None,
+        lnk: Optional[Lnk] = None,
+        surface=None,
+        identifier=None,
+    ) -> None:
         top, links = _normalize_top_and_links(top, links)
 
         if top:
@@ -194,37 +209,41 @@ class DMRS(scope.ScopingSemanticStructure):
         self.links = links
 
     @property
-    def nodes(self):
+    def nodes(self) -> list[Node]:
         return self.predications
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, DMRS):
             return NotImplemented
-        return (self.top == other.top
-                and self.index == other.index
-                and self.nodes == other.nodes
-                and self.links == other.links)
+        return (
+            self.top == other.top
+            and self.index == other.index
+            and self.nodes == other.nodes
+            and self.links == other.links
+        )
 
     # SemanticStructure methods
 
-    def properties(self, id):
+    def properties(self, id: Optional[int]) -> dict[str, str]:
         return self[id].properties
 
-    def is_quantifier(self, id):
+    def is_quantifier(self, id: Optional[int]) -> bool:
         """
         Return `True` if *id* is the id of a quantifier node.
         """
         return any(link.role == RESTRICTION_ROLE
                    for link in self.links if link.start == id)
 
-    def quantification_pairs(self):
-        qs = set()
-        qmap = {}
+    def quantification_pairs(
+        self,
+    ) -> list[tuple[Optional[Node], Optional[Node]]]:
+        qs: set[int] = set()
+        qmap: dict[int, Node] = {}
         for link in self.links:
             if link.role == RESTRICTION_ROLE:
                 qs.add(link.start)
                 qmap[link.end] = self[link.start]
-        pairs = []
+        pairs: list[tuple[Optional[Node], Optional[Node]]] = []
         # first pair non-quantifiers to their quantifier, if any
         for node in self.nodes:
             if node.id not in qs:
@@ -234,7 +253,11 @@ class DMRS(scope.ScopingSemanticStructure):
         # its link.end must point to something
         return pairs
 
-    def arguments(self, types=None, expressed=None):
+    def arguments(
+        self,
+        types: Optional[Iterable[str]] = None,
+        expressed: Optional[bool] = None,
+    ) -> ArgumentStructure[int]:
         """
         Return a mapping of the argument structure.
 
@@ -254,7 +277,9 @@ class DMRS(scope.ScopingSemanticStructure):
             pairs for outgoing arguments for the predication.
         """
 
-        args = {node.id: [] for node in self.nodes}
+        args: dict[int, list[tuple[str, int]]] = {
+            node.id: [] for node in self.nodes
+        }
         H = variable.HANDLE
 
         for link in self.links:
@@ -279,7 +304,7 @@ class DMRS(scope.ScopingSemanticStructure):
 
     # ScopingSemanticStructure methods
 
-    def scopes(self):
+    def scopes(self) -> tuple[Optional[str], dict[str, list[Node]]]:
         """
         Return a tuple containing the top label and the scope map.
 
@@ -288,7 +313,7 @@ class DMRS(scope.ScopingSemanticStructure):
         the `None` is returned for the top label.
 
         The scope map is a dictionary mapping scope labels to the
-        lists of predications sharing a scope.
+        lists of nodes sharing a scope.
         """
 
         h = variable.HANDLE
@@ -311,15 +336,18 @@ class DMRS(scope.ScopingSemanticStructure):
 
         return top, scopes
 
-    def scopal_arguments(self, scopes=None):
+    def scopal_arguments(
+        self,
+        scopes: Optional[ScopeMap[Node]] = None,
+    ) -> ScopalArguments[int]:
         """
         Return a mapping of the scopal argument structure.
 
         The return value maps node ids to lists of scopal arguments as
-        (role, scope_relation, target) triples. If *scopes* is given,
-        the target is the scope label, otherwise it is the target
-        node's id. Note that ``MOD/EQ`` links are not included as
-        scopal arguments.
+        (role, scope_relation, scope_label) triples. If *scopes* is
+        given, it is used as the source of scope labels. Otherwise,
+        :meth:`scopes` is first called to generate those labels. Note
+        that ``MOD/EQ`` links are not included as scopal arguments.
 
         Args:
             scopes: mapping of scope labels to lists of predications
@@ -331,35 +359,40 @@ class DMRS(scope.ScopingSemanticStructure):
             >>> d.scopal_arguments(scopes=scopes)
             {10000: [('ARG1', 'qeq', 'h2')]}
         """
-        id_to_lbl = {}
-        if scopes is not None:
-            for label, nodes in scopes.items():
-                for node in nodes:
-                    id_to_lbl[node.id] = label
+        if scopes is None:
+            _, scopes = self.scopes()
 
-        scargs = {node.id: [] for node in self.nodes}
+        id_to_lbl: dict[int, str] = {
+            node.id: lbl for lbl, nodes in scopes.items() for node in nodes
+        }
+
+        scargs: dict[int, list[tuple[str, ScopeRelation, str]]] = {
+            node.id: [] for node in self.nodes
+        }
         for link in self.links:
             if link.post == HEQ_POST:
-                relation = scope.LHEQ
+                relation = ScopeRelation.LHEQ
             elif link.post == H_POST:
-                relation = scope.QEQ
+                relation = ScopeRelation.QEQ
             else:
                 continue
-            # get the label if scopes was given
-            target = id_to_lbl.get(link.end, link.end)
-            scargs[link.start].append((link.role, relation, target))
+            label = id_to_lbl[link.end]
+            scargs[link.start].append((link.role, relation, label))
 
         return scargs
 
 
-def _normalize_top_and_links(top, links):
+def _normalize_top_and_links(
+    top: Optional[int],
+    links: Optional[Iterable[Link]],
+) -> tuple[Optional[int], list[Link]]:
     """
     Original DMRS had a /H link from a special node id of 0 to
     indicate the top node, but now the `top` attribute is used.
     Remove any such links and use them to specify `top` if it was not
     specified already (otherwise ignore them).
     """
-    _links = []
+    _links: list[Link] = []
     if links is not None:
         for link in links:
             if link.start == TOP_NODE_ID:

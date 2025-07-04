@@ -3,7 +3,8 @@ Functions for working with MRS variables.
 """
 
 import re
-from typing import Dict, List, Optional, Tuple
+from collections.abc import Iterable
+from typing import Optional
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -21,7 +22,7 @@ HANDLE             = 'h'
 _variable_re = re.compile(r'^([-\w]*[^\s\d])(\d+)$')
 
 
-def split(var: str) -> Tuple[str, str]:
+def split(var: str) -> tuple[str, str]:
     """
     Split a valid variable string into its variable type and id.
 
@@ -102,12 +103,20 @@ class VariableFactory:
         store (dict): a mapping of variables to associated properties
     """
 
+    vid: int
+    index: dict[int, str]  # vid: var
+    store: dict[str, list[tuple[str, str]]]  # var: [(prop, val)]
+
     def __init__(self, starting_vid: int = 1):
         self.vid = starting_vid
-        self.index: Dict[int, str] = {}  # to map vid to created variable
-        self.store: Dict[str, List[str]] = {}  # variable to prop list
+        self.index = {}
+        self.store = {}
 
-    def new(self, type: str, properties: Optional[List[str]] = None) -> str:
+    def new(
+        self,
+        type: Optional[str],
+        properties: Optional[Iterable[tuple[str, str]]] = None,
+    ) -> str:
         """
         Create a new variable for the given *type*.
 
@@ -127,6 +136,6 @@ class VariableFactory:
         index[vid] = varstring
         if properties is None:
             properties = []
-        self.store[varstring] = properties
+        self.store[varstring] = list(properties)
         self.vid = vid + 1
         return varstring

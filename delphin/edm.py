@@ -3,23 +3,25 @@
 Elementary Dependency Matching
 """
 
+__all__ = ['compute']
+
 import logging
 from collections import Counter
 from itertools import zip_longest
-from typing import Any, Iterable, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, Iterable, NamedTuple, Optional, TypeVar
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 from delphin.dmrs import DMRS
 from delphin.eds import EDS
-from delphin.lnk import LnkMixin
+from delphin.sembase import Predication
 
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
-_SemanticRepresentation = Union[EDS, DMRS]
-_Span = Tuple[int, int]
-_Triple = Tuple[_Span, str, Any]
+SR = TypeVar('SR', EDS, DMRS)
+_Span = tuple[int, int]
+_Triple = tuple[_Span, str, Any]
 
 
 class _Count(NamedTuple):
@@ -54,12 +56,12 @@ class _Score(NamedTuple):
     fscore: float
 
 
-def _span(node: LnkMixin) -> _Span:
+def _span(node: Predication) -> _Span:
     """Return the Lnk span of a Node as a (cfrom, cto) tuple."""
     return (node.cfrom, node.cto)
 
 
-def _names(sr: _SemanticRepresentation) -> List[_Triple]:
+def _names(sr: SR) -> list[_Triple]:
     """Return the list of name (predicate) triples for *sr*."""
     triples = []
     for node in sr.nodes:
@@ -68,7 +70,7 @@ def _names(sr: _SemanticRepresentation) -> List[_Triple]:
     return triples
 
 
-def _arguments(sr: _SemanticRepresentation) -> List[_Triple]:
+def _arguments(sr: SR) -> list[_Triple]:
     """Return the list of argument triples for *sr*."""
     triples = []
     args = sr.arguments()
@@ -80,7 +82,7 @@ def _arguments(sr: _SemanticRepresentation) -> List[_Triple]:
     return triples
 
 
-def _properties(sr: _SemanticRepresentation) -> List[_Triple]:
+def _properties(sr: SR) -> list[_Triple]:
     """Return the list of property triples for *sr*."""
     triples = []
     for node in sr.nodes:
@@ -90,7 +92,7 @@ def _properties(sr: _SemanticRepresentation) -> List[_Triple]:
     return triples
 
 
-def _constants(sr: _SemanticRepresentation) -> List[_Triple]:
+def _constants(sr: SR) -> list[_Triple]:
     """Return the list of constant (CARG) triples for *sr*."""
     triples = []
     for node in sr.nodes:
@@ -99,8 +101,7 @@ def _constants(sr: _SemanticRepresentation) -> List[_Triple]:
     return triples
 
 
-def _match(gold: _SemanticRepresentation,
-           test: _SemanticRepresentation) -> _Match:
+def _match(gold: SR, test: SR) -> _Match:
     """
     Return the counts of *gold* and *test* triples for all categories.
 
@@ -145,8 +146,8 @@ def _count(func, gold, test) -> _Count:
 
 
 def _accumulate(
-    golds: Iterable[Optional[_SemanticRepresentation]],
-    tests: Iterable[Optional[_SemanticRepresentation]],
+    golds: Iterable[Optional[SR]],
+    tests: Iterable[Optional[SR]],
     ignore_missing_gold: bool,
     ignore_missing_test: bool,
 ) -> _Match:
@@ -167,21 +168,22 @@ def _accumulate(
             logger.info('no gold or test representation; skipping')
             continue
         elif gold is None:
+            assert test is not None
             if ignore_missing_gold:
                 logger.info('no gold representation; skipping')
                 continue
             else:
                 logger.debug('missing gold representation')
-                gold = EDS()
+                gold = type(test)()
         elif test is None:
+            assert gold is not None
             if ignore_missing_test:
                 logger.info('no test representation; skipping')
                 continue
             else:
                 logger.debug('missing test representation')
-                test = EDS()
+                test = type(gold)()
 
-        assert isinstance(gold, (EDS, DMRS)) and isinstance(test, (EDS, DMRS))
         result = _match(gold, test)
 
         if info:
@@ -204,8 +206,8 @@ def _accumulate(
     return totals
 
 
-def compute(golds: Iterable[Optional[_SemanticRepresentation]],
-            tests: Iterable[Optional[_SemanticRepresentation]],
+def compute(golds: Iterable[Optional[SR]],
+            tests: Iterable[Optional[SR]],
             name_weight: float = 1.0,
             argument_weight: float = 1.0,
             property_weight: float = 1.0,

@@ -78,7 +78,8 @@ typecheck = "mypy --namespace-packages --explicit-package-bases --ignore-missing
 [tool.hatch.envs.docs]
 dependencies = [
   "sphinx",
-  "sphinx-rtd-theme",
+  "sphinx-copybutton",
+  "furo",
   "httpx",
   "falcon",
 ]
