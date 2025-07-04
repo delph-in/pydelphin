@@ -47,7 +47,6 @@ class Node(Predication[int]):
         predicate: semantic predicate
         type: node type (corresponds to the intrinsic variable type in MRS)
         properties: morphosemantic properties
-        sortinfo: properties with the node type at key `"cvarsort"`
         carg: constant value (e.g., for named entities)
         lnk: surface alignment
         cfrom: surface alignment starting position
@@ -81,7 +80,9 @@ class Node(Predication[int]):
     @property
     def sortinfo(self) -> dict[str, str]:
         """
-        Morphosemantic property mapping with cvarsort.
+        Morphosemantic property mapping including ``"cvarsort"``.
+
+        The ``"cvarsort"`` key encodes :data:`Node.type`.
         """
         d = dict(self.properties)
         if self.type is not None:
@@ -177,10 +178,10 @@ class DMRS(ScopingSemanticStructure[int, Node]):
     >>> rain = Node(10000, '_rain_v_1', type='e')
     >>> heavy = Node(10001, '_heavy_a_1', type='e')
     >>> arg1_link = Link(10000, 10001, role='ARG1', post='EQ')
-    >>> d = DMRS(top=10000, index=10000, [rain], [arg1_link])
+    >>> d = DMRS(top=10000, index=10000, [rain, heavy], [arg1_link])
     """
 
-    __slots__ = ('links')
+    __slots__ = ('links',)
 
     links: list[Link]
 

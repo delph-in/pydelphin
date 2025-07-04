@@ -6,6 +6,7 @@
 
 * Removed `requirements.txt`; it was unnecessary and out of date
 * Replaced `requests` dependency with `httpx`
+* Change docs theme to furo, use sphinx-copybutton & autodoc-typehints
 
 ### Changed
 

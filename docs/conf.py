@@ -48,6 +48,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
+    'sphinx_copybutton',
     'wiki',
 ]
 
@@ -98,7 +99,7 @@ rst_prolog = """
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
 #html_theme = 'classic'
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -200,7 +201,18 @@ napoleon_use_rtype = False
 
 # disable type hints
 
-autodoc_typehints = 'none'
+autodoc_typehints = 'signature'
+
+
+# -- Options for sphinx_copybutton extension ---------------------------------
+
+copybutton_prompt_text = (
+    r">>> "              # regular Python prompt
+    r"|\.\.\. "          # Python continuation prompt
+    r"|\$ "              # Basic shell
+    r"|In \[\d*\]: "     # Jupyter notebook
+)
+copybutton_prompt_is_regexp = True
 
 
 # -- Options for wikis -------------------------------------------------------
