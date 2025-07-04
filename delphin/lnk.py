@@ -1,13 +1,18 @@
-
 """
 Surface alignment for semantic entities.
 """
 
-from typing import Iterable, Optional, Tuple, Union, overload
+__all__ = [
+    "Lnk",
+    "LnkError",
+    "LnkMixin",  # noqa: F822 ; for backward compatibility
+]
 
-# Default modules need to import the PyDelphin version
+import warnings
+from typing import Any, Iterable, Union, overload
+
 from delphin.__about__ import __version__  # noqa: F401
-from delphin.exceptions import PyDelphinException
+from delphin.exceptions import PyDelphinException, PyDelphinWarning
 
 
 class LnkError(PyDelphinException):
@@ -57,7 +62,7 @@ class Lnk:
     __slots__ = ('type', 'data')
 
     type: int
-    data: Union[int, Tuple[int, ...]]
+    data: Union[None, int, tuple[int, ...]]
 
     # These types determine how a lnk on an EP or MRS are to be
     # interpreted, and thus determine the data type/structure of the
@@ -69,24 +74,29 @@ class Lnk:
     EDGE = 4  # An edge identifier: a number
 
     @overload
-    def __init__(self, arg: None, data: None = None):
+    def __init__(self, arg: str, data: None = None) -> None:
         ...
 
     @overload
-    def __init__(self, arg: str, data: None = None):
+    def __init__(
+        self,
+        arg: int,
+        data: Union[None, int, tuple[int, ...]] = None,
+    ) -> None:
         ...
 
-    @overload
-    def __init__(self,
-                 arg: int,
-                 data: Union[None, int, Tuple[int, ...]] = None):
-        ...
-
-    def __init__(self, arg, data=None):
-        if not arg:
-            self.type = Lnk.UNSPECIFIED
-            self.data = None
-        elif data is None and (arg[:1], arg[-1:]) == ('<', '>'):
+    def __init__(
+        self,
+        arg: Union[str, int],
+        data: Union[None, int, tuple[int, ...]] = None,
+    ) -> None:
+        if isinstance(arg, str):
+            if data is not None:
+                raise LnkError(
+                    'data argument should be None when arg is a string'
+                )
+            if (arg[:1], arg[-1:]) != ('<', '>'):
+                raise LnkError(f'invalid Lnk string: {arg!r}')
             arg = arg[1:-1]
             if arg.startswith('@'):
                 self.type = Lnk.EDGE
@@ -102,7 +112,10 @@ class Lnk:
             else:
                 self.type = Lnk.TOKENS
                 self.data = tuple(map(int, arg.split()))
-        elif arg in (Lnk.CHARSPAN, Lnk.CHARTSPAN, Lnk.TOKENS, Lnk.EDGE):
+        elif isinstance(arg, int):
+            if arg not in (Lnk.UNSPECIFIED, Lnk.CHARSPAN, Lnk.CHARTSPAN,
+                           Lnk.TOKENS, Lnk.EDGE):
+                raise LnkError(f'invalid Lnk type {arg!r}')
             self.type = arg
             self.data = data
         else:
@@ -113,7 +126,7 @@ class Lnk:
         """
         Create a Lnk object for when no information is given.
         """
-        return cls(None)
+        return cls(Lnk.UNSPECIFIED)
 
     @classmethod
     def charspan(cls, start: Union[str, int], end: Union[str, int]):
@@ -183,47 +196,17 @@ class Lnk:
         return True
 
 
-class LnkMixin:
-    """
-    A mixin class for adding `cfrom` and `cto` properties on structures.
-    """
+# LnkMixin has been moved to delphin.sembase. To keep backward
+# compatibility and avoid circular imports, load it only when
+# requested.
 
-    __slots__ = ('lnk', 'surface')
-
-    def __init__(self,
-                 lnk: Optional[Lnk] = None,
-                 surface: Optional[str] = None):
-        if lnk is None:
-            lnk = Lnk.default()
-        self.lnk = lnk
-        self.surface = surface
-
-    @property
-    def cfrom(self) -> int:
-        """
-        The initial character position in the surface string.
-
-        Defaults to -1 if there is no valid cfrom value.
-        """
-        cfrom = -1
-        try:
-            if self.lnk.type == Lnk.CHARSPAN:
-                cfrom = self.lnk.data[0]  # type: ignore
-        except AttributeError:
-            pass  # use default cfrom of -1
-        return cfrom
-
-    @property
-    def cto(self) -> int:
-        """
-        The final character position in the surface string.
-
-        Defaults to -1 if there is no valid cto value.
-        """
-        cto = -1
-        try:
-            if self.lnk.type == Lnk.CHARSPAN:
-                cto = self.lnk.data[1]  # type: ignore
-        except AttributeError:
-            pass  # use default cto of -1
-        return cto
+def __getattr__(name: str) -> Any:
+    if name == 'LnkMixin':
+        from delphin.sembase import LnkMixin
+        warnings.warn(
+            "LnkMixin has been moved to delphin.sembase.LnkMixin",
+            PyDelphinWarning,
+            stacklevel=2,
+        )
+        return LnkMixin
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

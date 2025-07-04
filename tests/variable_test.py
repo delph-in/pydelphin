@@ -56,8 +56,8 @@ class TestVariableFactory():
         v = vf.new('x')
         assert v == 'x1'
         assert vf.vid == 2
-        assert len(vf.store['x1']) == 0
+        assert vf.store == {'x1': []}
         v = vf.new('e', [('PROP', 'VAL')])
         assert v == 'e2'
         assert vf.vid == 3
-        assert len(vf.store['e2']) == 1
+        assert vf.store == {'x1': [], 'e2': [('PROP', 'VAL')]}

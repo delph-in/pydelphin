@@ -13,14 +13,14 @@ class TestLnk():
             Lnk('lnktype', (0, 1))
 
     def test__eq__(self):
-        assert Lnk(None) == Lnk(None)
-        assert Lnk(None) != Lnk.charspan(0, 1)
+        assert Lnk.default() == Lnk.default()
+        assert Lnk.default() != Lnk.charspan(0, 1)
         assert Lnk.charspan(0, 1) == Lnk.charspan(0, 1)
         assert Lnk.charspan(0, 1) != Lnk.charspan(0, 2)
         assert Lnk.charspan(0, 1) != Lnk.chartspan(0, 1)
 
     def test__bool__(self):
-        assert not Lnk(None)
+        assert not Lnk.default()
         assert not Lnk.charspan(-1, -1)
         assert Lnk.charspan(0, 0)
         assert Lnk.chartspan(0, 0)
@@ -38,6 +38,7 @@ class TestLnk():
         assert lnk.type == Lnk.CHARSPAN
         assert lnk.data == (0, 1)
         assert str(lnk) == '<0:1>'
+        assert lnk == Lnk(str(lnk))
         repr(lnk)  # no error
         lnk = Lnk.charspan('0', '1')
         assert lnk.data == (0, 1)
@@ -55,6 +56,7 @@ class TestLnk():
         assert lnk.type == Lnk.CHARTSPAN
         assert lnk.data == (0, 1)
         assert str(lnk) == '<0#1>'
+        assert lnk == Lnk(str(lnk))
         repr(lnk)  # no error
         lnk = Lnk.chartspan('0', '1')
         assert lnk.data == (0, 1)
@@ -72,6 +74,7 @@ class TestLnk():
         assert lnk.type == Lnk.TOKENS
         assert lnk.data == (1, 2, 3)
         assert str(lnk) == '<1 2 3>'
+        assert lnk == Lnk(str(lnk))
         repr(lnk)  # no error
         lnk = Lnk.tokens(['1'])
         assert lnk.data == (1,)
@@ -88,6 +91,7 @@ class TestLnk():
         assert lnk.type == Lnk.EDGE
         assert lnk.data == 1
         assert str(lnk) == '<@1>'
+        assert lnk == Lnk(str(lnk))
         repr(lnk)  # no error
         lnk = Lnk.edge('1')
         assert lnk.data == 1

@@ -4,16 +4,18 @@ Operations on DMRS structures
 """
 
 import warnings
-from typing import Callable, Optional, cast
+from typing import Optional, cast
 
 from delphin import dmrs, mrs, scope, variable
+from delphin.sembase import ScopeMap
 
 _HCMap = dict[str, mrs.HCons]
 _IdMap = dict[str, int]
 
 
 def from_mrs(
-    m: mrs.MRS, representative_priority: Optional[Callable] = None
+    m: mrs.MRS,
+    representative_priority: Optional[scope.PredicationPriority] = None,
 ) -> dmrs.DMRS:
     """
     Create a DMRS by converting from MRS *m*.
@@ -38,10 +40,14 @@ def from_mrs(
         scope.representatives(m, priority=representative_priority)
     )
     # EP id to node id map; create now to keep ids consistent
-    id_to_nid: _IdMap = {ep.id: i
-                         for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)}
-    iv_to_nid: _IdMap = {ep.iv: id_to_nid[ep.id]
-                         for ep in m.rels if not ep.is_quantifier()}
+    id_to_nid: _IdMap = {
+        ep.id: i for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)
+    }
+    iv_to_nid: _IdMap = {
+        ep.iv: id_to_nid[ep.id]
+        for ep in m.rels
+        if not ep.is_quantifier() and ep.iv is not None
+    }
 
     top = _mrs_get_top(m.top, hcmap, reps, id_to_nid)
     # some bad MRSs have an INDEX that isn't the ARG0 of any EP, so
@@ -59,14 +65,15 @@ def from_mrs(
         links=links,
         lnk=m.lnk,
         surface=m.surface,
-        identifier=m.identifier)
+        identifier=m.identifier,
+    )
 
 
 def _mrs_get_top(
-        top_var: Optional[str],
-        hcmap: _HCMap,
-        reps: scope.ScopeMap,
-        id_to_nid: _IdMap
+    top_var: Optional[str],
+    hcmap: _HCMap,
+    reps: ScopeMap,
+    id_to_nid: _IdMap,
 ) -> Optional[int]:
     top: Optional[int]
     if top_var is None:
@@ -108,28 +115,30 @@ def _mrs_to_nodes(m: mrs.MRS, id_to_nid: _IdMap) -> list[dmrs.Node]:
                 type = variable.type(iv)
         nodes.append(
             dmrs.Node(node_id,
-                      ep.predicate,
-                      type,
-                      properties,
-                      ep.carg,
-                      ep.lnk,
-                      ep.surface,
-                      ep.base))
+                ep.predicate,
+                type,
+                properties,
+                ep.carg,
+                ep.lnk,
+                ep.surface,
+                ep.base,
+            )
+        )
     return nodes
 
 
 def _mrs_to_links(
-        m: mrs.MRS,
-        hcmap: _HCMap,
-        reps: dict[str, list[mrs.EP]],  # MRS-specific ScopeMap
-        iv_to_nid: _IdMap,
-        id_to_nid: _IdMap
+    m: mrs.MRS,
+    hcmap: _HCMap,
+    reps: dict[str, list[mrs.EP]],  # MRS-specific ScopeMap
+    iv_to_nid: _IdMap,
+    id_to_nid: _IdMap,
 ) -> list[dmrs.Link]:
     links = []
     # links from arguments
-    for src, roleargs in m.arguments().items():
-        start = id_to_nid[src]
-        src_ep = cast(mrs.EP, m[src])
+    for src_id, roleargs in m.arguments().items():
+        start = id_to_nid[src_id]
+        src_ep = cast(mrs.EP, m[src_id])
         for role, tgt in roleargs:
             # non-scopal arguments
             if tgt in iv_to_nid:
@@ -167,8 +176,9 @@ def _mrs_to_links(
             ep = eps[0]
             assert isinstance(ep, mrs.EP)
             end = id_to_nid[ep.id]
-            for src in eps[1:]:
-                start = id_to_nid[src.id]
+            for src_ep in eps[1:]:
+                start = id_to_nid[src_ep.id]
                 links.append(
-                    dmrs.Link(start, end, dmrs.BARE_EQ_ROLE, dmrs.EQ_POST))
+                    dmrs.Link(start, end, dmrs.BARE_EQ_ROLE, dmrs.EQ_POST)
+                )
     return links

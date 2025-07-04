@@ -7,6 +7,23 @@
 * Removed `requirements.txt`; it was unnecessary and out of date
 * Replaced `requests` dependency with `httpx`
 
+### Changed
+
+* `delphin.dmrs.DMRS.scopal_arguments()` always returns arguments with
+  scope labels and not node ids. If the *scopes* argument is not
+  given, `DMRS.scopes()` is first called to get it. (see [#402])
+* `delphin.sembase` now has some members moved from other modules; the
+  original names are retained for backward compatibility ([#402]):
+  - `delphin.scope.ScopingSemanticStructure`
+  - `delphin.scope.(LEQ|LHEQ|QEQ|OUTSCOPES)` (in an enum named
+    `ScopeRelation`)
+  - `delphin.lnk.LnkMixin`
+* `Predication`, `SemanticStructure` and `ScopingSemanticStructure` in
+  `delphin.sembase` are now generic abstract base classes which `MRS`,
+  `DMRS` and `EDS` implement.
+* `delphin.lnk.Lnk` no longer accepts `None` as its first argument;
+  for an uninitialized Lnk, use `Lnk.default()`
+
 
 ## [v1.10.0]
 
@@ -1680,3 +1697,4 @@ information about changes, except for
 [#386]: https://github.com/delph-in/pydelphin/issues/386
 [#395]: https://github.com/delph-in/pydelphin/issues/395
 [#396]: https://github.com/delph-in/pydelphin/issues/396
+[#402]: https://github.com/delph-in/pydelphin/issues/402

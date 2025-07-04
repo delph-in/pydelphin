@@ -183,26 +183,35 @@ def from_dict(d):
         return None if x is None else Lnk.charspan(x['from'], x['to'])
     nodes = []
     for node in d.get('nodes', []):
-        properties = dict(node.get('sortinfo', {}))  # make a copy
+        properties = {
+            str(key): str(val)  # ensure keys and values are strings
+            for key, val in node.get('sortinfo', {}).items()
+        }  # make a copy
         type = None
         if CVARSORT in properties:
             type = properties.pop(CVARSORT)
-        nodes.append(Node(
-            node['nodeid'],
-            node['predicate'],
-            type=type,
-            properties=properties,
-            carg=node.get('carg'),
-            lnk=_lnk(node.get('lnk')),
-            surface=node.get('surface'),
-            base=node.get('base')))
+        nodes.append(
+            Node(
+                node['nodeid'],
+                node['predicate'],
+                type=type,
+                properties=properties,
+                carg=node.get('carg'),
+                lnk=_lnk(node.get('lnk')),
+                surface=node.get('surface'),
+                base=node.get('base'),
+            )
+        )
     links = []
     for link in d.get('links', []):
-        links.append(Link(
-            link['from'],
-            link['to'],
-            link.get('rargname'),
-            link.get('post')))
+        links.append(
+            Link(
+                link['from'],
+                link['to'],
+                link.get('rargname'),
+                link.get('post'),
+            )
+        )
     return DMRS(
         top=d.get('top'),
         index=d.get('index'),

@@ -260,6 +260,23 @@ def pathological2():
     ''')  # noqa: E501
 
 
+def test_is_connected(m1, m1d, m2):
+    assert mrs.is_connected(m1)  # trivial; only one EP
+    assert mrs.is_connected(m1d)  # top is not considered
+    assert mrs.is_connected(m2)  # multiple EPs
+    disconnected = simplemrs.decode('''
+    [ TOP: h0
+      INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
+      RELS: < [ _the_q<0:3> LBL: h4 ARG0: x3 RSTR: h5 BODY: h6 ]
+              [ _dog_n_1<4:7> LBL: h7 ARG0: x3 ]
+              [ _chase_v_1<8:14> LBL: h1 ARG0: e2 ARG1: x3 ARG2: i13 ]
+              [ _the_q<15:18> LBL: h9 ARG0: x8 RSTR: h10 BODY: h11 ]
+              [ _dog_n_1<19:23> LBL: h12 ARG0: x8 ] >
+      HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h12 > ]
+    ''')
+    assert not mrs.is_connected(disconnected)
+
+
 def test_is_isomorphic_identity(m1, m1b, m1c, m1d, m1e, m1f, m1g, m2, m2b):
     assert mrs.is_isomorphic(m1, m1)
     assert mrs.is_isomorphic(m1b, m1b)

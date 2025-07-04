@@ -3,10 +3,10 @@
 Operations on MRS structures
 """
 
-from typing import Dict, Iterable, Set, cast
+from typing import Iterable, Union
 
-from delphin import mrs, predicate, scope, util, variable
-from delphin.sembase import Identifier, property_priority
+from delphin import dmrs, mrs, predicate, scope, util, variable
+from delphin.sembase import ScopeMap, property_priority
 
 
 def is_connected(m: mrs.MRS) -> bool:
@@ -18,7 +18,7 @@ def is_connected(m: mrs.MRS) -> bool:
     arguments (including qeqs), or label equalities.
     """
     ids = {ep.id for ep in m.rels}
-    g: Dict[Identifier, Set[Identifier]] = {id: set() for id in ids}
+    g: dict[str, set[Union[str, None]]] = {id: set() for id in ids}
     # first establish links from labels and intrinsic variables to EPs
     for ep in m.rels:
         id, lbl, iv = ep.id, ep.label, ep.iv
@@ -114,7 +114,7 @@ def plausibly_scopes(m: mrs.MRS) -> bool:
         return False
     seen = set([m.top])
     for id, roleargs in m.arguments(types='h').items():
-        ep = cast(mrs.EP, m[id])
+        ep = m[id]
         for _, handle in roleargs:
             if handle == ep.label:
                 return False
@@ -174,7 +174,7 @@ def _make_mrs_isograph(x: mrs.MRS, properties: bool) -> util._IsoGraph:
         # optimization: retrieve early to avoid successive lookup
         lbl = ep.label
         id = ep.id
-        props = x.variables.get(ep.iv)
+        props = x.variables.get(ep.iv or '')  # or '' for type consistency
         args = ep.args
         carg = ep.carg
         # scope labels (may be targets of arguments or hcons)
@@ -250,7 +250,7 @@ def compare_bags(testbag: Iterable[mrs.MRS],
         return (test_unique, shared, gold_remaining)
 
 
-def from_dmrs(d):
+def from_dmrs(d: dmrs.DMRS) -> mrs.MRS:
     """
     Create an MRS by converting from DMRS *d*.
 
@@ -276,13 +276,13 @@ def from_dmrs(d):
     # for index see https://github.com/delph-in/pydelphin/issues/214
     index = None if not d.index else id_to_iv[d.index]
 
-    hcons = []
+    hcons: list[mrs.HCons] = []
     if top is not None:
         hcons.append(qeq(top, _top))
 
     icons = None  # see https://github.com/delph-in/pydelphin/issues/220
 
-    rels = []
+    rels: list[mrs.EP] = []
     for node in d.nodes:
         id = node.id
         label = id_to_lbl[id]
@@ -308,12 +308,15 @@ def from_dmrs(d):
             args[mrs.BODY_ROLE] = vfac.new(H)
 
         rels.append(
-            mrs.EP(node.predicate,
-                   label,
-                   args=args,
-                   lnk=node.lnk,
-                   surface=node.surface,
-                   base=node.base))
+            mrs.EP(
+                node.predicate,
+                label,
+                args=args,
+                lnk=node.lnk,
+                surface=node.surface,
+                base=node.base,
+            )
+        )
 
     return mrs.MRS(
         top=top,
@@ -324,19 +327,24 @@ def from_dmrs(d):
         variables=vfac.store,
         lnk=d.lnk,
         surface=d.surface,
-        identifier=d.identifier)
+        identifier=d.identifier,
+    )
 
 
-def _dmrs_build_maps(d, scopes, vfac):
-    id_to_lbl = {}
+def _dmrs_build_maps(
+    d: dmrs.DMRS,
+    scopes: ScopeMap[dmrs.Node],
+    vfac: variable.VariableFactory,
+) -> tuple[dict[int, str], dict[int, str]]:
+    id_to_lbl: dict[int, str] = {}
     for label, nodes in scopes.items():
         vfac.index[variable.id(label)] = label  # prevent vid reuse
         id_to_lbl.update((node.id, label) for node in nodes)
 
-    id_to_iv = {}
+    id_to_iv: dict[int, str] = {}
     for node, q in d.quantification_pairs():
         if node is not None:
-            iv = vfac.new(node.type, node.properties)
+            iv = vfac.new(node.type, list(node.properties.items()))
             id_to_iv[node.id] = iv
             if q is not None:
                 id_to_iv[q.id] = iv
