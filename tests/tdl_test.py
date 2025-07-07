@@ -8,6 +8,8 @@ from delphin import tdl
 from delphin.tdl import (
     AVM,
     BlockComment,
+    ConfigEntry,
+    ConfigEnvironment,
     Conjunction,
     ConsList,
     Coreference,
@@ -743,7 +745,7 @@ def test_parse_blockcomment():
     assert isinstance(bc, BlockComment)
 
 
-def test_parse_environments():
+def test_parse_empty_environments():
     g = _iterparse(':begin :type.\n'
                    ':end :type.')
     event, e, _ = next(g)
@@ -767,6 +769,8 @@ def test_parse_environments():
     assert isinstance(e, InstanceEnvironment)
     assert e.entries == []
 
+
+def test_parse_environments_with_contents():
     g = _iterparse(':begin :type.\n'
                    'a := b & [ ATTR val ].\n'
                    ':end :type.')
@@ -796,6 +800,8 @@ def test_parse_environments():
     assert e.entries[1].path.name == 'file2.tdl'
     assert e.entries[1].path.parent.name == 'subdir'
 
+
+def test_parse_nested_environment():
     g = _iterparse(':begin :type.\n'
                    '  :include "file1.tdl".\n'
                    '  :begin :instance :status lex-rule.\n'
@@ -816,6 +822,44 @@ def test_parse_environments():
     assert e2.status == 'lex-rule'
     assert len(e2.entries) == 1
     assert isinstance(e2.entries[0], FileInclude)
+
+
+def test_config_environment():
+    g = _iterparse(
+        ':begin :config.\n'
+        ':end :config.'
+    )
+    event, e, _ = next(g)
+    assert event == 'BeginEnvironment'
+    assert isinstance(e, ConfigEnvironment)
+    assert e.label == ''
+    assert e.entries == []
+    assert next(g)[0] == 'EndEnvironment'
+
+    g = _iterparse(
+        ':begin :config ace.\n'
+        ':end :config.'
+    )
+    assert next(g)[1].label == 'ace'
+
+
+def test_config_environment_contents():
+    def keyval(s: str) -> ConfigEntry:
+        g = _iterparse(f':begin :config.\n{s}\n:end :config.')
+        event, e, _ = next(g)
+        assert event == 'BeginEnvironment'
+        while event != 'EndEnvironment':
+            event, _, _ = next(g)
+        assert len(e.entries) == 1
+        return e.entries[0]
+
+    assert keyval('symbol := abc.') == ('symbol', ['abc'])
+    assert keyval('string := "abc".') == ('string', ['abc'])
+    assert keyval('list := abc def.') == ('list', ['abc', 'def'])
+    assert keyval('list2 := "a b c" "d e f".') == ('list2', ['a b c', 'd e f'])
+    assert keyval('multiline :=\n abc\n def.') == ('multiline', ['abc', 'def'])
+    # assert keyval(';a comment') == ...
+    # assert keyval(':begin :type.\n:include "a.tdl".\n:end :type.') == ...
 
 
 def test_format_TypeTerms():
@@ -975,6 +1019,24 @@ def test_format_environments():
         '  :end :instance.\n'
         '  :include "another.tdl".\n'
         ':end :type.')
+
+
+def test_format_config_environment():
+    e = ConfigEnvironment(
+        label="test",
+        entries=[
+            LineComment(' a comment'),
+            ConfigEntry('key', ['value']),
+            ConfigEntry('key-two', ['a space', 'nospace']),
+        ]
+    )
+    assert tdl.format(e) == (
+        ':begin :config test.\n'
+        '  ; a comment\n'
+        '  key := value.\n'
+        '  key-two := "a space" nospace.\n'
+        ':end :config.'
+    )
 
 
 def test_format_fileinclude():

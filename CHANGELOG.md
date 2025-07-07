@@ -2,6 +2,11 @@
 
 ### Unreleased
 
+### Added
+
+* `delphin.tdl.ConfigEntry` ([#391])
+* `delphin.tdl.ConfigEnvironment` ([#391])
+
 ### Maintenance
 
 * Removed `requirements.txt`; it was unnecessary and out of date
@@ -48,6 +53,11 @@
 
 * `tdl.AVM` initialization uses `AVM.aggregate()` instead of
   assignment of values on features ([#395])
+
+### Maintenance
+
+* Changed `delphin.tdl` from a simple module to a backwards-compatible
+  package
 
 
 ## [v1.9.1]
@@ -1696,6 +1706,7 @@ information about changes, except for
 [#379]: https://github.com/delph-in/pydelphin/issues/379
 [#383]: https://github.com/delph-in/pydelphin/issues/383
 [#386]: https://github.com/delph-in/pydelphin/issues/386
+[#391]: https://github.com/delph-in/pydelphin/issues/391
 [#395]: https://github.com/delph-in/pydelphin/issues/395
 [#396]: https://github.com/delph-in/pydelphin/issues/396
 [#402]: https://github.com/delph-in/pydelphin/issues/402
