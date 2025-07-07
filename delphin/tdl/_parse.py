@@ -10,6 +10,8 @@ from delphin.tdl._model import (
     EMPTY_LIST_TYPE,
     LIST_TYPE,
     BlockComment,
+    ConfigEntry,
+    ConfigEnvironment,
     Conjunction,
     ConsList,
     Coreference,
@@ -65,9 +67,9 @@ _tdl_lex_re = re.compile(
     |\(([^ ]+\s+(?:[^ )\\]|\\.)+)\)  #  22  affix subpattern
     |(\/)                            #  23  defaults (currently unused)
     |({identifier})                  #  24  identifiers and symbols
-    |(:begin)                        #  25  start a :type or :instance block
-    |(:end)                          #  26  end a :type or :instance block
-    |(:type|:instance)               #  27  environment type
+    |(:begin)                        #  25  start an environment block
+    |(:end)                          #  26  end an environment block
+    |(:type|:instance|:config)       #  27  environment type
     |(:status)                       #  28  instance status
     |(:include)                      #  29  file inclusion
     |([^\s])                         #  30  unexpected
@@ -241,7 +243,11 @@ def _parse_tdl(tokens, path):
                 obj = _parse_letterset(token, line_no)
                 yield (obj.__class__.__name__, obj, line_no)
             elif gid == 24:
-                obj = _parse_tdl_definition(token, tokens)
+                # special handling for configs
+                if isinstance(environment, ConfigEnvironment):
+                    obj = _parse_config_key_val(token, tokens)
+                else:
+                    obj = _parse_tdl_definition(token, tokens)
                 yield (obj.__class__.__name__, obj, line_no)
             elif gid == 25:
                 envstack.append(environment)
@@ -265,6 +271,26 @@ def _parse_tdl(tokens, path):
                 environment.entries.append(obj)
     except StopIteration:
         raise TDLSyntaxError('unexpected end of input.') from None
+
+
+def _parse_config_key_val(identifier, tokens) -> tuple[str, list[str]]:
+    _, token, line_no, _ = _shift(tokens)
+
+    if token != ':=':
+        raise TDLSyntaxError('expected: :=', lineno=line_no)
+    gid, token, line_no, _ = _shift(tokens)
+
+    values: list[str] = []
+    while gid != 10:
+        if gid not in (4, 24):
+            raise TDLSyntaxError(
+                'expected: a string or a symbol',
+                lineno=line_no,
+            )
+        values.append(token)
+        gid, token, line_no, _ = _shift(tokens)
+
+    return ConfigEntry(identifier, values)
 
 
 def _parse_tdl_definition(identifier, tokens):
@@ -488,8 +514,16 @@ def _parse_tdl_begin_environment(tokens):
             raise TDLSyntaxError('expected: :status or .',
                                  lineno=lineno)
         env = InstanceEnvironment(status)
-    else:
+    elif envtype == ':type':
         env = TypeEnvironment()
+    elif envtype == ':config':
+        label = ""
+        if gid == 24:
+            label = token
+            gid, token, lineno = tokens.next()
+        env = ConfigEnvironment(label=label)
+    else:
+        raise TDLSyntaxError(f'unexpected environment type: {envtype}')
     if gid != 10:
         raise TDLSyntaxError('expected: .', lineno=lineno, text=token)
     return env
@@ -502,6 +536,8 @@ def _parse_tdl_end_environment(tokens, env):
     elif envtype == ':instance' and not isinstance(env, InstanceEnvironment):
         raise TDLSyntaxError('expected: :instance',
                              lineno=lineno, text=envtype)
+    elif envtype == ':config' and not isinstance(env, ConfigEnvironment):
+        raise TDLSyntaxError('expected: :config', lineno=lineno, text=envtype)
     gid, _, lineno = tokens.next()
     if gid != 10:
         raise TDLSyntaxError('expected: .', lineno=lineno)

@@ -1,9 +1,12 @@
+import re
 import textwrap
 
 from delphin.tdl._exceptions import TDLError
 from delphin.tdl._model import (
     AVM,
     BlockComment,
+    ConfigEntry,
+    ConfigEnvironment,
     Conjunction,
     ConsList,
     Coreference,
@@ -68,6 +71,8 @@ def format(obj, indent=0):
         return _format_linecomment(obj, indent)
     elif isinstance(obj, BlockComment):
         return _format_blockcomment(obj, indent)
+    elif isinstance(obj, ConfigEntry):
+        return _format_configentry(obj, indent)
     else:
         raise ValueError(f'cannot format object as TDL: {obj!r}')
 
@@ -271,19 +276,34 @@ def _format_morphset(obj, indent):
 
 
 def _format_environment(env, indent):
-    status = ''
+    post = ''
     if isinstance(env, TypeEnvironment):
         envtype = ':type'
     elif isinstance(env, InstanceEnvironment):
         envtype = ':instance'
         if env.status:
-            status = ' :status ' + env.status
+            post = ' :status ' + env.status
+    elif isinstance(env, ConfigEnvironment):
+        envtype = ':config'
+        if env.label:
+            post = f' {env.label}'
+    else:
+        raise TDLError(f"invalid environment type: {type(env).__name__}")
 
     contents = '\n'.join(format(obj, indent + 2) for obj in env.entries)
     if contents:
         contents += '\n'
     return '{0}:begin {1}{2}.\n{3}{0}:end {1}.'.format(
-        ' ' * indent, envtype, status, contents)
+        ' ' * indent, envtype, post, contents)
+
+
+def _format_configentry(obj: ConfigEntry, indent: int) -> str:
+    values: list[str] = []
+    for value in obj.values:
+        if not re.fullmatch(r'''[^\s!"#$%&'(),.\/:;<=>[\]^|]+''', value):
+            value = '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+        values.append(value)
+    return '{}{} := {}.'.format(' ' * indent, obj.key, " ".join(values))
 
 
 def _format_include(fi, indent):

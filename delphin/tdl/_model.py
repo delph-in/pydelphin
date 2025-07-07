@@ -1,6 +1,6 @@
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Optional, Union
+from typing import NamedTuple, Optional, Union
 
 from delphin import util
 from delphin.tdl._exceptions import TDLError
@@ -863,8 +863,37 @@ class InstanceEnvironment(_Environment):
         entries (list): TDL entries
     """
     def __init__(self, status, entries=None):
-        super(InstanceEnvironment, self).__init__(entries)
+        super().__init__(entries)
         self.status = status
+
+
+class ConfigEnvironment(_Environment):
+    """
+    TDL configuration environment.
+
+    Args:
+        entries (list): config entries
+    """
+    def __init__(self, label: str = '', entries=None):
+        super().__init__(entries)
+        self.label = label
+
+
+class ConfigEntry(NamedTuple):
+    """Key-value pair from a TDL config file.
+
+    Since the type of the value (e.g., an atomic string or a list)
+    depends on the key, values are always read as a list. For
+    convenience, the :prop:`value` property returns these values
+    as a single string joined with space characters.
+    """
+
+    key: str
+    values: list[str]
+
+    @property
+    def value(self) -> str:
+        return " ".join(self.values)
 
 
 class FileInclude:
