@@ -8,6 +8,8 @@ from delphin import tdl
 from delphin.tdl import (
     AVM,
     BlockComment,
+    ConfigEntry,
+    ConfigEnvironment,
     Conjunction,
     ConsList,
     Coreference,
@@ -827,6 +829,38 @@ def test_parse_environments():
     assert isinstance(e2.entries[0], FileInclude)
 
 
+def test_config_environment():
+    g = _iterparse(":begin :config.\n:end :config.")
+    event, e, _ = next(g)
+    assert event == "BeginEnvironment"
+    assert isinstance(e, ConfigEnvironment)
+    assert e.label == ""
+    assert e.entries == []
+    assert next(g)[0] == "EndEnvironment"
+
+    g = _iterparse(":begin :config ace.\n:end :config.")
+    assert next(g)[1].label == "ace"
+
+
+def test_config_environment_contents():
+    def keyval(s: str) -> ConfigEntry:
+        g = _iterparse(f":begin :config.\n{s}\n:end :config.")
+        event, e, _ = next(g)
+        assert event == "BeginEnvironment"
+        while event != "EndEnvironment":
+            event, _, _ = next(g)
+        assert len(e.entries) == 1
+        return e.entries[0]
+
+    assert keyval("symbol := abc.") == ("symbol", ["abc"])
+    assert keyval('string := "abc".') == ("string", ["abc"])
+    assert keyval("list := abc def.") == ("list", ["abc", "def"])
+    assert keyval('list2 := "a b c" "d e f".') == ("list2", ["a b c", "d e f"])
+    assert keyval("multiline :=\n abc\n def.") == ("multiline", ["abc", "def"])
+    # assert keyval(';a comment') == ...
+    # assert keyval(':begin :type.\n:include "a.tdl".\n:end :type.') == ...
+
+
 def test_format_TypeTerms():
     assert tdl.format(TypeIdentifier("a-type")) == "a-type"
     assert tdl.format(String("a string")) == '"a string"'
@@ -998,6 +1032,24 @@ def test_format_environments():
         "  :end :instance.\n"
         '  :include "another.tdl".\n'
         ":end :type."
+    )
+
+
+def test_format_config_environment():
+    e = ConfigEnvironment(
+        label="test",
+        entries=[
+            LineComment(" a comment"),
+            ConfigEntry("key", ["value"]),
+            ConfigEntry("key-two", ["a space", "nospace"]),
+        ],
+    )
+    assert tdl.format(e) == (
+        ":begin :config test.\n"
+        "  ; a comment\n"
+        "  key := value.\n"
+        '  key-two := "a space" nospace.\n'
+        ":end :config."
     )
 
 

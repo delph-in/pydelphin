@@ -10,6 +10,8 @@
 ### Added
 
 * Provisional support for TDL config environments ([#391])
+* `delphin.tdl.ConfigEntry` ([#391])
+* `delphin.tdl.ConfigEnvironment` ([#391])
 
 ### Maintenance
 
