@@ -7,8 +7,9 @@ __all__ = ['compute']
 
 import logging
 from collections import Counter
+from collections.abc import Iterable
 from itertools import zip_longest
-from typing import Any, Iterable, NamedTuple, Optional, TypeVar
+from typing import Any, NamedTuple, TypeVar
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -146,8 +147,8 @@ def _count(func, gold, test) -> _Count:
 
 
 def _accumulate(
-    golds: Iterable[Optional[SR]],
-    tests: Iterable[Optional[SR]],
+    golds: Iterable[SR | None],
+    tests: Iterable[SR | None],
     ignore_missing_gold: bool,
     ignore_missing_test: bool,
 ) -> _Match:
@@ -206,8 +207,8 @@ def _accumulate(
     return totals
 
 
-def compute(golds: Iterable[Optional[SR]],
-            tests: Iterable[Optional[SR]],
+def compute(golds: Iterable[SR | None],
+            tests: Iterable[SR | None],
             name_weight: float = 1.0,
             argument_weight: float = 1.0,
             property_weight: float = 1.0,

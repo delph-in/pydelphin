@@ -12,14 +12,14 @@ representations will be converted to EDS for comparison.
 import argparse
 import logging
 import warnings
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, Optional, Union
 
 from delphin import dmrs, edm, eds, itsdb, mrs, tsdb, util
 
 logger = logging.getLogger(__name__)
 
-_SemanticRepresentation = Union[eds.EDS, dmrs.DMRS]
+_SemanticRepresentation = eds.EDS | dmrs.DMRS
 
 parser = argparse.ArgumentParser(add_help=False)
 
@@ -53,7 +53,7 @@ def _iter_representations(
     path: Path,
     fmt: str,
     p: int
-) -> Iterator[Optional[_SemanticRepresentation]]:
+) -> Iterator[_SemanticRepresentation | None]:
     if tsdb.is_database_directory(path):
         logger.debug('reading MRSs from profile: %s', (path,))
         ts = itsdb.TestSuite(path)
@@ -86,7 +86,7 @@ def _eds_from_mrs(
     m: mrs.MRS,
     predicate_modifiers: bool,
     errors: str = 'warn',
-) -> Optional[eds.EDS]:
+) -> eds.EDS | None:
     try:
         e = eds.from_mrs(m, predicate_modifiers=predicate_modifiers)
     except Exception:

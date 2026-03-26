@@ -3,8 +3,8 @@
 Basic classes for modeling feature structures.
 """
 
-from collections.abc import Mapping, Sequence
-from typing import Any, Callable, Iterable, Optional, Union
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import Any, TypeAlias
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -17,11 +17,11 @@ class TFSError(PyDelphinException):
 
 
 # generic input argument types
-FeatureSeq = Sequence[tuple[str, Any]]
-FeatureMap = Mapping[str, Any]
+FeatureSeq: TypeAlias = Sequence[tuple[str, Any]]
+FeatureMap: TypeAlias = Mapping[str, Any]
 # explicit types
-FeatureList = list[tuple[str, Any]]
-FeatureDict = dict[str, Any]
+FeatureList: TypeAlias = list[tuple[str, Any]]
+FeatureDict: TypeAlias = dict[str, Any]
 
 
 class FeatureStructure:
@@ -42,7 +42,7 @@ class FeatureStructure:
 
     def __init__(
         self,
-        featvals: Union[FeatureSeq, FeatureMap, None] = None,
+        featvals: FeatureSeq | FeatureMap | None = None,
     ) -> None:
         self._avm = {}
         if featvals and hasattr(featvals, 'items'):
@@ -55,7 +55,7 @@ class FeatureStructure:
         return cls(None)
 
     def __repr__(self) -> str:
-        return '<{} object at {}>'.format(self.__class__.__name__, id(self))
+        return f'<{self.__class__.__name__} object at {id(self)}>'
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, FeatureStructure):
@@ -144,7 +144,7 @@ class FeatureStructure:
                         fs.append((feat, val))
                     else:
                         for subfeat, subval in val.features(expand=expand):
-                            fs.append(('{}.{}'.format(feat, subfeat), subval))
+                            fs.append((f'{feat}.{subfeat}', subval))
                 else:
                     fs.append((feat, val))
         return fs
@@ -166,15 +166,13 @@ class TypedFeatureStructure(FeatureStructure):
     def __init__(
         self,
         type: str,
-        featvals: Union[FeatureSeq, FeatureMap, None] = None,
+        featvals: FeatureSeq | FeatureMap | None = None,
     ) -> None:
         self._type = type
         super().__init__(featvals)
 
     def __repr__(self) -> str:
-        return '<TypedFeatureStructure object ({}) at {}>'.format(
-            self.type, id(self)
-        )
+        return f'<TypedFeatureStructure object ({self.type}) at {id(self)}>'
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, TypedFeatureStructure):
@@ -219,9 +217,9 @@ class TypeHierarchy(MultiHierarchy[str]):
     def __init__(
         self,
         top: str,
-        hierarchy: Optional[Mapping[str, Iterable[str]]] = None,
-        data: Optional[Mapping[str, Any]] = None,
-        normalize_identifier: Optional[Callable[[str], str]] = None
+        hierarchy: Mapping[str, Iterable[str]] | None = None,
+        data: Mapping[str, Any] | None = None,
+        normalize_identifier: Callable[[str], str] | None = None
     ) -> None:
         if not normalize_identifier:
             normalize_identifier = str.lower

@@ -5,21 +5,14 @@ Regular Expression Preprocessor (REPP)
 import logging
 import warnings
 from array import array
+from collections.abc import Iterable, Iterator
 from itertools import takewhile
 from pathlib import Path
+from re import Match, Pattern
 from typing import (
     TYPE_CHECKING,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Match,
     NamedTuple,
-    Optional,
-    Pattern,
-    Set,
-    Tuple,
-    Union,
+    TypeAlias,
 )
 
 # use regex library if available; otherwise warn
@@ -46,9 +39,9 @@ DEFAULT_TOKENIZER = r'[ \t]+'
 
 
 if TYPE_CHECKING:
-    _CMap = array[int]  # characterization map
+    _CMap: TypeAlias = array[int]  # characterization map
 else:
-    _CMap = array
+    _CMap: TypeAlias = array
 
 # Mask values
 _MASK_B = 1  # start of mask
@@ -130,7 +123,7 @@ class REPPStep(NamedTuple):
     mask: _CMap  # BIO scheme, B=1, I=2, O=0
 
 
-_Trace = Iterator[Union[REPPStep, REPPResult]]
+_Trace: TypeAlias = Iterator[REPPStep | REPPResult]
 
 
 class _REPPOperation:
@@ -145,7 +138,7 @@ class _REPPOperation:
     def _apply(
         self,
         s: str,
-        active: Set[str],
+        active: set[str],
         mask: _CMap
     ) -> Iterator[REPPStep]:
         raise NotImplementedError()
@@ -176,7 +169,7 @@ class _REPPRule(_REPPOperation):
     def _apply(
         self,
         s: str,
-        active: Set[str],
+        active: set[str],
         mask: _CMap
     ) -> Iterator[REPPStep]:
         logger.debug(' %s', self)
@@ -187,7 +180,7 @@ class _REPPRule(_REPPOperation):
         if ms:
             pos = 0  # current position in the original string
             shift = 0  # current original/target length difference
-            parts: List[str] = []
+            parts: list[str] = []
             smap = array('i', [0])
             emap = array('i', [0])
             new_mask = array('i', [_MASK_O])
@@ -252,7 +245,7 @@ class _REPPMask(_REPPOperation):
     def _apply(
         self,
         s: str,
-        active: Set[str],
+        active: set[str],
         mask: _CMap
     ) -> Iterator[REPPStep]:
         logger.debug(' %s', self)
@@ -268,25 +261,23 @@ class _REPPMask(_REPPOperation):
 class _REPPGroup(_REPPOperation):
     def __init__(
         self,
-        operations: Optional[List[_REPPOperation]] = None,
-        name: Optional[str] = None
+        operations: list[_REPPOperation] | None = None,
+        name: str | None = None
     ):
         if operations is None:
             operations = []
-        self.operations: List[_REPPOperation] = operations
+        self.operations: list[_REPPOperation] = operations
         self.name = name
         self._loaded = False
 
     def __repr__(self):
-        name = '("{}") '.format(self.name) if self.name is not None else ''
-        return '<{} object {}at {}>'.format(
-            type(self).__name__, name, id(self)
-        )
+        name = f'("{self.name}") ' if self.name is not None else ''
+        return f'<{type(self).__name__} object {name}at {id(self)}>'
 
     def _apply(
         self,
         s: str,
-        active: Set[str],
+        active: set[str],
         mask: _CMap
     ) -> Iterator[REPPStep]:
         o = s
@@ -308,7 +299,7 @@ class _REPPInternalGroup(_REPPGroup):
     def _apply(
         self,
         s: str,
-        active: Set[str],
+        active: set[str],
         mask: _CMap
     ) -> Iterator[REPPStep]:
         logger.debug('>%s', self.name)
@@ -358,21 +349,21 @@ class REPP(_REPPGroup):
 
     def __init__(
         self,
-        operations: Optional[List[_REPPOperation]] = None,
-        name: Optional[str] = None,
-        modules: Optional[Dict[str, 'REPP']] = None,
-        active: Optional[Iterable[str]] = None
+        operations: list[_REPPOperation] | None = None,
+        name: str | None = None,
+        modules: dict[str, 'REPP'] | None = None,
+        active: Iterable[str] | None = None
     ):
         super().__init__(operations=operations, name=name)
-        self.info: Optional[str] = None
-        self.tokenize_pattern: Optional[str] = None
+        self.info: str | None = None
+        self.tokenize_pattern: str | None = None
 
         if modules is None:
             modules = {}
         self.modules = dict(modules)
         for modname, mod in self.modules.items():
             mod.name = modname
-        self.active: Set[str] = set()
+        self.active: set[str] = set()
         if active is None:
             active = []
         for modname in active:
@@ -505,7 +496,7 @@ class REPP(_REPPGroup):
     def _apply(
         self,
         s: str,
-        active: Set[str],
+        active: set[str],
         mask: _CMap
     ) -> Iterator[REPPStep]:
         if self.name in active:
@@ -520,7 +511,7 @@ class REPP(_REPPGroup):
     def apply(
         self,
         s: str,
-        active: Optional[Iterable[str]] = None
+        active: Iterable[str] | None = None
     ) -> REPPResult:
         """
         Apply the REPP's rewrite rules to the input string *s*.
@@ -541,7 +532,7 @@ class REPP(_REPPGroup):
     def trace(
         self,
         s: str,
-        active: Optional[Iterable[str]] = None,
+        active: Iterable[str] | None = None,
         verbose: bool = False
     ) -> _Trace:
         """
@@ -563,7 +554,7 @@ class REPP(_REPPGroup):
         yield from self._trace(s, active, verbose)
 
     def _trace(
-        self, s: str, active: Set[str], verbose: bool
+        self, s: str, active: set[str], verbose: bool
     ) -> _Trace:
         startmap = _zeromap(s)
         endmap = _zeromap(s)
@@ -585,8 +576,8 @@ class REPP(_REPPGroup):
     def tokenize(
         self,
         s: str,
-        pattern: Optional[str] = None,
-        active: Optional[Iterable[str]] = None
+        pattern: str | None = None,
+        active: Iterable[str] | None = None
     ) -> YYTokenLattice:
         """
         Rewrite and tokenize the input string *s*.
@@ -665,14 +656,14 @@ def _get_segments(replacement: str, _re):
     # segments are transparent for characterization. For PET behavior,
     # these must appear in strictly increasing order with no gaps
     last_trackable = 0
-    for expected, (i, grp) in zip(range(1, len(groups)+1), groups):
+    for expected, (i, grp) in zip(range(1, len(groups)+1), groups, strict=False):
         if grp == expected:
             last_trackable = i + 1  # +1 for slice end
 
     # we can also combine groups and literals into a single list of
     # (literal, None) or (None, group) pairs for convenience
     group_map = dict(groups)
-    segments: List[Tuple[Optional[str], Optional[int]]] = [
+    segments: list[tuple[str | None, int | None]] = [
         (literal, group_map.get(i))
         for i, literal
         in enumerate(literals)
@@ -690,8 +681,8 @@ def _parse_template(replacement: str, _re: Pattern[str]):
 
     pos = 0
     groupindex = _re.groupindex
-    literals: List[Optional[str]] = []
-    groups: List[Tuple[int, int]] = []
+    literals: list[str | None] = []
+    groups: list[tuple[int, int]] = []
 
     for m in _replacements_re.finditer(replacement):
         mstart = m.start()
@@ -750,7 +741,7 @@ def _mergemap(map1: _CMap, map2: _CMap) -> _CMap:
 def _copy_part(
     s: str,
     shift: int,
-    parts: List[str],
+    parts: list[str],
     smap: _CMap,
     emap: _CMap
 ) -> None:
@@ -764,7 +755,7 @@ def _insert_part(
     s: str,
     width: int,
     shift: int,
-    parts: List[str],
+    parts: list[str],
     smap: _CMap,
     emap: _CMap
 ) -> None:
@@ -781,8 +772,8 @@ def _process_match(
     shift: int,
     tracked,
     untracked
-) -> Tuple[str, _CMap, _CMap, _CMap, int, bool]:
-    parts: List[str] = []
+) -> tuple[str, _CMap, _CMap, _CMap, int, bool]:
+    parts: list[str] = []
     smap = array('i', [])
     emap = array('i', [])
     mask = array('i', [])
@@ -889,12 +880,12 @@ def _make_mask_info(
     s: str,
     mask: _CMap,
     end_fixed: bool
-) -> Tuple[str, Dict[str, int], str]:
+) -> tuple[str, dict[str, int], str]:
     if not mask:
         return '', {}, ''
     left = s[:_get_mask_len(mask, 0)] if mask[0] == _MASK_I else ''
     right = s[-_get_mask_len(mask[::-1], 0) or len(s):] if end_fixed else ''
-    middle: Dict[str, int] = {}
+    middle: dict[str, int] = {}
     i = len(left)
     j = len(s) - len(right)
     while i < j:
@@ -915,7 +906,7 @@ def _get_mask_len(mask: _CMap, i: int):
     return sum(1 for _ in takewhile(lambda v: v == _MASK_I, mask[i:]))
 
 
-def _tokenize(result: REPPResult, pattern: str) -> List[Tuple[int, int, str]]:
+def _tokenize(result: REPPResult, pattern: str) -> list[tuple[int, int, str]]:
     s, sm, em = result  # unpack for efficiency in loop
     toks = []
     pos = 0
@@ -934,8 +925,8 @@ def _tokenize(result: REPPResult, pattern: str) -> List[Tuple[int, int, str]]:
 
 def _read_file(
     path: Path,
-    directory: Optional[Path]
-) -> Tuple[str, Path, List[str]]:
+    directory: Path | None
+) -> tuple[str, Path, list[str]]:
     if directory is not None:
         directory = Path(directory).expanduser()
     else:
@@ -945,22 +936,22 @@ def _read_file(
     return name, directory, lines
 
 
-def _repp_lines(path: Path) -> List[str]:
+def _repp_lines(path: Path) -> list[str]:
     if not path.is_file():
         raise REPPError(f'REPP file not found: {path!s}')
     return path.read_text(encoding='utf-8').splitlines()
 
 
 def _parse_repp_module(
-    lines: List[str],
+    lines: list[str],
     r: REPP,
     directory: Path
 ) -> None:
     r._loaded = True
 
-    operations: List[_REPPOperation] = r.operations
-    stack: List[List[_REPPOperation]] = [operations]
-    internal_groups: Dict[str, _REPPInternalGroup] = {}
+    operations: list[_REPPOperation] = r.operations
+    stack: list[list[_REPPOperation]] = [operations]
+    internal_groups: dict[str, _REPPInternalGroup] = {}
 
     while lines:
         line = lines.pop(0)
@@ -969,35 +960,29 @@ def _parse_repp_module(
 
         operator, operand = line[0], line[1:].rstrip()
 
-        if operator == '!':
-            # don't use operand because it was rstripped; use line[1:]
-            operations.append(_parse_rewrite_rule(line[1:]))
-
-        elif operator == '<':
-            fn = directory.joinpath(operand)
-            lines = _repp_lines(fn) + lines
-
-        elif operator == '>':
-            operations.append(
-                _handle_group_call(operand, internal_groups, r, directory)
-            )
-
-        elif operator == '=':
-            # don't use operand because it was rstripped; use line[1:]
-            operations.append(_REPPMask(line[1:]))
-
-        elif operator == '#':
-            _handle_internal_group(operand, internal_groups, stack)
-            operations = stack[-1]
-
-        elif operator == ':':
-            _handle_tokenization_pattern(operand, r, len(stack) > 1)
-
-        elif operator == '@':
-            _handle_metainfo_declaration(operand, r, len(stack) > 1)
-
-        else:
-            raise REPPError(f'Invalid declaration: {line}')
+        match operator:
+            case '!':
+                # don't use operand because it was rstripped; use line[1:]
+                operations.append(_parse_rewrite_rule(line[1:]))
+            case '<':
+                fn = directory.joinpath(operand)
+                lines = _repp_lines(fn) + lines
+            case '>':
+                operations.append(
+                    _handle_group_call(operand, internal_groups, r, directory)
+                )
+            case '=':
+                # don't use operand because it was rstripped; use line[1:]
+                operations.append(_REPPMask(line[1:]))
+            case '#':
+                _handle_internal_group(operand, internal_groups, stack)
+                operations = stack[-1]
+            case ':':
+                _handle_tokenization_pattern(operand, r, len(stack) > 1)
+            case '@':
+                _handle_metainfo_declaration(operand, r, len(stack) > 1)
+            case _:
+                raise REPPError(f'Invalid declaration: {line}')
 
     _verify_internal_groups(internal_groups)
 
@@ -1013,7 +998,7 @@ def _handle_group_call(
     operand: str,
     internal_groups,
     r: REPP,
-    directory: Optional[Path],
+    directory: Path | None,
 ) -> _REPPGroup:
     if operand.isdigit():
         if operand not in internal_groups:

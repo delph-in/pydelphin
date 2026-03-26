@@ -145,8 +145,7 @@ def encode(d, properties=True, lnk=True, indent=True):
         pred = "\\named{}" if pred == 'named' else pred
         if n.carg is not None:
             pred += "\\smaller ({})".format(n.carg.strip('"'))
-        lines.append("    \\spred{{{}}} {}     % node {}".format(
-            pred, sep, i+1))
+        lines.append(f"    \\spred{{{pred}}} {sep}     % node {i+1}")
     lines.append("  \\end{deptext}")
     nodeidx = {n.id: i for i, n in enumerate(ns, 1)}
 
@@ -157,12 +156,11 @@ def encode(d, properties=True, lnk=True, indent=True):
         # _latex_escape('/' + link.post)
 
     for link in d.links:
-        lines.append('  \\depedge[{}]{{{}}}{{{}}}{{\\srl{{{}}}}}'.format(
-            _label_edge(link),
-            nodeidx[link.start],
-            nodeidx[link.end],
-            _latex_escape(_link_label(link))
-        ))
+        lines.append(
+            f'  \\depedge[{_label_edge(link)}]'
+            f'{{{nodeidx[link.start]}}}{{{nodeidx[link.end]}}}'
+            f'{{\\srl{{{_latex_escape(_link_label(link))}}}}}'
+        )
     # placeholder for icons
     lines.append('%  \\depedge[icons]{f}{t}{FOCUS}')
     lines.append('\\end{dependency}\n')

@@ -22,7 +22,7 @@ from pygments.token import (
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
-_tdl_break_characters = re.escape(r'<>!=:.#&,[];$()^/')
+TDL_BREAK_CHARS = re.escape(r'<>!=:.#&,[];$()^/')
 
 
 class TDLLexer(RegexLexer):
@@ -73,11 +73,11 @@ class TDLLexer(RegexLexer):
             (r'\[', Punctuation, 'avm'),
             (r'<!', Punctuation, 'difflist'),
             (r'<', Punctuation, 'conslist'),
-            (r'#[^\s{}]+'.format(_tdl_break_characters), Name.Label),
+            (rf'#[^\s{TDL_BREAK_CHARS}]+', Name.Label),
             include('strings'),
             (r'\*top\*', Keyword.Constant),
             (r'\.\.\.', Name),
-            (r'[^\s{}]+'.format(_tdl_break_characters), Name),
+            (rf'[^\s{TDL_BREAK_CHARS}]+', Name),
             (r'', Text, '#pop')
         ],
         'avm': [
@@ -85,8 +85,11 @@ class TDLLexer(RegexLexer):
             (r'\s+', Text),
             (r'\]', Punctuation, '#pop'),
             (r',', Punctuation),
-            (r'((?:[^\s{0}]+)(?:\s*\.\s*[^\s{0}]+)*)'
-             .format(_tdl_break_characters), Name.Attribute, 'conjunction')
+            (
+                rf'((?:[^\s{TDL_BREAK_CHARS}]+)(?:\s*\.\s*[^\s{TDL_BREAK_CHARS}]+)*)',
+                Name.Attribute,
+                'conjunction'
+            )
         ],
         'conslist': [
             (r'>', Punctuation, '#pop'),

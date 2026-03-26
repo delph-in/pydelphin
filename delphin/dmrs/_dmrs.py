@@ -1,5 +1,6 @@
 
-from typing import Any, Iterable, Optional
+from collections.abc import Iterable
+from typing import Any
 
 from delphin import scope, variable
 from delphin.lnk import Lnk
@@ -63,10 +64,10 @@ class Node(Predication[int]):
         self,
         id: int,
         predicate: str,
-        type: Optional[str] = None,
-        properties: Optional[dict[str, str]] = None,
-        carg: Optional[str] = None,
-        lnk: Optional[Lnk] = None,
+        type: str | None = None,
+        properties: dict[str, str] | None = None,
+        carg: str | None = None,
+        lnk: Lnk | None = None,
         surface=None,
         base=None,
     ) -> None:
@@ -187,11 +188,11 @@ class DMRS(ScopingSemanticStructure[int, Node]):
 
     def __init__(
         self,
-        top: Optional[int] = None,
-        index: Optional[int] = None,
-        nodes: Optional[Iterable[Node]] = None,
-        links: Optional[Iterable[Link]] = None,
-        lnk: Optional[Lnk] = None,
+        top: int | None = None,
+        index: int | None = None,
+        nodes: Iterable[Node] | None = None,
+        links: Iterable[Link] | None = None,
+        lnk: Lnk | None = None,
         surface=None,
         identifier=None,
     ) -> None:
@@ -224,10 +225,10 @@ class DMRS(ScopingSemanticStructure[int, Node]):
 
     # SemanticStructure methods
 
-    def properties(self, id: Optional[int]) -> dict[str, str]:
+    def properties(self, id: int | None) -> dict[str, str]:
         return self[id].properties
 
-    def is_quantifier(self, id: Optional[int]) -> bool:
+    def is_quantifier(self, id: int | None) -> bool:
         """
         Return `True` if *id* is the id of a quantifier node.
         """
@@ -236,14 +237,14 @@ class DMRS(ScopingSemanticStructure[int, Node]):
 
     def quantification_pairs(
         self,
-    ) -> list[tuple[Optional[Node], Optional[Node]]]:
+    ) -> list[tuple[Node | None, Node | None]]:
         qs: set[int] = set()
         qmap: dict[int, Node] = {}
         for link in self.links:
             if link.role == RESTRICTION_ROLE:
                 qs.add(link.start)
                 qmap[link.end] = self[link.start]
-        pairs: list[tuple[Optional[Node], Optional[Node]]] = []
+        pairs: list[tuple[Node | None, Node | None]] = []
         # first pair non-quantifiers to their quantifier, if any
         for node in self.nodes:
             if node.id not in qs:
@@ -255,8 +256,8 @@ class DMRS(ScopingSemanticStructure[int, Node]):
 
     def arguments(
         self,
-        types: Optional[Iterable[str]] = None,
-        expressed: Optional[bool] = None,
+        types: Iterable[str] | None = None,
+        expressed: bool | None = None,
     ) -> ArgumentStructure[int]:
         """
         Return a mapping of the argument structure.
@@ -304,7 +305,7 @@ class DMRS(ScopingSemanticStructure[int, Node]):
 
     # ScopingSemanticStructure methods
 
-    def scopes(self) -> tuple[Optional[str], dict[str, list[Node]]]:
+    def scopes(self) -> tuple[str | None, dict[str, list[Node]]]:
         """
         Return a tuple containing the top label and the scope map.
 
@@ -338,7 +339,7 @@ class DMRS(ScopingSemanticStructure[int, Node]):
 
     def scopal_arguments(
         self,
-        scopes: Optional[ScopeMap[Node]] = None,
+        scopes: ScopeMap[Node] | None = None,
     ) -> ScopalArguments[int]:
         """
         Return a mapping of the scopal argument structure.
@@ -383,9 +384,9 @@ class DMRS(ScopingSemanticStructure[int, Node]):
 
 
 def _normalize_top_and_links(
-    top: Optional[int],
-    links: Optional[Iterable[Link]],
-) -> tuple[Optional[int], list[Link]]:
+    top: int | None,
+    links: Iterable[Link] | None,
+) -> tuple[int | None, list[Link]]:
     """
     Original DMRS had a /H link from a special node id of 0 to
     indicate the top node, but now the `top` attribute is used.

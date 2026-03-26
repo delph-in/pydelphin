@@ -10,13 +10,13 @@ from delphin.__about__ import __version__  # noqa: F401
 class PyDelphinException(Exception):
     """The base class for PyDelphin exceptions."""
     def __init__(self, *args, **kwargs):
-        super(PyDelphinException, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class PyDelphinWarning(Warning):
     """The base class for PyDelphin warnings."""
     def __init__(self, *args, **kwargs):
-        super(PyDelphinWarning, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class PyDelphinSyntaxError(PyDelphinException):

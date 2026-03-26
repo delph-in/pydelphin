@@ -8,10 +8,12 @@ import locale
 import logging
 import os
 import re
+from collections.abc import Iterable, Iterator, Mapping
 from datetime import datetime
 from getpass import getuser  # portable way to get username
 from pathlib import Path
 from platform import platform  # portable system information
+from re import Pattern
 from socket import gethostname  # portable way to get host name
 from subprocess import (
     PIPE,
@@ -23,14 +25,6 @@ from subprocess import (
 from typing import (
     IO,
     Any,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Pattern,
-    Tuple,
 )
 
 from delphin import interface, util
@@ -81,17 +75,17 @@ class ACEProcess(interface.Processor):
         stderr (file): stream used for ACE's stderr
     """
 
-    _cmdargs: List[str] = []
-    _termini: List[Pattern[str]] = []
+    _cmdargs: list[str] = []
+    _termini: list[Pattern[str]] = []
 
     def __init__(self,
                  grm: util.PathLike,
-                 cmdargs: Optional[List[str]] = None,
-                 executable: Optional[util.PathLike] = None,
-                 env: Optional[Mapping[str, str]] = None,
+                 cmdargs: list[str] | None = None,
+                 executable: util.PathLike | None = None,
+                 env: Mapping[str, str] | None = None,
                  tsdbinfo: bool = True,
                  full_forest: bool = False,
-                 stderr: Optional[IO[Any]] = None):
+                 stderr: IO[Any] | None = None):
         self.grm = str(Path(grm).expanduser())
 
         self.cmdargs = cmdargs or []
@@ -114,17 +108,17 @@ class ACEProcess(interface.Processor):
             self.receive = self._default_receive
         self.env = env or os.environ
         self._run_id = -1
-        self.run_infos: List[Dict[str, Any]] = []
+        self.run_infos: list[dict[str, Any]] = []
         self._stderr = stderr
         self._open()
 
     @property
-    def ace_version(self) -> Tuple[int, ...]:
+    def ace_version(self) -> tuple[int, ...]:
         """The version of the specified ACE binary."""
         return _ace_version(self.executable)
 
     @property
-    def run_info(self) -> Dict[str, Any]:
+    def run_info(self) -> dict[str, Any]:
         """Contextual information about the the running process."""
         return self.run_infos[-1]
 
@@ -160,8 +154,8 @@ class ACEProcess(interface.Processor):
 
     def _result_lines(
         self,
-        termini: Optional[List[Pattern[str]]] = None
-    ) -> List[str]:
+        termini: list[Pattern[str]] | None = None
+    ) -> list[str]:
         poll = self._p.poll
         assert self._p.stdout is not None, 'cannot receive output from ACE'
         next_line = self._p.stdout.readline
@@ -210,14 +204,14 @@ class ACEProcess(interface.Processor):
         """
         assert self._p.stdin is not None, 'cannot send inputs to ACE'
         try:
-            self._p.stdin.write((datum.rstrip() + '\n'))
+            self._p.stdin.write(datum.rstrip() + '\n')
             self._p.stdin.flush()
-        except (IOError, OSError):  # ValueError if file was closed manually
+        except OSError:  # ValueError if file was closed manually
             logger.info(
                 'Attempted to write to a closed process; attempting to reopen'
             )
             self._open()
-            self._p.stdin.write((datum.rstrip() + '\n'))
+            self._p.stdin.write(datum.rstrip() + '\n')
             self._p.stdin.flush()
 
     def receive(self) -> interface.Response:
@@ -282,7 +276,7 @@ class ACEProcess(interface.Processor):
 
     def process_item(self,
                      datum: str,
-                     keys: Optional[Dict[str, Any]] = None
+                     keys: dict[str, Any] | None = None
                      ) -> interface.Response:
         """
         Send *datum* to ACE and return the response with context.
@@ -343,7 +337,11 @@ class ACEParser(ACEProcess):
         lines = self._result_lines()
         response, lines = _make_response(lines, self.run_info)
         response['results'] = [
-            dict(zip(('mrs', 'derivation'), map(str.strip, line.split(' ; '))))
+            dict(
+                zip(('mrs', 'derivation'),
+                map(str.strip, line.split(' ; ')),
+                strict=False),
+            )
             for line in lines
         ]
         return response
@@ -361,10 +359,10 @@ class ACETransferer(ACEProcess):
 
     def __init__(self,
                  grm: util.PathLike,
-                 cmdargs: Optional[List[str]] = None,
-                 executable: Optional[util.PathLike] = None,
-                 env: Optional[Mapping[str, str]] = None,
-                 stderr: Optional[IO[Any]] = None):
+                 cmdargs: list[str] | None = None,
+                 executable: util.PathLike | None = None,
+                 env: Mapping[str, str] | None = None,
+                 stderr: IO[Any] | None = None):
         super().__init__(grm, cmdargs=cmdargs, executable=executable, env=env,
                          tsdbinfo=False, full_forest=False, stderr=stderr)
 
@@ -391,11 +389,11 @@ class ACEGenerator(ACEProcess):
 
     def __init__(self,
                  grm: util.PathLike,
-                 cmdargs: Optional[List[str]] = None,
-                 executable: Optional[util.PathLike] = None,
-                 env: Optional[Mapping[str, str]] = None,
+                 cmdargs: list[str] | None = None,
+                 executable: util.PathLike | None = None,
+                 env: Mapping[str, str] | None = None,
                  tsdbinfo: bool = True,
-                 stderr: Optional[IO[Any]] = None):
+                 stderr: IO[Any] | None = None):
         super().__init__(grm, cmdargs=cmdargs, executable=executable, env=env,
                          tsdbinfo=tsdbinfo, full_forest=False, stderr=stderr)
 
@@ -435,10 +433,10 @@ class ACEGenerator(ACEProcess):
 
 def compile(cfg_path: util.PathLike,
             out_path: util.PathLike,
-            executable: Optional[util.PathLike] = None,
-            env: Optional[Mapping[str, str]] = None,
-            stdout: Optional[IO[Any]] = None,
-            stderr: Optional[IO[Any]] = None) -> None:
+            executable: util.PathLike | None = None,
+            env: Mapping[str, str] | None = None,
+            stdout: IO[Any] | None = None,
+            stderr: IO[Any] | None = None) -> None:
     """
     Use ACE to compile a grammar.
 
@@ -619,9 +617,9 @@ _ace_argparser.add_argument('--yy-rules', action='store_true')
 _ace_argparser.add_argument('--max-words', type=int)
 
 
-def _ace_version(executable: str) -> Tuple[int, ...]:
+def _ace_version(executable: str) -> tuple[int, ...]:
     # 0.9.0 is the initial public release of ACE
-    version: Tuple[int, ...] = (0, 9, 0)
+    version: tuple[int, ...] = (0, 9, 0)
     try:
         out = check_output([executable, '-V'], universal_newlines=True)
     except (CalledProcessError, OSError):
@@ -659,7 +657,7 @@ def _possible_mrs(s: str) -> str:
         return ''
 
 
-def _make_response(lines, run) -> Tuple[interface.Response, List[str]]:
+def _make_response(lines, run) -> tuple[interface.Response, list[str]]:
     response = interface.Response({
         'NOTES': [],
         'WARNINGS': [],
@@ -684,7 +682,7 @@ def _make_response(lines, run) -> Tuple[interface.Response, List[str]]:
     return response, content_lines
 
 
-def _sexpr_data(line: str) -> Iterator[Tuple[str, Any]]:
+def _sexpr_data(line: str) -> Iterator[tuple[str, Any]]:
     while line:
         try:
             expr = util.SExpr.parse(line)

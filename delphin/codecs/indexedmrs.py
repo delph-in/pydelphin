@@ -223,7 +223,7 @@ def _decode_rel(lexer, variables, semi):
     arglist, carg = _decode_arglist(lexer, variables)
     argtypes = [variable.type(arg) for arg in arglist]
     synopsis = semi.find_synopsis(pred, argtypes)
-    args = {d[0]: v for d, v in zip(synopsis, arglist)}
+    args = {d[0]: v for d, v in zip(synopsis, arglist, strict=True)}
     if carg:
         args[CONSTANT_ROLE] = carg
     return EP(
@@ -281,8 +281,8 @@ def _match_properties(variables, semi):
         semiprops = semi.variables[variable.type(var)]
         assert len(semiprops) == len(propvals)
         assert all(semi.properties.subsumes(sp[1], pv)
-                   for sp, pv in zip(semiprops, propvals))
-        variables[var] = {sp[0]: pv for sp, pv in zip(semiprops, propvals)}
+                   for sp, pv in zip(semiprops, propvals, strict=True))
+        variables[var] = {sp[0]: pv for sp, pv in zip(semiprops, propvals, strict=True)}
 
 
 ##############################################################################
@@ -363,7 +363,7 @@ def _encode_rel(ep, semi, varprops, lnk, delim):
             for d in synopsis
             if d.name in ep.args]
     if ep.carg is not None:
-        args.append('"{}"'.format(ep.carg))
+        args.append(f'"{ep.carg}"')
     return '{label}:{pred}{lnk}({args})'.format(
         label=ep.label,
         pred=ep.predicate,
@@ -372,8 +372,8 @@ def _encode_rel(ep, semi, varprops, lnk, delim):
 
 
 def _encode_hcons(hc):
-    return '{} {} {}'.format(hc.hi, hc.relation, hc.lo)
+    return f'{hc.hi} {hc.relation} {hc.lo}'
 
 
 def _encode_icons(ic):
-    return '{} {} {}'.format(ic.left, ic.relation, ic.right)
+    return f'{ic.left} {ic.relation} {ic.right}'

@@ -17,12 +17,10 @@ __all__ = [
     "ScopingSemanticStructure",
 ]
 
+from collections.abc import Callable, Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    Iterable,
-    Optional,
     TypeVar,
     overload,
 )
@@ -99,7 +97,7 @@ def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
 
 def descendants(
     x: ScopingSemanticStructure[ID, P],
-    scopes: Optional[ScopeMap[P]] = None,
+    scopes: ScopeMap[P] | None = None,
 ) -> Descendants[ID, P]:
     """
     Return a mapping of predication ids to their scopal descendants.
@@ -154,20 +152,20 @@ def _descendants(
 @overload
 def representatives(
     x: mrs.MRS,
-    priority: Optional[PredicationPriority[mrs.EP]] = None,
+    priority: PredicationPriority[mrs.EP] | None = None,
 ) -> Scopes[mrs.EP]:
     ...
 
 @overload
 def representatives(
     x: dmrs.DMRS,
-    priority: Optional[PredicationPriority[dmrs.Node]] = None,
+    priority: PredicationPriority[dmrs.Node] | None = None,
 ) -> Scopes[dmrs.Node]:
     ...
 
 def representatives(
     x: ScopingSemanticStructure,
-    priority: Optional[PredicationPriority] = None,
+    priority: PredicationPriority | None = None,
 ) -> ScopeMap:
     """
     Find the scope representatives in *x* sorted by *priority*.

@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import warnings
 from collections import OrderedDict
+from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
 from datetime import date, datetime
 from gzip import (
     GzipFile,
@@ -15,17 +16,7 @@ from gzip import (
 from pathlib import Path
 from typing import (
     IO,
-    Dict,
-    Generator,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
+    TypeAlias,
     cast as typing_cast,
 )
 
@@ -74,12 +65,12 @@ _MONTHS = {
 #############################################################################
 # Local types
 
-RawValue = Union[str, None]
-RawRecord = Sequence[RawValue]
-Value = Union[str, int, float, datetime, date, None]
-Record = Sequence[Value]
-Records = Iterable[Record]
-ColumnMap = Dict[str, Value]  # e.g., a partial Record
+RawValue: TypeAlias = str | None
+RawRecord: TypeAlias = Sequence[RawValue]
+Value: TypeAlias = str | int | float | datetime | date | None
+Record: TypeAlias = Sequence[Value]
+Records: TypeAlias = Iterable[Record]
+ColumnMap: TypeAlias = dict[str, Value]  # e.g., a partial Record
 
 
 #############################################################################
@@ -123,8 +114,8 @@ class Field:
     def __init__(self,
                  name: str,
                  datatype: str,
-                 flags: Optional[Iterable[str]] = None,
-                 comment: Optional[str] = None) -> None:
+                 flags: Iterable[str] | None = None,
+                 comment: str | None = None) -> None:
         self.name = name
         self.datatype = datatype
         self.flags = tuple(flags or [])
@@ -145,7 +136,7 @@ class Field:
         parts.extend(self.flags)
         s = '  ' + ' '.join(parts)
         if self.comment:
-            s = '{}# {}'.format(s.ljust(40), self.comment)
+            s = f'{s.ljust(40)}# {self.comment}'
         return s
 
     def __eq__(self, other):
@@ -156,10 +147,10 @@ class Field:
                 and self.flags == other.flags)
 
 
-Fields = Sequence[Field]
-FieldIndex = Dict[str, int]
-Schema = Mapping[str, Fields]
-SchemaLike = Union[Schema, util.PathLike]
+Fields: TypeAlias = Sequence[Field]
+FieldIndex: TypeAlias = dict[str, int]
+Schema: TypeAlias = Mapping[str, Fields]
+SchemaLike: TypeAlias = Schema | util.PathLike
 
 
 def make_field_index(fields: Fields) -> FieldIndex:
@@ -198,10 +189,10 @@ def read_schema(path: util.PathLike) -> Schema:
 
 def _parse_schema(s: str) -> Schema:
     """Instantiate schema dict from a string."""
-    tables: List[Tuple[str, Fields]] = []
-    seen: Set[str] = set()
+    tables: list[tuple[str, Fields]] = []
+    seen: set[str] = set()
     current_table = ''
-    current_fields: List[Field] = []
+    current_fields: list[Field] = []
     lines = list(reversed(s.splitlines()))  # to pop() in right order
     while lines:
         line = lines.pop().strip()
@@ -267,7 +258,7 @@ class Relation(Records):
     def __init__(self,
                  dir: util.PathLike,
                  name: str,
-                 fields: Optional[Fields],
+                 fields: Fields | None,
                  encoding: str = 'utf-8'):
         self.dir = Path(dir).expanduser()
         self.name = name
@@ -349,7 +340,7 @@ class Database:
         return len(self.schema)
 
     def select_from(self, name: str,
-                    columns: Optional[Iterable[str]] = None,
+                    columns: Iterable[str] | None = None,
                     cast: bool = False) -> Generator[Record, None, None]:
         """
         Yield values for *columns* from relation *name*.
@@ -374,7 +365,7 @@ class Database:
     def _select_raw(
             self,
             name: str,
-            columns: Optional[Iterable[str]] = None
+            columns: Iterable[str] | None = None
     ) -> Generator[RawRecord, None, None]:
         if name not in self.schema:
             raise TSDBError(f'relation not defined in schema: {name}')
@@ -430,7 +421,7 @@ def unescape(string: str) -> str:
     """
     # unescape cannot use multiple str.replace() calls because of
     # examples like '\\\\s' which turn into '@' instead of '\\s'
-    chars: List[str] = []
+    chars: list[str] = []
     esc = False
     for c in string:
         if esc:
@@ -453,7 +444,7 @@ def unescape(string: str) -> str:
 
 
 def split(line: str,
-          fields: Optional[Fields] = None) -> Record:
+          fields: Fields | None = None) -> Record:
     """
     Split a raw line from a relation into a list of column values.
 
@@ -476,14 +467,14 @@ def split(line: str,
         if len(raw_values) != len(fields):
             _mismatched_counts(raw_values, fields)
         record = tuple(cast(f.datatype, col)
-                       for col, f in zip(raw_values, fields))
+                       for col, f in zip(raw_values, fields, strict=False))
     else:
         record = tuple(raw_values)
     return record
 
 
 def join(values: Record,
-         fields: Optional[Fields] = None) -> str:
+         fields: Fields | None = None) -> str:
     """
     Join a list of column values into a string for a relation file.
 
@@ -505,7 +496,7 @@ def join(values: Record,
         if len(values) != len(fields):
             _mismatched_counts(values, fields)
         raw_values = [format(f.datatype, val, default=f.default)
-                      for f, val in zip(fields, values)]
+                      for f, val in zip(fields, values, strict=False)]
     else:
         raw_values = ['' if v is None else str(v) for v in values]
     escaped_values = map(escape, raw_values)
@@ -513,8 +504,9 @@ def join(values: Record,
 
 
 def _mismatched_counts(columns, fields):
-    raise TSDBError('number of columns ({}) != number of fields ({})'
-                    .format(len(columns), len(fields)))
+    raise TSDBError(
+        f'number of columns ({len(columns)}) != number of fields ({len(fields)})'
+    )
 
 
 def make_record(colmap: ColumnMap, fields: Fields) -> Record:
@@ -536,7 +528,7 @@ def make_record(colmap: ColumnMap, fields: Fields) -> Record:
     return tuple(colmap.get(f.name, None) for f in fields)
 
 
-def cast(datatype: str, raw_value: Optional[str]) -> Value:
+def cast(datatype: str, raw_value: str | None) -> Value:
     """
     Cast TSDB field *raw_value* into *datatype*.
 
@@ -611,7 +603,7 @@ def cast(datatype: str, raw_value: Optional[str]) -> Value:
 _cast = cast
 
 
-def _parse_datetime(s: str) -> Union[datetime, None]:
+def _parse_datetime(s: str) -> datetime | None:
     if re.match(r':?(today|now)', s):
         return datetime.now()
 
@@ -660,8 +652,8 @@ def _date_fix(mo):
 
 
 def format(datatype: str,
-           value: Optional[Value],
-           default: Optional[str] = None) -> str:
+           value: Value | None,
+           default: str | None = None) -> str:
     """
     Format a column *value* based on its *field*.
 
@@ -741,7 +733,7 @@ def get_path(dir: util.PathLike,
     return tbl_path
 
 
-def _get_paths(dir: util.PathLike, name: str) -> Tuple[Path, Path, bool]:
+def _get_paths(dir: util.PathLike, name: str) -> tuple[Path, Path, bool]:
     tbl_path = Path(dir, name).expanduser()
     tx_path = tbl_path.with_suffix('')
     gz_path = tbl_path.with_suffix('.gz')
@@ -755,7 +747,7 @@ def _get_paths(dir: util.PathLike, name: str) -> Tuple[Path, Path, bool]:
 
 def open(dir: util.PathLike,
          name: str,
-         encoding: Optional[str] = None) -> IO[str]:
+         encoding: str | None = None) -> IO[str]:
     """
     Open a TSDB database file.
 
@@ -785,7 +777,7 @@ def open(dir: util.PathLike,
 def write(dir: util.PathLike,
           name: str,
           records: Iterable[Record],
-          fields: Optional[Fields] = None,
+          fields: Fields | None = None,
           append: bool = False,
           gzip: bool = False,
           encoding: str = 'utf-8') -> None:
@@ -921,8 +913,8 @@ def initialize_database(path: util.PathLike,
 
 def write_database(db: Database,
                    path: util.PathLike,
-                   names: Optional[Iterable[str]] = None,
-                   schema: Optional[SchemaLike] = None,
+                   names: Iterable[str] | None = None,
+                   schema: SchemaLike | None = None,
                    gzip: bool = False,
                    encoding: str = 'utf-8') -> None:
     """
@@ -994,7 +986,7 @@ def write_database(db: Database,
 def _remake_records(relation, old_fields, new_fields):
     field_names = [field.name for field in old_fields]
     for record in relation:
-        colmap = dict(zip(field_names, record))
+        colmap = dict(zip(field_names, record, strict=False))
         yield make_record(colmap, new_fields)
 
 

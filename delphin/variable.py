@@ -4,7 +4,6 @@ Functions for working with MRS variables.
 
 import re
 from collections.abc import Iterable
-from typing import Optional
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -114,8 +113,8 @@ class VariableFactory:
 
     def new(
         self,
-        type: Optional[str],
-        properties: Optional[Iterable[tuple[str, str]]] = None,
+        type: str | None,
+        properties: Iterable[tuple[str, str]] | None = None,
     ) -> str:
         """
         Create a new variable for the given *type*.

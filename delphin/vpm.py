@@ -154,7 +154,7 @@ class VPM:
             vals = [props.get(f) for f in srcfeats]
             for srcvals, op, tgtvals in pms:
                 if _valmatch(vals, srcvals, op, vs, self._semi, 'properties'):
-                    for i, featval in enumerate(zip(tgtfeats, tgtvals)):
+                    for i, featval in enumerate(zip(tgtfeats, tgtvals, strict=True)):
                         k, v = featval
                         if v == '*':
                             if i < len(vals) and vals[i] is not None:
@@ -186,7 +186,7 @@ def _valmatch(vs, ss, op, varsort, semi, section):
                     or (s[0], s[-1], s[1:-1]) == ('[', ']', varsort)
                 )
             )
-            for v, s in zip(vs, ss)
+            for v, s in zip(vs, ss, strict=False)
         )
     else:
         pass

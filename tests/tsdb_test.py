@@ -72,7 +72,7 @@ def test_write_schema(empty_testsuite, tmp_path):
     assert orig.read_text() == new.read_text()
 
 
-class TestDatabase():
+class TestDatabase:
     def test_init(self, tmp_path, mini_testsuite):
         with pytest.raises(TypeError):
             tsdb.Database()
@@ -161,7 +161,7 @@ def test_unescape():
 def test_split(empty_testsuite):
     assert tsdb.split('') == (None,)
     assert tsdb.split('one') == ('one',)
-    assert tsdb.split(u'あ') == (u'あ',)
+    assert tsdb.split('あ') == ('あ',)
     assert tsdb.split('one@two') == ('one', 'two')
     assert tsdb.split('one@@three') == ('one', None, 'three')
     assert (tsdb.split('one\\s@\\\\two\\nabc')
@@ -173,7 +173,7 @@ def test_split(empty_testsuite):
 def test_join():
     assert tsdb.join([None]) == ''
     assert tsdb.join(['one']) == 'one'
-    assert tsdb.join([u'あ']) == u'あ'
+    assert tsdb.join(['あ']) == 'あ'
     assert tsdb.join(['one', 'two']) == 'one@two'
     assert tsdb.join(['one', None, 'three']) == 'one@@three'
     assert tsdb.join(['one@', '\\two\nabc']) == 'one\\s@\\\\two\\nabc'

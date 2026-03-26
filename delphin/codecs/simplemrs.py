@@ -4,7 +4,6 @@ Serialization functions for the SimpleMRS format.
 
 import re
 from pathlib import Path
-from typing import Optional
 
 from delphin import predicate, variable
 from delphin.lnk import Lnk
@@ -217,7 +216,7 @@ def _decode_lnk(lexer):
     return lnk
 
 
-def _decode_dqstring(dqstring: Optional[str]) -> Optional[str]:
+def _decode_dqstring(dqstring: str | None) -> str | None:
     if dqstring is not None:
         dqstring = _unescape(dqstring)
     return dqstring
@@ -320,7 +319,7 @@ def _encode_surface_info(m, lnk):
         if m.lnk:
             tokens.append(str(m.lnk))
         if m.surface is not None:
-            tokens.append('"{}"'.format(_escape(m.surface)))
+            tokens.append(f'"{_escape(m.surface)}"')
     return tokens
 
 
@@ -328,9 +327,9 @@ def _encode_hook(m, varprops, indent):
     delim = '\n  ' if indent else ' '
     tokens = []
     if m.top is not None:
-        tokens.append('{}: {}'.format(TOP_FEATURE, m.top))
+        tokens.append(f'{TOP_FEATURE}: {m.top}')
     if m.index is not None:
-        tokens.append('INDEX: {}'.format(_encode_variable(m.index, varprops)))
+        tokens.append(f'INDEX: {_encode_variable(m.index, varprops)}')
     if tokens:
         tokens = [delim.join(tokens)]
     return tokens
@@ -359,12 +358,12 @@ def _encode_rels(rels, varprops, lnk, indent):
             pred += str(rel.lnk)
         reltoks = ['[', pred]
         if lnk and rel.surface is not None:
-            reltoks.append('"{}"'.format(_escape(rel.surface)))
+            reltoks.append(f'"{_escape(rel.surface)}"')
         reltoks.extend(('LBL:', rel.label))
         for role in sorted(rel.args, key=role_priority):
             arg = rel.args[role]
             if role == CONSTANT_ROLE:
-                arg = '"{}"'.format(_escape(arg))
+                arg = f'"{_escape(arg)}"'
             else:
                 arg = _encode_variable(arg, varprops)
             reltoks.extend((role + ':', arg))
@@ -382,7 +381,7 @@ def _encode_predicate(predicate: str) -> str:
 
 
 def _encode_hcons(hcons):
-    tokens = ['{} {} {}'.format(hc.hi, hc.relation, hc.lo)
+    tokens = [f'{hc.hi} {hc.relation} {hc.lo}'
               for hc in hcons]
     if tokens:
         tokens = ['HCONS: <'] + [' '.join(tokens)] + ['>']
@@ -390,9 +389,10 @@ def _encode_hcons(hcons):
 
 
 def _encode_icons(icons, varprops):
-    tokens = ['{} {} {}'.format(_encode_variable(ic.left, varprops),
-                                ic.relation,
-                                _encode_variable(ic.right, varprops))
+    tokens = [
+        f'{_encode_variable(ic.left, varprops)} '
+        f'{ic.relation} '
+        f'{_encode_variable(ic.right, varprops)}'
               for ic in icons]
     if tokens:
         tokens = ['ICONS: <'] + [' '.join(tokens)] + ['>']

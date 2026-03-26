@@ -32,7 +32,7 @@ For bug reports, please provide the following, if possible:
   >>> mrs.__version__  # package version
   '1.10.0'
   ```
-* Python version (e.g. 3.9, 3.10, etc.)
+* Python version (e.g. 3.13, 3.14, etc.)
 
 For feature requests, please provide a use case for the feature.
 

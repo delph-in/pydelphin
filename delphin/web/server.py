@@ -8,7 +8,6 @@ import functools
 import json
 import pathlib
 import urllib.parse
-from typing import Optional, Type
 
 import falcon
 
@@ -86,7 +85,7 @@ class ProcessorServer:
         instead.
     """
 
-    processor_class: Optional[Type[interface.Processor]] = None
+    processor_class: type[interface.Processor] | None = None
 
     def __init__(self, grammar, *args, **kwargs):
         self.grammar = grammar

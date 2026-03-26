@@ -4,15 +4,14 @@ Classes and functions related to derivation trees.
 
 import re
 from collections import namedtuple
-from collections.abc import Sequence
+from collections.abc import (
+    Iterable,
+    Sequence,
+    Sequence as SequenceType,
+)
 from typing import (
     Any,
-    Dict,
-    Iterable,
-    List,
     Optional,
-    Sequence as SequenceType,
-    Union,
 )
 
 # Default modules need to import the PyDelphin version
@@ -88,8 +87,8 @@ class _UDFNodeBase:
     def to_dict(
         self,
         fields: Iterable[str] = _all_fields,
-        labels: Optional[SequenceType] = None
-    ) -> Dict[str, Any]:
+        labels: SequenceType | None = None
+    ) -> dict[str, Any]:
         """
         Encode the node as a dictionary suitable for JSON serialization.
 
@@ -118,8 +117,8 @@ class UDFToken(namedtuple('UDFToken', 'id tfs')):
         id: token identifier
         tfs: the feature structure for the token
     """
-    def __new__(cls, id: Union[int, str], tfs: str):
-        return super(UDFToken, cls).__new__(cls, int(id), tfs)
+    def __new__(cls, id: int | str, tfs: str):
+        return super().__new__(cls, int(id), tfs)
 
     def __repr__(self):
         return f'<UDFToken object ({self.id} {self.tfs!r}) at {id(self)}>'
@@ -149,11 +148,11 @@ class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', 'form tokens')):
 
     def __new__(cls,
                 form: str,
-                tokens: Optional[SequenceType[UDFToken]] = None,
+                tokens: SequenceType[UDFToken] | None = None,
                 parent=None):
         if tokens is None:
             tokens = []
-        t = super(UDFTerminal, cls).__new__(cls, form, tokens)
+        t = super().__new__(cls, form, tokens)
         # internal bookkeeping
         t._parent = parent
         return t
@@ -208,18 +207,18 @@ class UDFNode(_UDFNodeBase,
         parent: parent node in derivation
     """
 
-    _head: Optional[bool]
-    type: Optional[str]
+    _head: bool | None
+    type: str | None
 
     def __new__(cls,
-                id: Optional[int],
+                id: int | None,
                 entity: str,
-                score: Optional[float] = None,
-                start: Optional[int] = None,
-                end: Optional[int] = None,
-                daughters: Optional[SequenceType[_UDFNodeBase]] = None,
-                head: Optional[bool] = None,
-                type: Optional[str] = None,
+                score: float | None = None,
+                start: int | None = None,
+                end: int | None = None,
+                daughters: SequenceType[_UDFNodeBase] | None = None,
+                head: bool | None = None,
+                type: str | None = None,
                 parent: Optional['UDFNode'] = None):
         # numeric fields can be underspecified as -1 if not a root
         if id is not None:
@@ -233,7 +232,7 @@ class UDFNode(_UDFNodeBase,
         # make sure daughters are not roots (is this check unnecessary?)
         if any(dtr.is_root() for dtr in daughters):
             raise ValueError('Daughter nodes cannot be roots.')
-        node = super(UDFNode, cls).__new__(
+        node = super().__new__(
             cls, id, entity, score, start, end, daughters
         )
         # internal bookkeeping
@@ -243,8 +242,9 @@ class UDFNode(_UDFNodeBase,
         return node
 
     def __repr__(self):
-        return '<UDFNode object ({}, {}, {}, {}, {}) at {}>'.format(
-            self.id, self.entity, self.score, self.start, self.end, id(self)
+        return (
+            f'<UDFNode object ({self.id}, {self.entity}, {self.score},'
+            f'{self.start}, {self.end}) at {id(self)}>'
         )
 
     def __eq__(self, other):
@@ -265,7 +265,7 @@ class UDFNode(_UDFNodeBase,
             return False
         if len(self.daughters) != len(other.daughters):
             return False
-        if any(a != b for a, b in zip(self.daughters, other.daughters)):
+        if any(a != b for a, b in zip(self.daughters, other.daughters, strict=True)):
             return False
         # Return true if they're the same!
         return True
@@ -390,7 +390,7 @@ def from_string(s: str) -> Derivation:
     return Derivation(*udfnode, head=udfnode._head, type=udfnode.type)
 
 
-def from_dict(d: Dict[str, Any]) -> Derivation:
+def from_dict(d: dict[str, Any]) -> Derivation:
     """
     Instantiate a Derivation from a dictionary representation.
 
@@ -440,8 +440,8 @@ def _from_string(s) -> UDFNode:
         raise DerivationSyntaxError(
             'missing opening or closing parentheses', text=s)
     s_ = s[1:]  # get rid of initial open-parenthesis
-    stack: List[UDFNode] = []
-    deriv: Optional[UDFNode] = None
+    stack: list[UDFNode] = []
+    deriv: UDFNode | None = None
     matches = _udf_re.finditer(s_)
     for match in matches:
         if match.group('done'):
@@ -495,8 +495,8 @@ def _unquote(s: str) -> str:
     return None
 
 
-def _udf_tokens(tokenstring: str) -> List[UDFToken]:
-    tokens: List[UDFToken] = []
+def _udf_tokens(tokenstring: str) -> list[UDFToken]:
+    tokens: list[UDFToken] = []
     if tokenstring:
         toks = re.findall(
             r'\s*({id})\s+({tfs})'
@@ -508,7 +508,7 @@ def _udf_tokens(tokenstring: str) -> List[UDFToken]:
     return tokens
 
 
-def _from_dict(d: Dict[str, Any], parent: Optional[UDFNode] = None) -> UDFNode:
+def _from_dict(d: dict[str, Any], parent: UDFNode | None = None) -> UDFNode:
     if 'daughters' in d:
         n = UDFNode(
             d.get('id'),
@@ -567,18 +567,11 @@ def _to_udf(obj, indent, level, udx=False):
             return f'({entity}{dtrs})'
         else:
             # :g for score makes -1.0 look like -1
-            return '({} {} {:g} {} {}{})'.format(
-                obj.id,
-                entity,
-                obj.score,
-                obj.start,
-                obj.end,
-                dtrs
-            )
+            return f'({obj.id} {entity} {obj.score:g} {obj.start} {obj.end}{dtrs})'
     elif isinstance(obj, UDFTerminal):
         form = f'"{obj.form}"'
         tokens = [f'{t.id} "{t.tfs}"' for t in obj.tokens]
-        return '({})'.format(delim.join([form] + tokens))
+        return f'({delim.join([form] + tokens)})'
     else:
         raise TypeError(f'Invalid node: {obj!s}')
 
@@ -607,7 +600,7 @@ def _map_labels(drv, labels):
     sublbls = labels[1:]
     if (sublbls and len(subds) != len(sublbls)):
         raise ValueError('Labels do not match derivation structure.')
-    for d, lbls in zip(subds, sublbls):
+    for d, lbls in zip(subds, sublbls, strict=True):
         if hasattr(d, 'id'):
             m.update(_map_labels(d, lbls))
     return m

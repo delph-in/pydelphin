@@ -4,7 +4,7 @@ import pytest
 from delphin.lnk import Lnk, LnkError, LnkMixin
 
 
-class TestLnk():
+class TestLnk:
     def test_raw_init(self):
         with pytest.raises(TypeError):
             Lnk()
@@ -103,7 +103,7 @@ class TestLnk():
             Lnk.edge('a')
 
 
-class TestLnkMixin():
+class TestLnkMixin:
     def test_inherit(self):
         class NoLnk(LnkMixin):
             pass

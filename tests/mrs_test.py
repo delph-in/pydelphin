@@ -32,7 +32,7 @@ def dogs_bark():
 #     assert m.variables == {}
 
 
-class TestEP():
+class TestEP:
     def test__init__(self):
         with pytest.raises(TypeError):
             mrs.EP()
@@ -57,7 +57,7 @@ class TestEP():
         assert ep != mrs.EP('_chase_v_1', 'h2')
 
 
-class TestMRS():
+class TestMRS:
     def test__init__(self, dogs_bark):
         m = mrs.MRS()
         assert m.top is None

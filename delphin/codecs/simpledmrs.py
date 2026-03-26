@@ -266,7 +266,7 @@ def _encode_dmrs(d, properties, lnk, indent):
     if d.identifier is None:
         start = 'dmrs {'
     else:
-        start = 'dmrs {} {{'.format(d.identifier)
+        start = f'dmrs {d.identifier} {{'
     attrs = _encode_attrs(d, lnk)
     nodes = [_encode_node(node, properties, lnk) for node in d.nodes]
     links = [_encode_link(link) for link in d.links]
@@ -279,11 +279,11 @@ def _encode_attrs(d, lnk):
         if d.lnk:
             attrs.append(str(d.lnk))
         if d.surface is not None:
-            attrs.append('"{}"'.format(d.surface))
+            attrs.append(f'"{d.surface}"')
     if d.top is not None:
-        attrs.append('top={}'.format(d.top))
+        attrs.append(f'top={d.top}')
     if d.index is not None:
-        attrs.append('index={}'.format(d.index))
+        attrs.append(f'index={d.index}')
     if attrs:
         attrs = ['[{}]'.format(' '.join(attrs))]
     return attrs
@@ -294,7 +294,7 @@ def _encode_node(node, properties, lnk):
         nodeid=node.id,
         pred=node.predicate,
         lnk=str(node.lnk) if lnk else '',
-        carg='' if node.carg is None else '("{}")'.format(node.carg),
+        carg='' if node.carg is None else f'("{node.carg}")',
         sortinfo=_encode_sortinfo(node, properties))
 
 
@@ -304,7 +304,7 @@ def _encode_sortinfo(node, properties):
     if node.type is not None and node.type != 'u':
         sortinfo.append(node.type)
     if properties and node.properties:
-        sortinfo.extend('{}={}'.format(k, v)
+        sortinfo.extend(f'{k}={v}'
                         for k, v in node.properties.items())
     if sortinfo:
         return ' ' + ' '.join(sortinfo)

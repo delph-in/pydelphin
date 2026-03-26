@@ -47,8 +47,8 @@ def test_decode_issue_302():
 
     def assert_predicate(p):
         m = simplemrs.decode(
-            '[ TOP: h0 RELS: < [ {}<1:2> LBL: h1 ] > HCONS: < h0 qeq h1 > ]'
-            .format(p)
+            f'[ TOP: h0 RELS: < [ {p}<1:2> LBL: h1 ] > HCONS: < h0 qeq h1 > ]'
+
         )
         assert m.rels[0].predicate == p
 

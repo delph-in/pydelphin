@@ -263,9 +263,8 @@ class SynopsisRole(tuple):
                                       properties,
                                       bool(optional)]))
 
-    def __repr__(self):
-        return 'SynopsisRole({}, {}, {}, {})'.format(
-            self.name, self.value, self.properties, self.optional)
+    def __repr__(self) -> str:
+        return f'SynopsisRole({", ".join(self)})'
 
     def _to_dict(self):
         d = {"name": self.name, "value": self.value}
@@ -494,8 +493,7 @@ class SemI:
                         # Just warn because of the current situation where
                         # 'i' variables are used for unexpressed 'x's
                         warnings.warn(
-                            "{}: property '{}' not allowed on '{}'"
-                            .format(pred, k, role.value),
+                            f"{pred}: property '{k}' not allowed on '{role.value}'",
                             SemIWarning,
                             stacklevel=2,
                         )
@@ -503,8 +501,8 @@ class SemI:
                         _v = propcache[role.value][k]
                         if not self.properties.compatible(v, _v):
                             raise SemIError(
-                                '{}: incompatible property values: {}, {}'
-                                .format(pred, v, _v))
+                                f'{pred}: incompatible property values: {v}, {_v}'
+                            )
         return synopsis
 
     @classmethod

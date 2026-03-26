@@ -295,13 +295,13 @@ def _encode_node(node, properties, lnk):
         parts.append(str(node.lnk))
 
     if node.carg is not None:
-        parts.append('("{}")'.format(node.carg))
+        parts.append(f'("{node.carg}")')
 
     if properties and (node.properties or node.type):
         parts.append('{')
         parts.append(node.type or variable.UNSPECIFIC)
         if node.properties:
-            proplist = ['{} {}'.format(prop, node.properties[prop])
+            proplist = [f'{prop} {node.properties[prop]}'
                         for prop in sorted(node.properties,
                                            key=property_priority)]
             parts.append(' ' + ', '.join(proplist))
@@ -311,7 +311,7 @@ def _encode_node(node, properties, lnk):
     edgelist = []
     edges = node.edges
     for role in sorted(edges, key=role_priority):
-        edgelist.append('{} {}'.format(role, edges[role]))
+        edgelist.append(f'{role} {edges[role]}')
     parts.append(', '.join(edgelist))
     parts.append(']')
 

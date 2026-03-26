@@ -3,7 +3,6 @@ Interfaces for external data providers.
 """
 
 from collections.abc import Sequence
-from typing import Optional
 
 from delphin import exceptions, util
 
@@ -31,7 +30,7 @@ class Processor:
             `"transfer"`, or `"generate"`)
     """
 
-    task: Optional[str] = None
+    task: str | None = None
 
     def process_item(self, datum, keys=None):
         """
@@ -62,7 +61,7 @@ class Result(dict):
     """
 
     def __repr__(self):
-        return 'Result({})'.format(dict.__repr__(self))
+        return f'Result({dict.__repr__(self)})'
 
     def derivation(self):
         """
@@ -209,7 +208,7 @@ class Response(dict):
     _result_cls = Result
 
     def __repr__(self):
-        return 'Response({})'.format(dict.__repr__(self))
+        return f'Response({dict.__repr__(self)})'
 
     def results(self):
         """Return Result objects for each result."""

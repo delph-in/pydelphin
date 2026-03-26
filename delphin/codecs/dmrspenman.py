@@ -177,9 +177,9 @@ def to_triples(d, properties=True, lnk=True):
             _id = idmap[node.id]
             triples.append((_id, ':instance', node.predicate))
             if lnk and node.lnk is not None:
-                triples.append((_id, ':lnk', '"{}"'.format(str(node.lnk))))
+                triples.append((_id, ':lnk', f'"{str(node.lnk)}"'))
             if node.carg is not None:
-                triples.append((_id, ':carg', '"{}"'.format(node.carg)))
+                triples.append((_id, ':carg', f'"{node.carg}"'))
             if node.type:
                 triples.append((_id, ':' + CVARSORT, node.type))
             if properties:
@@ -195,7 +195,7 @@ def to_triples(d, properties=True, lnk=True):
         if link.start in main_component and link.end in main_component:
             start = idmap[link.start]
             end = idmap[link.end]
-            relation = ':{}-{}'.format(link.role.upper(), link.post)
+            relation = f':{link.role.upper()}-{link.post}'
             triples.append((start, relation, end))
 
     if not complete:

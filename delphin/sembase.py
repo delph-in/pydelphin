@@ -14,16 +14,13 @@ __all__ = [
 ]
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Mapping, Sequence
 from enum import Enum
 from typing import (
     Any,
     Generic,
-    Iterable,
-    Mapping,
-    Optional,
-    Sequence,
+    TypeAlias,
     TypeVar,
-    Union,
 )
 
 # Default modules need to import the PyDelphin version
@@ -32,8 +29,8 @@ from delphin.lnk import Lnk
 
 # Basic Type Aliases
 
-Role = str
-Properties = dict[str, str]  # property: value
+Role: TypeAlias = str
+Properties: TypeAlias = dict[str, str]  # property: value
 
 
 # Functions for the default ordering of feature lists
@@ -92,12 +89,12 @@ class LnkMixin:
     __slots__ = ('lnk', 'surface')
 
     lnk: Lnk
-    surface: Optional[str]
+    surface: str | None
 
     def __init__(
         self,
-        lnk: Optional[Lnk] = None,
-        surface: Optional[str] = None,
+        lnk: Lnk | None = None,
+        surface: str | None = None,
     ) -> None:
         if lnk is None:
             lnk = Lnk.default()
@@ -138,10 +135,10 @@ class LnkMixin:
 # Identifiers are node ids in DMRS and EDS, or variables in MRS
 # including handles and underspecified variables
 
-Identifier = Union[str, int]
+Identifier: TypeAlias = str | int
 ID = TypeVar('ID', bound=Identifier)
-RoleArgument = tuple[Role, ID]
-ArgumentStructure = dict[ID, list[RoleArgument[ID]]]
+RoleArgument: TypeAlias = tuple[Role, ID]
+ArgumentStructure: TypeAlias = dict[ID, list[RoleArgument[ID]]]
 
 
 class Predication(LnkMixin, Generic[ID], ABC):
@@ -161,9 +158,9 @@ class Predication(LnkMixin, Generic[ID], ABC):
     def __init__(self,
                  id: ID,
                  predicate: str,
-                 type: Union[str, None],
-                 lnk: Optional[Lnk],
-                 surface: Optional[str],
+                 type: str | None,
+                 lnk: Lnk | None,
+                 surface: str | None,
                  base):
         super().__init__(lnk, surface)
         self.id = id
@@ -208,15 +205,15 @@ class SemanticStructure(LnkMixin, Generic[ID, P], ABC):
 
     __slots__ = ('top', 'predications', 'identifier', '_pidx')
 
-    top: Optional[ID]
+    top: ID | None
     predications: list[P]
 
     def __init__(
         self,
-        top: Optional[ID],
+        top: ID | None,
         predications: Sequence[P],
-        lnk: Optional[Lnk],
-        surface: Optional[str],
+        lnk: Lnk | None,
+        surface: str | None,
         identifier
     ) -> None:
         super().__init__(lnk, surface)
@@ -236,18 +233,18 @@ class SemanticStructure(LnkMixin, Generic[ID, P], ABC):
     @abstractmethod
     def __eq__(self, other: Any) -> bool: ...
 
-    def __contains__(self, id: Optional[ID]):
+    def __contains__(self, id: ID | None):
         return id in self._pidx
 
-    def __getitem__(self, id: Optional[ID]) -> P:
+    def __getitem__(self, id: ID | None) -> P:
         if id is None:
             raise KeyError(id)
         return self._pidx[id]
 
     @abstractmethod
     def arguments(self,
-        types: Optional[Iterable[str]] = None,
-        expressed: Optional[bool] = None,
+        types: Iterable[str] | None = None,
+        expressed: bool | None = None,
     ) -> ArgumentStructure[ID]:
         """
         Return a mapping of the argument structure.
@@ -264,17 +261,17 @@ class SemanticStructure(LnkMixin, Generic[ID, P], ABC):
         ...
 
     @abstractmethod
-    def properties(self, id: Optional[ID]) -> Properties:
+    def properties(self, id: ID | None) -> Properties:
         """Return the morphosemantic properties for *id*."""
         ...
 
     @abstractmethod
-    def is_quantifier(self, id: Optional[ID]) -> bool:
+    def is_quantifier(self, id: ID | None) -> bool:
         """Return `True` if *id* represents a quantifier."""
         ...
 
     @abstractmethod
-    def quantification_pairs(self) -> list[tuple[Optional[P], Optional[P]]]:
+    def quantification_pairs(self) -> list[tuple[P | None, P | None]]:
         """
         Return a list of (Quantifiee, Quantifier) pairs.
 
@@ -301,12 +298,12 @@ class ScopeRelation(str, Enum):
     QEQ = 'qeq'              # equality modulo quantifiers (hole-to-label)
 
 
-ScopeLabel = str
-ScopeMap = Mapping[ScopeLabel, Sequence[P]]  # input argument
-Scopes = dict[ScopeLabel, list[P]]  # return value
-ScopalRoleArgument = tuple[Role, ScopeRelation, ScopeLabel]
-ScopalArgumentMap = Mapping[ID, Sequence[ScopalRoleArgument]]
-ScopalArguments = dict[ID, list[ScopalRoleArgument]]
+ScopeLabel: TypeAlias = str
+ScopeMap: TypeAlias = Mapping[ScopeLabel, Sequence[P]]  # input argument
+Scopes: TypeAlias = dict[ScopeLabel, list[P]]  # return value
+ScopalRoleArgument: TypeAlias = tuple[Role, ScopeRelation, ScopeLabel]
+ScopalArgumentMap: TypeAlias = Mapping[ID, Sequence[ScopalRoleArgument]]
+ScopalArguments: TypeAlias = dict[ID, list[ScopalRoleArgument]]
 
 
 class ScopingSemanticStructure(SemanticStructure[ID, P], ABC):
@@ -331,10 +328,10 @@ class ScopingSemanticStructure(SemanticStructure[ID, P], ABC):
 
     def __init__(
         self,
-        top: Optional[ID],
-        index: Optional[ID],
+        top: ID | None,
+        index: ID | None,
         predications: Sequence[P],
-        lnk: Optional[Lnk],
+        lnk: Lnk | None,
         surface,
         identifier,
     ) -> None:
@@ -344,7 +341,7 @@ class ScopingSemanticStructure(SemanticStructure[ID, P], ABC):
     @abstractmethod
     def scopal_arguments(
         self,
-        scopes: Optional[ScopeMap[P]] = None,
+        scopes: ScopeMap[P] | None = None,
     ) -> ScopalArguments[ID]:
         """
         Return a mapping of the scopal argument structure.
@@ -359,7 +356,7 @@ class ScopingSemanticStructure(SemanticStructure[ID, P], ABC):
         ...
 
     @abstractmethod
-    def scopes(self) -> tuple[Optional[str], Scopes[P]]:
+    def scopes(self) -> tuple[str | None, Scopes[P]]:
         """
         Return a tuple containing the top label and the scope map.
 

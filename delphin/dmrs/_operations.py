@@ -4,7 +4,7 @@ Operations on DMRS structures
 """
 
 import warnings
-from typing import Optional, cast
+from typing import cast
 
 from delphin import dmrs, mrs, scope, variable
 from delphin.sembase import ScopeMap
@@ -15,7 +15,7 @@ _IdMap = dict[str, int]
 
 def from_mrs(
     m: mrs.MRS,
-    representative_priority: Optional[scope.PredicationPriority] = None,
+    representative_priority: scope.PredicationPriority | None = None,
 ) -> dmrs.DMRS:
     """
     Create a DMRS by converting from MRS *m*.
@@ -70,12 +70,12 @@ def from_mrs(
 
 
 def _mrs_get_top(
-    top_var: Optional[str],
+    top_var: str | None,
     hcmap: _HCMap,
     reps: ScopeMap,
     id_to_nid: _IdMap,
-) -> Optional[int]:
-    top: Optional[int]
+) -> int | None:
+    top: int | None
     if top_var is None:
         top = None
     else:

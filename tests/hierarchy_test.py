@@ -15,7 +15,7 @@ def h1():
                         'd': ('a', 'b')})
 
 
-class TestMultiHierarchy():
+class TestMultiHierarchy:
     def test_init(self):
         with pytest.raises(TypeError):
             MH()

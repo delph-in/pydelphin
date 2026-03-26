@@ -87,7 +87,7 @@ def test_from_mrs_broken_hcons_issue_319(dogs_bark_mrs):
         hcons=[HCons.qeq('h0', 'h1'), HCons.qeq('h5', 'h6')]
     )
     # no warning normally
-    e = from_mrs(m)
+    from_mrs(m)
     # broken hcons
     m.rels[1].label = 'h99'
     with pytest.warns(EDSWarning):

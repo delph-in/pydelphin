@@ -6,20 +6,13 @@ import collections
 import itertools
 import logging
 import tempfile
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from datetime import datetime
 from pathlib import Path
 from typing import (
     IO,
     Any,
-    Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
+    TypeAlias,
     cast as typing_cast,
     overload,
 )
@@ -35,7 +28,7 @@ logger = logging.getLogger(__name__)
 ##############################################################################
 # Module variables
 
-_default_task_selectors = {
+_DEFAULT_TASK_SELECTORS = {
     'parse': ('item', 'i-input'),
     'transfer': ('result', 'mrs'),
     'generate': ('result', 'mrs'),
@@ -53,7 +46,7 @@ class ITSDBError(tsdb.TSDBError):
 # Processor Interface
 
 
-Transaction = List[Tuple[str, tsdb.ColumnMap]]
+Transaction: TypeAlias = list[tuple[str, tsdb.ColumnMap]]
 
 
 class FieldMapper:
@@ -94,7 +87,7 @@ class FieldMapper:
         affected_tables: list of tables that are affected by the
             processing
     """
-    def __init__(self, source: Optional[tsdb.Database] = None):
+    def __init__(self, source: tsdb.Database | None = None):
         # the parse keys exclude some that are handled specially
         self._parse_keys = '''
             ninputs ntokens readings first total tcpu tgc treal words
@@ -113,7 +106,7 @@ class FieldMapper:
             user host os start end items status
         '''.split()
         self._parse_id = -1
-        self._runs: Dict[int, Dict[str, Any]] = {}
+        self._runs: dict[int, dict[str, Any]] = {}
         self._last_run_id = -1
 
         self.affected_tables = '''
@@ -121,9 +114,9 @@ class FieldMapper:
             update fold score
         '''.split()
 
-        self._i_id_map: Dict[int, int] = {}
+        self._i_id_map: dict[int, int] = {}
         if source:
-            pairs = typing_cast(List[Tuple[int, int]],
+            pairs = typing_cast(list[tuple[int, int]],
                                 source.select_from(
                                     'parse',
                                     ('parse-id', 'i-id'),
@@ -275,18 +268,18 @@ class FieldMapper:
             assert isinstance(parse_id, int)
             return parse_id
 
-        parse_map: Dict[int, List[Dict[str, tsdb.Value]]] = {}
+        parse_map: dict[int, list[dict[str, tsdb.Value]]] = {}
         rows  = typing_cast(Sequence['Row'], ts['parse'])
         for key, grp in itertools.groupby(rows, key=get_i_id):
-            parse_map[key] = [dict(zip(row.keys(), row)) for row in grp]
+            parse_map[key] = [dict(zip(row.keys(), row, strict=False)) for row in grp]
 
-        result_map: Dict[int, List[Dict[str, tsdb.Value]]] = {}
+        result_map: dict[int, list[dict[str, tsdb.Value]]] = {}
         rows  = typing_cast(Sequence['Row'], ts['result'])
         for key, grp in itertools.groupby(rows, key=get_parse_id):
-            result_map[key] = [dict(zip(row.keys(), row)) for row in grp]
+            result_map[key] = [dict(zip(row.keys(), row, strict=False)) for row in grp]
 
         for item in ts['item']:
-            d: Dict[str, tsdb.Value] = dict(zip(item.keys(), item))
+            d: dict[str, tsdb.Value] = dict(zip(item.keys(), item, strict=False))
             i_id = d['i-id']
             assert isinstance(i_id, int)
             for parse in parse_map.get(i_id, []):
@@ -327,16 +320,16 @@ class Row(tsdb.Record):
     def __init__(self,
                  fields: tsdb.Fields,
                  data: Sequence[tsdb.Value],
-                 field_index: Optional[tsdb.FieldIndex] = None):
+                 field_index: tsdb.FieldIndex | None = None):
         if len(data) != len(fields):
             raise ITSDBError(
-                'number of columns ({}) != number of fields ({})'
-                .format(len(data), len(fields)))
+                f'number of columns ({len(data)}) != number of fields ({len(fields)})'
+            )
         if field_index is None:
             field_index = tsdb.make_field_index(fields)
         self.fields = fields
         self.data = tuple(tsdb.format(f.datatype, val)
-                          for f, val in zip(fields, data))
+                          for f, val in zip(fields, data, strict=True))
         self._field_index = field_index
 
     def __repr__(self) -> str:
@@ -358,7 +351,7 @@ class Row(tsdb.Record):
 
     def __iter__(self) -> Iterator[tsdb.Value]:
         datatypes = tuple(field.datatype for field in self.fields)
-        for datatype, raw_value in zip(datatypes, self.data):
+        for datatype, raw_value in zip(datatypes, self.data, strict=True):
             yield tsdb.cast(datatype, raw_value)
 
     @overload
@@ -366,7 +359,7 @@ class Row(tsdb.Record):
         ...
 
     @overload  # noqa: F811
-    def __getitem__(self, key: slice) -> Tuple[tsdb.Value]:
+    def __getitem__(self, key: slice) -> tuple[tsdb.Value]:
         ...
 
     @overload  # noqa: F811
@@ -378,7 +371,7 @@ class Row(tsdb.Record):
             fields = self.fields[key]
             raw_values = self.data[key]
             return tuple(tsdb.cast(field.datatype, raw)
-                         for field, raw in zip(fields, raw_values))
+                         for field, raw in zip(fields, raw_values, strict=True))
         else:
             if isinstance(key, str):
                 index = self._field_index[key]
@@ -388,7 +381,7 @@ class Row(tsdb.Record):
             raw_value = self.data[index]
             return tsdb.cast(field.datatype, raw_value)
 
-    def keys(self) -> List[str]:
+    def keys(self) -> list[str]:
         """
         Return the list of field names for the row.
 
@@ -398,7 +391,7 @@ class Row(tsdb.Record):
         return [f.name for f in self.fields]
 
 
-Rows = Sequence[Row]
+Rows: TypeAlias = Sequence[Row]
 
 
 class Table(tsdb.Relation):
@@ -434,9 +427,9 @@ class Table(tsdb.Relation):
             # file didn't exist as plain-text or gzipped, so create it
             path = self.dir.joinpath(name)
             path.write_text('')
-        self._rows: List[Optional[Row]] = []
+        self._rows: list[Row | None] = []
         # storing the open file for __iter__ let's Table.close() work
-        self._file: Optional[IO[str]] = None
+        self._file: IO[str] | None = None
 
         # These two numbers are needed to track if changes to the
         # table are only additions or if they remove/alter existing
@@ -490,7 +483,7 @@ class Table(tsdb.Relation):
         else:
             return self._getitem(index)
 
-    def _iterslice(self, slice: slice) -> List[Row]:
+    def _iterslice(self, slice: slice) -> list[Row]:
         """Yield rows from a slice index."""
         with tsdb.open(self.dir, self.name, encoding=self.encoding) as fh:
             rows = [row for _, row in self._enum_rows(fh, slice)]
@@ -515,7 +508,7 @@ class Table(tsdb.Relation):
                                   field_index=self._field_index)
                         break
         if row is None:
-            raise ITSDBError('could not retrieve row {}'.format(index))
+            raise ITSDBError(f'could not retrieve row {index}')
         return row
 
     @overload
@@ -650,8 +643,8 @@ class Table(tsdb.Relation):
 
     def _enum_rows(self,
                    fh: IO[str],
-                   _slice: Optional[slice] = None
-                   ) -> Iterator[Tuple[int, Row]]:
+                   _slice: slice | None = None
+                   ) -> Iterator[tuple[int, Row]]:
         """Enumerate on-disk and in-memory rows."""
         if _slice is None:
             _slice = slice(None)
@@ -663,7 +656,7 @@ class Table(tsdb.Relation):
         for i, row in enumerate(self._rows):
             # always read next line until EOF to keep in sync
             if not file_exhausted:
-                line: Optional[str] = None
+                line: str | None = None
                 try:
                     line = next(fh)
                 except StopIteration:
@@ -701,8 +694,8 @@ class TestSuite(tsdb.Database):
     """
 
     def __init__(self,
-                 path: Optional[util.PathLike] = None,
-                 schema: Optional[tsdb.SchemaLike] = None,
+                 path: util.PathLike | None = None,
+                 schema: tsdb.SchemaLike | None = None,
                  encoding: str = 'utf-8') -> None:
         # Virtual test suites use a temporary directory
         if path is None:
@@ -722,7 +715,7 @@ class TestSuite(tsdb.Database):
             tsdb.write_schema(path, schema)
 
         super().__init__(path, autocast=False, encoding=encoding)
-        self._data: Dict[str, Table] = {}
+        self._data: dict[str, Table] = {}
 
     @property
     def in_transaction(self) -> bool:
@@ -735,7 +728,7 @@ class TestSuite(tsdb.Database):
     def __getitem__(self, name: str) -> Table:
         """Return a Table given its name in the schema."""
         if name not in self.schema:
-            raise ITSDBError('table not defined in schema: {}'.format(name))
+            raise ITSDBError(f'table not defined in schema: {name}')
         # if the table is None it is invalidated; reload it
         if name not in self._data:
             self._data[name] = Table(
@@ -744,7 +737,7 @@ class TestSuite(tsdb.Database):
 
     def select_from(self,
                     name: str,
-                    columns: Optional[Iterable[str]] = None,
+                    columns: Iterable[str] | None = None,
                     cast: bool = True):
         """
         Select fields given by *names* from each row in table *name*.
@@ -812,7 +805,7 @@ class TestSuite(tsdb.Database):
 
     def processed_items(
             self,
-            fieldmapper: Optional[FieldMapper] = None
+            fieldmapper: FieldMapper | None = None
     ) -> Iterator[interface.Response]:
         """
         Iterate over the data as :class:`Response` objects.
@@ -824,12 +817,12 @@ class TestSuite(tsdb.Database):
     def process(
             self,
             cpu: interface.Processor,
-            selector: Optional[Tuple[str, str]] = None,
-            source: Optional[tsdb.Database] = None,
-            fieldmapper: Optional[FieldMapper] = None,
+            selector: tuple[str, str] | None = None,
+            source: tsdb.Database | None = None,
+            fieldmapper: FieldMapper | None = None,
             gzip: bool = False,
             buffer_size: int = 1000,
-            callback: Optional[Callable[[interface.Response], Any]] = None,
+            callback: Callable[[interface.Response], Any] | None = None,
     ) -> None:
         """
         Process each item in a [incr tsdb()] test suite.
@@ -864,14 +857,15 @@ class TestSuite(tsdb.Database):
         """
         if selector is None:
             assert isinstance(cpu.task, str)
-            input_table, input_column = _default_task_selectors[cpu.task]
+            input_table, input_column = _DEFAULT_TASK_SELECTORS[cpu.task]
         else:
             input_table, input_column = selector
         if (input_table not in self.schema
             or all(f.name != input_column
                    for f in self.schema[input_table])):
-            raise ITSDBError('invalid table or column: {!s}, {!s}'
-                             .format(input_table, input_column))
+            raise ITSDBError(
+                f'invalid table or column: {input_table!s}, {input_column!s}'
+            )
         if source is None:
             source = self
         if fieldmapper is None:
@@ -887,7 +881,7 @@ class TestSuite(tsdb.Database):
         for row in source[input_table]:
             datum = row[index[input_column]]
             keys = [row[index[name]] for name in key_names]
-            keys_dict = dict(zip(key_names, keys))
+            keys_dict = dict(zip(key_names, keys, strict=False))
             response = cpu.process_item(datum, keys=keys_dict)
 
             logger.info(
@@ -908,7 +902,7 @@ class TestSuite(tsdb.Database):
 
 def _add_row(ts: TestSuite,
              name: str,
-             data: Dict,
+             data: dict,
              buffer_size: int) -> None:
     """
     Prepare and append a Row into its Table; flush to disk if necessary.
@@ -931,13 +925,13 @@ def _add_row(ts: TestSuite,
 ##############################################################################
 # Non-class (i.e. static) functions
 
-Match = Tuple[tsdb.Value, Rows, Rows]
-_Matched = Tuple[List[Row], List[Row]]
+Match: TypeAlias = tuple[tsdb.Value, Rows, Rows]
+_Matched: TypeAlias = tuple[list[Row], list[Row]]
 
 
 def match_rows(rows1: Rows,
                rows2: Rows,
-               key: Union[str, int],
+               key: str | int,
                sort_keys: bool = True) -> Iterator[Match]:
     """
     Yield triples of `(value, left_rows, right_rows)` where
@@ -962,7 +956,7 @@ def match_rows(rows1: Rows,
             list of any matching rows from *rows1*, and the list of
             any matching rows from *rows2*
     """
-    matched: Dict[tsdb.Value, _Matched] = collections.OrderedDict()
+    matched: dict[tsdb.Value, _Matched] = collections.OrderedDict()
     for i, rows in enumerate([rows1, rows2]):
         for row in rows:
             val: tsdb.Value = row[key]

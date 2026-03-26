@@ -4,7 +4,6 @@ Semantic predicates.
 """
 
 import re
-from typing import Optional, Tuple
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -23,21 +22,25 @@ _lemma_re = re.compile(r'[^\s_]+')
 _pos_re = re.compile(r'[{}]'.format(''.join(_POS)), flags=re.IGNORECASE)
 _sense_re = re.compile(r'[^\s_]+')
 
+_LEM_PAT = _lemma_re.pattern
+_POS_PAT = _pos_re.pattern
+_SNS_PAT = _sense_re.pattern
+
 # strict regular expression only allows fully-compliant predicate strings
 _strict_predicate_re = re.compile(
-    r'(_{0}_{1}(?:_{2})?)$'  # normalized surface predicate
-    r'|([^\s_]\S*)$'         # abstract predicate
-    .format(_lemma_re.pattern, _pos_re.pattern, _sense_re.pattern),
+    rf'(_{_LEM_PAT}_{_POS_PAT}(?:_{_SNS_PAT})?)$'  # normalized surface predicate
+    r'|([^\s_]\S*)$'  # abstract predicate
+    ,
     re.IGNORECASE)
 
 # robust regular expression allows some observed variations
 _robust_predicate_re = re.compile(
-    r'_?'                        # allow abstract predicates, too
-    r'(?P<lemma>{0}(?:_{0})*?)'  # match until last 1 or 2 parts
-    r'(?:_(?P<pos>{1}))?'        # pos is optional
-    r'(?:_(?P<sense>{2}))?'      # sense is optional
-    r'(?:_rel)?$'                # _rel is optional
-    .format(_lemma_re.pattern, _pos_re.pattern, _sense_re.pattern),
+    r'_?'  # allow abstract predicates, too
+    rf'(?P<lemma>{_LEM_PAT}(?:_{_LEM_PAT})*?)'  # match until last 1 or 2 parts
+    rf'(?:_(?P<pos>{_POS_PAT}))?'  # pos is optional
+    rf'(?:_(?P<sense>{_SNS_PAT}))?'  # sense is optional
+    r'(?:_rel)?$'  # _rel is optional
+    ,
     flags=re.IGNORECASE)
 
 
@@ -52,7 +55,7 @@ def _strip_predicate(s: str) -> str:
     return s
 
 
-def split(s: str) -> Tuple[str, Optional[str], Optional[str]]:
+def split(s: str) -> tuple[str, str | None, str | None]:
     """
     Split predicate string *s* and return the lemma, pos, and sense.
 
@@ -79,7 +82,7 @@ def split(s: str) -> Tuple[str, Optional[str], Optional[str]]:
     return (match.group('lemma'), match.group('pos'), match.group('sense'))
 
 
-def create(lemma: str, pos: str, sense: Optional[str] = None) -> str:
+def create(lemma: str, pos: str, sense: str | None = None) -> str:
     """
     Create a surface predicate string from its *lemma*, *pos*, and *sense*.
 

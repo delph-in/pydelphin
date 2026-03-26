@@ -17,7 +17,7 @@ def dogs_bark():
                   dmrs.Link(10001, 10002, 'RSTR', 'H')]}
 
 
-class TestNode():
+class TestNode:
     def test_init(self):
         with pytest.raises(TypeError):
             dmrs.Node()
@@ -47,7 +47,7 @@ class TestNode():
         assert n.sortinfo == {'cvarsort': 'x', 'NUM': 'sg'}
 
 
-class TestLink():
+class TestLink:
     def test_init(self):
         with pytest.raises(TypeError):
             dmrs.Link()
@@ -69,7 +69,7 @@ class TestLink():
         assert link1 != dmrs.Link(1, 2, 'ARG1', 'NEQ')
 
 
-class TestDMRS():
+class TestDMRS:
     def test__init__(self, dogs_bark):
         d = dmrs.DMRS()
         assert d.top is None
@@ -169,8 +169,10 @@ def test_from_mrs_nearly_all_cats_were_chased_by_dogs():
     n2 = d.nodes[1]
     assert n1.predicate == '_nearly_x_deg'
     assert n2.predicate == '_all_q'
-    assert any((l.start, l.end, l.role, l.post) == (n1.id, n2.id, 'MOD', 'EQ')
-               for l in d.links)
+    assert any(
+        (link.start, link.end, link.role, link.post) == (n1.id, n2.id, 'MOD', 'EQ')
+        for link in d.links
+    )
 
 
 def test_from_mrs_issue_303():

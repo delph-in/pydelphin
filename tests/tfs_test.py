@@ -19,7 +19,7 @@ def nested_fs():
     return tfs.FeatureStructure([('A.B.C', 1), ('A.B.D', 2), ('B', 3)])
 
 
-class TestFeatureStructure():
+class TestFeatureStructure:
     def test_init(self):
         tfs.FeatureStructure()
         tfs.FeatureStructure({'A': 'b'})

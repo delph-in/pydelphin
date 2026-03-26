@@ -15,7 +15,7 @@ def ace_mismatch():
 
 def mock_popen(pid=None, returncode=None, stdout=None, stderr=None):
 
-    class MockedPopen():
+    class MockedPopen:
         def __init__(self, args, **kwargs):
             self.args = args
             self.pid = pid

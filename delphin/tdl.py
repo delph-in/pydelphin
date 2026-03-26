@@ -5,9 +5,9 @@ Classes and functions for parsing and inspecting TDL.
 import re
 import textwrap
 import warnings
-from collections.abc import Mapping, Sequence
+from collections.abc import Generator, Mapping, Sequence
 from pathlib import Path
-from typing import Generator, Optional, Tuple, Union
+from typing import TypeAlias, Union
 
 from delphin import util
 
@@ -34,8 +34,8 @@ _max_inline_list_items = 3  # number of list items that may appear inline
 _line_width = 79  # try not to go beyond this number of characters
 
 
-AttrSeq = Sequence[tuple[str, Union['Conjunction', 'Term']]]
-AttrMap = Mapping[str, Union['Conjunction', 'Term']]
+AttrSeq: TypeAlias = Sequence[tuple[str, Union['Conjunction', 'Term']]]
+AttrMap: TypeAlias = Mapping[str, Union['Conjunction', 'Term']]
 
 # Exceptions
 
@@ -73,8 +73,7 @@ class Term:
         self.docstring = docstring
 
     def __repr__(self):
-        return "<{} object at {}>".format(
-            type(self).__name__, id(self))
+        return f"<{type(self).__name__} object at {id(self)}>"
 
     def __and__(self, other):
         if isinstance(other, Term):
@@ -107,11 +106,10 @@ class TypeTerm(Term, str):
         return str.__new__(cls, string)
 
     def __init__(self, string, docstring=None):
-        super(TypeTerm, self).__init__(docstring=docstring)
+        super().__init__(docstring=docstring)
 
     def __repr__(self):
-        return "<{} object ({}) at {}>".format(
-            type(self).__name__, self, id(self))
+        return f"<{type(self).__name__} object ({self}) at {id(self)}>"
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -196,7 +194,7 @@ class AVM(FeatureStructure, Term):
 
     def __init__(
         self,
-        featvals: Union[AttrSeq, AttrMap, None] = None,
+        featvals: AttrSeq | AttrMap | None = None,
         docstring=None,
     ) -> None:
         # super() doesn't work because I need to split the parameters
@@ -212,11 +210,11 @@ class AVM(FeatureStructure, Term):
     def __setitem__(self, key: str, val: Union['Conjunction', Term]) -> None:
         if not (val is None or isinstance(val, (Term, Conjunction))):
             raise TypeError(
-                'invalid attribute value type: {}'.format(type(val).__name__)
+                f'invalid attribute value type: {type(val).__name__}'
             )
-        super(AVM, self).__setitem__(key, val)
+        super().__setitem__(key, val)
 
-    def aggregate(self, featvals: Union[AttrSeq, AttrMap]) -> None:
+    def aggregate(self, featvals: AttrSeq | AttrMap) -> None:
         """Combine features in a single AVM.
 
         This function takes feature paths and values and merges them
@@ -300,7 +298,7 @@ class AVM(FeatureStructure, Term):
              ('A.C', <TypeIdentifier object (2) at ...>)]
         """
         fs = []
-        for featpath, val in super(AVM, self).features(expand=expand):
+        for featpath, val in super().features(expand=expand):
             # don't juse Conjunction.features() here because we want to
             # include the non-AVM terms, too
             if expand and isinstance(val, Conjunction):
@@ -354,7 +352,7 @@ class ConsList(AVM):
 
     """
     def __init__(self, values=None, end=LIST_TYPE, docstring=None):
-        super(ConsList, self).__init__(docstring=docstring)
+        super().__init__(docstring=docstring)
 
         if values is None:
             values = []
@@ -466,7 +464,7 @@ class DiffList(AVM):
 
         featvals = [(DIFF_LIST_LIST, dl_list),
                     (DIFF_LIST_LAST, dl_last)]
-        super(DiffList, self).__init__(
+        super().__init__(
             featvals, docstring=docstring)
 
     def __len__(self):
@@ -513,7 +511,7 @@ class Coreference(Term):
         docstring (str): documentation string
     """
     def __init__(self, identifier, docstring=None):
-        super(Coreference, self).__init__(docstring=docstring)
+        super().__init__(docstring=docstring)
         self.identifier = identifier
 
     def __str__(self):
@@ -672,7 +670,7 @@ class Conjunction:
                 return str(term)
         return None  # conjunction does not have a string type (not an error)
 
-    def _last_avm(self) -> Optional[AVM]:
+    def _last_avm(self) -> AVM | None:
         for term in reversed(self._terms):
             if isinstance(term, AVM):
                 return term
@@ -708,9 +706,7 @@ class TypeDefinition:
         self.docstring = docstring
 
     def __repr__(self):
-        return "<{} object '{}' at {}>".format(
-            type(self).__name__, self.identifier, id(self)
-        )
+        return f"<{type(self).__name__} object '{self.identifier}' at {id(self)}>"
 
     @property
     def supertypes(self):
@@ -784,7 +780,7 @@ class TypeAddendum(TypeDefinition):
     def __init__(self, identifier, conjunction=None, docstring=None):
         if conjunction is None:
             conjunction = Conjunction()
-        super(TypeAddendum, self).__init__(identifier, conjunction, docstring)
+        super().__init__(identifier, conjunction, docstring)
 
 
 class LexicalRuleDefinition(TypeDefinition):
@@ -813,7 +809,7 @@ class LexicalRuleDefinition(TypeDefinition):
                  patterns,
                  conjunction,
                  **kwargs):
-        super(LexicalRuleDefinition, self).__init__(
+        super().__init__(
             identifier, conjunction, **kwargs)
         self.affix_type = affix_type
         self.patterns = patterns
@@ -896,7 +892,7 @@ class InstanceEnvironment(_Environment):
         entries (list): TDL entries
     """
     def __init__(self, status, entries=None):
-        super(InstanceEnvironment, self).__init__(entries)
+        super().__init__(entries)
         self.status = status
 
 
@@ -934,12 +930,12 @@ class BlockComment(str):
 #       inside the pattern is necessary, use non-capture groups (?:)
 _identifier_pattern = r'''[^\s!"#$%&'(),.\/:;<=>[\]^|]+'''
 _tdl_lex_re = re.compile(
-    r'''# regex-pattern                gid  description
+    rf'''# regex-pattern                gid  description
     (""")                            #   1  start of multiline docstring
     |(\#\|)                          #   2  start of multiline comment
     |;([^\n]*)                       #   3  single-line comment
     |"([^"\\]*(?:\\.[^"\\]*)*)"      #   4  double-quoted "strings"
-    |'({identifier})                 #   5  single-quoted 'symbols
+    |'({_identifier_pattern})        #   5  single-quoted 'symbols
     |\^([^$\\]*(?:\\.|[^$\\]*)*)\$   #   6  regular expression
     |(:[=<])                         #   7  type def operator
     |(:\+)                           #   8  type addendum operator
@@ -953,19 +949,19 @@ _tdl_lex_re = re.compile(
     |(\])                            #  16  AVM close
     |(!>)                            #  17  diff list close
     |(>)                             #  18  cons list close
-    |\#({identifier})                #  19  coreference
+    |\#({_identifier_pattern})       #  19  coreference
     |%\s*\((.*)\)                    #  20  letter-set or wild-card
     |%(prefix|suffix)                #  21  start of affixing pattern
     |\(([^ ]+\s+(?:[^ )\\]|\\.)+)\)  #  22  affix subpattern
     |(\/)                            #  23  defaults (currently unused)
-    |({identifier})                  #  24  identifiers and symbols
+    |({_identifier_pattern})         #  24  identifiers and symbols
     |(:begin)                        #  25  start a :type or :instance block
     |(:end)                          #  26  end a :type or :instance block
     |(:type|:instance)               #  27  environment type
     |(:status)                       #  28  instance status
     |(:include)                      #  29  file inclusion
     |([^\s])                         #  30  unexpected
-    '''.format(identifier=_identifier_pattern),
+    ''',
     flags=re.VERBOSE | re.UNICODE)
 
 
@@ -1062,9 +1058,9 @@ def _bounded(p1, p2, line, pos, line_no, lines):
 
 # Parsing functions
 
-ParseEvent = Tuple[
+ParseEvent: TypeAlias = tuple[
     str,
-    Union[str, TypeDefinition, _MorphSet, _Environment, FileInclude],
+    str | TypeDefinition | _MorphSet | _Environment | FileInclude,
     int
 ]
 
@@ -1173,9 +1169,9 @@ def _parse_tdl_definition(identifier, tokens):
     elif gid == 7:
         if token == ':<':
             warnings.warn(
-                'Subtype operator :< encountered at line {} for '
-                '{}; Continuing as if it were the := operator.'
-                .format(line_no, identifier),
+                f'Subtype operator :< encountered at line {line_no} for '
+                f'{identifier}; Continuing as if it were the := operator.'
+                ,
                 TDLWarning,
                 stacklevel=2,
             )
@@ -1469,8 +1465,7 @@ def _format_term(term, indent):
     }.get(term.__class__, None)
 
     if fmt is None:
-        raise TDLError('not a valid term: {}'
-                       .format(type(term).__name__))
+        raise TDLError(f'not a valid term: {type(term).__name__}')
 
     if term.docstring is not None:
         return '{}\n{}{}'.format(
@@ -1575,12 +1570,13 @@ def _format_typedef(td, indent):
     if hasattr(td, 'affix_type'):
         patterns = ' '.join(f'({a} {b})' for a, b in td.patterns)
         body = _format_typedef_body(td, indent, indent + 2)
-        return '{}{} {}\n%{} {}\n  {}.'.format(
-            i, td.identifier, td._operator, td.affix_type, patterns, body)
+        return (
+            f'{i}{td.identifier} {td._operator}\n%{td.affix_type} {patterns}\n  {body}.'
+        )
     else:
         body = _format_typedef_body(
             td, indent, indent + len(td.identifier) + 4)
-        return '{}{} {} {}.'.format(i, td.identifier, td._operator, body)
+        return f'{i}{td.identifier} {td._operator} {body}.'
 
 
 def _format_typedef_body(td, indent, offset):

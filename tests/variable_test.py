@@ -42,7 +42,7 @@ def test_is_valid():
     assert not variable.is_valid('x 1')
 
 
-class TestVariableFactory():
+class TestVariableFactory:
     def test_init(self):
         vf = variable.VariableFactory()
         assert vf.vid == 1

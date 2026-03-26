@@ -3,7 +3,7 @@
 Operations on MRS structures
 """
 
-from typing import Iterable, Union
+from collections.abc import Iterable
 
 from delphin import dmrs, mrs, predicate, scope, util, variable
 from delphin.sembase import ScopeMap, property_priority
@@ -18,7 +18,7 @@ def is_connected(m: mrs.MRS) -> bool:
     arguments (including qeqs), or label equalities.
     """
     ids = {ep.id for ep in m.rels}
-    g: dict[str, set[Union[str, None]]] = {id: set() for id in ids}
+    g: dict[str, set[str | None]] = {id: set() for id in ids}
     # first establish links from labels and intrinsic variables to EPs
     for ep in m.rels:
         id, lbl, iv = ep.id, ep.label, ep.iv

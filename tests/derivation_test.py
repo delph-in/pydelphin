@@ -12,7 +12,7 @@ from delphin.derivation import (
 )
 
 
-class TestUDFNode():
+class TestUDFNode:
     def test_init(self):
         n = N(1, 'entity')
         assert n.id == 1
@@ -40,7 +40,7 @@ class TestUDFNode():
         assert n2.parent is n1
 
 
-class TestDerivation():
+class TestDerivation:
     def test_init(self):
         with pytest.raises(TypeError):
             D()

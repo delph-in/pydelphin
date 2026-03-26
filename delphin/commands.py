@@ -7,8 +7,9 @@ import logging
 import sys
 import tempfile
 import warnings
+from collections.abc import Iterator
 from pathlib import Path
-from typing import IO, Any, Dict, Iterator, Optional, Union
+from typing import IO, Any
 
 from progress.bar import Bar as ProgressBar
 
@@ -35,17 +36,17 @@ class CommandError(exceptions.PyDelphinException):
 ###############################################################################
 # CONVERT #####################################################################
 
-def convert(path: Union[util.PathLike, IO[str]],
+def convert(path: util.PathLike | IO[str],
             source_fmt: str,
             target_fmt: str,
             select: str = 'result.mrs',
             properties: bool = True,
             lnk: bool = True,
             color: bool = False,
-            indent: Optional[int] = None,
+            indent: int | None = None,
             show_status: bool = False,
             predicate_modifiers: bool = False,
-            semi: Optional[Union[SemI, util.PathLike]] = None) -> str:
+            semi: SemI | util.PathLike | None = None) -> str:
     """
     Convert between various DELPH-IN Semantics representations.
 
@@ -107,7 +108,7 @@ def convert(path: Union[util.PathLike, IO[str]],
             semi = load_semi(semi)
 
     # read
-    kwargs: Dict[str, Any] = {}
+    kwargs: dict[str, Any] = {}
     if source_fmt == 'indexedmrs' and semi is not None:
         kwargs['semi'] = semi
     if source_lines:
@@ -405,7 +406,7 @@ def _lines_to_records(lineiter, colnames, split, fields):
                 'line values do not match expected fields:\n'
                 f'  fields: {", ".join(colnames)}\n'
                 f'  values: {", ".join(colvals)}')
-        colmap = dict(zip(colnames, colvals))
+        colmap = dict(zip(colnames, colvals, strict=True))
 
         if with_i_id:
             if 'i-id' not in colmap:
@@ -789,9 +790,9 @@ def repp(source, config=None, module=None, active=None,
 ###############################################################################
 # COMPARE #####################################################################
 
-def compare(testsuite: Union[util.PathLike, itsdb.TestSuite],
-            gold: Union[util.PathLike, itsdb.TestSuite],
-            select: str = 'i-id i-input mrs') -> Iterator[Dict]:
+def compare(testsuite: util.PathLike | itsdb.TestSuite,
+            gold: util.PathLike | itsdb.TestSuite,
+            select: str = 'i-id i-input mrs') -> Iterator[dict]:
     """
     Compare two [incr tsdb()] profiles.
 

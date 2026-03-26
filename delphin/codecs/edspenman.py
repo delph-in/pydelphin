@@ -169,9 +169,9 @@ def to_triples(e, properties=True, lnk=True):
         if nid in main_component:
             triples.append((nid, ':instance', node.predicate))
             if lnk and node.lnk:
-                triples.append((nid, ':lnk', '"{}"'.format(str(node.lnk))))
+                triples.append((nid, ':lnk', f'"{str(node.lnk)}"'))
             if node.carg:
-                triples.append((nid, ':carg', '"{}"'.format(node.carg)))
+                triples.append((nid, ':carg', f'"{node.carg}"'))
             if node.type is not None:
                 triples.append((nid, ':type', node.type))
             if properties:

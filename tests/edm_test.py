@@ -1,5 +1,4 @@
 
-from typing import Tuple
 
 from delphin.codecs import eds
 from delphin.edm import compute
@@ -35,7 +34,7 @@ tests = eds.loads('''
 ''')
 
 
-def edm_sig3(*args, **kwargs) -> Tuple[float, float, float]:
+def edm_sig3(*args, **kwargs) -> tuple[float, float, float]:
     p, r, f = compute(*args, **kwargs)
     return round(p, 3), round(r, 3), round(f, 3)
 

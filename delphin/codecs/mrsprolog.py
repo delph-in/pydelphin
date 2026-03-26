@@ -122,10 +122,6 @@ def _encode_rel(ep, ___, ____):
     for role in sorted(ep.args, key=role_priority):
         val = ep.args[role]
         if role == CONSTANT_ROLE:
-            val = "'{}'".format(val)
+            val = f"'{val}'"
         args.append(plav.format(role, val))
-    return "rel('{pred}',{lbl},{___}[{attrvals}])".format(
-        pred=ep.predicate,
-        lbl=ep.label,
-        ___=___,
-        attrvals=____.join(args))
+    return f"rel('{ep.predicate}',{ep.label},{___}[{____.join(args)}])"

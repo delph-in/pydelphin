@@ -4,7 +4,7 @@ YY tokens and token lattices.
 """
 
 import re
-from typing import List, NamedTuple, Optional, Tuple
+from typing import NamedTuple
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -16,12 +16,12 @@ class _YYToken(NamedTuple):
     start: int
     end: int
     lnk: Lnk
-    paths: List[int]
+    paths: list[int]
     form: str
-    surface: Optional[str]
+    surface: str | None
     ipos: int          # relative index of sub-token to which lrules apply
-    lrules: List[str]  # list of morphological rules applied, "null" if None
-    pos: List[Tuple[str, float]]
+    lrules: list[str]  # list of morphological rules applied, "null" if None
+    pos: list[tuple[str, float]]
 
 
 class YYToken(_YYToken):
@@ -49,7 +49,7 @@ class YYToken(_YYToken):
             raise TypeError('Missing required keyword argument \'form\'.')
         if lnk is None:
             lnk = Lnk.default()
-        return super(YYToken, cls).__new__(
+        return super().__new__(
             cls, id, start, end, lnk, list(paths), form, surface,
             ipos, list(lrules), list(pos)
         )
@@ -87,7 +87,7 @@ class YYToken(_YYToken):
             surface=d.get('surface'),
             # ipos=
             # lrules=
-            pos=list(zip(d.get('tags', []), d.get('probabilities', [])))
+            pos=list(zip(d.get('tags', []), d.get('probabilities', []), strict=True))
         )
 
     def to_dict(self):
@@ -165,7 +165,13 @@ class YYTokenLattice:
                 lnk = Lnk.charspan(d['lnkfrom'], d['lnkto'])
             if d['pos'] is not None:
                 ps = d['pos'].strip().split()
-                pos = list(zip(map(_qstrip, ps[::2]), map(float, ps[1::2])))
+                pos = list(
+                    zip(
+                        map(_qstrip, ps[::2]),
+                        map(float, ps[1::2]),
+                        strict=True,
+                    )
+                )
             tokens.append(
                 YYToken(
                     int(d['id']),
@@ -203,6 +209,6 @@ class YYTokenLattice:
             return NotImplemented
         if (len(self.tokens) == len(other.tokens)
             and all(t1 == t2 for t1, t2
-                    in zip(self.tokens, other.tokens))):
+                    in zip(self.tokens, other.tokens, strict=True))):
             return True
         return False

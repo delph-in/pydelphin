@@ -396,13 +396,13 @@ def test_LexicalRuleDefinition():
 def test_parse_identifiers():
     assert tdlparse('a := b.').identifier == 'a'
     assert tdlparse('*a* := b.').identifier == '*a*'
-    assert tdlparse(u'Ⅲ := b.').identifier == u'Ⅲ'
-    assert tdlparse(u'＊-marker := b.').identifier == u'＊-marker'
-    assert tdlparse(u'，_c_1 := b.').identifier == u'，_c_1'
-    assert tdlparse(u'_n_1 := b.').identifier == u'_n_1'
-    assert tdlparse(u'和_c_⚠ := b.').identifier == u'和_c_⚠'
-    assert tdlparse(u'格里姆斯比•罗伊洛特_n_1 := b.').identifier == (
-        u'格里姆斯比•罗伊洛特_n_1')
+    assert tdlparse('Ⅲ := b.').identifier == 'Ⅲ'
+    assert tdlparse('＊-marker := b.').identifier == '＊-marker'
+    assert tdlparse('，_c_1 := b.').identifier == '，_c_1'
+    assert tdlparse('_n_1 := b.').identifier == '_n_1'
+    assert tdlparse('和_c_⚠ := b.').identifier == '和_c_⚠'
+    assert tdlparse('格里姆斯比•罗伊洛特_n_1 := b.').identifier == (
+        '格里姆斯比•罗伊洛特_n_1')
     with pytest.raises(TDLSyntaxError):
         tdlparse('a:b := b.')
     with pytest.raises(TDLSyntaxError):

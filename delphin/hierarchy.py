@@ -3,14 +3,10 @@
 Basic support for hierarchies.
 """
 
-from collections.abc import Hashable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from typing import (
     Any,
-    Callable,
     Generic,
-    Iterable,
-    Iterator,
-    Optional,
     TypeVar,
 )
 
@@ -107,9 +103,9 @@ class MultiHierarchy(Generic[H]):
     def __init__(
         self,
         top: H,
-        hierarchy: Optional[HierarchyMap] = None,
-        data: Optional[DataMap] = None,
-        normalize_identifier: Optional[IdentifierNormalizer] = None,
+        hierarchy: HierarchyMap | None = None,
+        data: DataMap | None = None,
+        normalize_identifier: IdentifierNormalizer | None = None,
     ):
         if not normalize_identifier:
             self._norm = _norm_id
@@ -176,8 +172,8 @@ class MultiHierarchy(Generic[H]):
 
     def update(
         self,
-        subhierarchy: Optional[HierarchyMap] = None,
-        data: Optional[DataMap] = None,
+        subhierarchy: HierarchyMap | None = None,
+        data: DataMap | None = None,
     ) -> None:
         """
         Incorporate *subhierarchy* and *data* into the hierarchy.
@@ -309,8 +305,8 @@ class MultiHierarchy(Generic[H]):
 
     def validate_update(
         self,
-        subhierarchy: Optional[HierarchyMap],
-        data: Optional[DataMap],
+        subhierarchy: HierarchyMap | None,
+        data: DataMap | None,
     ) -> tuple[HierarchyDict, DataDict]:
         """
         Check if the update can apply to the current hierarchy.
@@ -346,8 +342,8 @@ def _ancestors(id: H, hier: dict[H, tuple[H, ...]]) -> set[H]:
 
 def _normalize_update(
     norm: IdentifierNormalizer,
-    subhierarchy: Optional[HierarchyMap],
-    data: Optional[DataMap],
+    subhierarchy: HierarchyMap | None,
+    data: DataMap | None,
 ) -> tuple[HierarchyDict, DataDict]:
     sub: HierarchyDict = {}
     parents: Identifiers

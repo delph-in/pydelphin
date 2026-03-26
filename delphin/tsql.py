@@ -5,18 +5,10 @@ TSQL -- Test Suite Query Language
 
 import operator
 import re
+from collections.abc import Callable, Iterator
 from datetime import datetime
 from typing import (
     Any,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    Union,
     cast as typing_cast,
 )
 
@@ -38,17 +30,17 @@ class TSQLSyntaxError(PyDelphinSyntaxError):
 
 # LOCAL TYPES #################################################################
 
-_Names = List[str]
-_Comparison = Tuple[str, Tuple[str, tsdb.Value]]
+_Names = list[str]
+_Comparison = tuple[str, tuple[str, tsdb.Value]]
 # the following should be recursive:
 #     _Boolean = Tuple[str, Union[_Boolean, List[_Boolean, ...]]]
 # but use Any until the type checker supports recursive types.
 # see: https://github.com/python/mypy/issues/731
-_Boolean = Tuple[str, Any]
-_Condition = Union[_Comparison, _Boolean]
+_Boolean = tuple[str, Any]
+_Condition = _Comparison | _Boolean
 _FilterFunction = Callable[[tsdb.Record], bool]
 
-_QNameResolver = Callable[[str], Tuple[str, tsdb.Field]]
+_QNameResolver = Callable[[str], tuple[str, tsdb.Field]]
 
 
 class _Record(tsdb.Record):
@@ -56,24 +48,24 @@ class _Record(tsdb.Record):
     def __new__(cls,
                 fields: tsdb.Fields,
                 data: tsdb.Record,
-                field_index: Optional[tsdb.FieldIndex] = None):
+                field_index: tsdb.FieldIndex | None = None):
         return tuple(data)
 
 
 class Selection(tsdb.Records):
     def __init__(self,
-                 record_class: Optional[Type[_Record]] = None) -> None:
+                 record_class: type[_Record] | None = None) -> None:
         """
         The results of a 'select' query.
         """
-        self.fields: List[tsdb.Field] = []
+        self.fields: list[tsdb.Field] = []
         self._field_index: tsdb.FieldIndex = {}
         self.data: tsdb.Records = []
         self.projection = None
         if record_class is None:
             record_class = _Record
         self.record_class = record_class
-        self.joined: Set[str] = set()
+        self.joined: set[str] = set()
 
     def __iter__(self) -> Iterator[tsdb.Record]:
         if self.projection is None:
@@ -96,9 +88,9 @@ class Selection(tsdb.Records):
             data = tuple(record[idx] for idx in indices)
             if cast and all(value is None or isinstance(value, str)
                             for value in data):
-                data = typing_cast(Tuple[Optional[str], ...], data)
+                data = typing_cast(tuple[str | None, ...], data)
                 data = tuple(tsdb.cast(field.datatype, value)
-                             for field, value in zip(fields, data))
+                             for field, value in zip(fields, data, strict=True))
             yield cls(fields, data, field_index=index)
 
 
@@ -158,7 +150,7 @@ def query(querystring: str,
 
 def select(querystring: str,
            db: tsdb.Database,
-           record_class: Optional[Type[_Record]] = None) -> Selection:
+           record_class: type[_Record] | None = None) -> Selection:
     """
     Perform the TSQL selection query *querystring* on testsuite *ts*.
 
@@ -181,10 +173,10 @@ def select(querystring: str,
 
 
 def _select(projection: _Names,
-            relations: List[str],
-            condition: Optional[_Condition],
+            relations: list[str],
+            condition: _Condition | None,
             db: tsdb.Database,
-            record_class: Optional[Type[_Record]]) -> Selection:
+            record_class: type[_Record] | None) -> Selection:
 
     proj, joins, condition = _make_execution_plan(
         projection, relations, condition, db)
@@ -203,9 +195,9 @@ def _select(projection: _Names,
 
 def _make_execution_plan(
         projection: _Names,
-        relations: List[str],
-        condition: Optional[_Condition],
-        db: tsdb.Database) -> Tuple:
+        relations: list[str],
+        condition: _Condition | None,
+        db: tsdb.Database) -> tuple:
     """Make a plan for all relations to join and columns to keep."""
     resolve_qname = _make_qname_resolver(db, relations)
 
@@ -214,7 +206,7 @@ def _make_execution_plan(
     else:
         projection = [resolve_qname(name)[0] for name in projection]
 
-    cond_resolved: Optional[_Condition] = None
+    cond_resolved: _Condition | None = None
     cond_fields: _Names = []
     if condition:
         cond_resolved, cond_fields = _process_condition_fields(
@@ -225,9 +217,9 @@ def _make_execution_plan(
     return projection, joins, cond_resolved
 
 
-def _project_all(relations: List[str], db: tsdb.Database) -> List[str]:
+def _project_all(relations: list[str], db: tsdb.Database) -> list[str]:
     projection = []
-    keys_added: Set[str] = set()
+    keys_added: set[str] = set()
     for name in relations:
         for field in db.schema[name]:
             qname = f'{name}.{field.name}'
@@ -242,7 +234,7 @@ def _project_all(relations: List[str], db: tsdb.Database) -> List[str]:
 
 def _make_qname_resolver(
         db: tsdb.Database,
-        relations: List[str]) -> _QNameResolver:
+        relations: list[str]) -> _QNameResolver:
     """
     Return a function that turns column names into qualified names.
 
@@ -250,7 +242,7 @@ def _make_qname_resolver(
     """
 
     index = {rel: tsdb.make_field_index(db.schema[rel]) for rel in db.schema}
-    schema_map: Dict[str, List[str]] = {}
+    schema_map: dict[str, list[str]] = {}
     for relname, fields in db.schema.items():
         for field in fields:
             schema_map.setdefault(field.name, []).append(relname)
@@ -260,7 +252,7 @@ def _make_qname_resolver(
                                      key=relations.__contains__,
                                      reverse=True)
 
-    def resolve(colname: str) -> Tuple[str, tsdb.Field]:
+    def resolve(colname: str) -> tuple[str, tsdb.Field]:
         rel, _, col = colname.rpartition('.')
         if rel:
             qname = colname
@@ -373,12 +365,12 @@ _operator_functions = {'==': operator.eq,
 
 def _process_condition_fields(
         condition: _Condition,
-        resolve_qname: _QNameResolver) -> Tuple[_Condition, _Names]:
+        resolve_qname: _QNameResolver) -> tuple[_Condition, _Names]:
     # conditions are something like:
     #  ('==', ('i-id', 11))
     op, body = condition
     if op in ('and', 'or'):
-        body = typing_cast(List[_Condition], body)
+        body = typing_cast(list[_Condition], body)
         fieldset = set()
         conditions = []
         for cond in body:
@@ -400,8 +392,9 @@ def _process_condition_fields(
         typ = _expected_type(field.datatype)
         if not isinstance(body[1], typ):
             raise TSQLError(
-                'type mismatch in condition on {}: {} {} {}'
-                .format(qname, typ.__name__, op, type(body[1]).__name__))
+                f'type mismatch in condition on {qname}: '
+                f'{typ.__name__} {op} {type(body[1]).__name__}'
+            )
 
         return (op, (qname, body[1])), [qname]
 
@@ -426,7 +419,7 @@ def _process_condition_function(
     #  ('==', ('i-id', 11))
     op, body = condition
     if op in ('and', 'or'):
-        body = typing_cast(List[_Condition], body)
+        body = typing_cast(list[_Condition], body)
         conditions = []
         for cond in body:
             _func = _process_condition_function(cond, selection)
@@ -494,12 +487,12 @@ def _join(selection: Selection,
     indices = [field_index[col] for col in columns]
     fields = [all_fields[idx] for idx in indices]
 
-    data: List[tsdb.Record] = []
+    data: list[tsdb.Record] = []
     if not selection.joined:
         _merge_fields(selection, name, [], fields)
         data.extend(db._select_raw(name, columns))
     else:
-        on: List[str] = []
+        on: list[str] = []
         if selection is not None:
             on = [f.name for f in fields
                   if f.is_key and f.name in selection._field_index]
@@ -509,13 +502,16 @@ def _join(selection: Selection,
         if not on:
             raise TSQLError('no shared keys for joining')
 
-        right: Dict[Tuple[tsdb.Value, ...], List[tsdb.Record]] = {}
+        right: dict[tuple[tsdb.Value, ...], list[tsdb.Record]] = {}
         for keys, row in zip(db.select_from(name, on, cast=True),
-                             db._select_raw(name, cols)):
+                             db._select_raw(name, cols),
+                             strict=True):
             right.setdefault(tuple(keys), []).append(tuple(row))
 
         rfill = tuple([None] * len(fields))
-        for keys, lrow in zip(selection.select(*on, cast=True), selection):
+        for keys, lrow in zip(selection.select(*on, cast=True),
+                              selection,
+                              strict=True):
             keys = tuple(keys)
             if how == 'left' or keys in right:
                 for rrow in right.get(keys, [rfill]):
@@ -552,12 +548,10 @@ _month = r'(?:[0-9][0-9]?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)'
 _day = r'[0-9]{1,2}'
 _time = (r'\s*\({t}:{t}(?::{t})?\)'
          r'|\s+{t}:{t}(?::{t})').format(t=r'[0-9]{2}')
-_yyyy_mm_dd = r'{year}-{month}(?:-{day})?(?:{time})?'.format(
-    year=_year, month=_month, day=_day, time=_time)
-_dd_mm_yy = r'(?:{day}-)?{month}-{year}(?:{time})?'.format(
-    year=_yr, month=_month, day=_day, time=_time)
+_yyyy_mm_dd = rf'{_year}-{_month}(?:-{_day})?(?:{_time})?'
+_dd_mm_yy = rf'(?:{_day}-)?{_month}-{_yr}(?:{_time})?'
 _id = r'[a-zA-Z][-_a-zA-Z0-9]*'
-_qid = r'{id}\.{id}'.format(id=_id)  # qualified id: "table.column"
+_qid = rf'{_id}\.{_id}'  # qualified id: "table.column"
 
 _TSQLLexer = util.Lexer(
     tokens=[
@@ -638,7 +632,7 @@ def _parse_select(querystring: str) -> dict:
             'condition': condition}
 
 
-def _parse_select_projection(lexer: util.LookaheadLexer) -> List[str]:
+def _parse_select_projection(lexer: util.LookaheadLexer) -> list[str]:
     typ, col_id = lexer.choice_type(_STAR, _QID, _ID)
     projection = []
     if typ in (_QID, _ID):
@@ -650,7 +644,7 @@ def _parse_select_projection(lexer: util.LookaheadLexer) -> List[str]:
     return projection
 
 
-def _parse_select_from(lexer: util.LookaheadLexer) -> List[str]:
+def _parse_select_from(lexer: util.LookaheadLexer) -> list[str]:
     relations = []
     if lexer.accept_type(_FROM):
         relation = lexer.expect_type(_ID)
@@ -661,11 +655,11 @@ def _parse_select_from(lexer: util.LookaheadLexer) -> List[str]:
 
 
 def _parse_select_where(
-        lexer: util.LookaheadLexer) -> Optional[_Condition]:
-    conditions: List[_Condition] = []
+        lexer: util.LookaheadLexer) -> _Condition | None:
+    conditions: list[_Condition] = []
     while lexer.accept_type(_WHERE):
         conditions.append(_parse_condition_disjunction(lexer))
-    condition: Optional[_Condition] = None
+    condition: _Condition | None = None
     if len(conditions) == 1:
         condition = conditions[0]
     elif len(conditions) > 1:
@@ -692,7 +686,7 @@ def _parse_condition_disjunction(
 
 def _parse_condition_conjunction(
         lexer: util.LookaheadLexer) -> _Condition:
-    conds: List[_Condition] = []
+    conds: list[_Condition] = []
     while True:
         typ, token = lexer.choice_type(_NOT, _LPAREN, _QID, _ID)
         if typ == _NOT:

@@ -9,25 +9,20 @@ import pkgutil
 import re
 import warnings
 from collections import defaultdict, deque
+from collections.abc import Iterable, Iterator
 from enum import IntEnum
 from functools import wraps
 from pathlib import Path
 from typing import (
-    Any,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
     NamedTuple,
-    Set,
-    Tuple,
+    TypeAlias,
     Union,
 )
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
 
-PathLike = Union[str, Path]
+PathLike: TypeAlias = str | Path
 
 
 def deprecated(message=None, final_version=None, alternative=None):
@@ -98,9 +93,9 @@ def _connected_components(nodes, edges):
     return components
 
 
-_IsoGraph = Dict[str, Dict[Union[None, str], str]]
-_IsoMap = Dict[str, str]
-_IsoPairs = List[Tuple[str, str]]
+_IsoGraph: TypeAlias = dict[str, dict[None | str, str]]
+_IsoMap: TypeAlias = dict[str, str]
+_IsoPairs: TypeAlias = list[tuple[str, str]]
 
 
 def _vf2(g1: _IsoGraph, g2: _IsoGraph) -> _IsoMap:
@@ -114,7 +109,7 @@ def _vf2(g1: _IsoGraph, g2: _IsoGraph) -> _IsoMap:
     mapping: _IsoMap = {}
     prev_n = None
     candidates = _vf2_candidates(mapping, g1, g2)
-    states: List[Tuple[Union[None, str], _IsoPairs]] = []
+    states: list[tuple[None | str, _IsoPairs]] = []
     while len(mapping) < len(g2):
         pair_found = False
         while candidates and not pair_found:
@@ -182,7 +177,7 @@ def _vf2_feasible(
     return True
 
 
-def _vf2_new(mapping: _IsoMap, g: _IsoGraph, a: str) -> Set[str]:
+def _vf2_new(mapping: _IsoMap, g: _IsoGraph, a: str) -> set[str]:
     new = set()
     agenda = [a]
     while agenda:
@@ -217,11 +212,11 @@ def _vf2_candidates(
         g2: _IsoGraph,
 ) -> _IsoPairs:
     # sides of the mapping as sets
-    m1: Set[str] = set(mapping)
-    m2: Set[str] = set(mapping.values())
+    m1: set[str] = set(mapping)
+    m2: set[str] = set(mapping.values())
     # combination of incoming and outgoing edges
-    t1: Set[str] = set()
-    t2: Set[str] = set()
+    t1: set[str] = set()
+    t2: set[str] = set()
     for n, m in mapping.items():
         t1.update(n_ for n_ in g1[n] if n_ is not None and n_ not in m1)
         t2.update(m_ for m_ in g2[m] if m_ is not None and m_ not in m2)
@@ -265,12 +260,12 @@ def _vf2_candidates(
 # S-expressions
 #  e.g. (:n-inputs . 3) or (S (NP (NNS Dogs)) (VP (VBZ bark)))
 
-_Atom = Union[str, int, float]
-_SExpr = Union[_Atom, '_Cons']
+_Atom: TypeAlias = str | int | float
+_SExpr: TypeAlias = Union[_Atom, '_Cons']
 # The following would be nice, but Mypy doesn't do recursive types yet:
 #     https://github.com/python/mypy/issues/731
-# _Cons = Union[Tuple[_SExpr, _SExpr], List[_SExpr]]
-_Cons = Union[Tuple[Any, Any], List[Any]]
+_Cons: TypeAlias = tuple[_SExpr, _SExpr] | list[_SExpr]
+# _Cons: TypeAlias = tuple[Any, Any] | list[Any]
 
 
 class SExprResult(NamedTuple):
@@ -281,11 +276,11 @@ class SExprResult(NamedTuple):
 
 # escapes from https://en.wikipedia.org/wiki/S-expression#Use_in_Lisp
 _SExpr_escape_chars = r'"\s\(\)\[\]\{\}\\;'
-_SExpr_symbol_re = re.compile(r'(?:[^{}]+|\\.)+'.format(_SExpr_escape_chars))
+_SExpr_symbol_re = re.compile(rf'(?:[^{_SExpr_escape_chars}]+|\\.)+')
 
 
 def _SExpr_unescape_symbol(s):
-    return re.sub(r'\\([{}])'.format(_SExpr_escape_chars), r'\1', s)
+    return re.sub(rf'\\([{_SExpr_escape_chars}])', r'\1', s)
 
 
 def _SExpr_unescape_string(s):
@@ -300,8 +295,8 @@ def _SExpr_parse(s: str) -> SExprResult:
     assert s.startswith('(')
     i = 1
     n = len(s)
-    stack: List[List[_SExpr]] = []
-    vals: List[_SExpr] = []
+    stack: list[list[_SExpr]] = []
+    vals: list[_SExpr] = []
     while i < n:
         c = s[i]
         # numbers
@@ -340,7 +335,7 @@ def _SExpr_parse(s: str) -> SExprResult:
     return SExprResult(data, s[i+1:])
 
 
-def _SExpr_parse_number(s: str, i: int) -> Tuple[Union[int, float], int]:
+def _SExpr_parse_number(s: str, i: int) -> tuple[int | float, int]:
     j = i + 1  # start at next character
     while s[j].isdigit():
         j += 1
@@ -366,7 +361,7 @@ def _SExpr_parse_number(s: str, i: int) -> Tuple[Union[int, float], int]:
     return float(s[i:j]), j
 
 
-def _SExpr_parse_string(s: str, i: int) -> Tuple[str, int]:
+def _SExpr_parse_string(s: str, i: int) -> tuple[str, int]:
     j = i + 1
     while s[j] != '"':
         if s[j] == '\\':
@@ -376,7 +371,7 @@ def _SExpr_parse_string(s: str, i: int) -> Tuple[str, int]:
     return _SExpr_unescape_string(s[i+1:j]), j + 1
 
 
-def _SExpr_parse_symbol(s: str, i: int) -> Tuple[str, int]:
+def _SExpr_parse_symbol(s: str, i: int) -> tuple[str, int]:
     m = _SExpr_symbol_re.match(s, pos=i)
     if m is None:
         raise ValueError('Invalid S-Expression: ' + s)
@@ -486,7 +481,7 @@ class LookaheadIterator:
         return datum
 
 
-_Token = Tuple[int, str, int, int, str]
+_Token: TypeAlias = tuple[int, str, int, int, str]
 
 
 class LookaheadLexer(LookaheadIterator):

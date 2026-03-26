@@ -2,6 +2,11 @@
 
 ### Unreleased
 
+### Python Versions
+
+* Removed Python 3.9 support ([#403])
+* Added Python 3.14 support ([#403])
+
 ### Maintenance
 
 * Removed `requirements.txt`; it was unnecessary and out of date
@@ -1699,3 +1704,4 @@ information about changes, except for
 [#395]: https://github.com/delph-in/pydelphin/issues/395
 [#396]: https://github.com/delph-in/pydelphin/issues/396
 [#402]: https://github.com/delph-in/pydelphin/issues/402
+[#403]: https://github.com/delph-in/pydelphin/issues/403

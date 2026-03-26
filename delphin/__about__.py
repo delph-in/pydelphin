@@ -11,9 +11,9 @@ __summary__ = 'Libraries and scripts for DELPH-IN data'
 __uri__ = 'https://github.com/delph-in/pydelphin'
 
 __author__ = 'Michael Wayne Goodman'
-__email__ = 'goodman.m.w@gmail.com'
+__email__ = '1428419+goodmami@users.noreply.github.com'
 
 __maintainer__ = 'Michael Wayne Goodman'
 
 __license__ = 'MIT'
-__copyright__ = '2013--2020 %s <%s> and contributors' % (__author__, __email__)
+__copyright__ = f'2013--2020 {__author__} <{__email__}> and contributors'
