@@ -98,7 +98,6 @@ class YYToken(_YYToken):
             d["start"],
             d["end"],
             Lnk.charspan(d["from"], d["to"]) if "from" in d else None,
-            # d.get('paths', [1]),
             form=d["form"],
             surface=d.get("surface"),
             # ipos=
@@ -115,11 +114,8 @@ class YYToken(_YYToken):
             cfrom, cto = self.lnk.data
             d["from"] = cfrom
             d["to"] = cto
-        # d['paths'] = self.paths
         if self.surface is not None:
             d["surface"] = self.surface
-        # d['ipos'] = self.ipos
-        # d['lrules'] = self.lrules
         if self.pos:
             d["tags"] = [ps[0] for ps in self.pos]
             d["probabilities"] = [ps[1] for ps in self.pos]

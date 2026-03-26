@@ -156,7 +156,6 @@ def _read_file(path, basedir, encoding):
                     pairs = properties.split(", ")
                     properties = [pair.split() for pair in pairs]
                 v = {"parents": supertypes, "properties": properties}
-                # v = type(identifier, supertypes, d)
                 _incorporate(data["variables"], identifier, v, path)
             else:
                 raise SemISyntaxError(
@@ -370,8 +369,6 @@ class Synopsis(tuple):
                 return False  # unmatched role in args
             elif role is None and arg is None and not synrole.optional:
                 return False  # unmatched synopsis role
-            # elif role is not None and role != synrole.name:
-            #     return False  # invalid role in sequence
             elif arg is not None:
                 if variables is not None:
                     if not variables.subsumes(synrole.value, arg):

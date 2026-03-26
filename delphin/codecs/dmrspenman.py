@@ -186,8 +186,6 @@ def to_triples(d, properties=True, lnk=True):
         else:
             complete = False
 
-    # if d.top is not None:
-    #     triples.append((None, 'top', d.top))
     for link in d.links:
         if link.start in main_component and link.end in main_component:
             start = idmap[link.start]

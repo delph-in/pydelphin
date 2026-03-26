@@ -32,9 +32,8 @@ class TSQLSyntaxError(PyDelphinSyntaxError):
 
 _Names = list[str]
 _Comparison = tuple[str, tuple[str, tsdb.Value]]
-# the following should be recursive:
-#     _Boolean = Tuple[str, Union[_Boolean, List[_Boolean, ...]]]
-# but use Any until the type checker supports recursive types.
+# _Boolean should be recursive but use Any until the type checker
+# supports recursive types.
 # see: https://github.com/python/mypy/issues/731
 _Boolean = tuple[str, Any]
 _Condition = _Comparison | _Boolean
@@ -369,8 +368,7 @@ _operator_functions = {
 def _process_condition_fields(
     condition: _Condition, resolve_qname: _QNameResolver
 ) -> tuple[_Condition, _Names]:
-    # conditions are something like:
-    #  ('==', ('i-id', 11))
+    # conditions are something like: ('==', ('i-id', 11))
     op, body = condition
     if op in ("and", "or"):
         body = typing_cast(list[_Condition], body)
@@ -416,8 +414,7 @@ def _process_condition_function(
 ) -> _FilterFunction:
     field_index = selection._field_index
     fields = selection.fields
-    # conditions are something like:
-    #  ('==', ('i-id', 11))
+    # conditions are something like: ('==', ('i-id', 11))
     op, body = condition
     if op in ("and", "or"):
         body = typing_cast(list[_Condition], body)

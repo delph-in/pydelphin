@@ -163,9 +163,7 @@ def to_dict(mrs, properties=True, lnk=True):
         constraints=(list(map(_hcons, mrs.hcons)) + list(map(_icons, mrs.icons))),
         variables={v: _var(v) for v in mrs.variables},
     )
-    # if mrs.lnk is not None: d['lnk'] = mrs.lnk
-    # if mrs.surface is not None: d['surface'] = mrs.surface
-    # if mrs.identifier is not None: d['identifier'] = mrs.identifier
+    # skipping mrs.lnk, mrs.surface, or mrs.identifier
     return d
 
 

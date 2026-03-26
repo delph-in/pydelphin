@@ -138,10 +138,13 @@ def encode(d, properties=True, lnk=True, indent=False):
 
 
 def _decode(fh):
-    # <!ELEMENT dmrs-list (dmrs)*>
-    # if memory becomes a big problem, consider catching start events,
-    # get the root element (later start events can be ignored), and
-    # root.clear() after decoding each mrs
+    """
+    <!ELEMENT dmrs-list (dmrs)*>
+
+    if memory becomes a big problem, consider catching start events,
+    get the root element (later start events can be ignored), and
+    root.clear() after decoding each mrs
+    """
     for _, elem in etree.iterparse(fh, events=("end",)):
         if elem.tag == "dmrs":
             yield _decode_dmrs(elem)
@@ -149,12 +152,14 @@ def _decode(fh):
 
 
 def _decode_dmrs(elem):
-    # <!ELEMENT dmrs (node|link)*>
-    # <!ATTLIST dmrs
-    #           cfrom CDATA #REQUIRED
-    #           cto   CDATA #REQUIRED
-    #           surface   CDATA #IMPLIED
-    #           ident     CDATA #IMPLIED >
+    """
+    <!ELEMENT dmrs (node|link)*>
+    <!ATTLIST dmrs
+              cfrom CDATA #REQUIRED
+              cto   CDATA #REQUIRED
+              surface   CDATA #IMPLIED
+              ident     CDATA #IMPLIED >
+    """
     elem = elem.find(".")  # in case elem is an ElementTree rather than Element
     return DMRS(
         top=elem.get("top"),
@@ -168,14 +173,16 @@ def _decode_dmrs(elem):
 
 
 def _decode_node(elem):
-    # <!ELEMENT node ((realpred|gpred), sortinfo)>
-    # <!ATTLIST node
-    #           nodeid CDATA #REQUIRED
-    #           cfrom CDATA #REQUIRED
-    #           cto   CDATA #REQUIRED
-    #           surface   CDATA #IMPLIED
-    #           base      CDATA #IMPLIED
-    #           carg CDATA #IMPLIED >
+    """
+    <!ELEMENT node ((realpred|gpred), sortinfo)>
+    <!ATTLIST node
+              nodeid CDATA #REQUIRED
+              cfrom CDATA #REQUIRED
+              cto   CDATA #REQUIRED
+              surface   CDATA #IMPLIED
+              base      CDATA #IMPLIED
+              carg CDATA #IMPLIED >
+    """
     sortinfo = _decode_sortinfo(elem.find("sortinfo"))
     type = None
     if CVARSORT in sortinfo:
@@ -193,12 +200,14 @@ def _decode_node(elem):
 
 
 def _decode_pred(elem):
-    # <!ELEMENT realpred EMPTY>
-    # <!ATTLIST realpred
-    #           lemma CDATA #REQUIRED
-    #           pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
-    #           sense CDATA #IMPLIED >
-    # <!ELEMENT gpred (#PCDATA)>
+    """
+    <!ELEMENT realpred EMPTY>
+    <!ATTLIST realpred
+              lemma CDATA #REQUIRED
+              pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
+              sense CDATA #IMPLIED >
+    <!ELEMENT gpred (#PCDATA)>
+    """
     if elem.tag == "gpred":
         pred = elem.text
     elif elem.tag == "realpred":
@@ -207,20 +216,23 @@ def _decode_pred(elem):
 
 
 def _decode_sortinfo(elem):
-    # <!ELEMENT sortinfo EMPTY>
-    # <!ATTLIST sortinfo
-    #           cvarsort (x|e|i|u) #IMPLIED
-    #           num  (sg|pl|u) #IMPLIED
-    #           pers (1|2|3|1-or-3|u) #IMPLIED
-    #           gend (m|f|n|m-or-f|u) #IMPLIED
-    #           sf (prop|ques|comm|prop-or-ques|u) #IMPLIED
-    #           tense (past|pres|fut|tensed|untensed|u) #IMPLIED
-    #           mood (indicative|subjunctive|u) #IMPLIED
-    #           prontype (std_pron|zero_pron|refl|u) #IMPLIED
-    #           prog (plus|minus|u) #IMPLIED
-    #           perf (plus|minus|u) #IMPLIED
-    #           ind  (plus|minus|u) #IMPLIED >
-    # note: Just accept any properties, since these are ERG-specific
+    """
+    <!ELEMENT sortinfo EMPTY>
+    <!ATTLIST sortinfo
+              cvarsort (x|e|i|u) #IMPLIED
+              num  (sg|pl|u) #IMPLIED
+              pers (1|2|3|1-or-3|u) #IMPLIED
+              gend (m|f|n|m-or-f|u) #IMPLIED
+              sf (prop|ques|comm|prop-or-ques|u) #IMPLIED
+              tense (past|pres|fut|tensed|untensed|u) #IMPLIED
+              mood (indicative|subjunctive|u) #IMPLIED
+              prontype (std_pron|zero_pron|refl|u) #IMPLIED
+              prog (plus|minus|u) #IMPLIED
+              perf (plus|minus|u) #IMPLIED
+              ind  (plus|minus|u) #IMPLIED >
+
+    note: Just accept any properties, since these are ERG-specific
+    """
     return {
         (key.upper() if key != CVARSORT else key): val.lower()
         for key, val in elem.attrib.items()
@@ -228,12 +240,14 @@ def _decode_sortinfo(elem):
 
 
 def _decode_link(elem):
-    # <!ELEMENT link (rargname, post)>
-    # <!ATTLIST link
-    #           from CDATA #REQUIRED
-    #           to   CDATA #REQUIRED >
-    # <!ELEMENT rargname (#PCDATA)>
-    # <!ELEMENT post (#PCDATA)>
+    """
+    <!ELEMENT link (rargname, post)>
+    <!ATTLIST link
+              from CDATA #REQUIRED
+              to   CDATA #REQUIRED >
+    <!ELEMENT rargname (#PCDATA)>
+    <!ELEMENT post (#PCDATA)>
+    """
     return Link(
         start=int(elem.get("from")),
         end=int(elem.get("to")),

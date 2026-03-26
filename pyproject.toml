@@ -99,6 +99,7 @@ select = [
   "F",    # Pyflakes
   "W",    # pycodestyle warnings
   "UP",   # pyupgrade
+  "ERA",  # eradicate dead code
 ]
 
 [tool.ruff.lint.isort]
@@ -106,7 +107,13 @@ combine-as-imports = true
 force-wrap-aliases = true
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["E501"]  # test cases often have long strings
+"tests/*" = [
+  "E501",  # test cases often have long strings
+  "ERA",   # commented out tests sometimes serve as documentation
+]
+"docs/conf.py" = [
+  "ERA",   # commented out parts of conf.py template
+]
 
 [tool.mypy]
 python_version = "3.10"

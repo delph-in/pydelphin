@@ -1028,9 +1028,6 @@ def _lex(stream):
                 elif gid == 30:
                     raise TDLSyntaxError(lineno=line_no, offset=m.start(), text=line)
                 else:
-                    # token = None
-                    # if not (6 < gid < 20):
-                    #     token = m.group(gid)
                     token = m.group(gid)
                     yield (gid, token, line_no)
     except StopIteration:
@@ -1550,11 +1547,7 @@ def _format_difflist(dl, indent):
     ):
         return "<! {} !>".format(", ".join(values))
     else:
-        # i = ' ' * (indent + 3)  # 3 == len('<! ')
         return "<! {} !>".format((",\n" + " " * (indent + 3)).join(values))
-        #     values[0])]
-        # lines.extend(i + val for val in values[1:])
-        # return ',\n'.join(lines) + ' !>'
 
 
 def _format_conjunction(conj, indent):

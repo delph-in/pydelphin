@@ -172,19 +172,23 @@ def _decode_mrs(elem):
 
 
 def _decode_label(elem):
-    # <!ELEMENT label (extrapair*)>
-    # <!ATTLIST label
-    #           vid CDATA #REQUIRED >
+    """
+    <!ELEMENT label (extrapair*)>
+    <!ATTLIST label
+              vid CDATA #REQUIRED >
+    """
     vid = elem.get("vid")
     # ignoring extrapairs
     return "h" + vid
 
 
 def _decode_var(elem, variables):
-    # <!ELEMENT var (extrapair*)>
-    # <!ATTLIST var
-    #           vid  CDATA #REQUIRED
-    #           sort (x|e|h|u|l|i) #IMPLIED >
+    """
+    <!ELEMENT var (extrapair*)>
+    <!ATTLIST var
+              vid  CDATA #REQUIRED
+              sort (x|e|h|u|l|i) #IMPLIED >
+    """
     vid = elem.get("vid")
     srt = elem.get("sort").lower()
     var = srt + vid
@@ -195,19 +199,23 @@ def _decode_var(elem, variables):
 
 
 def _decode_extrapairs(elems):
-    # <!ELEMENT extrapair (path,value)>
-    # <!ELEMENT path (#PCDATA)>
-    # <!ELEMENT value (#PCDATA)>
+    """
+    <!ELEMENT extrapair (path,value)>
+    <!ELEMENT path (#PCDATA)>
+    <!ELEMENT value (#PCDATA)>
+    """
     return [(e.find("path").text.upper(), e.find("value").text.lower()) for e in elems]
 
 
 def _decode_ep(elem, variables=None):
-    # <!ELEMENT ep ((pred|spred|realpred), label, fvpair*)>
-    # <!ATTLIST ep
-    #           cfrom CDATA #IMPLIED
-    #           cto   CDATA #IMPLIED
-    #           surface   CDATA #IMPLIED
-    #           base      CDATA #IMPLIED >
+    """
+    <!ELEMENT ep ((pred|spred|realpred), label, fvpair*)>
+    <!ATTLIST ep
+              cfrom CDATA #IMPLIED
+              cto   CDATA #IMPLIED
+              surface   CDATA #IMPLIED
+              base      CDATA #IMPLIED >
+    """
     args = _decode_args(elem, variables=variables)
     return EP(
         _decode_pred(elem.find("./")),
@@ -220,13 +228,15 @@ def _decode_ep(elem, variables=None):
 
 
 def _decode_pred(elem):
-    # <!ELEMENT pred (#PCDATA)>
-    # <!ELEMENT spred (#PCDATA)>
-    # <!ELEMENT realpred EMPTY>
-    # <!ATTLIST realpred
-    #           lemma CDATA #REQUIRED
-    #           pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
-    #           sense CDATA #IMPLIED >
+    """
+    <!ELEMENT pred (#PCDATA)>
+    <!ELEMENT spred (#PCDATA)>
+    <!ELEMENT realpred EMPTY>
+    <!ATTLIST realpred
+              lemma CDATA #REQUIRED
+              pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
+              sense CDATA #IMPLIED >
+    """
     if elem.tag in ("pred", "spred"):
         return elem.text
     elif elem.tag == "realpred":
@@ -234,9 +244,12 @@ def _decode_pred(elem):
 
 
 def _decode_args(elem, variables=None):
-    # <!ELEMENT fvpair (rargname, (var|constant))>
-    # This code assumes that only cargs have constant values, and all
-    # other args (including IVs) have var values.
+    """
+    <!ELEMENT fvpair (rargname, (var|constant))>
+
+    This code assumes that only cargs have constant values, and all
+    other args (including IVs) have var values.
+    """
     args = {}
     for e in elem.findall("fvpair"):
         rargname = e.find("rargname").text.upper()
@@ -249,11 +262,13 @@ def _decode_args(elem, variables=None):
 
 
 def _decode_hcons(elem, variables):
-    # <!ELEMENT hcons (hi, lo)>
-    # <!ATTLIST hcons
-    #           hreln (qeq|lheq|outscopes) #REQUIRED >
-    # <!ELEMENT hi (var)>
-    # <!ELEMENT lo (label|var)>
+    """
+    <!ELEMENT hcons (hi, lo)>
+    <!ATTLIST hcons
+              hreln (qeq|lheq|outscopes) #REQUIRED >
+    <!ELEMENT hi (var)>
+    <!ELEMENT lo (label|var)>
+    """
     hi = _decode_var(elem.find("hi/var"), variables)
     lo = elem.find("lo/")
     if lo.tag == "var":
@@ -265,11 +280,13 @@ def _decode_hcons(elem, variables):
 
 # this isn't part of the spec; just putting here in case it's added later
 def _decode_icons(elem, variables):
-    # <!ELEMENT icons (left, right)>
-    # <!ATTLIST icons
-    #           ireln #REQUIRED >
-    # <!ELEMENT left (var)>
-    # <!ELEMENT right (var)>
+    """
+    <!ELEMENT icons (left, right)>
+    <!ATTLIST icons
+              ireln #REQUIRED >
+    <!ELEMENT left (var)>
+    <!ELEMENT right (var)>
+    """
     return ICons(
         _decode_var(elem.find("left/var"), variables),
         elem.get("ireln"),

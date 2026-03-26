@@ -373,8 +373,6 @@ class REPP(_REPPGroup):
         m = re.search(r"repp-modules\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.", conf)
         t = re.search(r"repp-tokenizer\s*:=\s*([-\w]+)\s*\.", conf)
         a = re.search(r"repp-calls\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.", conf)
-        # f = re.search(
-        #     r'format\s*:=\s*(\w+)\s*\.', conf)
         d = re.search(r"repp-directory\s*:=\s*(.*)\.\s*$", conf)
 
         if m is None:
@@ -382,10 +380,9 @@ class REPP(_REPPGroup):
         if t is None:
             raise REPPError("repp-tokenizer option must be set")
 
-        # mods = m.group(1).split()
+        # unused for now: mods = m.group(1).split()
         tok = t.group(1).strip()
         active = a.group(1).split() if a is not None else None
-        # fmt = f.group(1).strip() if f is not None else None
 
         if directory is None:
             if d is not None:

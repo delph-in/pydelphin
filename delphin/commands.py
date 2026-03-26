@@ -132,8 +132,7 @@ def convert(
     kwargs["lnk"] = lnk
     # Manually dealing with headers, joiners, and footers is to
     # accommodate streaming output. Otherwise it is the same as
-    # calling the following:
-    #     target_codec.dumps(xs, **kwargs)
+    # calling the following: target_codec.dumps(xs, **kwargs)
     if target_lines:
         header = footer = ""
         joiner = "\n"
@@ -231,7 +230,6 @@ def _read(path, source_codec, select, kwargs):
         path = Path(path).expanduser()
         if path.is_dir():
             db = tsdb.Database(path)
-            # ts = itsdb.TestSuite(path)
             xs = [
                 next(iter(source_codec.loads(r[0], **kwargs)), None)
                 for r in tsql.select(select, db)

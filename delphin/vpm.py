@@ -13,7 +13,7 @@ from delphin.exceptions import PyDelphinSyntaxError
 
 _LR_OPS = set(["<>", ">>", "==", "=>"])
 _RL_OPS = set(["<>", "<<", "==", "<="])
-# _SUBSUME_OPS = set(['<>', '<<', '>>'])  # unused
+# _SUBSUME_OPS = set(['<>', '<<', '>>'])  # (usused)  # noqa: ERA001
 _EQUAL_OPS = set(["==", "<=", "=>"])
 _ALL_OPS = _LR_OPS.union(_RL_OPS)
 
@@ -132,8 +132,9 @@ class VPM:
         """
         vs, vid = variable.split(var)
         if reverse:
-            # variable type mapping is disabled in reverse
-            # tms = [(b, op, a) for a, op, b in self._typemap if op in _RL_OPS]
+            # variable type mapping is disabled in reverse;
+            # otherwise this would be (b, op, a) for each (a, op, b) in
+            # self._typemap if the op is in _RL_OPS
             tms = []
         else:
             tms = [(a, op, b) for a, op, b in self._typemap if op in _LR_OPS]

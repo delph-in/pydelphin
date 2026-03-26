@@ -382,28 +382,3 @@ def _validate_parentage(
         raise HierarchyError(
             "{} has redundant parents: {}".format(id, ", ".join(redundant))
         )
-
-
-# single-parented hierarchy might be something like this:
-# class Hierarchy(MultiHierarchy):
-#     def parent(self, identifier):
-#         identifier = self._norm(identifier)
-#         parents = self._hier[identifier]
-#         if parents:
-#             parents = parents[0]
-#         return parents
-
-#     def validate_update(self, subhierarchy, data):
-#         """
-#         Check if the update can apply to the current hierarchy.
-
-#         Raises:
-#             HierarchyError: when the update is invalid
-#         """
-#         subhierarchy, data = super().validate_update(subhierarchy, data)
-#         for id, parents in subhierarchy.items():
-#             if len(parents) != 1:
-#                 raise HierarchyError(
-#                     '{} has more than one parent: {}'
-#                     .format(id, ', '.join(parents)))
-#         return subhierarchy, data

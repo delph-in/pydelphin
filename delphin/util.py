@@ -237,38 +237,12 @@ def _vf2_candidates(
         return []
 
 
-# unescaping escaped strings (potentially with unicode)
-#   (disabled but left here in case a need arises)
-# thanks: http://stackoverflow.com/a/24519338/1441112
-
-# import re
-# import codecs
-
-# _ESCAPE_SEQUENCE_RE = re.compile(r'''
-#     ( \\U........      # 8-digit hex escapes
-#     | \\u....          # 4-digit hex escapes
-#     | \\x..            # 2-digit hex escapes
-#     | \\[0-7]{1,3}     # Octal escapes
-#     | \\N\{[^}]+\}     # Unicode characters by name
-#     | \\[\\'"abfnrtv]  # Single-character escapes
-#     )''', re.UNICODE | re.VERBOSE
-# )
-
-# def unescape_string(s):
-#     def decode_match(match):
-#         return codecs.decode(match.group(0), 'unicode-escape')
-#     return _ESCAPE_SEQUENCE_RE.sub(decode_match, s)
-
-
 # S-expressions
 #  e.g. (:n-inputs . 3) or (S (NP (NNS Dogs)) (VP (VBZ bark)))
 
 _Atom: TypeAlias = str | int | float
 _SExpr: TypeAlias = Union[_Atom, "_Cons"]
-# The following would be nice, but Mypy doesn't do recursive types yet:
-#     https://github.com/python/mypy/issues/731
 _Cons: TypeAlias = tuple[_SExpr, _SExpr] | list[_SExpr]
-# _Cons: TypeAlias = tuple[Any, Any] | list[Any]
 
 
 class SExprResult(NamedTuple):

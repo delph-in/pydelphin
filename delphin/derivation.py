@@ -647,17 +647,16 @@ def _to_dict_recursive(obj, fields, labels):
             d["label"] = labels[obj.id]
     elif isinstance(obj, UDFTerminal):
         d["form"] = obj.form
-        # d['from'] = min(t.tfs['+FROM'] for t in obj.tokens)
-        # d['to'] = max(t.tfs['+TO'] for t in obj.tokens)
+        # unused for now: d['from'] = min(t.tfs['+FROM'] for t in obj.tokens)
+        # unused for now: d['to'] = max(t.tfs['+TO'] for t in obj.tokens)
         if obj.tokens and "tokens" in fields:
             tokens = []
             for tok in obj.tokens:
                 td = {"id": tok.id}
-                # td['from'] = tok.tfs['+FROM']
-                # td['to'] = tok.tfs['+TO']
+                # unused for now: td['from'] = tok.tfs['+FROM']
+                # unused for now: td['to'] = tok.tfs['+TO']
                 td["tfs"] = tok.tfs
                 tokens.append(td)
             d["tokens"] = tokens
-    # else:
-    #     raies TypeError()
+    # any else cases?
     return d

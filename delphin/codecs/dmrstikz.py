@@ -67,14 +67,6 @@ _LATEX_CHARMAP = [
 
 
 def _latex_escape(s):
-    # consider a re sub with a function. e.g.
-    # _character_unescapes = {
-    #   '\\s': _field_delimiter,
-    #   '\\n': '\n',
-    #   '\\\\': '\\'}
-    # _unescape_func = lambda m: _character_unescapes[m.group(0)]
-    # _unescape_re = re.compile(r'(\\s|\\n|\\\\)')
-    # _unescape_re.sub(_unescape_func, string, flags=re.UNICODE)
     for c, r in _LATEX_CHARMAP:
         s = s.replace(c, r)
     return s
@@ -153,7 +145,6 @@ def encode(d, properties=True, lnk=True, indent=True):
         lines.append(
             "  \\deproot[root]{{{}}}{{{}}}".format(nodeidx[d.top], "\\srl{TOP}")
         )
-        # _latex_escape('/' + link.post)
 
     for link in d.links:
         lines.append(
