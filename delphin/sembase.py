@@ -1,16 +1,15 @@
-
 """
 Basic classes and functions for semantic representations.
 """
 
 __all__ = [
-    'role_priority',
-    'property_priority',
-    'LnkMixin',
-    'Predication',
-    'SemanticStructure',
-    'ScopingSemanticStructure',
-    'ScopeRelation',
+    "role_priority",
+    "property_priority",
+    "LnkMixin",
+    "Predication",
+    "SemanticStructure",
+    "ScopingSemanticStructure",
+    "ScopeRelation",
 ]
 
 from abc import ABC, abstractmethod
@@ -35,31 +34,32 @@ Properties: TypeAlias = dict[str, str]  # property: value
 
 # Functions for the default ordering of feature lists
 
+
 def role_priority(role: str) -> tuple[bool, bool, str]:
     """Return a representation of role priority for ordering."""
     # canonical order: LBL ARG* RSTR BODY *-INDEX *-HNDL CARG ...
     role = role.upper()
     return (
-        role != 'LBL',
-        role in ('BODY', 'CARG'),
+        role != "LBL",
+        role in ("BODY", "CARG"),
         role,
     )
 
 
 _COMMON_PROPERTIES = (
-    'PERS',      # [x] person (ERG, Jacy)
-    'NUM',       # [x] number (ERG, Jacy)
-    'GEND',      # [x] gender (ERG, Jacy)
-    'IND',       # [x] individuated (ERG)
-    'PT',        # [x] pronoun-type (ERG)
-    'PRONTYPE',  # [x] pronoun-type (Jacy)
-    'SF',        # [e] sentential-force (ERG)
-    'TENSE',     # [e] tense (ERG, Jacy)
-    'MOOD',      # [e] mood (ERG, Jacy)
-    'PROG',      # [e] progressive (ERG, Jacy)
-    'PERF',      # [e] perfective (ERG, Jacy)
-    'ASPECT',    # [e] other aspect (Jacy)
-    'PASS',      # [e] passive (Jacy)
+    "PERS",  # [x] person (ERG, Jacy)
+    "NUM",  # [x] number (ERG, Jacy)
+    "GEND",  # [x] gender (ERG, Jacy)
+    "IND",  # [x] individuated (ERG)
+    "PT",  # [x] pronoun-type (ERG)
+    "PRONTYPE",  # [x] pronoun-type (Jacy)
+    "SF",  # [e] sentential-force (ERG)
+    "TENSE",  # [e] tense (ERG, Jacy)
+    "MOOD",  # [e] mood (ERG, Jacy)
+    "PROG",  # [e] progressive (ERG, Jacy)
+    "PERF",  # [e] perfective (ERG, Jacy)
+    "ASPECT",  # [e] other aspect (Jacy)
+    "PASS",  # [e] passive (Jacy)
 )
 
 _COMMON_PROPERTY_INDEX = dict((p, i) for i, p in enumerate(_COMMON_PROPERTIES))
@@ -81,12 +81,13 @@ def property_priority(prop: str) -> tuple[int, str]:
 
 # Classes for Semantic Structures
 
+
 class LnkMixin:
     """
     A mixin class for adding `cfrom` and `cto` properties on structures.
     """
 
-    __slots__ = ('lnk', 'surface')
+    __slots__ = ("lnk", "surface")
 
     lnk: Lnk
     surface: str | None
@@ -136,7 +137,7 @@ class LnkMixin:
 # including handles and underspecified variables
 
 Identifier: TypeAlias = str | int
-ID = TypeVar('ID', bound=Identifier)
+ID = TypeVar("ID", bound=Identifier)
 RoleArgument: TypeAlias = tuple[Role, ID]
 ArgumentStructure: TypeAlias = dict[ID, list[RoleArgument[ID]]]
 
@@ -153,15 +154,17 @@ class Predication(LnkMixin, Generic[ID], ABC):
     identifiers and, if specified, different surface alignments.
     """
 
-    __slots__ = ('id', 'predicate', 'type', 'base')
+    __slots__ = ("id", "predicate", "type", "base")
 
-    def __init__(self,
-                 id: ID,
-                 predicate: str,
-                 type: str | None,
-                 lnk: Lnk | None,
-                 surface: str | None,
-                 base):
+    def __init__(
+        self,
+        id: ID,
+        predicate: str,
+        type: str | None,
+        lnk: Lnk | None,
+        surface: str | None,
+        base,
+    ):
         super().__init__(lnk, surface)
         self.id = id
         self.predicate = predicate
@@ -169,13 +172,14 @@ class Predication(LnkMixin, Generic[ID], ABC):
         self.base = base
 
     def __repr__(self):
-        return '<{} object ({}:{}{}{}) at {}>'.format(
+        return "<{} object ({}:{}{}{}) at {}>".format(
             self.__class__.__name__,
             self.id,
             self.predicate,
             str(self.lnk),
-            '[{}]'.format(self.type or '?'),
-            id(self))
+            "[{}]".format(self.type or "?"),
+            id(self),
+        )
 
     @abstractmethod
     def __eq__(self, other: Any) -> bool: ...
@@ -183,7 +187,7 @@ class Predication(LnkMixin, Generic[ID], ABC):
 
 # Structure types
 
-P = TypeVar('P', bound=Predication)
+P = TypeVar("P", bound=Predication)
 
 
 class SemanticStructure(LnkMixin, Generic[ID, P], ABC):
@@ -203,7 +207,7 @@ class SemanticStructure(LnkMixin, Generic[ID, P], ABC):
         identifier: a discourse-utterance identifier
     """
 
-    __slots__ = ('top', 'predications', 'identifier', '_pidx')
+    __slots__ = ("top", "predications", "identifier", "_pidx")
 
     top: ID | None
     predications: list[P]
@@ -214,21 +218,20 @@ class SemanticStructure(LnkMixin, Generic[ID, P], ABC):
         predications: Sequence[P],
         lnk: Lnk | None,
         surface: str | None,
-        identifier
+        identifier,
     ) -> None:
         super().__init__(lnk, surface)
         self.top = top
         self.predications = list(predications)
-        self._pidx: dict[ID, P] = {
-            p.id: p for p in predications
-        }
+        self._pidx: dict[ID, P] = {p.id: p for p in predications}
         self.identifier = identifier
 
     def __repr__(self):
-        return '<{} object ({}) at {}>'.format(
+        return "<{} object ({}) at {}>".format(
             self.__class__.__name__,
-            ' '.join(p.predicate for p in self.predications),
-            id(self))
+            " ".join(p.predicate for p in self.predications),
+            id(self),
+        )
 
     @abstractmethod
     def __eq__(self, other: Any) -> bool: ...
@@ -242,7 +245,8 @@ class SemanticStructure(LnkMixin, Generic[ID, P], ABC):
         return self._pidx[id]
 
     @abstractmethod
-    def arguments(self,
+    def arguments(
+        self,
         types: Iterable[str] | None = None,
         expressed: bool | None = None,
     ) -> ArgumentStructure[ID]:
@@ -281,8 +285,7 @@ class SemanticStructure(LnkMixin, Generic[ID, P], ABC):
         complete structures, the quantifiee will never be `None`.
 
         Example:
-            >>> [(p.predicate, q.predicate)
-            ...  for p, q in m.quantification_pairs()]
+            >>> [(p.predicate, q.predicate) for p, q in m.quantification_pairs()]
             [('_dog_n_1', '_the_q'), ('_bark_v_1', None)]
         """
         ...
@@ -290,12 +293,13 @@ class SemanticStructure(LnkMixin, Generic[ID, P], ABC):
 
 class ScopeRelation(str, Enum):
     """The enumeration of relations used in handle constraints."""
+
     __str__ = str.__str__  # we want to print 'qeq', not 'ScopeRelation.qeq'
 
-    LEQ = 'leq'              # label equality (label-to-label)
-    LHEQ = 'lheq'            # label-handle equality (hole-to-label)
-    OUTSCOPES = 'outscopes'  # directly or indirectly takes scope over
-    QEQ = 'qeq'              # equality modulo quantifiers (hole-to-label)
+    LEQ = "leq"  # label equality (label-to-label)
+    LHEQ = "lheq"  # label-handle equality (hole-to-label)
+    OUTSCOPES = "outscopes"  # directly or indirectly takes scope over
+    QEQ = "qeq"  # equality modulo quantifiers (hole-to-label)
 
 
 ScopeLabel: TypeAlias = str
@@ -324,7 +328,7 @@ class ScopingSemanticStructure(SemanticStructure[ID, P], ABC):
         index: The non-scopal top of the structure.
     """
 
-    __slots__ = ('index',)
+    __slots__ = ("index",)
 
     def __init__(
         self,

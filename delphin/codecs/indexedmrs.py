@@ -1,4 +1,3 @@
-
 """
 Serialization for the Indexed MRS format.
 """
@@ -11,13 +10,14 @@ from delphin.mrs import CONSTANT_ROLE, EP, MRS, HCons, ICons, MRSSyntaxError
 from delphin.util import Lexer
 
 CODEC_INFO = {
-    'representation': 'mrs',
+    "representation": "mrs",
 }
 
 
 ##############################################################################
 ##############################################################################
 # Pickle-API methods
+
 
 def load(source, semi):
     """
@@ -30,7 +30,7 @@ def load(source, semi):
     Returns:
         a list of MRS objects
     """
-    if hasattr(source, 'read'):
+    if hasattr(source, "read"):
         ms = list(_decode(source, semi))
     else:
         source = Path(source).expanduser()
@@ -39,7 +39,7 @@ def load(source, semi):
     return ms
 
 
-def loads(s, semi, single=False, encoding='utf-8'):
+def loads(s, semi, single=False, encoding="utf-8"):
     """
     Deserialize Indexed MRS string representations
 
@@ -54,8 +54,9 @@ def loads(s, semi, single=False, encoding='utf-8'):
     return ms
 
 
-def dump(ms, destination, semi, properties=True, lnk=True,
-         indent=False, encoding='utf-8'):
+def dump(
+    ms, destination, semi, properties=True, lnk=True, indent=False, encoding="utf-8"
+):
     """
     Serialize MRS objects to Indexed MRS and write to a file
 
@@ -72,11 +73,11 @@ def dump(ms, destination, semi, properties=True, lnk=True,
             file with the given encoding; otherwise it is ignored
     """
     text = dumps(ms, semi, properties=properties, lnk=lnk, indent=indent)
-    if hasattr(destination, 'write'):
+    if hasattr(destination, "write"):
         print(text, file=destination)
     else:
         destination = Path(destination).expanduser()
-        with destination.open('w', encoding=encoding) as fh:
+        with destination.open("w", encoding=encoding) as fh:
             print(text, file=fh)
 
 
@@ -135,32 +136,33 @@ def encode(d, semi, properties=True, lnk=True, indent=False):
 
 _IndexedMRSLexer = Lexer(
     tokens=[
-        (r'<-?\d+:-?\d+>', 'LNK:a lnk value'),
-        (r'"([^"\\]*(?:\\.[^"\\]*)*)"', 'DQSTRING:a string'),
-        (r'<', 'LANGLE:<'),
-        (r'>', 'RANGLE:>'),
-        (r'\{', 'LBRACE:{'),
-        (r'\}', 'RBRACE:}'),
-        (r'\(', 'LPAREN:('),
-        (r'\)', 'RPAREN:)'),
-        (r',', 'COMMA:,'),
-        (r':', 'COLON::'),
-        (r'[^\s"\'()\/,:;<=>[\]{}]+', 'SYMBOL:a symbol'),
-        (r'[^\s]', 'UNEXPECTED')
+        (r"<-?\d+:-?\d+>", "LNK:a lnk value"),
+        (r'"([^"\\]*(?:\\.[^"\\]*)*)"', "DQSTRING:a string"),
+        (r"<", "LANGLE:<"),
+        (r">", "RANGLE:>"),
+        (r"\{", "LBRACE:{"),
+        (r"\}", "RBRACE:}"),
+        (r"\(", "LPAREN:("),
+        (r"\)", "RPAREN:)"),
+        (r",", "COMMA:,"),
+        (r":", "COLON::"),
+        (r'[^\s"\'()\/,:;<=>[\]{}]+', "SYMBOL:a symbol"),
+        (r"[^\s]", "UNEXPECTED"),
     ],
-    error_class=MRSSyntaxError)
+    error_class=MRSSyntaxError,
+)
 
-LNK      = _IndexedMRSLexer.tokentypes.LNK
+LNK = _IndexedMRSLexer.tokentypes.LNK
 DQSTRING = _IndexedMRSLexer.tokentypes.DQSTRING
-LANGLE   = _IndexedMRSLexer.tokentypes.LANGLE
-RANGLE   = _IndexedMRSLexer.tokentypes.RANGLE
-LBRACE   = _IndexedMRSLexer.tokentypes.LBRACE
-RBRACE   = _IndexedMRSLexer.tokentypes.RBRACE
-LPAREN   = _IndexedMRSLexer.tokentypes.LPAREN
-RPAREN   = _IndexedMRSLexer.tokentypes.RPAREN
-COMMA    = _IndexedMRSLexer.tokentypes.COMMA
-COLON    = _IndexedMRSLexer.tokentypes.COLON
-SYMBOL   = _IndexedMRSLexer.tokentypes.SYMBOL
+LANGLE = _IndexedMRSLexer.tokentypes.LANGLE
+RANGLE = _IndexedMRSLexer.tokentypes.RANGLE
+LBRACE = _IndexedMRSLexer.tokentypes.LBRACE
+RBRACE = _IndexedMRSLexer.tokentypes.RBRACE
+LPAREN = _IndexedMRSLexer.tokentypes.LPAREN
+RPAREN = _IndexedMRSLexer.tokentypes.RPAREN
+COMMA = _IndexedMRSLexer.tokentypes.COMMA
+COLON = _IndexedMRSLexer.tokentypes.COLON
+SYMBOL = _IndexedMRSLexer.tokentypes.SYMBOL
 
 
 def _decode(lineiter, semi):
@@ -186,15 +188,17 @@ def _decode_indexed(lexer, semi):
         icons = _decode_cons(lexer, ICons)
     lexer.expect_type(RANGLE)
     _match_properties(variables, semi)
-    return MRS(top=top,
-               index=index,
-               rels=rels,
-               hcons=hcons,
-               icons=icons,
-               variables=variables,
-               lnk=lnk,
-               surface=surface,
-               identifier=identifier)
+    return MRS(
+        top=top,
+        index=index,
+        rels=rels,
+        hcons=hcons,
+        icons=icons,
+        variables=variables,
+        lnk=lnk,
+        surface=surface,
+        identifier=identifier,
+    )
 
 
 def _decode_proplist(lexer):
@@ -226,13 +230,7 @@ def _decode_rel(lexer, variables, semi):
     args = {d[0]: v for d, v in zip(synopsis, arglist, strict=True)}
     if carg:
         args[CONSTANT_ROLE] = carg
-    return EP(
-        pred,
-        label,
-        args=args,
-        lnk=lnk,
-        surface=None,
-        base=None)
+    return EP(pred, label, args=args, lnk=lnk, surface=None, base=None)
 
 
 def _decode_lnk(lexer):
@@ -280,8 +278,10 @@ def _match_properties(variables, semi):
             continue
         semiprops = semi.variables[variable.type(var)]
         assert len(semiprops) == len(propvals)
-        assert all(semi.properties.subsumes(sp[1], pv)
-                   for sp, pv in zip(semiprops, propvals, strict=True))
+        assert all(
+            semi.properties.subsumes(sp[1], pv)
+            for sp, pv in zip(semiprops, propvals, strict=True)
+        )
         variables[var] = {sp[0]: pv for sp, pv in zip(semiprops, propvals, strict=True)}
 
 
@@ -292,30 +292,28 @@ def _match_properties(variables, semi):
 
 def _encode(ms, semi, properties, lnk, indent):
     if indent is None or indent is False:
-        delim = ' '
+        delim = " "
     else:
-        delim = '\n'
-    return delim.join(
-        _encode_indexed(m, semi, properties, lnk, indent)
-        for m in ms)
+        delim = "\n"
+    return delim.join(_encode_indexed(m, semi, properties, lnk, indent) for m in ms)
 
 
 def _encode_indexed(m, semi, properties, lnk, indent):
     if indent is None or indent is False:
-        i1 = ',{{{}}}'
-        i2 = i3 = ','
-        start = '<'
-        end = '>'
-        hook = '{},{}'
+        i1 = ",{{{}}}"
+        i2 = i3 = ","
+        start = "<"
+        end = ">"
+        hook = "{},{}"
     else:
         if indent is True:
             indent = 2
-        i1 = ',\n' + (' ' * indent) + '{{' + (' ' * (indent - 1)) + '{} }}'
-        i2 = ',\n' + ('  ' * indent)
-        i3 = ', '
-        start = '< '
-        end = ' >'
-        hook = '{}, {}'
+        i1 = ",\n" + (" " * indent) + "{{" + (" " * (indent - 1)) + "{} }}"
+        i2 = ",\n" + ("  " * indent)
+        i3 = ", "
+        start = "< "
+        end = " >"
+        hook = "{}, {}"
 
     if properties:
         varprops = _prepare_variable_properties(m, semi)
@@ -324,17 +322,13 @@ def _encode_indexed(m, semi, properties, lnk, indent):
 
     body = [
         hook.format(m.top, _encode_variable(m.index, varprops)),
-        i1.format(i2.join(_encode_rel(ep, semi, varprops, lnk, i3)
-                          for ep in m.rels)),
-        i1.format(i2.join(_encode_hcons(hc)
-                          for hc in m.hcons))
+        i1.format(i2.join(_encode_rel(ep, semi, varprops, lnk, i3) for ep in m.rels)),
+        i1.format(i2.join(_encode_hcons(hc) for hc in m.hcons)),
     ]
     if m.icons:
-        body.append(
-            i1.format(i2.join(_encode_icons(ic)
-                              for ic in m.icons)))
+        body.append(i1.format(i2.join(_encode_icons(ic) for ic in m.icons)))
 
-    return start + ''.join(body) + end
+    return start + "".join(body) + end
 
 
 def _prepare_variable_properties(m, semi):
@@ -343,37 +337,41 @@ def _prepare_variable_properties(m, semi):
         if varprops:
             proplists[var] = [
                 varprops.get(key, val).upper()
-                for key, val in semi.variables[variable.type(var)]]
+                for key, val in semi.variables[variable.type(var)]
+            ]
     return proplists
 
 
 def _encode_variable(var, varprops):
     if var in varprops:
-        props = ':' + ':'.join(varprops[var])
+        props = ":" + ":".join(varprops[var])
         del varprops[var]
     else:
-        props = ''
+        props = ""
     return var + props
 
 
 def _encode_rel(ep, semi, varprops, lnk, delim):
     roles = {role: None for role in ep.args if role != CONSTANT_ROLE}
     synopsis = semi.find_synopsis(ep.predicate, roles)
-    args = [_encode_variable(ep.args[d.name], varprops)
-            for d in synopsis
-            if d.name in ep.args]
+    args = [
+        _encode_variable(ep.args[d.name], varprops)
+        for d in synopsis
+        if d.name in ep.args
+    ]
     if ep.carg is not None:
         args.append(f'"{ep.carg}"')
-    return '{label}:{pred}{lnk}({args})'.format(
+    return "{label}:{pred}{lnk}({args})".format(
         label=ep.label,
         pred=ep.predicate,
-        lnk=str(ep.lnk) if lnk else '',
-        args=delim.join(args))
+        lnk=str(ep.lnk) if lnk else "",
+        args=delim.join(args),
+    )
 
 
 def _encode_hcons(hc):
-    return f'{hc.hi} {hc.relation} {hc.lo}'
+    return f"{hc.hi} {hc.relation} {hc.lo}"
 
 
 def _encode_icons(ic):
-    return f'{ic.left} {ic.relation} {ic.right}'
+    return f"{ic.left} {ic.relation} {ic.right}"

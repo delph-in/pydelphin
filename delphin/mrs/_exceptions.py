@@ -1,4 +1,3 @@
-
 from delphin.exceptions import PyDelphinException, PyDelphinSyntaxError
 
 

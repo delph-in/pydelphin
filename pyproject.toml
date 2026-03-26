@@ -108,9 +108,6 @@ force-wrap-aliases = true
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]  # test cases often have long strings
 
-[tool.ruff.format]
-quote-style = "single"
-
 [tool.mypy]
 python_version = "3.10"
 

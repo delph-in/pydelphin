@@ -1,4 +1,3 @@
-
 """
 Utility functions.
 """
@@ -31,7 +30,7 @@ def deprecated(message=None, final_version=None, alternative=None):
         if final_version is not None:
             message += " and will be removed from version {version}"
         if alternative is not None:
-            message += '; use the following instead: {alternative}'
+            message += "; use the following instead: {alternative}"
 
     def deprecated_decorator(f):
         @wraps(f)
@@ -40,13 +39,15 @@ def deprecated(message=None, final_version=None, alternative=None):
                 message.format(
                     name=f.__name__,
                     version=final_version,
-                    alternative=alternative
+                    alternative=alternative,
                 ),
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             return f(*args, **kwargs)
+
         return deprecated_wrapper
+
     return deprecated_decorator
 
 
@@ -146,33 +147,35 @@ def _vf2_inv_map(d: _IsoGraph) -> None:
             if tgt is not None and src != tgt:
                 if tgt not in _d:
                     _d[tgt] = {}
-                _d[tgt][src] = '--' + data
+                _d[tgt][src] = "--" + data
     for k, d2 in _d.items():
         d[k].update(d2)
 
 
 def _vf2_feasible(
-        mapping: _IsoMap,
-        g1: _IsoGraph,
-        g2: _IsoGraph,
-        n: str,
-        m: str,
+    mapping: _IsoMap,
+    g1: _IsoGraph,
+    g2: _IsoGraph,
+    n: str,
+    m: str,
 ) -> bool:
     e1 = g1[n]  # edges from n in g1
     e2 = g2[m]  # edges from m in g2
     inv_map = {b: a for a, b in mapping.items()}  # inverse of bijection
     # semantic feasibility of nodes
-    if e1.get(None, '') != e2.get(None, ''):
+    if e1.get(None, "") != e2.get(None, ""):
         return False
     # accounts for r_in, r_out
     if len(e1) != len(e2):
         return False
     # accounts for r_new (only 1 extra level of lookahead)
-    if (len(_vf2_new(mapping, g1, n)) != len(_vf2_new(inv_map, g2, m))):
+    if len(_vf2_new(mapping, g1, n)) != len(_vf2_new(inv_map, g2, m)):
         return False
     # accounts for r_pred, r_succ
-    if not (_vf2_consistent(mapping, g1, g2, n, m)
-            and _vf2_consistent(inv_map, g2, g1, m, n)):
+    if not (
+        _vf2_consistent(mapping, g1, g2, n, m)
+        and _vf2_consistent(inv_map, g2, g1, m, n)
+    ):
         return False
     return True
 
@@ -190,11 +193,11 @@ def _vf2_new(mapping: _IsoMap, g: _IsoGraph, a: str) -> set[str]:
 
 
 def _vf2_consistent(
-        mapping: _IsoMap,
-        ga: _IsoGraph,
-        gb: _IsoGraph,
-        a: str,
-        b: str,
+    mapping: _IsoMap,
+    ga: _IsoGraph,
+    gb: _IsoGraph,
+    a: str,
+    b: str,
 ) -> bool:
     for a_, data in ga[a].items():
         if a_ not in mapping:
@@ -207,9 +210,9 @@ def _vf2_consistent(
 
 
 def _vf2_candidates(
-        mapping: _IsoMap,
-        g1: _IsoGraph,
-        g2: _IsoGraph,
+    mapping: _IsoMap,
+    g1: _IsoGraph,
+    g2: _IsoGraph,
 ) -> _IsoPairs:
     # sides of the mapping as sets
     m1: set[str] = set(mapping)
@@ -261,7 +264,7 @@ def _vf2_candidates(
 #  e.g. (:n-inputs . 3) or (S (NP (NNS Dogs)) (VP (VBZ bark)))
 
 _Atom: TypeAlias = str | int | float
-_SExpr: TypeAlias = Union[_Atom, '_Cons']
+_SExpr: TypeAlias = Union[_Atom, "_Cons"]
 # The following would be nice, but Mypy doesn't do recursive types yet:
 #     https://github.com/python/mypy/issues/731
 _Cons: TypeAlias = tuple[_SExpr, _SExpr] | list[_SExpr]
@@ -270,29 +273,30 @@ _Cons: TypeAlias = tuple[_SExpr, _SExpr] | list[_SExpr]
 
 class SExprResult(NamedTuple):
     """The result of parsing an S-Expression."""
+
     data: _Cons
     remainder: str
 
 
 # escapes from https://en.wikipedia.org/wiki/S-expression#Use_in_Lisp
 _SExpr_escape_chars = r'"\s\(\)\[\]\{\}\\;'
-_SExpr_symbol_re = re.compile(rf'(?:[^{_SExpr_escape_chars}]+|\\.)+')
+_SExpr_symbol_re = re.compile(rf"(?:[^{_SExpr_escape_chars}]+|\\.)+")
 
 
 def _SExpr_unescape_symbol(s):
-    return re.sub(rf'\\([{_SExpr_escape_chars}])', r'\1', s)
+    return re.sub(rf"\\([{_SExpr_escape_chars}])", r"\1", s)
 
 
 def _SExpr_unescape_string(s):
-    return re.sub(r'\\(["\\])', r'\1', s)
+    return re.sub(r'\\(["\\])', r"\1", s)
 
 
 def _SExpr_parse(s: str) -> SExprResult:
     s = s.lstrip()
     data: _Cons = []
     if not s:
-        return SExprResult(data, '')
-    assert s.startswith('(')
+        return SExprResult(data, "")
+    assert s.startswith("(")
     i = 1
     n = len(s)
     stack: list[list[_SExpr]] = []
@@ -300,7 +304,7 @@ def _SExpr_parse(s: str) -> SExprResult:
     while i < n:
         c = s[i]
         # numbers
-        if c.isdigit() or c == '-' and (i + 1 < n) and s[i + 1].isdigit():
+        if c.isdigit() or c == "-" and (i + 1 < n) and s[i + 1].isdigit():
             num, i = _SExpr_parse_number(s, i)
             vals.append(num)
         # quoted strings
@@ -308,13 +312,13 @@ def _SExpr_parse(s: str) -> SExprResult:
             string, i = _SExpr_parse_string(s, i)
             vals.append(string)
         # start new list
-        elif c == '(':
+        elif c == "(":
             stack.append(vals)
             vals = []
             i += 1
         # end list
-        elif c == ')':
-            if len(vals) == 3 and vals[1] == '.':
+        elif c == ")":
+            if len(vals) == 3 and vals[1] == ".":
                 data = (vals[0], vals[2])  # simplify dotted pair
             else:
                 data = vals
@@ -332,7 +336,7 @@ def _SExpr_parse(s: str) -> SExprResult:
             sym, i = _SExpr_parse_symbol(s, i)
             vals.append(sym)
 
-    return SExprResult(data, s[i+1:])
+    return SExprResult(data, s[i + 1 :])
 
 
 def _SExpr_parse_number(s: str, i: int) -> tuple[int | float, int]:
@@ -341,19 +345,19 @@ def _SExpr_parse_number(s: str, i: int) -> tuple[int | float, int]:
         j += 1
     c = s[j]
 
-    if c not in '.eE':  # int
+    if c not in ".eE":  # int
         return int(s[i:j]), j
 
     # float
-    if c == '.':
+    if c == ".":
         j += 1
         while s[j].isdigit():
             j += 1
         c = s[j]
 
-    if c in 'eE':
+    if c in "eE":
         j += 1
-        if s[j] in '+-':
+        if s[j] in "+-":
             j += 1
         while s[j].isdigit():
             j += 1
@@ -364,30 +368,29 @@ def _SExpr_parse_number(s: str, i: int) -> tuple[int | float, int]:
 def _SExpr_parse_string(s: str, i: int) -> tuple[str, int]:
     j = i + 1
     while s[j] != '"':
-        if s[j] == '\\':
+        if s[j] == "\\":
             j += 2
         else:
             j += 1
-    return _SExpr_unescape_string(s[i+1:j]), j + 1
+    return _SExpr_unescape_string(s[i + 1 : j]), j + 1
 
 
 def _SExpr_parse_symbol(s: str, i: int) -> tuple[str, int]:
     m = _SExpr_symbol_re.match(s, pos=i)
     if m is None:
-        raise ValueError('Invalid S-Expression: ' + s)
+        raise ValueError("Invalid S-Expression: " + s)
     return _SExpr_unescape_symbol(m.group(0)), m.end()
 
 
 class _SExprParser:
-
     def parse(self, s: str) -> SExprResult:
         return _SExpr_parse(s.lstrip())
 
     def format(self, d):
         if isinstance(d, tuple) and len(d) == 2:
-            return f'({d[0]} . {d[1]})'
+            return f"({d[0]} . {d[1]})"
         elif isinstance(d, (tuple, list)):
-            return '({})'.format(' '.join(map(self.format, d)))
+            return "({})".format(" ".join(map(self.format, d)))
         elif isinstance(d, str):
             return d
         else:
@@ -403,6 +406,7 @@ class LookaheadIterator:
     at the nth token of any n, and the ability to skip intervening
     tokens (e.g., what is the 3rd token that is not a comment?).
     """
+
     def __init__(self, iterable, n=1024):
         assert n > 0
         self._iterable = iterable
@@ -491,7 +495,7 @@ class LookaheadLexer(LookaheadIterator):
 
     def expect(self, *args, skip=None):
         vals = []
-        for (ttype, tform) in args:
+        for ttype, tform in args:
             gid, token, lineno, offset, line = self.next(skip=skip)
             err = None
             if ttype is not None and gid != ttype:
@@ -499,10 +503,9 @@ class LookaheadLexer(LookaheadIterator):
             elif tform is not None and token != tform:
                 err = repr(tform)
             if err is not None:
-                raise self._errcls('expected: ' + err,
-                                   lineno=lineno,
-                                   offset=offset,
-                                   text=line)
+                raise self._errcls(
+                    "expected: " + err, lineno=lineno, offset=offset, text=line
+                )
             vals.append(token)
         if len(args) == 1:
             return vals[0]
@@ -512,22 +515,25 @@ class LookaheadLexer(LookaheadIterator):
     def accept(self, arg, skip=None, drop=False):
         ttype, tform = arg
         gid, token, lineno, offset, line = self.peek(skip=skip, drop=drop)
-        if ((ttype is None or gid == ttype)
-                and (tform is None or token == tform)):
+        if (ttype is None or gid == ttype) and (tform is None or token == tform):
             self.next(skip=skip)
             return token
         return None
 
     def choice(self, *args, skip=None):
         gid, token, lineno, offset, line = self.next(skip=skip)
-        for (ttype, tform) in args:
-            if ((ttype is None or gid == ttype)
-                    and (tform is None or token == tform)):
+        for ttype, tform in args:
+            if (ttype is None or gid == ttype) and (tform is None or token == tform):
                 return gid, token
-        errs = [str(ttype) if ttype is not None else repr(tform)
-                for ttype, tform in args]
-        raise self._errcls('expected one of: ' + ', '.join(errs),
-                           lineno=lineno, offset=offset, text=line)
+        errs = [
+            str(ttype) if ttype is not None else repr(tform) for ttype, tform in args
+        ]
+        raise self._errcls(
+            "expected one of: " + ", ".join(errs),
+            lineno=lineno,
+            offset=offset,
+            text=line,
+        )
 
     def expect_type(self, *args, skip=None):
         return self.expect(*((arg, None) for arg in args), skip=skip)
@@ -568,19 +574,18 @@ class Lexer:
 
             numgroups = re.compile(pattern).groups
             if numgroups == 0:
-                pattern = '(' + pattern + ')'
+                pattern = "(" + pattern + ")"
             elif numgroups != 1:
-                raise ValueError(
-                    'pattern does not have 0 or 1 group: ' + pattern)
+                raise ValueError("pattern does not have 0 or 1 group: " + pattern)
             patterns.append(pattern)
 
-            name, _, description = name.partition(':')
+            name, _, description = name.partition(":")
             if description:
                 desc[name] = description
             types.append(name)
 
-        self._re = re.compile('|'.join(patterns))
-        e = IntEnum('TokenTypes', types)
+        self._re = re.compile("|".join(patterns))
+        e = IntEnum("TokenTypes", types)
         e.__str__ = lambda self, desc=desc: desc.get(self.name, self.name)
         self.tokentypes = e
 
@@ -609,10 +614,8 @@ class Lexer:
                     offset = m.start()
                     if gid == UNEXPECTED:
                         raise self._errcls(
-                            'unexpected input',
-                            lineno=lineno,
-                            offset=offset,
-                            text=line)
+                            "unexpected input", lineno=lineno, offset=offset, text=line
+                        )
                     token = m.group(gid)
                     yield (gid, token, lineno, offset, line)
         except StopIteration:
@@ -621,16 +624,17 @@ class Lexer:
 
 # modified from https://www.python.org/dev/peps/pep-0263/#defining-the-encoding
 _encoding_symbol_re = re.compile(
-    b'^.*?coding[:=][ \\t]*([-_.a-zA-Z0-9]+)', re.IGNORECASE)
+    b"^.*?coding[:=][ \\t]*([-_.a-zA-Z0-9]+)", re.IGNORECASE
+)
 
 
-def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
+def detect_encoding(filename, default_encoding="utf-8", comment_char=b";"):
     encoding = None
-    with open(filename, 'rb') as fh:
+    with open(filename, "rb") as fh:
         line1 = fh.readline()
     # strip off any UTF-8 BOM and leading spaces
     if line1.startswith(codecs.BOM_UTF8):
-        line1 = line1[len(codecs.BOM_UTF8):].lstrip()
+        line1 = line1[len(codecs.BOM_UTF8) :].lstrip()
         has_bom = True
     else:
         line1 = line1.lstrip()
@@ -639,15 +643,15 @@ def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
     if line1.startswith(comment_char):
         re_match1 = _encoding_symbol_re.search(line1)
         if re_match1:
-            match = re_match1.group(1).decode('ascii').lower()
+            match = re_match1.group(1).decode("ascii").lower()
             if codecs.lookup(match):
                 encoding = match
 
     if has_bom:
-        if encoding and encoding != 'utf-8':
+        if encoding and encoding != "utf-8":
             raise ValueError("Declared encoding does not match BOM")
         else:
-            encoding = 'utf-8'
+            encoding = "utf-8"
 
     if not encoding:
         encoding = default_encoding
@@ -657,8 +661,10 @@ def detect_encoding(filename, default_encoding='utf-8', comment_char=b';'):
 
 def namespace_modules(ns):
     """Return the name to fullname mapping of modules in package *ns*."""
-    return {name: f'{ns.__name__}.{name}'
-            for _, name, _ in pkgutil.iter_modules(ns.__path__)}
+    return {
+        name: f"{ns.__name__}.{name}"
+        for _, name, _ in pkgutil.iter_modules(ns.__path__)
+    }
 
 
 def inspect_codecs():
@@ -673,15 +679,16 @@ def inspect_codecs():
     and the description will be the exception message.
     """
     import delphin.codecs
+
     codecs = namespace_modules(delphin.codecs)
     result = defaultdict(list)
     for name, fullname in codecs.items():
         try:
             mod = importlib.import_module(fullname)
-            rep = mod.CODEC_INFO['representation']
-            description = mod.CODEC_INFO.get('description', '')
+            rep = mod.CODEC_INFO["representation"]
+            description = mod.CODEC_INFO.get("description", "")
         except Exception as ex:
-            result['(error)'].append((name, None, str(ex)))
+            result["(error)"].append((name, None, str(ex)))
         else:
             result[rep].append((name, mod, description))
     return result
@@ -692,6 +699,7 @@ def import_codec(name: str):
     Import codec *name* and return the module.
     """
     import delphin.codecs
+
     codecs = namespace_modules(delphin.codecs)
     fullname = codecs[name]
     return importlib.import_module(fullname)
@@ -701,7 +709,7 @@ def make_highlighter(fmt):
     import pygments
     from pygments.formatters import Terminal256Formatter as _formatter
 
-    if fmt == 'simplemrs':
+    if fmt == "simplemrs":
         import delphin.highlight
 
         def highlight(text):
@@ -711,7 +719,7 @@ def make_highlighter(fmt):
                 _formatter(style=delphin.highlight.MRSStyle),
             )
 
-    elif fmt == 'diff':
+    elif fmt == "diff":
         from pygments.lexers.diff import DiffLexer
 
         def highlight(text):
@@ -720,7 +728,7 @@ def make_highlighter(fmt):
                 text,
                 DiffLexer(),
                 _formatter(),
-            ).rstrip('\n')
+            ).rstrip("\n")
 
     else:
 

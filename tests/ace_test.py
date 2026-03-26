@@ -1,4 +1,3 @@
-
 import io
 
 import pytest
@@ -8,13 +7,14 @@ from delphin import ace
 
 @pytest.fixture
 def ace_mismatch():
-    return ('version mismatch: '
-            'this is ACE version 0.9.29, but this grammar image '
-            'was compiled by ACE version 0.9.27')
+    return (
+        "version mismatch: "
+        "this is ACE version 0.9.29, but this grammar image "
+        "was compiled by ACE version 0.9.27"
+    )
 
 
 def mock_popen(pid=None, returncode=None, stdout=None, stderr=None):
-
     class MockedPopen:
         def __init__(self, args, **kwargs):
             self.args = args
@@ -50,13 +50,14 @@ def test_start(ace_mismatch, tmp_path, monkeypatch):
         pid=10,
         returncode=255,
         stdout=io.StringIO(),
-        stderr=io.StringIO(ace_mismatch))
-    grm = tmp_path / 'grm.dat'
-    grm.write_text('')
+        stderr=io.StringIO(ace_mismatch),
+    )
+    grm = tmp_path / "grm.dat"
+    grm.write_text("")
     with monkeypatch.context() as m:
-        m.setattr(ace, 'Popen', popen)
-        m.setattr(ace, '_ace_version', lambda x: (0, 9, 29))
+        m.setattr(ace, "Popen", popen)
+        m.setattr(ace, "_ace_version", lambda x: (0, 9, 29))
         with pytest.raises(ace.ACEProcessError):
             ace.ACEParser(str(grm))
         with pytest.raises(ace.ACEProcessError):
-            ace.parse(str(grm), 'Dogs sleep.')
+            ace.parse(str(grm), "Dogs sleep.")

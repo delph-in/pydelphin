@@ -18,10 +18,12 @@ from typing import (
 # use regex library if available; otherwise warn
 try:
     import regex as re
+
     re.DEFAULT_VERSION = re.V1
     _regex_available = True
 except ImportError:
     import re  # type: ignore
+
     _regex_available = False
 
 # Default modules need to import the PyDelphin version
@@ -35,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 #: The tokenization pattern used if none is given in a REPP module.
-DEFAULT_TOKENIZER = r'[ \t]+'
+DEFAULT_TOKENIZER = r"[ \t]+"
 
 
 if TYPE_CHECKING:
@@ -96,6 +98,7 @@ class REPPResult(NamedTuple):
         startmap (:py:class:`array`): integer array of start offsets
         endmap (:py:class:`array`): integer array of end offsets
     """
+
     string: str
     startmap: _CMap
     endmap: _CMap
@@ -114,9 +117,10 @@ class REPPStep(NamedTuple):
         endmap (:py:class:`array`): integer array of end offsets
         mask (:py:class:`array`): integer array of mask indicators
     """
+
     input: str
     output: str
-    operation: '_REPPOperation'
+    operation: "_REPPOperation"
     applied: bool
     startmap: _CMap
     endmap: _CMap
@@ -135,12 +139,7 @@ class _REPPOperation:
     [_REPPInternalGroup], and [REPP] instances.
     """
 
-    def _apply(
-        self,
-        s: str,
-        active: set[str],
-        mask: _CMap
-    ) -> Iterator[REPPStep]:
+    def _apply(self, s: str, active: set[str], mask: _CMap) -> Iterator[REPPStep]:
         raise NotImplementedError()
 
 
@@ -157,6 +156,7 @@ class _REPPRule(_REPPOperation):
         pattern: the regular expression pattern to match
         replacement: the replacement template
     """
+
     def __init__(self, pattern: str, replacement: str):
         self.pattern = pattern
         self.replacement = replacement
@@ -164,15 +164,10 @@ class _REPPRule(_REPPOperation):
         self._tracked, self._untracked = _get_segments(replacement, self._re)
 
     def __str__(self):
-        return f'!{self.pattern}\t\t{self.replacement}'
+        return f"!{self.pattern}\t\t{self.replacement}"
 
-    def _apply(
-        self,
-        s: str,
-        active: set[str],
-        mask: _CMap
-    ) -> Iterator[REPPStep]:
-        logger.debug(' %s', self)
+    def _apply(self, s: str, active: set[str], mask: _CMap) -> Iterator[REPPStep]:
+        logger.debug(" %s", self)
 
         applied = False
         ms = list(self._re.finditer(s))
@@ -181,9 +176,9 @@ class _REPPRule(_REPPOperation):
             pos = 0  # current position in the original string
             shift = 0  # current original/target length difference
             parts: list[str] = []
-            smap = array('i', [0])
-            emap = array('i', [0])
-            new_mask = array('i', [_MASK_O])
+            smap = array("i", [0])
+            emap = array("i", [0])
+            new_mask = array("i", [_MASK_O])
 
             for m in ms:
                 sub, _smap, _emap, _mask, delta, blocked = _process_match(
@@ -198,7 +193,7 @@ class _REPPRule(_REPPOperation):
                 # copy up to point of match
                 if pos < start:
                     _copy_part(s[pos:start], shift, parts, smap, emap)
-                    new_mask.extend(mask[pos+1:start+1])
+                    new_mask.extend(mask[pos + 1 : start + 1])
 
                 parts.append(sub)
                 smap.extend(_smap)
@@ -209,13 +204,13 @@ class _REPPRule(_REPPOperation):
 
             if pos < len(s):
                 _copy_part(s[pos:], shift, parts, smap, emap)
-                new_mask.extend(mask[pos+1:len(s)+1])
+                new_mask.extend(mask[pos + 1 : len(s) + 1])
 
             smap.append(shift)
             emap.append(shift - 1)
             new_mask.append(_MASK_O)
             mask = new_mask
-            o = ''.join(parts)
+            o = "".join(parts)
 
         else:
             o = s
@@ -235,21 +230,17 @@ class _REPPMask(_REPPOperation):
     Args:
         pattern: the regular expression pattern to match
     """
+
     def __init__(self, pattern: str):
         self.pattern = pattern
         self._re = _compile(pattern)
 
     def __str__(self):
-        return f'={self.pattern}'
+        return f"={self.pattern}"
 
-    def _apply(
-        self,
-        s: str,
-        active: set[str],
-        mask: _CMap
-    ) -> Iterator[REPPStep]:
-        logger.debug(' %s', self)
-        newmask = array('i', mask)  # make a copy
+    def _apply(self, s: str, active: set[str], mask: _CMap) -> Iterator[REPPStep]:
+        logger.debug(" %s", self)
+        newmask = array("i", mask)  # make a copy
         for m in self._re.finditer(s):
             start = m.start() + 1
             newmask[start] = max(_MASK_B, mask[start])
@@ -260,9 +251,7 @@ class _REPPMask(_REPPOperation):
 
 class _REPPGroup(_REPPOperation):
     def __init__(
-        self,
-        operations: list[_REPPOperation] | None = None,
-        name: str | None = None
+        self, operations: list[_REPPOperation] | None = None, name: str | None = None
     ):
         if operations is None:
             operations = []
@@ -271,15 +260,10 @@ class _REPPGroup(_REPPOperation):
         self._loaded = False
 
     def __repr__(self):
-        name = f'("{self.name}") ' if self.name is not None else ''
-        return f'<{type(self).__name__} object {name}at {id(self)}>'
+        name = f'("{self.name}") ' if self.name is not None else ""
+        return f"<{type(self).__name__} object {name}at {id(self)}>"
 
-    def _apply(
-        self,
-        s: str,
-        active: set[str],
-        mask: _CMap
-    ) -> Iterator[REPPStep]:
+    def _apply(self, s: str, active: set[str], mask: _CMap) -> Iterator[REPPStep]:
         o = s
         applied = False
         for operation in self.operations:
@@ -294,15 +278,10 @@ class _REPPGroup(_REPPOperation):
 
 class _REPPInternalGroup(_REPPGroup):
     def __str__(self):
-        return f'Internal group #{self.name}'
+        return f"Internal group #{self.name}"
 
-    def _apply(
-        self,
-        s: str,
-        active: set[str],
-        mask: _CMap
-    ) -> Iterator[REPPStep]:
-        logger.debug('>%s', self.name)
+    def _apply(self, s: str, active: set[str], mask: _CMap) -> Iterator[REPPStep]:
+        logger.debug(">%s", self.name)
         i = 0
         prev = s
         step = None  # in case _REPPGroup._apply() ever yields nothing
@@ -316,7 +295,7 @@ class _REPPInternalGroup(_REPPGroup):
                 yield step
                 mask = step.mask
 
-        logger.debug('>%s (done; iterated %d time(s))', self.name, i)
+        logger.debug(">%s (done; iterated %d time(s))", self.name, i)
 
 
 class REPP(_REPPGroup):
@@ -351,8 +330,8 @@ class REPP(_REPPGroup):
         self,
         operations: list[_REPPOperation] | None = None,
         name: str | None = None,
-        modules: dict[str, 'REPP'] | None = None,
-        active: Iterable[str] | None = None
+        modules: dict[str, "REPP"] | None = None,
+        active: Iterable[str] | None = None,
     ):
         super().__init__(operations=operations, name=name)
         self.info: str | None = None
@@ -385,27 +364,23 @@ class REPP(_REPPGroup):
         """
         path = Path(path).expanduser()
         if not path.is_file():
-            raise REPPError(f'REPP config file not found: {path!s}')
+            raise REPPError(f"REPP config file not found: {path!s}")
         confdir = path.parent
 
         # TODO: can TDL parsing be repurposed for this variant?
-        conf = path.read_text(encoding='utf-8')
-        conf = re.sub(r';.*', '', conf).replace('\n', ' ')
-        m = re.search(
-            r'repp-modules\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.', conf)
-        t = re.search(
-            r'repp-tokenizer\s*:=\s*([-\w]+)\s*\.', conf)
-        a = re.search(
-            r'repp-calls\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.', conf)
+        conf = path.read_text(encoding="utf-8")
+        conf = re.sub(r";.*", "", conf).replace("\n", " ")
+        m = re.search(r"repp-modules\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.", conf)
+        t = re.search(r"repp-tokenizer\s*:=\s*([-\w]+)\s*\.", conf)
+        a = re.search(r"repp-calls\s*:=\s*((?:[-\w]+\s+)*[-\w]+)\s*\.", conf)
         # f = re.search(
         #     r'format\s*:=\s*(\w+)\s*\.', conf)
-        d = re.search(
-            r'repp-directory\s*:=\s*(.*)\.\s*$', conf)
+        d = re.search(r"repp-directory\s*:=\s*(.*)\.\s*$", conf)
 
         if m is None:
-            raise REPPError('repp-modules option must be set')
+            raise REPPError("repp-modules option must be set")
         if t is None:
-            raise REPPError('repp-tokenizer option must be set')
+            raise REPPError("repp-tokenizer option must be set")
 
         # mods = m.group(1).split()
         tok = t.group(1).strip()
@@ -415,20 +390,18 @@ class REPP(_REPPGroup):
         if directory is None:
             if d is not None:
                 directory = d.group(1).strip(' "')
-            elif confdir.joinpath(tok + '.rpp').is_file():
+            elif confdir.joinpath(tok + ".rpp").is_file():
                 directory = confdir
-            elif confdir.joinpath('rpp', tok + '.rpp').is_file():
-                directory = confdir.joinpath('rpp')
-            elif confdir.joinpath('../rpp', tok + '.rpp').is_file():
-                directory = confdir.joinpath('../rpp')
+            elif confdir.joinpath("rpp", tok + ".rpp").is_file():
+                directory = confdir.joinpath("rpp")
+            elif confdir.joinpath("../rpp", tok + ".rpp").is_file():
+                directory = confdir.joinpath("../rpp")
             else:
-                raise REPPError('Could not find a suitable REPP directory.')
+                raise REPPError("Could not find a suitable REPP directory.")
 
         # ignore repp-modules and format?
         return REPP.from_file(
-            directory.joinpath(tok + '.rpp'),
-            directory=directory,
-            active=active
+            directory.joinpath(tok + ".rpp"), directory=directory, active=active
         )
 
     @classmethod
@@ -493,26 +466,17 @@ class REPP(_REPPGroup):
         if mod in self.active:
             self.active.remove(mod)
 
-    def _apply(
-        self,
-        s: str,
-        active: set[str],
-        mask: _CMap
-    ) -> Iterator[REPPStep]:
+    def _apply(self, s: str, active: set[str], mask: _CMap) -> Iterator[REPPStep]:
         if self.name in active:
-            logger.info('>%s', self.name)
+            logger.info(">%s", self.name)
             for step in super()._apply(s, active, mask):
                 yield step
                 mask = step.mask
-            logger.debug('>%s (done)', self.name)
+            logger.debug(">%s (done)", self.name)
         else:
-            logger.debug('>%s (inactive)', self.name)
+            logger.debug(">%s (inactive)", self.name)
 
-    def apply(
-        self,
-        s: str,
-        active: Iterable[str] | None = None
-    ) -> REPPResult:
+    def apply(self, s: str, active: Iterable[str] | None = None) -> REPPResult:
         """
         Apply the REPP's rewrite rules to the input string *s*.
 
@@ -524,16 +488,13 @@ class REPP(_REPPGroup):
             a :class:`REPPResult` object containing the processed
                 string and characterization maps
         """
-        logger.info('apply(%r)', s)
+        logger.info("apply(%r)", s)
         active = self.active if active is None else set(active)
         result = last(self._trace(s, active, False))
         return result
 
     def trace(
-        self,
-        s: str,
-        active: Iterable[str] | None = None,
-        verbose: bool = False
+        self, s: str, active: Iterable[str] | None = None, verbose: bool = False
     ) -> _Trace:
         """
         Rewrite string *s* like `apply()`, but yield each rewrite step.
@@ -549,13 +510,11 @@ class REPP(_REPPGroup):
                 step, and finally a :class:`REPPResult` object after
                 the last rewrite
         """
-        logger.info('trace(%r)', s)
+        logger.info("trace(%r)", s)
         active = self.active if active is None else set(active)
         yield from self._trace(s, active, verbose)
 
-    def _trace(
-        self, s: str, active: set[str], verbose: bool
-    ) -> _Trace:
+    def _trace(self, s: str, active: set[str], verbose: bool) -> _Trace:
         startmap = _zeromap(s)
         endmap = _zeromap(s)
         mask = _zeromap(s)
@@ -574,10 +533,7 @@ class REPP(_REPPGroup):
         yield REPPResult(s, startmap, endmap)
 
     def tokenize(
-        self,
-        s: str,
-        pattern: str | None = None,
-        active: Iterable[str] | None = None
+        self, s: str, pattern: str | None = None, active: Iterable[str] | None = None
     ) -> YYTokenLattice:
         """
         Rewrite and tokenize the input string *s*.
@@ -592,7 +548,7 @@ class REPP(_REPPGroup):
             a :class:`~delphin.tokens.YYTokenLattice` containing the
             tokens and their characterization information
         """
-        logger.info('tokenize(%r, %r)', s, pattern)
+        logger.info("tokenize(%r, %r)", s, pattern)
         if pattern is None:
             if self.tokenize_pattern is None:
                 pattern = DEFAULT_TOKENIZER
@@ -616,11 +572,15 @@ class REPP(_REPPGroup):
             a :class:`~delphin.tokens.YYTokenLattice` containing the
             tokens and their characterization information
         """
-        logger.info('tokenize_result(%r, %r)', result, pattern)
+        logger.info("tokenize_result(%r, %r)", result, pattern)
         tokens = [
-            YYToken(id=i, start=i, end=(i + 1),
-                    lnk=Lnk.charspan(tok[0], tok[1]),
-                    form=tok[2])
+            YYToken(
+                id=i,
+                start=i,
+                end=(i + 1),
+                lnk=Lnk.charspan(tok[0], tok[1]),
+                form=tok[2],
+            )
             for i, tok in enumerate(_tokenize(result, pattern))
         ]
         return YYTokenLattice(tokens)
@@ -630,9 +590,9 @@ def _compile(pattern: str) -> Pattern[str]:
     try:
         return re.compile(pattern)
     except re.error:
-        if _regex_available and '[' in pattern or ']' in pattern:
+        if _regex_available and "[" in pattern or "]" in pattern:
             warnings.warn(
-                'Invalid regex in REPP; see warning log for details.',
+                "Invalid regex in REPP; see warning log for details.",
                 REPPWarning,
                 stacklevel=2,
             )
@@ -656,7 +616,7 @@ def _get_segments(replacement: str, _re):
     # segments are transparent for characterization. For PET behavior,
     # these must appear in strictly increasing order with no gaps
     last_trackable = 0
-    for expected, (i, grp) in zip(range(1, len(groups)+1), groups, strict=False):
+    for expected, (i, grp) in zip(range(1, len(groups) + 1), groups, strict=False):
         if grp == expected:
             last_trackable = i + 1  # +1 for slice end
 
@@ -664,9 +624,7 @@ def _get_segments(replacement: str, _re):
     # (literal, None) or (None, group) pairs for convenience
     group_map = dict(groups)
     segments: list[tuple[str | None, int | None]] = [
-        (literal, group_map.get(i))
-        for i, literal
-        in enumerate(literals)
+        (literal, group_map.get(i)) for i, literal in enumerate(literals)
     ]
     # Divide the segments into trackable/untrackable
     return segments[:last_trackable], segments[last_trackable:]
@@ -697,7 +655,7 @@ def _parse_template(replacement: str, _re: Pattern[str]):
             else:
                 index = int(grp)
         elif oct := m.group("oct"):
-            literals.append(chr(int(oct, 8) & 0xff))
+            literals.append(chr(int(oct, 8) & 0xFF))
             continue
         elif esc := m.group("esc"):
             literals.append(_ascii_escapes[esc])
@@ -722,7 +680,7 @@ def last(steps: _Trace) -> REPPResult:
 
 
 def _zeromap(s: str) -> _CMap:
-    return array('i', [0] * (len(s) + 2))
+    return array("i", [0] * (len(s) + 2))
 
 
 def _mergemap(map1: _CMap, map2: _CMap) -> _CMap:
@@ -731,20 +689,14 @@ def _mergemap(map1: _CMap, map2: _CMap) -> _CMap:
     the equivalent position in map1. E.g., the i'th position in map2
     corresponds to the i + map2[i] position in map1.
     """
-    merged = array('i', [0] * len(map2))
+    merged = array("i", [0] * len(map2))
     for i, shift in enumerate(map2):
         newshift = shift + map1[i + shift]
         merged[i] = newshift
     return merged
 
 
-def _copy_part(
-    s: str,
-    shift: int,
-    parts: list[str],
-    smap: _CMap,
-    emap: _CMap
-) -> None:
+def _copy_part(s: str, shift: int, parts: list[str], smap: _CMap, emap: _CMap) -> None:
     parts.append(s)
     map_part = [shift] * len(s)
     smap.extend(map_part)
@@ -752,12 +704,7 @@ def _copy_part(
 
 
 def _insert_part(
-    s: str,
-    width: int,
-    shift: int,
-    parts: list[str],
-    smap: _CMap,
-    emap: _CMap
+    s: str, width: int, shift: int, parts: list[str], smap: _CMap, emap: _CMap
 ) -> None:
     parts.append(s)
     endshift = shift - len(s)
@@ -767,16 +714,12 @@ def _insert_part(
 
 
 def _process_match(
-    m: Match[str],
-    prev_mask: _CMap,
-    shift: int,
-    tracked,
-    untracked
+    m: Match[str], prev_mask: _CMap, shift: int, tracked, untracked
 ) -> tuple[str, _CMap, _CMap, _CMap, int, bool]:
     parts: list[str] = []
-    smap = array('i', [])
-    emap = array('i', [])
-    mask = array('i', [])
+    smap = array("i", [])
+    emap = array("i", [])
+    mask = array("i", [])
     delta = 0
     blocked = False
 
@@ -787,13 +730,13 @@ def _process_match(
 
         for literal, group in tracked:
             if literal is None:
-                literal = m.group(group) or ''
+                literal = m.group(group) or ""
                 _copy_part(literal, shift + delta, parts, smap, emap)
-                mask.extend(prev_mask[(start+1):(start+len(literal)+1)])
-                end = m.start(group+1) if group < m.lastindex else m.end()
+                mask.extend(prev_mask[(start + 1) : (start + len(literal) + 1)])
+                end = m.start(group + 1) if group < m.lastindex else m.end()
             else:
                 # block if overlap with mask
-                if any(prev_mask[start+1:end+1]):
+                if any(prev_mask[start + 1 : end + 1]):
                     blocked = True
                     break
                 width = end - start
@@ -806,26 +749,28 @@ def _process_match(
 
         if untracked:
             # block if untracked overlaps with mask, including backreferences
-            if (any(prev_mask[start+1:m.end()+1])
-                or any(any(prev_mask[m.start(grp)+1:m.end(grp)+1])
-                       for lit, grp in untracked if grp)):
+            if any(prev_mask[start + 1 : m.end() + 1]) or any(
+                any(prev_mask[m.start(grp) + 1 : m.end(grp) + 1])
+                for lit, grp in untracked
+                if grp
+            ):
                 blocked = True
             else:
                 # untracked segments can be collapsed into one substring
-                literal = ''.join(
-                    m.group(group) or '' if literal is None else literal
+                literal = "".join(
+                    m.group(group) or "" if literal is None else literal
                     for literal, group in untracked
                 )
                 width = m.end() - start
                 litlen = len(literal)
-                _insert_part(literal, width, shift+delta, parts, smap, emap)
+                _insert_part(literal, width, shift + delta, parts, smap, emap)
                 mask.extend([_MASK_O] * litlen)
                 delta += width - litlen
     else:
         # the replacement is empty (match is deleted)
         delta = m.end() - m.start()
 
-    substring = ''.join(parts)
+    substring = "".join(parts)
     if not blocked:
         blocked = _check_mask(substring, m, smap, emap, mask, prev_mask)
 
@@ -833,12 +778,7 @@ def _process_match(
 
 
 def _check_mask(
-    s: str,
-    m: Match[str],
-    smap: _CMap,
-    emap: _CMap,
-    mask: _CMap,
-    prev_mask: _CMap
+    s: str, m: Match[str], smap: _CMap, emap: _CMap, mask: _CMap, prev_mask: _CMap
 ) -> bool:
     """Returns True if any masked material has changed.
 
@@ -877,20 +817,18 @@ def _check_mask(
 
 
 def _make_mask_info(
-    s: str,
-    mask: _CMap,
-    end_fixed: bool
+    s: str, mask: _CMap, end_fixed: bool
 ) -> tuple[str, dict[str, int], str]:
     if not mask:
-        return '', {}, ''
-    left = s[:_get_mask_len(mask, 0)] if mask[0] == _MASK_I else ''
-    right = s[-_get_mask_len(mask[::-1], 0) or len(s):] if end_fixed else ''
+        return "", {}, ""
+    left = s[: _get_mask_len(mask, 0)] if mask[0] == _MASK_I else ""
+    right = s[-_get_mask_len(mask[::-1], 0) or len(s) :] if end_fixed else ""
     middle: dict[str, int] = {}
     i = len(left)
     j = len(s) - len(right)
     while i < j:
         if mask[i] == _MASK_B:
-            mlen = _get_mask_len(mask, i+1) + 1
+            mlen = _get_mask_len(mask, i + 1) + 1
             substr = s[i:mlen]
             if substr not in middle:
                 middle[substr] = 1
@@ -912,41 +850,32 @@ def _tokenize(result: REPPResult, pattern: str) -> list[tuple[int, int, str]]:
     pos = 0
     for m in re.finditer(pattern, result.string):
         if pos < m.start():
-            toks.append((pos + sm[pos + 1],
-                         m.start() + em[m.start()],
-                         s[pos:m.start()]))
+            toks.append(
+                (pos + sm[pos + 1], m.start() + em[m.start()], s[pos : m.start()])
+            )
         pos = m.end()
     if pos < len(s):
-        toks.append((pos + sm[pos + 1],
-                     len(s) + em[len(s)],
-                     s[pos:]))
+        toks.append((pos + sm[pos + 1], len(s) + em[len(s)], s[pos:]))
     return toks
 
 
-def _read_file(
-    path: Path,
-    directory: Path | None
-) -> tuple[str, Path, list[str]]:
+def _read_file(path: Path, directory: Path | None) -> tuple[str, Path, list[str]]:
     if directory is not None:
         directory = Path(directory).expanduser()
     else:
         directory = path.parent
-    name = path.with_suffix('').name
+    name = path.with_suffix("").name
     lines = _repp_lines(path)
     return name, directory, lines
 
 
 def _repp_lines(path: Path) -> list[str]:
     if not path.is_file():
-        raise REPPError(f'REPP file not found: {path!s}')
-    return path.read_text(encoding='utf-8').splitlines()
+        raise REPPError(f"REPP file not found: {path!s}")
+    return path.read_text(encoding="utf-8").splitlines()
 
 
-def _parse_repp_module(
-    lines: list[str],
-    r: REPP,
-    directory: Path
-) -> None:
+def _parse_repp_module(lines: list[str], r: REPP, directory: Path) -> None:
     r._loaded = True
 
     operations: list[_REPPOperation] = r.operations
@@ -955,42 +884,42 @@ def _parse_repp_module(
 
     while lines:
         line = lines.pop(0)
-        if line.startswith(';') or line.strip() == '':
+        if line.startswith(";") or line.strip() == "":
             continue  # skip comments and empty lines
 
         operator, operand = line[0], line[1:].rstrip()
 
         match operator:
-            case '!':
+            case "!":
                 # don't use operand because it was rstripped; use line[1:]
                 operations.append(_parse_rewrite_rule(line[1:]))
-            case '<':
+            case "<":
                 fn = directory.joinpath(operand)
                 lines = _repp_lines(fn) + lines
-            case '>':
+            case ">":
                 operations.append(
                     _handle_group_call(operand, internal_groups, r, directory)
                 )
-            case '=':
+            case "=":
                 # don't use operand because it was rstripped; use line[1:]
                 operations.append(_REPPMask(line[1:]))
-            case '#':
+            case "#":
                 _handle_internal_group(operand, internal_groups, stack)
                 operations = stack[-1]
-            case ':':
+            case ":":
                 _handle_tokenization_pattern(operand, r, len(stack) > 1)
-            case '@':
+            case "@":
                 _handle_metainfo_declaration(operand, r, len(stack) > 1)
             case _:
-                raise REPPError(f'Invalid declaration: {line}')
+                raise REPPError(f"Invalid declaration: {line}")
 
     _verify_internal_groups(internal_groups)
 
 
 def _parse_rewrite_rule(operand: str) -> _REPPRule:
-    match = re.match(r'([^\t]+)\t+(.*)', operand)
+    match = re.match(r"([^\t]+)\t+(.*)", operand)
     if match is None:
-        raise REPPError(f'Invalid rewrite rule: !{operand}')
+        raise REPPError(f"Invalid rewrite rule: !{operand}")
     return _REPPRule(match.group(1), match.group(2))
 
 
@@ -1002,20 +931,20 @@ def _handle_group_call(
 ) -> _REPPGroup:
     if operand.isdigit():
         if operand not in internal_groups:
-            internal_groups[operand] = _REPPInternalGroup(operations=[],
-                                                          name=operand)
+            internal_groups[operand] = _REPPInternalGroup(operations=[], name=operand)
         return internal_groups[operand]
     elif not operand:
-        raise REPPError('Missing group name')
+        raise REPPError("Missing group name")
     else:
         if operand not in r.modules:
             r.modules[operand] = REPP(name=operand, modules=r.modules)
         mod = r.modules[operand]
         if not mod._loaded:
             if directory is None:
-                raise REPPError('Cannot implicitly load modules if '
-                                'a directory is not given.')
-            modpath = directory / (operand + '.rpp')
+                raise REPPError(
+                    "Cannot implicitly load modules if a directory is not given."
+                )
+            modpath = directory / (operand + ".rpp")
             _parse_repp_module(_repp_lines(modpath), mod, directory)
         return mod
 
@@ -1023,17 +952,16 @@ def _handle_group_call(
 def _handle_internal_group(operand, internal_groups, stack) -> None:
     if operand.isdigit():
         if operand not in internal_groups:
-            internal_groups[operand] = _REPPInternalGroup(operations=[],
-                                                          name=operand)
+            internal_groups[operand] = _REPPInternalGroup(operations=[], name=operand)
         ig = internal_groups[operand]
         if ig._loaded:
-            raise REPPError(f'Internal group name already defined: {operand}')
+            raise REPPError(f"Internal group name already defined: {operand}")
         ig._loaded = True
         stack.append(ig.operations)
-    elif operand == '':
+    elif operand == "":
         stack.pop()
     else:
-        raise REPPError('Invalid internal group name: ' + operand)
+        raise REPPError("Invalid internal group name: " + operand)
 
 
 def _handle_tokenization_pattern(
@@ -1042,9 +970,9 @@ def _handle_tokenization_pattern(
     in_internal_group: bool,
 ) -> None:
     if in_internal_group:
-        raise REPPError('tokenization pattern defined in internal group')
+        raise REPPError("tokenization pattern defined in internal group")
     if r.tokenize_pattern is not None:
-        raise REPPError('Only one tokenization pattern (:) may be defined.')
+        raise REPPError("Only one tokenization pattern (:) may be defined.")
     r.tokenize_pattern = operand
 
 
@@ -1054,13 +982,13 @@ def _handle_metainfo_declaration(
     in_internal_group: bool,
 ) -> None:
     if in_internal_group:
-        raise REPPError('meta-info declaration defined in internal group')
+        raise REPPError("meta-info declaration defined in internal group")
     if r.info is not None:
-        raise REPPError('Only one meta-info declaration (@) may be defined.')
+        raise REPPError("Only one meta-info declaration (@) may be defined.")
     r.info = operand
 
 
 def _verify_internal_groups(internal_groups):
     for grpname, grp in internal_groups.items():
         if not grp._loaded:
-            raise REPPError(f'internal group not defined: #{grpname}')
+            raise REPPError(f"internal group not defined: #{grpname}")

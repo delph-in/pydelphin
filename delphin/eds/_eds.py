@@ -1,4 +1,3 @@
-
 """
 Elementary Dependency Structures (EDS).
 """
@@ -9,13 +8,14 @@ from typing import Any
 from delphin.lnk import Lnk
 from delphin.sembase import ArgumentStructure, Predication, SemanticStructure
 
-BOUND_VARIABLE_ROLE = 'BV'
-PREDICATE_MODIFIER_ROLE = 'ARG1'
+BOUND_VARIABLE_ROLE = "BV"
+PREDICATE_MODIFIER_ROLE = "ARG1"
 
 
 ##############################################################################
 ##############################################################################
 # EDS classes
+
 
 class Node(Predication[str]):
     """
@@ -45,7 +45,7 @@ class Node(Predication[str]):
         base: base form
     """
 
-    __slots__ = ('edges', 'properties', 'carg')
+    __slots__ = ("edges", "properties", "carg")
 
     edges: dict[str, str]
     properties: dict[str, str]
@@ -63,7 +63,6 @@ class Node(Predication[str]):
         surface=None,
         base=None,
     ) -> None:
-
         if not edges:
             edges = {}
         if not properties:
@@ -78,11 +77,13 @@ class Node(Predication[str]):
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Node):
             return NotImplemented
-        return (self.predicate == other.predicate
-                and self.type == other.type
-                and self.edges == other.edges
-                and self.properties == other.properties
-                and self.carg == other.carg)
+        return (
+            self.predicate == other.predicate
+            and self.type == other.type
+            and self.edges == other.edges
+            and self.properties == other.properties
+            and self.carg == other.carg
+        )
 
 
 class EDS(SemanticStructure[str, Node]):
@@ -118,8 +119,7 @@ class EDS(SemanticStructure[str, Node]):
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, EDS):
             return NotImplemented
-        return (self.top == other.top
-                and self.nodes == other.nodes)
+        return self.top == other.top and self.nodes == other.nodes
 
     @property
     def nodes(self) -> list[Node]:
@@ -131,8 +131,7 @@ class EDS(SemanticStructure[str, Node]):
         """The list of all edges."""
         edges: list[tuple[str, str, str]] = []
         for node in self.nodes:
-            edges.extend((node.id, role, target)
-                         for role, target in node.edges.items())
+            edges.extend((node.id, role, target) for role, target in node.edges.items())
         return edges
 
     # SemanticStructure methods

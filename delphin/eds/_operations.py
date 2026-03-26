@@ -1,4 +1,3 @@
-
 """
 Operations on EDS
 """
@@ -9,8 +8,9 @@ from itertools import count
 from delphin import eds, scope, util, variable
 
 
-def from_mrs(m, predicate_modifiers=True, unique_ids=True,
-             representative_priority=None):
+def from_mrs(
+    m, predicate_modifiers=True, unique_ids=True, representative_priority=None
+):
     """
     Create an EDS by converting from MRS *m*.
 
@@ -37,9 +37,7 @@ def from_mrs(m, predicate_modifiers=True, unique_ids=True,
     # EP id to node id map; create now to keep ids consistent
     hcmap = {hc.hi: hc for hc in m.hcons}
     reps = scope.representatives(m, priority=representative_priority)
-    ivmap = {p.iv: (p, q)
-             for p, q in m.quantification_pairs()
-             if p is not None}
+    ivmap = {p.iv: (p, q) for p, q in m.quantification_pairs() if p is not None}
 
     top = _mrs_get_top(m.top, hcmap, reps, m.index, ivmap)
     deps = _mrs_args_to_basic_deps(m, hcmap, ivmap, reps)
@@ -50,7 +48,8 @@ def from_mrs(m, predicate_modifiers=True, unique_ids=True,
         nodes=nodes,
         lnk=m.lnk,
         surface=m.surface,
-        identifier=m.identifier)
+        identifier=m.identifier,
+    )
 
     if predicate_modifiers is True:
         predicate_modifiers = find_predicate_modifiers
@@ -72,7 +71,7 @@ def _mrs_get_top(top, hcmap, reps, index, ivmap):
     else:
         if top in hcmap:
             warnings.warn(
-                f'broken handle constraint: {hcmap[top]}',
+                f"broken handle constraint: {hcmap[top]}",
                 eds.EDSWarning,
                 stacklevel=2,
             )
@@ -83,7 +82,7 @@ def _mrs_get_top(top, hcmap, reps, index, ivmap):
             top = reps[lbl][0].id
         else:
             warnings.warn(
-                'unable to find a suitable TOP',
+                "unable to find a suitable TOP",
                 eds.EDSWarning,
                 stacklevel=2,
             )
@@ -106,7 +105,7 @@ def _mrs_args_to_basic_deps(m, hcmap, ivmap, reps):
                         tgt = reps[lbl][0].id
                     else:
                         warnings.warn(
-                            f'broken handle constraint: {hcmap[tgt]}',
+                            f"broken handle constraint: {hcmap[tgt]}",
                             eds.EDSWarning,
                             stacklevel=2,
                         )
@@ -137,15 +136,18 @@ def _mrs_to_nodes(m, edges):
             properties = m.properties(iv)
             type = variable.type(iv)
         nodes.append(
-            eds.Node(ep.id,
-                     ep.predicate,
-                     type,
-                     edges.get(ep.id, {}),
-                     properties,
-                     ep.carg,
-                     ep.lnk,
-                     ep.surface,
-                     ep.base))
+            eds.Node(
+                ep.id,
+                ep.predicate,
+                type,
+                edges.get(ep.id, {}),
+                properties,
+                ep.carg,
+                ep.lnk,
+                ep.surface,
+                ep.base,
+            )
+        )
     return nodes
 
 
@@ -216,9 +218,9 @@ def find_predicate_modifiers(e, m, representatives=None):
                 joined = set([ccmap[first.id]])
                 for other in eps[1:]:
                     occ = ccmap[other.id]
-                    type = variable.type(other.args.get(role, 'u0'))
+                    type = variable.type(other.args.get(role, "u0"))
                     needs_edge = occ not in joined
-                    edge_available = type.lower() == 'u'
+                    edge_available = type.lower() == "u"
                     if needs_edge and edge_available:
                         addl.setdefault(other.id, {})[role] = first.id
                         joined.add(occ)
@@ -245,7 +247,7 @@ def make_ids_unique(e, m):
         m: the MRS from which *e* was converted
     """
     # deps can be used to single out ep from set sharing ARG0s
-    new_ids = (f'_{i}' for i in count(start=1))
+    new_ids = (f"_{i}" for i in count(start=1))
     nids = {}
     used = {}
     # initially only make new ids for quantifiers and those with no IV
@@ -263,8 +265,7 @@ def make_ids_unique(e, m):
     for nid, ep_ids in used.items():
         if len(ep_ids) > 1:
             ep_ids = sorted(
-                ep_ids,
-                key=lambda n: any(d in ep_ids for _, d in deps.get(n, []))
+                ep_ids, key=lambda n: any(d in ep_ids for _, d in deps.get(n, []))
             )
             for nid in ep_ids[1:]:
                 nids[nid] = next(new_ids)

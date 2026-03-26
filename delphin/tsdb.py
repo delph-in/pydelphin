@@ -29,8 +29,8 @@ from delphin.exceptions import PyDelphinException, PyDelphinWarning
 #############################################################################
 # Constants
 
-SCHEMA_FILENAME = 'relations'
-FIELD_DELIMITER = '@'
+SCHEMA_FILENAME = "relations"
+FIELD_DELIMITER = "@"
 TSDB_CORE_FILES = [
     "item",
     "analysis",
@@ -38,13 +38,9 @@ TSDB_CORE_FILES = [
     "parameter",
     "set",
     "item-phenomenon",
-    "item-set"
+    "item-set",
 ]
-TSDB_CODED_ATTRIBUTES = {
-    'i-wf': '1',
-    'i-difficulty': '1',
-    'polarity': '-1'
-}
+TSDB_CODED_ATTRIBUTES = {"i-wf": "1", "i-difficulty": "1", "polarity": "-1"}
 # bidirectional de-localized month map for date parsing/formatting
 _MONTHS = {
     1: 'jan', 'jan': 1,
@@ -59,7 +55,7 @@ _MONTHS = {
     10: 'oct', 'oct': 10,
     11: 'nov', 'nov': 11,
     12: 'dec', 'dec': 12,
-}
+}  # fmt: skip
 
 
 #############################################################################
@@ -92,8 +88,9 @@ class TSDBWarning(PyDelphinWarning):
 #############################################################################
 # Database Schema
 
+
 class Field:
-    '''
+    """
     A tuple describing a column in a TSDB database relation.
 
     Args:
@@ -107,15 +104,17 @@ class Field:
 
         default (str): The default formatted value (see
             :func:`format`) when the value it describes is `None`.
-    '''
+    """
 
-    __slots__ = 'name', 'datatype', 'flags', 'comment', 'is_key', 'default'
+    __slots__ = "name", "datatype", "flags", "comment", "is_key", "default"
 
-    def __init__(self,
-                 name: str,
-                 datatype: str,
-                 flags: Iterable[str] | None = None,
-                 comment: str | None = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        datatype: str,
+        flags: Iterable[str] | None = None,
+        comment: str | None = None,
+    ) -> None:
         self.name = name
         self.datatype = datatype
         self.flags = tuple(flags or [])
@@ -123,28 +122,29 @@ class Field:
 
         self.is_key = False
         for flag in self.flags:
-            if flag in (':key', ':primary') or flag.startswith(':foreign'):
+            if flag in (":key", ":primary") or flag.startswith(":foreign"):
                 self.is_key = True
 
         self.default: str = TSDB_CODED_ATTRIBUTES.get(
-            name,
-            '-1' if datatype == ':integer' else ''
+            name, "-1" if datatype == ":integer" else ""
         )
 
     def __str__(self):
         parts = [self.name, self.datatype]
         parts.extend(self.flags)
-        s = '  ' + ' '.join(parts)
+        s = "  " + " ".join(parts)
         if self.comment:
-            s = f'{s.ljust(40)}# {self.comment}'
+            s = f"{s.ljust(40)}# {self.comment}"
         return s
 
     def __eq__(self, other):
         if not isinstance(other, Field):
             return NotImplemented
-        return (self.name == other.name
-                and self.datatype == other.datatype
-                and self.flags == other.flags)
+        return (
+            self.name == other.name
+            and self.datatype == other.datatype
+            and self.flags == other.flags
+        )
 
 
 Fields: TypeAlias = Sequence[Field]
@@ -162,8 +162,7 @@ def make_field_index(fields: Fields) -> FieldIndex:
     Args:
         fields: iterable of :class:`Field` objects
     Examples:
-        >>> fields = [tsdb.Field('i-id', ':integer'),
-        ...           tsdb.Field('i-input', ':string')]
+        >>> fields = [tsdb.Field("i-id", ":integer"), tsdb.Field("i-input", ":string")]
         >>> tsdb.make_field_index(fields)
         {'i-id': 0, 'i-input': 1}
     """
@@ -182,48 +181,47 @@ def read_schema(path: util.PathLike) -> Schema:
     if path.is_dir():
         path = path.joinpath(SCHEMA_FILENAME)
     if not path.is_file():
-        raise TSDBSchemaError(f'no valid schema file at {path!s}')
+        raise TSDBSchemaError(f"no valid schema file at {path!s}")
 
-    return _parse_schema(path.read_text(encoding='utf-8'))
+    return _parse_schema(path.read_text(encoding="utf-8"))
 
 
 def _parse_schema(s: str) -> Schema:
     """Instantiate schema dict from a string."""
     tables: list[tuple[str, Fields]] = []
     seen: set[str] = set()
-    current_table = ''
+    current_table = ""
     current_fields: list[Field] = []
     lines = list(reversed(s.splitlines()))  # to pop() in right order
     while lines:
         line = lines.pop().strip()
-        table_m = re.match(r'^(?P<table>\w.+):$', line)
-        field_m = re.match(r'\s*(?P<name>\S+)'
-                           r'(\s+(?P<flags>[^#]+))?'
-                           r'(\s*#\s*(?P<comment>.*)$)?',
-                           line)
+        table_m = re.match(r"^(?P<table>\w.+):$", line)
+        field_m = re.match(
+            r"\s*(?P<name>\S+)"
+            r"(\s+(?P<flags>[^#]+))?"
+            r"(\s*#\s*(?P<comment>.*)$)?",
+            line,
+        )
         if table_m is not None:
-            table_name = table_m.group('table')
+            table_name = table_m.group("table")
             if table_name in seen:
-                raise TSDBSchemaError(f'table {table_name} redefined')
+                raise TSDBSchemaError(f"table {table_name} redefined")
             current_table = table_name
             current_fields = []
             tables.append((current_table, current_fields))
             seen.add(table_name)
         elif field_m is not None and current_table:
-            name = field_m.group('name')
-            flags = field_m.group('flags').split()
+            name = field_m.group("name")
+            flags = field_m.group("flags").split()
             datatype = flags.pop(0)
-            comment = field_m.group('comment')
-            current_fields.append(
-                Field(name, datatype, flags, comment)
-            )
-        elif line != '':
-            raise TSDBSchemaError('invalid line in schema file: ' + line)
+            comment = field_m.group("comment")
+            current_fields.append(Field(name, datatype, flags, comment))
+        elif line != "":
+            raise TSDBSchemaError("invalid line in schema file: " + line)
     return OrderedDict(tables)
 
 
-def write_schema(path: util.PathLike,
-                 schema: Schema) -> None:
+def write_schema(path: util.PathLike, schema: Schema) -> None:
     """
     Serialize *schema* and write it to the relations file at *path*.
 
@@ -233,15 +231,14 @@ def write_schema(path: util.PathLike,
     path = Path(path).expanduser()
     if path.is_dir():
         path = path.joinpath(SCHEMA_FILENAME)
-    path.write_text(_format_schema(schema) + '\n', encoding='utf-8')
+    path.write_text(_format_schema(schema) + "\n", encoding="utf-8")
 
 
 def _format_schema(schema: Schema) -> str:
     """Serialize a schema dict to its string form."""
-    return '\n\n'.join(
-        '{name}:\n{fields}'.format(
-            name=name,
-            fields='\n'.join(str(f) for f in schema[name])
+    return "\n\n".join(
+        "{name}:\n{fields}".format(
+            name=name, fields="\n".join(str(f) for f in schema[name])
         )
         for name in schema
     )
@@ -255,18 +252,22 @@ class Relation(Records):
     """
     A Relation is essentially an iterable of records.
     """
-    def __init__(self,
-                 dir: util.PathLike,
-                 name: str,
-                 fields: Fields | None,
-                 encoding: str = 'utf-8'):
+
+    def __init__(
+        self,
+        dir: util.PathLike,
+        name: str,
+        fields: Fields | None,
+        encoding: str = "utf-8",
+    ):
         self.dir = Path(dir).expanduser()
         self.name = name
         self.fields = fields
         self.encoding = encoding
-        self._generator = (split(line, fields=fields)
-                           for line in open(self.dir, name,
-                                            encoding=self.encoding))
+        self._generator = (
+            split(line, fields=fields)
+            for line in open(self.dir, name, encoding=self.encoding)
+        )
 
     def __next__(self) -> Record:
         return next(self._generator)
@@ -298,8 +299,8 @@ class Database:
             datatypes
         encoding: character encoding of the database files
     Example:
-        >>> db = tsdb.Database('my-profile')
-        >>> items = db['item']
+        >>> db = tsdb.Database("my-profile")
+        >>> items = db["item"]
         >>> first_record = next(items)
         >>> items.close()
     Attributes:
@@ -308,13 +309,13 @@ class Database:
             datatypes.
         encoding: The character encoding of database files.
     """
-    def __init__(self,
-                 path: util.PathLike,
-                 autocast: bool = False,
-                 encoding: str = 'utf-8') -> None:
+
+    def __init__(
+        self, path: util.PathLike, autocast: bool = False, encoding: str = "utf-8"
+    ) -> None:
         path = Path(path).expanduser()
         if not is_database_directory(path):
-            raise TSDBError(f'not a valid TSDB database: {path!s}')
+            raise TSDBError(f"not a valid TSDB database: {path!s}")
         self._path = path
         self.schema = read_schema(path)
         self.autocast = autocast
@@ -327,7 +328,7 @@ class Database:
 
     def __getitem__(self, name: str) -> Relation:
         if name not in self.schema:
-            raise TSDBError(f'relation not defined in schema: {name}')
+            raise TSDBError(f"relation not defined in schema: {name}")
         fields = None
         if self.autocast:
             fields = self.schema[name]
@@ -339,9 +340,9 @@ class Database:
     def __len__(self):
         return len(self.schema)
 
-    def select_from(self, name: str,
-                    columns: Iterable[str] | None = None,
-                    cast: bool = False) -> Generator[Record, None, None]:
+    def select_from(
+        self, name: str, columns: Iterable[str] | None = None, cast: bool = False
+    ) -> Generator[Record, None, None]:
         """
         Yield values for *columns* from relation *name*.
         """
@@ -355,20 +356,19 @@ class Database:
             if cast and not self.autocast:
                 record = typing_cast(RawRecord, record)
                 # _cast is a copy of the function cast()
-                data = tuple(_cast(fields[idx].datatype, record[idx])
-                             for idx in indices)
+                data = tuple(
+                    _cast(fields[idx].datatype, record[idx]) for idx in indices
+                )
             else:
                 data = tuple(record[idx] for idx in indices)
             yield data
         records.close()
 
     def _select_raw(
-            self,
-            name: str,
-            columns: Iterable[str] | None = None
+        self, name: str, columns: Iterable[str] | None = None
     ) -> Generator[RawRecord, None, None]:
         if name not in self.schema:
-            raise TSDBError(f'relation not defined in schema: {name}')
+            raise TSDBError(f"relation not defined in schema: {name}")
         fields = self.schema[name]
         if columns is None:
             indices = list(range(len(fields)))
@@ -383,6 +383,7 @@ class Database:
 
 #############################################################################
 # Data Encoding
+
 
 def escape(string: str) -> str:
     r"""
@@ -401,10 +402,11 @@ def escape(string: str) -> str:
         The escaped string
     """
     # str.replace()... is about 3-4x faster than re.sub() here
-    return (string
-            .replace('\\', '\\\\')  # must be done first
-            .replace('\n', '\\n')
-            .replace(FIELD_DELIMITER, '\\s'))
+    return (
+        string.replace("\\", "\\\\")  # must be done first
+        .replace("\n", "\\n")
+        .replace(FIELD_DELIMITER, "\\s")
+    )
 
 
 def unescape(string: str) -> str:
@@ -425,26 +427,25 @@ def unescape(string: str) -> str:
     esc = False
     for c in string:
         if esc:
-            if c == '\\':
-                chars.append('\\')
-            elif c == 's':
-                chars.append('@')
-            elif c == 'n':
-                chars.append('\n')
+            if c == "\\":
+                chars.append("\\")
+            elif c == "s":
+                chars.append("@")
+            elif c == "n":
+                chars.append("\n")
             else:
-                raise TSDBError('invalid escape sequence: \\' + c)
+                raise TSDBError("invalid escape sequence: \\" + c)
             esc = False
-        elif c == '\\':
+        elif c == "\\":
             esc = True
         else:
             chars.append(c)
     if esc:
-        raise TSDBError(f'invalid escape at end-of-string: {string!r}')
-    return ''.join(chars)
+        raise TSDBError(f"invalid escape at end-of-string: {string!r}")
+    return "".join(chars)
 
 
-def split(line: str,
-          fields: Fields | None = None) -> Record:
+def split(line: str, fields: Fields | None = None) -> Record:
     """
     Split a raw line from a relation into a list of column values.
 
@@ -461,20 +462,22 @@ def split(line: str,
     Returns:
         A list of column values.
     """
-    raw_values = [unescape(col) if col else None
-                  for col in line.rstrip('\n').split(FIELD_DELIMITER)]
+    raw_values = [
+        unescape(col) if col else None
+        for col in line.rstrip("\n").split(FIELD_DELIMITER)
+    ]
     if fields:
         if len(raw_values) != len(fields):
             _mismatched_counts(raw_values, fields)
-        record = tuple(cast(f.datatype, col)
-                       for col, f in zip(raw_values, fields, strict=False))
+        record = tuple(
+            cast(f.datatype, col) for col, f in zip(raw_values, fields, strict=False)
+        )
     else:
         record = tuple(raw_values)
     return record
 
 
-def join(values: Record,
-         fields: Fields | None = None) -> str:
+def join(values: Record, fields: Fields | None = None) -> str:
     """
     Join a list of column values into a string for a relation file.
 
@@ -495,17 +498,19 @@ def join(values: Record,
     if fields:
         if len(values) != len(fields):
             _mismatched_counts(values, fields)
-        raw_values = [format(f.datatype, val, default=f.default)
-                      for f, val in zip(fields, values, strict=False)]
+        raw_values = [
+            format(f.datatype, val, default=f.default)
+            for f, val in zip(fields, values, strict=False)
+        ]
     else:
-        raw_values = ['' if v is None else str(v) for v in values]
+        raw_values = ["" if v is None else str(v) for v in values]
     escaped_values = map(escape, raw_values)
     return FIELD_DELIMITER.join(escaped_values)
 
 
 def _mismatched_counts(columns, fields):
     raise TSDBError(
-        f'number of columns ({len(columns)}) != number of fields ({len(fields)})'
+        f"number of columns ({len(columns)}) != number of fields ({len(fields)})"
     )
 
 
@@ -565,37 +570,37 @@ def cast(datatype: str, raw_value: str | None) -> Value:
     pattern).
 
     Examples:
-        >>> tsdb.cast(':integer', '15')
+        >>> tsdb.cast(":integer", "15")
         15
-        >>> tsdb.cast(':float', '2.05e-3')
+        >>> tsdb.cast(":float", "2.05e-3")
         0.00205
-        >>> tsdb.cast(':string', 'Abrams slept.')
+        >>> tsdb.cast(":string", "Abrams slept.")
         'Abrams slept.'
-        >>> tsdb.cast(':date', '10-6-2002')
+        >>> tsdb.cast(":date", "10-6-2002")
         datetime.datetime(2002, 6, 10, 0, 0)
-        >>> tsdb.cast(':date', '8-sep-1999')
+        >>> tsdb.cast(":date", "8-sep-1999")
         datetime.datetime(1999, 9, 8, 0, 0)
-        >>> tsdb.cast(':date', 'apr-95')
+        >>> tsdb.cast(":date", "apr-95")
         datetime.datetime(1995, 4, 1, 0, 0)
-        >>> tsdb.cast(':date', '01-dec-02 (15:31:01)')
+        >>> tsdb.cast(":date", "01-dec-02 (15:31:01)")
         datetime.datetime(2002, 12, 1, 15, 31, 1)
-        >>> tsdb.cast(':date', '2008-10-12 10:51')
+        >>> tsdb.cast(":date", "2008-10-12 10:51")
         datetime.datetime(2008, 10, 12, 10, 51)
     """
-    if raw_value is None or raw_value == '':
+    if raw_value is None or raw_value == "":
         return None
     elif not isinstance(raw_value, str):
         raise TypeError("cast() argument 'raw_value' must be a string or None")
-    elif datatype == ':integer':
+    elif datatype == ":integer":
         return int(raw_value)
-    elif datatype == ':float':
+    elif datatype == ":float":
         return float(raw_value)
-    elif datatype == ':date':
+    elif datatype == ":date":
         return _parse_datetime(raw_value)
-    elif datatype == ':string':
+    elif datatype == ":string":
         return raw_value
     else:
-        raise TSDBError(f'invalid datatype: {datatype}')
+        raise TSDBError(f"invalid datatype: {datatype}")
 
 
 # some functions may use 'cast' as keyword parameter, so this lets
@@ -604,56 +609,60 @@ _cast = cast
 
 
 def _parse_datetime(s: str) -> datetime | None:
-    if re.match(r':?(today|now)', s):
+    if re.match(r":?(today|now)", s):
         return datetime.now()
 
     # YYYY-MM-DD HH:MM:SS
     m = re.match(
-        r'''
+        r"""
         (?P<y>[0-9]{4})
         -(?P<m>[0-9]{1,2}|\w{3})
         (?:-(?P<d>[0-9]{1,2}))?
         (?:\s*\(?
         (?P<H>[0-9]{2}):(?P<M>[0-9]{2})(?::(?P<S>[0-9]{2}))?
-        \)?)?''', s, flags=re.VERBOSE)
+        \)?)?""",
+        s,
+        flags=re.VERBOSE,
+    )
     if m is None:
         # DD-MM-YYYY HH:MM:SS
         m = re.match(
-            r'''
+            r"""
             (?:(?P<d>[0-9]{1,2})-)?
             (?P<m>[0-9]{1,2}|\w{3})
             -(?P<y>[0-9]{2}(?:[0-9]{2})?)
             (?:\s*\(?
                 (?P<H>[0-9]{2}):(?P<M>[0-9]{2})(?::(?P<S>[0-9]{2}))?
-            \)?)?''', s, flags=re.VERBOSE)
+            \)?)?""",
+            s,
+            flags=re.VERBOSE,
+        )
     if m is not None:
         s = _date_fix(m)
 
     try:
-        return datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
+        return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        warnings.warn(f'Invalid date field: {s!r}', TSDBWarning, stacklevel=2)
+        warnings.warn(f"Invalid date field: {s!r}", TSDBWarning, stacklevel=2)
         return None
 
 
 def _date_fix(mo):
-    y = mo.group('y')
+    y = mo.group("y")
     if len(y) == 2:
-        pre = '19' if int(y) >= 93 else '20'
+        pre = "19" if int(y) >= 93 else "20"
         y = pre + y  # beware the year-2093 bug! Use 4-digit dates.
-    m = mo.group('m')
+    m = mo.group("m")
     if len(m) == 3:  # assuming 3-letter abbreviations
         m = _MONTHS[m.lower()]
-    d = mo.group('d') or '01'
-    H = mo.group('H') or '00'
-    M = mo.group('M') or '00'
-    S = mo.group('S') or '00'
-    return f'{y}-{m}-{d} {H}:{M}:{S}'
+    d = mo.group("d") or "01"
+    H = mo.group("H") or "00"
+    M = mo.group("M") or "00"
+    S = mo.group("S") or "00"
+    return f"{y}-{m}-{d} {H}:{M}:{S}"
 
 
-def format(datatype: str,
-           value: Value | None,
-           default: str | None = None) -> str:
+def format(datatype: str, value: Value | None, default: str | None = None) -> str:
     """
     Format a column *value* based on its *field*.
 
@@ -670,27 +679,30 @@ def format(datatype: str,
     returned.
 
     Examples:
-        >>> tsdb.format(':integer', 42)
+        >>> tsdb.format(":integer", 42)
         '42'
-        >>> tsdb.format(':integer', None)
+        >>> tsdb.format(":integer", None)
         '-1'
-        >>> tsdb.format(':integer', None, default='1')
+        >>> tsdb.format(":integer", None, default="1")
         '1'
-        >>> tsdb.format(':date', datetime.datetime(1999,9,8))
+        >>> tsdb.format(":date", datetime.datetime(1999, 9, 8))
         '8-sep-1999'
     """
     if value is None:
         if default is None:
-            default = '-1' if datatype == ':integer' else ''
+            default = "-1" if datatype == ":integer" else ""
         else:
             default = str(default)  # ensure it is a string
         raw_value = default
-    elif datatype == ':date' and isinstance(value, (date, datetime)):
+    elif datatype == ":date" and isinstance(value, (date, datetime)):
         month = _MONTHS[value.month]
-        pattern = f'{value.day!s}-{month}-%Y'
-        if (isinstance(value, datetime)
-                and (value.hour, value.minute, value.second) != (0, 0, 0)):
-            pattern += ' %H:%M:%S'
+        pattern = f"{value.day!s}-{month}-%Y"
+        if isinstance(value, datetime) and (value.hour, value.minute, value.second) != (
+            0,
+            0,
+            0,
+        ):
+            pattern += " %H:%M:%S"
         raw_value = value.strftime(pattern)
     else:
         raw_value = str(value)
@@ -699,6 +711,7 @@ def format(datatype: str,
 
 #############################################################################
 # Files
+
 
 def is_database_directory(path: util.PathLike) -> bool:
     """
@@ -712,8 +725,7 @@ def is_database_directory(path: util.PathLike) -> bool:
     return path.is_dir() and path.joinpath(SCHEMA_FILENAME).is_file()
 
 
-def get_path(dir: util.PathLike,
-             name: str) -> Path:
+def get_path(dir: util.PathLike, name: str) -> Path:
     """
     Determine if the file path should end in .gz or not and return it.
 
@@ -729,25 +741,23 @@ def get_path(dir: util.PathLike,
     tx_path, gz_path, use_gz = _get_paths(dir, name)
     tbl_path = gz_path if use_gz else tx_path
     if not tbl_path.is_file():
-        raise TSDBError(f'File does not exist at {tbl_path!s}(.gz)')
+        raise TSDBError(f"File does not exist at {tbl_path!s}(.gz)")
     return tbl_path
 
 
 def _get_paths(dir: util.PathLike, name: str) -> tuple[Path, Path, bool]:
     tbl_path = Path(dir, name).expanduser()
-    tx_path = tbl_path.with_suffix('')
-    gz_path = tbl_path.with_suffix('.gz')
+    tx_path = tbl_path.with_suffix("")
+    gz_path = tbl_path.with_suffix(".gz")
     use_gz = False
-    if (gz_path.is_file()
-        and (not tx_path.exists()
-             or gz_path.stat().st_mtime > tx_path.stat().st_mtime)):
+    if gz_path.is_file() and (
+        not tx_path.exists() or gz_path.stat().st_mtime > tx_path.stat().st_mtime
+    ):
         use_gz = True
     return tx_path, gz_path, use_gz
 
 
-def open(dir: util.PathLike,
-         name: str,
-         encoding: str | None = None) -> IO[str]:
+def open(dir: util.PathLike, name: str, encoding: str | None = None) -> IO[str]:
     """
     Open a TSDB database file.
 
@@ -763,32 +773,34 @@ def open(dir: util.PathLike,
         encoding: character encoding of the file
     Example:
         >>> sentences = []
-        >>> with tsdb.open('my-profile', 'item') as item:
+        >>> with tsdb.open("my-profile", "item") as item:
         ...     for line in item:
         ...         sentences.append(tsdb.split(line)[6])
     """
     path = get_path(dir, name)
-    if path.suffix.lower() == '.gz':
-        return gzopen(path, mode='rt', encoding=encoding, newline='\n')
+    if path.suffix.lower() == ".gz":
+        return gzopen(path, mode="rt", encoding=encoding, newline="\n")
     else:
-        return path.open(encoding=encoding, newline='\n')
+        return path.open(encoding=encoding, newline="\n")
 
 
-def write(dir: util.PathLike,
-          name: str,
-          records: Iterable[Record],
-          fields: Fields | None = None,
-          append: bool = False,
-          gzip: bool = False,
-          encoding: str = 'utf-8') -> None:
+def write(
+    dir: util.PathLike,
+    name: str,
+    records: Iterable[Record],
+    fields: Fields | None = None,
+    append: bool = False,
+    gzip: bool = False,
+    encoding: str = "utf-8",
+) -> None:
     """
     Write *records* to relation *name* in the database at *dir*.
 
     The simplest way to write data to a file would be something like
     the following:
 
-    >>> with open(os.path.join(db.path, 'item'), 'w') as fh:
-    ...     print('\\n'.join(map(tsdb.join, db['item'])), file=fh)
+    >>> with open(os.path.join(db.path, "item"), "w") as fh:
+    ...     print("\\n".join(map(tsdb.join, db["item"])), file=fh)
 
     This function improves on that method by doing the following:
 
@@ -825,40 +837,34 @@ def write(dir: util.PathLike,
             with `gzip`; if `False`, do not compress
         encoding: character encoding of the file
     Example:
-        >>> tsdb.write('my-profile',
-        ...            'item',
-        ...            item_records,
-        ...            schema['item'])
+        >>> tsdb.write("my-profile", "item", item_records, schema["item"])
     """
     dir = Path(dir).expanduser()
 
     if encoding is None:
-        encoding = 'utf-8'
+        encoding = "utf-8"
 
     if not dir.is_dir():
-        raise TSDBError(f'invalid test suite directory: {dir}')
+        raise TSDBError(f"invalid test suite directory: {dir}")
 
     if fields is None:
         schema_path = dir / SCHEMA_FILENAME
         if schema_path.is_file():
             fields = read_schema(schema_path)[name]
         else:
-            raise TSDBError(
-                f'cannot determine fields; no schema file at {schema_path}')
+            raise TSDBError(f"cannot determine fields; no schema file at {schema_path}")
 
     tx_path, gz_path, use_gz = _get_paths(dir, name)
     if append and (gzip or use_gz):
-        raise NotImplementedError('cannot append to a gzipped file')
+        raise NotImplementedError("cannot append to a gzipped file")
 
-    mode = 'ab' if append else 'wb'
+    mode = "ab" if append else "wb"
 
     with tempfile.NamedTemporaryFile(
-            mode='w+b', suffix='.tmp',
-            prefix=name, dir=dir) as f_tmp:
-
+        mode="w+b", suffix=".tmp", prefix=name, dir=dir
+    ) as f_tmp:
         for record in records:
-            f_tmp.write(
-                (join(record, fields) + '\n').encode(encoding))
+            f_tmp.write((join(record, fields) + "\n").encode(encoding))
 
         # only gzip non-empty files
         gzip = gzip and f_tmp.tell() != 0
@@ -878,9 +884,9 @@ def write(dir: util.PathLike,
         other.unlink()
 
 
-def initialize_database(path: util.PathLike,
-                        schema: SchemaLike,
-                        files: bool = False) -> None:
+def initialize_database(
+    path: util.PathLike, schema: SchemaLike, files: bool = False
+) -> None:
     """
     Initialize a bare database directory at *path*.
 
@@ -911,12 +917,14 @@ def initialize_database(path: util.PathLike,
             path.joinpath(name).touch()
 
 
-def write_database(db: Database,
-                   path: util.PathLike,
-                   names: Iterable[str] | None = None,
-                   schema: SchemaLike | None = None,
-                   gzip: bool = False,
-                   encoding: str = 'utf-8') -> None:
+def write_database(
+    db: Database,
+    path: util.PathLike,
+    names: Iterable[str] | None = None,
+    schema: SchemaLike | None = None,
+    gzip: bool = False,
+    encoding: str = "utf-8",
+) -> None:
     """
     Write TSDB database *db* to *path*.
 
@@ -948,7 +956,7 @@ def write_database(db: Database,
     """
     path = Path(path).expanduser()
     if path.is_file():
-        raise TSDBError(f'not a directory: {path!s}')
+        raise TSDBError(f"not a directory: {path!s}")
     remake_records = schema is not None
     if schema is None:
         schema = db.schema
@@ -971,13 +979,7 @@ def write_database(db: Database,
                 pass
             if remake_records:
                 relation = _remake_records(relation, db.schema[name], fields)
-        write(path,
-              name,
-              relation,
-              fields,
-              append=False,
-              gzip=gzip,
-              encoding=encoding)
+        write(path, name, relation, fields, append=False, gzip=gzip, encoding=encoding)
 
     # only delete other files at the end in case db.path == path
     _cleanup_files(path, set(schema).difference(names))
@@ -992,8 +994,8 @@ def _remake_records(relation, old_fields, new_fields):
 
 def _cleanup_files(path, names):
     for name in names:
-        tx_path = Path(path, name).with_suffix('')
-        gz_path = Path(path, name).with_suffix('.gz')
+        tx_path = Path(path, name).with_suffix("")
+        gz_path = Path(path, name).with_suffix(".gz")
         if tx_path.is_file():
             tx_path.unlink()
         if gz_path.is_file():

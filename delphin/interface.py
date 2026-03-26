@@ -61,7 +61,7 @@ class Result(dict):
     """
 
     def __repr__(self):
-        return f'Result({dict.__repr__(self)})'
+        return f"Result({dict.__repr__(self)})"
 
     def derivation(self):
         """
@@ -77,9 +77,10 @@ class Result(dict):
             InterfaceError: when the value is an unsupported type or
                 :mod:`delphin.derivation` is unavailable
         """
-        drv = self.get('derivation')
+        drv = self.get("derivation")
         try:
             from delphin import derivation
+
             if isinstance(drv, dict):
                 drv = derivation.from_dict(drv)
             elif isinstance(drv, str):
@@ -87,7 +88,7 @@ class Result(dict):
             elif drv is not None:
                 raise TypeError(drv.__class__.__name__)
         except (ImportError, TypeError) as exc:
-            raise InterfaceError('can not get Derivation object') from exc
+            raise InterfaceError("can not get Derivation object") from exc
         return drv
 
     def tree(self):
@@ -97,21 +98,21 @@ class Result(dict):
         The tree data may be a standalone datum, or embedded in a
         derivation.
         """
-        tree = self.get('tree')
+        tree = self.get("tree")
 
         if isinstance(tree, str):
             tree = util.SExpr.parse(tree).data
 
         elif tree is None:
-            drv = self.get('derivation')
-            if isinstance(drv, dict) and 'label' in drv:
+            drv = self.get("derivation")
+            if isinstance(drv, dict) and "label" in drv:
 
                 def _extract_tree(d):
-                    t = [d.get('label', '')]
-                    if 'tokens' in d:
-                        t.append([d.get('form', '')])
+                    t = [d.get("label", "")]
+                    if "tokens" in d:
+                        t.append([d.get("form", "")])
                     else:
-                        for dtr in d.get('daughters', []):
+                        for dtr in d.get("daughters", []):
                             t.append(_extract_tree(dtr))
                     return t
 
@@ -133,18 +134,20 @@ class Result(dict):
             InterfaceError: when the value is an unsupported type or
                 the corresponding module is unavailable
         """
-        mrs = self.get('mrs')
+        mrs = self.get("mrs")
         try:
             if isinstance(mrs, dict):
                 from delphin.codecs import mrsjson
+
                 mrs = mrsjson.from_dict(mrs)
             elif isinstance(mrs, str):
                 from delphin.codecs import simplemrs
+
                 mrs = simplemrs.decode(mrs)
             elif mrs is not None:
                 raise TypeError(mrs.__class__.__name__)
         except (ImportError, TypeError) as exc:
-            raise InterfaceError('can not get MRS object') from exc
+            raise InterfaceError("can not get MRS object") from exc
         return mrs
 
     def eds(self):
@@ -161,18 +164,20 @@ class Result(dict):
             InterfaceError: when the value is an unsupported type or
                 the corresponding module is unavailable
         """
-        eds = self.get('eds')
+        eds = self.get("eds")
         try:
             if isinstance(eds, dict):
                 from delphin.codecs import edsjson
+
                 eds = edsjson.from_dict(eds)
             elif isinstance(eds, str):
                 from delphin.codecs import eds as edsnative
+
                 eds = edsnative.decode(eds)
             elif eds is not None:
                 raise TypeError(eds.__class__.__name__)
         except (ImportError, TypeError) as exc:
-            raise InterfaceError('can not get EDS object') from exc
+            raise InterfaceError("can not get EDS object") from exc
         return eds
 
     def dmrs(self):
@@ -188,15 +193,16 @@ class Result(dict):
             InterfaceError: when the value is not a dictionary or
                 :mod:`delphin.codecs.dmrsjson` is unavailable
         """
-        dmrs = self.get('dmrs')
+        dmrs = self.get("dmrs")
         try:
             if isinstance(dmrs, dict):
                 from delphin.codecs import dmrsjson
+
                 dmrs = dmrsjson.from_dict(dmrs)
             elif dmrs is not None:
                 raise TypeError(dmrs.__class__.__name__)
         except (ImportError, TypeError) as exc:
-            raise InterfaceError('can not get DMRS object') from exc
+            raise InterfaceError("can not get DMRS object") from exc
         return dmrs
 
 
@@ -205,20 +211,21 @@ class Response(dict):
     A wrapper around the response dictionary for more convenient
     access to results.
     """
+
     _result_cls = Result
 
     def __repr__(self):
-        return f'Response({dict.__repr__(self)})'
+        return f"Response({dict.__repr__(self)})"
 
     def results(self):
         """Return Result objects for each result."""
-        return [self._result_cls(r) for r in self.get('results', [])]
+        return [self._result_cls(r) for r in self.get("results", [])]
 
     def result(self, i):
         """Return a Result object for the result *i*."""
-        return self._result_cls(self.get('results', [])[i])
+        return self._result_cls(self.get("results", [])[i])
 
-    def tokens(self, tokenset='internal'):
+    def tokens(self, tokenset="internal"):
         """
         Interpret and return a YYTokenLattice object.
 
@@ -236,9 +243,10 @@ class Response(dict):
             InterfaceError: when the value is an unsupported type or
                 :mod:`delphin.tokens` is unavailble
         """
-        toks = self.get('tokens', {}).get(tokenset)
+        toks = self.get("tokens", {}).get(tokenset)
         try:
             from delphin import tokens
+
             if isinstance(toks, str):
                 toks = tokens.YYTokenLattice.from_string(toks)
             elif isinstance(toks, Sequence):
@@ -246,5 +254,5 @@ class Response(dict):
             elif toks is not None:
                 raise TypeError(toks.__class__.__name__)
         except (KeyError, ImportError, TypeError) as exc:
-            raise InterfaceError('can not get YYTokenLattice object') from exc
+            raise InterfaceError("can not get YYTokenLattice object") from exc
         return toks

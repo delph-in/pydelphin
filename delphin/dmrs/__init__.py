@@ -1,4 +1,3 @@
-
 """
 Dependency Minimal Recursion Semantics ([DMRS]_)
 
@@ -32,19 +31,19 @@ from delphin.dmrs._exceptions import (
 from delphin.dmrs._operations import from_mrs
 
 __all__ = [
-    'FIRST_NODE_ID',
-    'RESTRICTION_ROLE',
-    'BARE_EQ_ROLE',
-    'EQ_POST',
-    'HEQ_POST',
-    'NEQ_POST',
-    'H_POST',
-    'CVARSORT',
-    'DMRS',
-    'Node',
-    'Link',
-    'from_mrs',
-    'DMRSError',
-    'DMRSSyntaxError',
-    'DMRSWarning',
+    "FIRST_NODE_ID",
+    "RESTRICTION_ROLE",
+    "BARE_EQ_ROLE",
+    "EQ_POST",
+    "HEQ_POST",
+    "NEQ_POST",
+    "H_POST",
+    "CVARSORT",
+    "DMRS",
+    "Node",
+    "Link",
+    "from_mrs",
+    "DMRSError",
+    "DMRSSyntaxError",
+    "DMRSWarning",
 ]

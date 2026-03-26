@@ -1,4 +1,3 @@
-
 """
 Elementary Dependency Structures ([EDS]_)
 
@@ -32,14 +31,14 @@ from delphin.eds._operations import (
 )
 
 __all__ = [
-    'BOUND_VARIABLE_ROLE',
-    'PREDICATE_MODIFIER_ROLE',
-    'EDS',
-    'Node',
-    'from_mrs',
-    'find_predicate_modifiers',
-    'make_ids_unique',
-    'EDSError',
-    'EDSSyntaxError',
-    'EDSWarning',
+    "BOUND_VARIABLE_ROLE",
+    "PREDICATE_MODIFIER_ROLE",
+    "EDS",
+    "Node",
+    "from_mrs",
+    "find_predicate_modifiers",
+    "make_ids_unique",
+    "EDSError",
+    "EDSSyntaxError",
+    "EDSWarning",
 ]

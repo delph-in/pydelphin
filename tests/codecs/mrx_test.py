@@ -1,4 +1,3 @@
-
 import pytest
 
 from delphin.codecs import mrx
@@ -8,19 +7,22 @@ from delphin.mrs import EP, MRS, HCons
 @pytest.fixture
 def it_rains_mrs():
     m = MRS(
-        'h0', 'e2',
-        [EP('_rain_v_1', 'h1', {'ARG0': 'e2'})],
-        [HCons.qeq('h0', 'h1')])
+        "h0", "e2", [EP("_rain_v_1", "h1", {"ARG0": "e2"})], [HCons.qeq("h0", "h1")]
+    )
     return m
 
 
 @pytest.fixture
 def it_rains_heavily_mrs():
     m = MRS(
-        'h0', 'e2',
-        [EP('_rain_v_1', 'h1', {'ARG0': 'e2'}),
-         EP('_heavy_a_1', 'h1', {'ARG0': 'e3', 'ARG1': 'e2'})],
-        [HCons.qeq('h0', 'h1')])
+        "h0",
+        "e2",
+        [
+            EP("_rain_v_1", "h1", {"ARG0": "e2"}),
+            EP("_heavy_a_1", "h1", {"ARG0": "e3", "ARG1": "e2"}),
+        ],
+        [HCons.qeq("h0", "h1")],
+    )
     return m
 
 

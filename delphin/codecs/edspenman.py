@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 CODEC_INFO = {
-    'representation': 'eds',
+    "representation": "eds",
 }
 
 
@@ -30,12 +30,12 @@ def load(source):
     Returns:
         a list of EDS objects
     """
-    if not hasattr(source, 'read'):
+    if not hasattr(source, "read"):
         source = Path(source).expanduser()
     try:
         graphs = penman.load(source)
     except penman.PenmanError as exc:
-        raise PyDelphinException('could not decode with Penman') from exc
+        raise PyDelphinException("could not decode with Penman") from exc
     xs = [from_triples(g.triples) for g in graphs]
     return xs
 
@@ -52,13 +52,12 @@ def loads(s):
     try:
         graphs = penman.loads(s)
     except penman.PenmanError as exc:
-        raise PyDelphinException('could not decode with Penman') from exc
+        raise PyDelphinException("could not decode with Penman") from exc
     xs = [from_triples(g.triples) for g in graphs]
     return xs
 
 
-def dump(es, destination, properties=True, lnk=True,
-         indent=False, encoding='utf-8'):
+def dump(es, destination, properties=True, lnk=True, indent=False, encoding="utf-8"):
     """
     Serialize EDS objects to a EDS-PENMAN file.
 
@@ -75,11 +74,11 @@ def dump(es, destination, properties=True, lnk=True,
             file with the given encoding; otherwise it is ignored
     """
     text = dumps(es, properties=properties, lnk=lnk, indent=indent)
-    if hasattr(destination, 'write'):
+    if hasattr(destination, "write"):
         print(text, file=destination)
     else:
         destination = Path(destination).expanduser()
-        with destination.open('w', encoding=encoding) as fh:
+        with destination.open("w", encoding=encoding) as fh:
             print(text, file=fh)
 
 
@@ -103,12 +102,11 @@ def dumps(es, properties=True, lnk=True, indent=False):
     elif indent is False:
         indent = None
     to_graph = penman.Graph
-    graphs = [to_graph(to_triples(e, properties=properties, lnk=lnk))
-              for e in es]
+    graphs = [to_graph(to_triples(e, properties=properties, lnk=lnk)) for e in es]
     try:
         return penman.dumps(graphs, indent=indent)
     except penman.PenmanError as exc:
-        raise PyDelphinException('could not encode with Penman') from exc
+        raise PyDelphinException("could not encode with Penman") from exc
 
 
 def decode(s):
@@ -118,7 +116,7 @@ def decode(s):
     try:
         g = penman.decode(s)
     except penman.PenmanError as exc:
-        raise PyDelphinException('could not decode with Penman') from exc
+        raise PyDelphinException("could not decode with Penman") from exc
 
     return from_triples(g.triples)
 
@@ -145,7 +143,7 @@ def encode(e, properties=True, lnk=True, indent=False):
     try:
         return penman.encode(g, indent=indent)
     except penman.PenmanError as exc:
-        raise PyDelphinException('could not encode with Penman') from exc
+        raise PyDelphinException("could not encode with Penman") from exc
 
 
 def to_triples(e, properties=True, lnk=True):
@@ -167,25 +165,24 @@ def to_triples(e, properties=True, lnk=True):
     for node in nodes:
         nid = node.id
         if nid in main_component:
-            triples.append((nid, ':instance', node.predicate))
+            triples.append((nid, ":instance", node.predicate))
             if lnk and node.lnk:
-                triples.append((nid, ':lnk', f'"{str(node.lnk)}"'))
+                triples.append((nid, ":lnk", f'"{str(node.lnk)}"'))
             if node.carg:
-                triples.append((nid, ':carg', f'"{node.carg}"'))
+                triples.append((nid, ":carg", f'"{node.carg}"'))
             if node.type is not None:
-                triples.append((nid, ':type', node.type))
+                triples.append((nid, ":type", node.type))
             if properties:
                 for prop in sorted(node.properties, key=property_priority):
-                    rel = ':' + prop.lower()
+                    rel = ":" + prop.lower()
                     triples.append((nid, rel, node.properties[prop]))
             for role in sorted(node.edges, key=role_priority):
-                triples.append((nid, ':' + role, node.edges[role]))
+                triples.append((nid, ":" + role, node.edges[role]))
         else:
             complete = False
 
     if not complete:
-        logger.warning(
-            'disconnected graph cannot be completely encoded: %r', e)
+        logger.warning("disconnected graph cannot be completely encoded: %r", e)
     return triples
 
 
@@ -195,32 +192,42 @@ def from_triples(triples):
     """
     nids, nd = [], {}
     for src, rel, tgt in triples:
-        rel = rel.lstrip(':')
+        rel = rel.lstrip(":")
         if src not in nd:
             nids.append(src)
-            nd[src] = {'pred': None, 'type': None, 'edges': {},
-                       'props': {}, 'lnk': None, 'carg': None}
-        if rel == 'instance':
-            nd[src]['pred'] = tgt
-        elif rel == 'lnk':
-            nd[src]['lnk'] = Lnk(tgt.strip('"'))
-        elif rel == 'carg':
+            nd[src] = {
+                "pred": None,
+                "type": None,
+                "edges": {},
+                "props": {},
+                "lnk": None,
+                "carg": None,
+            }
+        if rel == "instance":
+            nd[src]["pred"] = tgt
+        elif rel == "lnk":
+            nd[src]["lnk"] = Lnk(tgt.strip('"'))
+        elif rel == "carg":
             if (tgt[0], tgt[-1]) == ('"', '"'):
                 tgt = tgt[1:-1]
-            nd[src]['carg'] = tgt
-        elif rel == 'type':
-            nd[src]['type'] = tgt
+            nd[src]["carg"] = tgt
+        elif rel == "type":
+            nd[src]["type"] = tgt
         elif rel.islower():
-            nd[src]['props'][rel.upper()] = tgt
+            nd[src]["props"][rel.upper()] = tgt
         else:
-            nd[src]['edges'][rel] = tgt
-    nodes = [Node(nid,
-                  nd[nid]['pred'],
-                  type=nd[nid]['type'],
-                  edges=nd[nid]['edges'],
-                  properties=nd[nid]['props'],
-                  carg=nd[nid]['carg'],
-                  lnk=nd[nid]['lnk'])
-             for nid in nids]
+            nd[src]["edges"][rel] = tgt
+    nodes = [
+        Node(
+            nid,
+            nd[nid]["pred"],
+            type=nd[nid]["type"],
+            edges=nd[nid]["edges"],
+            properties=nd[nid]["props"],
+            carg=nd[nid]["carg"],
+            lnk=nd[nid]["lnk"],
+        )
+        for nid in nids
+    ]
     top = nids[0] if nids else None
     return EDS(top=top, nodes=nodes)

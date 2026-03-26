@@ -1,4 +1,3 @@
-
 """
 Semantic Interface (SEM-I)
 """
@@ -21,52 +20,51 @@ from delphin.exceptions import (
 )
 from delphin.predicate import normalize as normalize_predicate
 
-TOP_TYPE = '*top*'
-STRING_TYPE = 'string'
+TOP_TYPE = "*top*"
+STRING_TYPE = "string"
 
 
 _SEMI_SECTIONS = (
-    'variables',
-    'properties',
-    'roles',
-    'predicates',
+    "variables",
+    "properties",
+    "roles",
+    "predicates",
 )
 
 _variable_entry_re = re.compile(
-    r'(?P<var>[^ .]+)'
-    r'(?: < (?P<parents>[^ &:.]+(?: & [^ &:.]+)*))?'
-    r'(?: : (?P<properties>[^ ]+ [^ ,.]+(?:, [^ ]+ [^ ,.]+)*))?'
-    r'\s*\.\s*(?:;.*)?$',
-    re.U
+    r"(?P<var>[^ .]+)"
+    r"(?: < (?P<parents>[^ &:.]+(?: & [^ &:.]+)*))?"
+    r"(?: : (?P<properties>[^ ]+ [^ ,.]+(?:, [^ ]+ [^ ,.]+)*))?"
+    r"\s*\.\s*(?:;.*)?$",
+    re.U,
 )
 
 _property_entry_re = re.compile(
-    r'(?P<type>[^ .]+)'
-    r'(?: < (?P<parents>[^ &.]+(?: & [^ &.]+)*))?'
-    r'\s*\.\s*(?:;.*)?$',
-    re.U
+    r"(?P<type>[^ .]+)"
+    r"(?: < (?P<parents>[^ &.]+(?: & [^ &.]+)*))?"
+    r"\s*\.\s*(?:;.*)?$",
+    re.U,
 )
 
 _role_entry_re = re.compile(
-    r'(?P<role>[^ ]+) : (?P<value>[^ .]+)\s*\.\s*(?:;.*)?$',
-    re.U
+    r"(?P<role>[^ ]+) : (?P<value>[^ .]+)\s*\.\s*(?:;.*)?$", re.U
 )
 
 _predicate_entry_re = re.compile(
-    r'(?P<pred>[^ ]+)'
-    r'(?: < (?P<parents>[^ &:.;]+(?: & [^ &:.;]+)*))?'
-    r'(?: : (?P<synposis>.*[^ .;]))?'
-    r'\s*\.\s*(?:;.*)?$',
-    re.U
+    r"(?P<pred>[^ ]+)"
+    r"(?: < (?P<parents>[^ &:.;]+(?: & [^ &:.;]+)*))?"
+    r"(?: : (?P<synposis>.*[^ .;]))?"
+    r"\s*\.\s*(?:;.*)?$",
+    re.U,
 )
 
 _synopsis_re = re.compile(
-    r'\s*(?P<optional>\[\s*)?'
-    r'(?P<name>[^ ]+) (?P<value>[^ ,.{\]]+)'
-    r'(?:\s*\{\s*(?P<properties>[^ ]+ [^ ,}]+(?:, [^ ]+ [^ ,}]+)*)\s*\})?'
-    r'(?(optional)\s*\])'
-    r'(?:\s*(?:,\s*|$))',
-    re.U
+    r"\s*(?P<optional>\[\s*)?"
+    r"(?P<name>[^ ]+) (?P<value>[^ ,.{\]]+)"
+    r"(?:\s*\{\s*(?P<properties>[^ ]+ [^ ,}]+(?:, [^ ]+ [^ ,}]+)*)\s*\})?"
+    r"(?(optional)\s*\])"
+    r"(?:\s*(?:,\s*|$))",
+    re.U,
 )
 
 
@@ -82,7 +80,7 @@ class SemIWarning(PyDelphinWarning):
     """Warning class for questionable SEM-Is."""
 
 
-def load(source, encoding='utf-8'):
+def load(source, encoding="utf-8"):
     """
     Interpret and return the SEM-I defined at path *source*.
 
@@ -100,124 +98,120 @@ def load(source, encoding='utf-8'):
 
 def _read_file(path, basedir, encoding):
     data = {
-        'variables': {},
-        'properties': {},
-        'roles': {},
-        'predicates': {},
+        "variables": {},
+        "properties": {},
+        "roles": {},
+        "predicates": {},
     }
     section = None
 
     for lineno, line in enumerate(path.open(encoding=encoding), 1):
         line = line.lstrip()
 
-        if not line or line.startswith(';'):
+        if not line or line.startswith(";"):
             continue
 
-        match = re.match(r'(?P<name>[^: ]+):\s*$', line)
+        match = re.match(r"(?P<name>[^: ]+):\s*$", line)
         if match is not None:
-            name = match.group('name')
+            name = match.group("name")
             if name not in _SEMI_SECTIONS:
                 raise SemISyntaxError(
-                    'invalid SEM-I section',
-                    filename=str(path), lineno=lineno, text=line)
+                    "invalid SEM-I section",
+                    filename=str(path),
+                    lineno=lineno,
+                    text=line,
+                )
             else:
                 section = name
             continue
 
-        match = re.match(r'include:\s*(?P<filename>.+)$', line, flags=re.U)
+        match = re.match(r"include:\s*(?P<filename>.+)$", line, flags=re.U)
         if match is not None:
-            include = basedir.joinpath(match.group('filename').rstrip())
-            include_data = _read_file(
-                include, include.parent, encoding)
-            for key, val in include_data['variables'].items():
-                _incorporate(data['variables'], key, val, include)
-            for key, val in include_data['properties'].items():
-                _incorporate(data['properties'], key, val, include)
-            for key, val in include_data['roles'].items():
-                _incorporate(data['roles'], key, val, include)
-            for pred, d in include_data['predicates'].items():
-                if pred not in data['predicates']:
-                    data['predicates'][pred] = {
-                        'parents': [],
-                        'synopses': []
-                    }
-                if d.get('parents'):
-                    data['predicates'][pred]['parents'] = d['parents']
-                if d.get('synopses'):
-                    data['predicates'][pred]['synopses'].extend(d['synopses'])
+            include = basedir.joinpath(match.group("filename").rstrip())
+            include_data = _read_file(include, include.parent, encoding)
+            for key, val in include_data["variables"].items():
+                _incorporate(data["variables"], key, val, include)
+            for key, val in include_data["properties"].items():
+                _incorporate(data["properties"], key, val, include)
+            for key, val in include_data["roles"].items():
+                _incorporate(data["roles"], key, val, include)
+            for pred, d in include_data["predicates"].items():
+                if pred not in data["predicates"]:
+                    data["predicates"][pred] = {"parents": [], "synopses": []}
+                if d.get("parents"):
+                    data["predicates"][pred]["parents"] = d["parents"]
+                if d.get("synopses"):
+                    data["predicates"][pred]["synopses"].extend(d["synopses"])
 
-        elif section == 'variables':
+        elif section == "variables":
             # e.g. e < i : PERF bool, TENSE tense.
             match = _variable_entry_re.match(line)
             if match is not None:
-                identifier = match.group('var')
-                supertypes = match.group('parents') or []
+                identifier = match.group("var")
+                supertypes = match.group("parents") or []
                 if supertypes:
-                    supertypes = supertypes.split(' & ')
-                properties = match.group('properties') or []
+                    supertypes = supertypes.split(" & ")
+                properties = match.group("properties") or []
                 if properties:
-                    pairs = properties.split(', ')
+                    pairs = properties.split(", ")
                     properties = [pair.split() for pair in pairs]
-                v = {'parents': supertypes, 'properties': properties}
+                v = {"parents": supertypes, "properties": properties}
                 # v = type(identifier, supertypes, d)
-                _incorporate(data['variables'], identifier, v, path)
+                _incorporate(data["variables"], identifier, v, path)
             else:
                 raise SemISyntaxError(
-                    'invalid variable',
-                    filename=str(path), lineno=lineno, text=line)
+                    "invalid variable", filename=str(path), lineno=lineno, text=line
+                )
 
-        elif section == 'properties':
+        elif section == "properties":
             # e.g. + < bool.
             match = _property_entry_re.match(line)
             if match is not None:
-                _type = match.group('type')
-                supertypes = match.group('parents') or []
+                _type = match.group("type")
+                supertypes = match.group("parents") or []
                 if supertypes:
-                    supertypes = supertypes.split(' & ')
-                _incorporate(
-                    data['properties'], _type, {'parents': supertypes}, path)
+                    supertypes = supertypes.split(" & ")
+                _incorporate(data["properties"], _type, {"parents": supertypes}, path)
             else:
                 raise SemISyntaxError(
-                    'invalid property',
-                    filename=str(path), lineno=lineno, text=line)
+                    "invalid property", filename=str(path), lineno=lineno, text=line
+                )
 
-        elif section == 'roles':
+        elif section == "roles":
             # e.g. + < bool.
             match = _role_entry_re.match(line)
             if match is not None:
-                role, value = match.group('role'), match.group('value')
-                _incorporate(data['roles'], role, {'value': value}, path)
+                role, value = match.group("role"), match.group("value")
+                _incorporate(data["roles"], role, {"value": value}, path)
             else:
                 raise SemISyntaxError(
-                    'invalid role',
-                    filename=str(path), lineno=lineno, text=line)
+                    "invalid role", filename=str(path), lineno=lineno, text=line
+                )
 
-        elif section == 'predicates':
+        elif section == "predicates":
             # e.g. _predicate_n_1 : ARG0 x { IND + }.
             match = _predicate_entry_re.match(line)
             if match is not None:
-                pred = match.group('pred')
-                if pred not in data['predicates']:
-                    data['predicates'][pred] = {
-                        'parents': [],
-                        'synopses': []
-                    }
-                sups = match.group('parents')
+                pred = match.group("pred")
+                if pred not in data["predicates"]:
+                    data["predicates"][pred] = {"parents": [], "synopses": []}
+                sups = match.group("parents")
                 if sups:
-                    data['predicates'][pred]['parents'] = sups.split(' & ')
-                synposis = match.group('synposis')
+                    data["predicates"][pred]["parents"] = sups.split(" & ")
+                synposis = match.group("synposis")
                 roles = []
                 if synposis:
                     for rolematch in _synopsis_re.finditer(synposis):
                         d = rolematch.groupdict()
-                        propstr = d['properties'] or ''
-                        d['properties'] = dict(
-                            pair.split() for pair in propstr.split(', ')
-                            if pair.strip() != '')
-                        d['optional'] = bool(d['optional'])
+                        propstr = d["properties"] or ""
+                        d["properties"] = dict(
+                            pair.split()
+                            for pair in propstr.split(", ")
+                            if pair.strip() != ""
+                        )
+                        d["optional"] = bool(d["optional"])
                         roles.append(d)
-                    data['predicates'][pred]['synopses'].append(
-                        {'roles': roles})
+                    data["predicates"][pred]["synopses"].append({"roles": roles})
 
     return data
 
@@ -243,43 +237,41 @@ class SynopsisRole(tuple):
         optional (bool): a flag indicating if the role is optional
     Example:
 
-    >>> role = SynopsisRole('ARG0', 'x', {'PERS': '3'}, False)
+    >>> role = SynopsisRole("ARG0", "x", {"PERS": "3"}, False)
     """
 
-    name = property(itemgetter(0), doc='The role name.')
-    value = property(
-        itemgetter(1), doc='The role value (variable type or "string"')
-    properties = property(itemgetter(2), doc='Property-value map.')
+    name = property(itemgetter(0), doc="The role name.")
+    value = property(itemgetter(1), doc='The role value (variable type or "string"')
+    properties = property(itemgetter(2), doc="Property-value map.")
     optional = property(itemgetter(3), doc="`True` if the role is optional.")
 
     def __new__(cls, name, value, properties=None, optional=False):
         if not properties:
             properties = {}
         else:
-            properties = {prop.upper(): val.lower()
-                          for prop, val in dict(properties).items()}
-        return super().__new__(cls, ([name.upper(),
-                                      value.lower(),
-                                      properties,
-                                      bool(optional)]))
+            properties = {
+                prop.upper(): val.lower() for prop, val in dict(properties).items()
+            }
+        return super().__new__(
+            cls, ([name.upper(), value.lower(), properties, bool(optional)])
+        )
 
     def __repr__(self) -> str:
-        return f'SynopsisRole({", ".join(self)})'
+        return f"SynopsisRole({', '.join(self)})"
 
     def _to_dict(self):
         d = {"name": self.name, "value": self.value}
         if self.properties:
-            d['properties'] = dict(self.properties)
+            d["properties"] = dict(self.properties)
         if self.optional:
-            d['optional'] = True
+            d["optional"] = True
         return d
 
     @classmethod
     def _from_dict(cls, d):
-        return cls(d['name'],
-                   d['value'],
-                   d.get('properties', []),
-                   d.get('optional', False))
+        return cls(
+            d["name"], d["value"], d.get("properties", []), d.get("optional", False)
+        )
 
 
 class Synopsis(tuple):
@@ -295,7 +287,7 @@ class Synopsis(tuple):
     """
 
     def __repr__(self):
-        return 'Synopsis([{}])'.format(', '.join(map(repr, self)))
+        return "Synopsis([{}])".format(", ".join(map(repr, self)))
 
     @classmethod
     def from_dict(cls, d):
@@ -304,19 +296,18 @@ class Synopsis(tuple):
 
         Example:
 
-        >>> synopsis = Synopsis.from_dict({
-        ...     'roles': [
-        ...         {'name': 'ARG0', 'value': 'e'},
-        ...         {'name': 'ARG1', 'value': 'x',
-        ...          'properties': {'NUM': 'sg'}}
-        ...     ]
-        ... })
-        ...
+        >>> synopsis = Synopsis.from_dict(
+        ...     {
+        ...         "roles": [
+        ...             {"name": "ARG0", "value": "e"},
+        ...             {"name": "ARG1", "value": "x", "properties": {"NUM": "sg"}},
+        ...         ]
+        ...     }
+        ... )
         >>> len(synopsis)
         2
         """
-        return cls(SynopsisRole._from_dict(role)
-                   for role in d.get('roles', []))
+        return cls(SynopsisRole._from_dict(role) for role in d.get("roles", []))
 
     def to_dict(self):
         """
@@ -324,16 +315,15 @@ class Synopsis(tuple):
 
         Example:
 
-        >>> Synopsis([
-        ...     SynopsisRole('ARG0', 'e'),
-        ...     SynopsisRole('ARG1', 'x', {'NUM': 'sg'})
-        ... ]).to_dict()
+        >>> Synopsis(
+        ...     [SynopsisRole("ARG0", "e"), SynopsisRole("ARG1", "x", {"NUM": "sg"})]
+        ... ).to_dict()
         {'roles': [{'name': 'ARG0', 'value': 'e'},
                    {'name': 'ARG1', 'value': 'x',
                     'properties': {'NUM': 'sg'}}]}
         """
 
-        return {'roles': [role._to_dict() for role in self]}
+        return {"roles": [role._to_dict() for role in self]}
 
     def subsumes(self, args, variables=None):
         """
@@ -368,7 +358,7 @@ class Synopsis(tuple):
             roleargs = []
             for role in set(args).union(name_to_roles):
                 role = role.upper()
-                v = args.get(role, '')
+                v = args.get(role, "")
                 v = v.lower() if v else None
                 roleargs.append((role, v, name_to_roles.get(role)))
         else:
@@ -414,11 +404,7 @@ class SemI:
             node data contains lists of synopses
     """
 
-    def __init__(self,
-                 variables=None,
-                 properties=None,
-                 roles=None,
-                 predicates=None):
+    def __init__(self, variables=None, properties=None, roles=None, predicates=None):
         self.properties = _new_hierarchy()
         self.variables = _new_hierarchy()
         self.roles = {}
@@ -434,41 +420,40 @@ class SemI:
             self._init_predicates(predicates)
 
     def _init_properties(self, properties):
-        subhier = {prop: data.get('parents') or TOP_TYPE
-                   for prop, data in properties.items()}
+        subhier = {
+            prop: data.get("parents") or TOP_TYPE for prop, data in properties.items()
+        }
         self.properties.update(subhierarchy=subhier)
 
     def _init_variables(self, variables):
         subhier, data = {}, {}
         for var, var_data in variables.items():
             properties = []
-            for k, v in var_data.get('properties', []):
+            for k, v in var_data.get("properties", []):
                 k, v = k.upper(), v.lower()
                 if v not in self.properties:
-                    raise SemIError(f'undefined property value: {v}')
+                    raise SemIError(f"undefined property value: {v}")
                 properties.append((k, v))
-            subhier[var] = var_data.get('parents') or TOP_TYPE
+            subhier[var] = var_data.get("parents") or TOP_TYPE
             data[var] = properties
         self.variables.update(subhierarchy=subhier, data=data)
 
     def _init_roles(self, roles):
         for role, data in roles.items():
             role = role.upper()
-            var = data['value'].lower()
+            var = data["value"].lower()
             if not (var == STRING_TYPE or var in self.variables):
-                raise SemIError(f'undefined variable type: {var}')
+                raise SemIError(f"undefined variable type: {var}")
             self.roles[role] = var
 
     def _init_predicates(self, predicates):
         subhier, data = {}, {}
-        propcache = {v: dict(props or [])
-                     for v, props in self.variables.items()}
+        propcache = {v: dict(props or []) for v, props in self.variables.items()}
         for pred, pred_data in predicates.items():
             synopses = []
-            for synopsis_data in pred_data.get('synopses', []):
-                synopses.append(
-                    self._init_synopsis(pred, synopsis_data, propcache))
-            subhier[pred] = pred_data.get('parents') or TOP_TYPE
+            for synopsis_data in pred_data.get("synopses", []):
+                synopses.append(self._init_synopsis(pred, synopsis_data, propcache))
+            subhier[pred] = pred_data.get("parents") or TOP_TYPE
             data[pred] = synopses
         self.predicates.update(subhierarchy=subhier, data=data)
 
@@ -476,19 +461,16 @@ class SemI:
         synopsis = Synopsis.from_dict(synopsis_data)
         for role in synopsis:
             if role.name not in self.roles:
-                raise SemIError(f'{pred}: undefined role: {role.name}')
+                raise SemIError(f"{pred}: undefined role: {role.name}")
             if role.value == STRING_TYPE:
                 if role.properties:
-                    raise SemIError(
-                        f'{pred}: strings cannot define properties')
+                    raise SemIError(f"{pred}: strings cannot define properties")
             elif role.value not in self.variables:
-                raise SemIError(
-                    f'{pred}: undefined variable type: {role.value}')
+                raise SemIError(f"{pred}: undefined variable type: {role.value}")
             else:
                 for k, v in role.properties.items():
                     if v not in self.properties:
-                        raise SemIError(
-                            f'{pred}: undefined property value: {v}')
+                        raise SemIError(f"{pred}: undefined property value: {v}")
                     if k not in propcache[role.value]:
                         # Just warn because of the current situation where
                         # 'i' variables are used for unexpressed 'x's
@@ -501,7 +483,7 @@ class SemI:
                         _v = propcache[role.value][k]
                         if not self.properties.compatible(v, _v):
                             raise SemIError(
-                                f'{pred}: incompatible property values: {v}, {_v}'
+                                f"{pred}: incompatible property values: {v}, {_v}"
                             )
         return synopsis
 
@@ -515,33 +497,35 @@ class SemI:
 
         def add_parents(d, ps):
             if ps and list(ps) != [TOP_TYPE]:
-                d['parents'] = list(ps)
+                d["parents"] = list(ps)
 
         variables = {}
         for var, data in self.variables.items():
             variables[var] = d = {}
             add_parents(d, self.variables.parents(var))
             if data:
-                d['properties'] = list(map(list, data))
+                d["properties"] = list(map(list, data))
 
         properties = {}
         for prop in self.properties:
             properties[prop] = d = {}
             add_parents(d, self.properties.parents(prop))
 
-        roles = {role: {'value': value} for role, value in self.roles.items()}
+        roles = {role: {"value": value} for role, value in self.roles.items()}
 
         predicates = {}
         for pred, data in self.predicates.items():
             predicates[pred] = d = {}
             add_parents(d, self.predicates.parents(pred))
             if data:
-                d['synopses'] = [synopsis.to_dict() for synopsis in data]
+                d["synopses"] = [synopsis.to_dict() for synopsis in data]
 
-        return {'variables': variables,
-                'properties': properties,
-                'roles': roles,
-                'predicates': predicates}
+        return {
+            "variables": variables,
+            "properties": properties,
+            "roles": roles,
+            "predicates": predicates,
+        }
 
     def find_synopsis(self, predicate, args=None):
         """
@@ -564,25 +548,28 @@ class SemI:
             :class:`SemIError`: if *predicate* is undefined or if no
                 matching synopsis can be found
         Example:
-            >>> smi.find_synopsis('_write_v_to')
+            >>> smi.find_synopsis("_write_v_to")
             [('ARG0', 'e', [], False), ('ARG1', 'i', [], False),
              ('ARG2', 'p', [], True), ('ARG3', 'h', [], True)]
-            >>> smi.find_synopsis('_write_v_to', args='eii')
+            >>> smi.find_synopsis("_write_v_to", args="eii")
             [('ARG0', 'e', [], False), ('ARG1', 'i', [], False),
              ('ARG2', 'i', [], False)]
         """
 
         predicate = normalize_predicate(predicate)
         if predicate not in self.predicates:
-            raise SemIError(f'undefined predicate: {predicate}')
+            raise SemIError(f"undefined predicate: {predicate}")
         found = False
         for synopsis in self.predicates[predicate]:
             if not args or synopsis.subsumes(args, self.variables):
                 found = synopsis
                 break
         if found is False:
-            raise SemIError('no valid synopsis for {}({})'
-                            .format(predicate, repr(args) if args else ''))
+            raise SemIError(
+                "no valid synopsis for {}({})".format(
+                    predicate, repr(args) if args else ""
+                )
+            )
         return found
 
 

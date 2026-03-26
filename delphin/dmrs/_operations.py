@@ -1,4 +1,3 @@
-
 """
 Operations on DMRS structures
 """
@@ -37,12 +36,10 @@ def from_mrs(
     # TODO: fix type annotation with scope.representatives overloads?
     reps = cast(
         dict[str, list[mrs.EP]],
-        scope.representatives(m, priority=representative_priority)
+        scope.representatives(m, priority=representative_priority),
     )
     # EP id to node id map; create now to keep ids consistent
-    id_to_nid: _IdMap = {
-        ep.id: i for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)
-    }
+    id_to_nid: _IdMap = {ep.id: i for i, ep in enumerate(m.rels, dmrs.FIRST_NODE_ID)}
     iv_to_nid: _IdMap = {
         ep.iv: id_to_nid[ep.id]
         for ep in m.rels
@@ -86,7 +83,7 @@ def _mrs_get_top(
             top = id_to_nid[rep.id]
         else:
             warnings.warn(
-                f'unusable TOP: {top_var}',
+                f"unusable TOP: {top_var}",
                 dmrs.DMRSWarning,
                 stacklevel=2,
             )
@@ -103,8 +100,8 @@ def _mrs_to_nodes(m: mrs.MRS, id_to_nid: _IdMap) -> list[dmrs.Node]:
             iv = ep.iv
             if iv is None:
                 warnings.warn(
-                    f'missing intrinsic variable for {ep!r}; morphosemantic '
-                    'properties and node type information will be lost',
+                    f"missing intrinsic variable for {ep!r}; morphosemantic "
+                    "properties and node type information will be lost",
                     dmrs.DMRSWarning,
                     stacklevel=2,
                 )
@@ -114,7 +111,8 @@ def _mrs_to_nodes(m: mrs.MRS, id_to_nid: _IdMap) -> list[dmrs.Node]:
                 properties = m.properties(iv)
                 type = variable.type(iv)
         nodes.append(
-            dmrs.Node(node_id,
+            dmrs.Node(
+                node_id,
                 ep.predicate,
                 type,
                 properties,
@@ -155,7 +153,7 @@ def _mrs_to_links(
                     post = dmrs.H_POST
                     if lbl not in reps:
                         warnings.warn(
-                            f'broken handle constraint: {hcmap[tgt]}',
+                            f"broken handle constraint: {hcmap[tgt]}",
                             dmrs.DMRSWarning,
                             stacklevel=2,
                         )
@@ -178,7 +176,5 @@ def _mrs_to_links(
             end = id_to_nid[ep.id]
             for src_ep in eps[1:]:
                 start = id_to_nid[src_ep.id]
-                links.append(
-                    dmrs.Link(start, end, dmrs.BARE_EQ_ROLE, dmrs.EQ_POST)
-                )
+                links.append(dmrs.Link(start, end, dmrs.BARE_EQ_ROLE, dmrs.EQ_POST))
     return links

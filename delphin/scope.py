@@ -44,8 +44,8 @@ if TYPE_CHECKING:
 
 # Type Aliases
 
-ID = TypeVar('ID', bound=Identifier)
-P = TypeVar('P', bound=Predication)
+ID = TypeVar("ID", bound=Identifier)
+P = TypeVar("P", bound=Predication)
 
 Descendants = dict[ID, list[P]]
 ScopeEqualities = Iterable[tuple[ScopeLabel, ScopeLabel]]
@@ -54,21 +54,23 @@ PredicationPriority = Callable[[P], Any]  # Any should be sortable
 
 # Exceptions
 
+
 class ScopeError(PyDelphinException):
     """Raised on invalid scope operations."""
 
 
 # Module Functions
 
+
 @overload
-def conjoin(scopes: ScopeMap[mrs.EP], leqs: ScopeEqualities) -> Scopes[mrs.EP]:
-    ...
+def conjoin(scopes: ScopeMap[mrs.EP], leqs: ScopeEqualities) -> Scopes[mrs.EP]: ...
+
 
 @overload
 def conjoin(
     scopes: ScopeMap[dmrs.Node], leqs: ScopeEqualities
-) -> Scopes[dmrs.Node]:
-    ...
+) -> Scopes[dmrs.Node]: ...
+
 
 def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
     """
@@ -82,7 +84,7 @@ def conjoin(scopes: ScopeMap, leqs: ScopeEqualities) -> ScopeMap:
         scope. The conjoined scope labels are taken arbitrarily from
         each equated set).
     Example:
-        >>> conjoined = scope.conjoin(mrs.scopes(), [('h2', 'h3')])
+        >>> conjoined = scope.conjoin(mrs.scopes(), [("h2", "h3")])
         >>> {lbl: [p.id for p in ps] for lbl, ps in conjoined.items()}
         {'h1': ['e2'], 'h2': ['x4', 'e6']}
     """
@@ -113,7 +115,6 @@ def descendants(
         >>> descendants = scope.descendants(m)
         >>> for id, ds in descendants.items():
         ...     print(m[id].predicate, [d.predicate for d in ds])
-        ...
         proper_q ['named']
         named []
         neg ['_think_v_1', '_leave_v_1']
@@ -153,15 +154,15 @@ def _descendants(
 def representatives(
     x: mrs.MRS,
     priority: PredicationPriority[mrs.EP] | None = None,
-) -> Scopes[mrs.EP]:
-    ...
+) -> Scopes[mrs.EP]: ...
+
 
 @overload
 def representatives(
     x: dmrs.DMRS,
     priority: PredicationPriority[dmrs.Node] | None = None,
-) -> Scopes[dmrs.Node]:
-    ...
+) -> Scopes[dmrs.Node]: ...
+
 
 def representatives(
     x: ScopingSemanticStructure,
@@ -205,27 +206,26 @@ def representatives(
         x: an MRS or a DMRS
         priority: a function that maps an EP to a rank for sorting
     Example:
-        >>> sent = 'The new chef whose soup accidentally spilled quit.'
+        >>> sent = "The new chef whose soup accidentally spilled quit."
         >>> m = ace.parse(erg, sent).result(0).mrs()
         >>> # in this example there are 4 EPs in scope h7
         >>> _, scopes = m.scopes()
-        >>> [ep.predicate for ep in scopes['h7']]
+        >>> [ep.predicate for ep in scopes["h7"]]
         ['_new_a_1', '_chef_n_1', '_accidental_a_1', '_spill_v_1']
         >>> # there are 2 representatives for scope h7
-        >>> reps = scope.representatives(m)['h7']
+        >>> reps = scope.representatives(m)["h7"]
         >>> [ep.predicate for ep in reps]
         ['_chef_n_1', '_spill_v_1']
     """
     _, scopes = x.scopes()
-    ns_args = {src: set(arg for _, arg in roleargs)
-               for src, roleargs in x.arguments(types='xeipu').items()}
-    # compute descendants, but only keep ids
-    descs = {id: set(d.id for d in ds)
-             for id, ds in descendants(x, scopes).items()}
-
-    reps: dict[ScopeLabel, list[Predication]] = {
-        label: [] for label in scopes
+    ns_args = {
+        src: set(arg for _, arg in roleargs)
+        for src, roleargs in x.arguments(types="xeipu").items()
     }
+    # compute descendants, but only keep ids
+    descs = {id: set(d.id for d in ds) for id, ds in descendants(x, scopes).items()}
+
+    reps: dict[ScopeLabel, list[Predication]] = {label: [] for label in scopes}
     for label, scope in scopes.items():
         if len(scope) == 1:
             reps[label].extend(scope)
@@ -251,8 +251,8 @@ def representatives(
 
 
 _UNTENSED_VALUES = {
-    '',
-    'untensed',
+    "",
+    "untensed",
 }
 
 
@@ -266,10 +266,10 @@ def _make_representative_priority(x: ScopingSemanticStructure):
         id = p.id
         type = p.type
 
-        if x.is_quantifier(id) or type == 'x':
+        if x.is_quantifier(id) or type == "x":
             rank = 0
-        elif type == 'e':
-            tense = x.properties(id).get('TENSE', '').lower()
+        elif type == "e":
+            tense = x.properties(id).get("TENSE", "").lower()
             if tense in _UNTENSED_VALUES:
                 rank = 2
             else:
@@ -283,6 +283,7 @@ def _make_representative_priority(x: ScopingSemanticStructure):
 
 # for backward compatibility
 from delphin.sembase import ScopeRelation  # noqa
+
 LEQ = ScopeRelation.LEQ
 LHEQ = ScopeRelation.LHEQ
 OUTSCOPES = ScopeRelation.OUTSCOPES

@@ -1,4 +1,3 @@
-
 from collections.abc import Iterable
 from typing import Any
 
@@ -13,16 +12,16 @@ from delphin.sembase import (
     ScopingSemanticStructure,
 )
 
-TOP_NODE_ID      = 0
-FIRST_NODE_ID    = 10000
-RESTRICTION_ROLE = 'RSTR'  # DMRS establishes that quantifiers have a RSTR link
-BARE_EQ_ROLE     = 'MOD'
-EQ_POST          = 'EQ'
-HEQ_POST         = 'HEQ'
-NEQ_POST         = 'NEQ'
-H_POST           = 'H'
-NIL_POST         = 'NIL'
-CVARSORT         = 'cvarsort'
+TOP_NODE_ID = 0
+FIRST_NODE_ID = 10000
+RESTRICTION_ROLE = "RSTR"  # DMRS establishes that quantifiers have a RSTR link
+BARE_EQ_ROLE = "MOD"
+EQ_POST = "EQ"
+HEQ_POST = "HEQ"
+NEQ_POST = "NEQ"
+H_POST = "H"
+NIL_POST = "NIL"
+CVARSORT = "cvarsort"
 
 
 class Node(Predication[int]):
@@ -56,7 +55,7 @@ class Node(Predication[int]):
         base: base form
     """
 
-    __slots__ = ('properties', 'carg')
+    __slots__ = ("properties", "carg")
 
     properties: dict[str, str]
 
@@ -93,10 +92,12 @@ class Node(Predication[int]):
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Node):
             return NotImplemented
-        return (self.predicate == other.predicate
-                and self.type == other.type
-                and self.properties == other.properties
-                and self.carg == other.carg)
+        return (
+            self.predicate == other.predicate
+            and self.type == other.type
+            and self.properties == other.properties
+            and self.carg == other.carg
+        )
 
 
 class Link:
@@ -123,7 +124,7 @@ class Link:
             relationship between the start and end of the Link
     """
 
-    __slots__ = ('start', 'end', 'role', 'post')
+    __slots__ = ("start", "end", "role", "post")
 
     def __init__(self, start: int, end: int, role: str, post: str) -> None:
         self.start = int(start)
@@ -132,17 +133,19 @@ class Link:
         self.post = post
 
     def __repr__(self) -> str:
-        return '<Link object ({} :{}/{} {}) at {}>'.format(
-            self.start, self.role or '', self.post, self.end, id(self)
+        return "<Link object ({} :{}/{} {}) at {}>".format(
+            self.start, self.role or "", self.post, self.end, id(self)
         )
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Link):
             return NotImplemented
-        return (self.start == other.start
-                and self.end == other.end
-                and self.role == other.role
-                and self.post == other.post)
+        return (
+            self.start == other.start
+            and self.end == other.end
+            and self.role == other.role
+            and self.post == other.post
+        )
 
 
 class DMRS(ScopingSemanticStructure[int, Node]):
@@ -176,13 +179,13 @@ class DMRS(ScopingSemanticStructure[int, Node]):
 
     Example:
 
-    >>> rain = Node(10000, '_rain_v_1', type='e')
-    >>> heavy = Node(10001, '_heavy_a_1', type='e')
-    >>> arg1_link = Link(10000, 10001, role='ARG1', post='EQ')
+    >>> rain = Node(10000, "_rain_v_1", type="e")
+    >>> heavy = Node(10001, "_heavy_a_1", type="e")
+    >>> arg1_link = Link(10000, 10001, role="ARG1", post="EQ")
     >>> d = DMRS(top=10000, index=10000, [rain, heavy], [arg1_link])
     """
 
-    __slots__ = ('links',)
+    __slots__ = ("links",)
 
     links: list[Link]
 
@@ -232,8 +235,9 @@ class DMRS(ScopingSemanticStructure[int, Node]):
         """
         Return `True` if *id* is the id of a quantifier node.
         """
-        return any(link.role == RESTRICTION_ROLE
-                   for link in self.links if link.start == id)
+        return any(
+            link.role == RESTRICTION_ROLE for link in self.links if link.start == id
+        )
 
     def quantification_pairs(
         self,
@@ -278,9 +282,7 @@ class DMRS(ScopingSemanticStructure[int, Node]):
             pairs for outgoing arguments for the predication.
         """
 
-        args: dict[int, list[tuple[str, int]]] = {
-            node.id: [] for node in self.nodes
-        }
+        args: dict[int, list[tuple[str, int]]] = {node.id: [] for node in self.nodes}
         H = variable.HANDLE
 
         for link in self.links:
@@ -322,18 +324,20 @@ class DMRS(ScopingSemanticStructure[int, Node]):
 
         id_to_lbl = {node.id: vfac.new(h) for node in self.nodes}
 
-        leqs = [(id_to_lbl[link.start], id_to_lbl[link.end])
-                for link in self.links
-                if link.post == EQ_POST]
+        leqs = [
+            (id_to_lbl[link.start], id_to_lbl[link.end])
+            for link in self.links
+            if link.post == EQ_POST
+        ]
         prescopes = {id_to_lbl[node.id]: [node] for node in self.nodes}
 
         scopes = scope.conjoin(prescopes, leqs)
         top = None
         if self.top is not None:
             top_node = self[self.top]
-            top = next((label for label, nodes in scopes.items()
-                        if top_node in nodes),
-                       None)
+            top = next(
+                (label for label, nodes in scopes.items() if top_node in nodes), None
+            )
 
         return top, scopes
 

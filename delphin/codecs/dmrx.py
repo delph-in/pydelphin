@@ -10,12 +10,12 @@ from delphin.dmrs import CVARSORT, DMRS, Link, Node
 from delphin.lnk import Lnk
 
 CODEC_INFO = {
-    'representation': 'dmrs',
+    "representation": "dmrs",
 }
 
-HEADER = '<dmrs-list>'
-JOINER = ''
-FOOTER = '</dmrs-list>'
+HEADER = "<dmrs-list>"
+JOINER = ""
+FOOTER = "</dmrs-list>"
 
 
 ##############################################################################
@@ -32,7 +32,7 @@ def load(source):
     Returns:
         a list of DMRS objects
     """
-    if not hasattr(source, 'read'):
+    if not hasattr(source, "read"):
         source = str(Path(source).expanduser())
     ms = _decode(source)
     return list(ms)
@@ -52,8 +52,7 @@ def loads(s):
     return list(ds)
 
 
-def dump(ds, destination, properties=True, lnk=True,
-         indent=False, encoding='utf-8'):
+def dump(ds, destination, properties=True, lnk=True, indent=False, encoding="utf-8"):
     """
     Serialize DMRS objects to DMRX and write to a file
 
@@ -67,16 +66,13 @@ def dump(ds, destination, properties=True, lnk=True,
         encoding (str): if *destination* is a filename, write to the
             file with the given encoding; otherwise it is ignored
     """
-    text = dumps(ds,
-                 properties=properties,
-                 lnk=lnk,
-                 indent=indent)
+    text = dumps(ds, properties=properties, lnk=lnk, indent=indent)
 
-    if hasattr(destination, 'write'):
+    if hasattr(destination, "write"):
         print(text, file=destination)
     else:
         destination = Path(destination).expanduser()
-        with destination.open('w', encoding=encoding) as fh:
+        with destination.open("w", encoding=encoding) as fh:
             print(text, file=fh)
 
 
@@ -127,12 +123,12 @@ def encode(d, properties=True, lnk=True, indent=False):
     """
     elem = _encode_dmrs(d, properties, lnk)
 
-    if indent is True or indent in ('LKB', 'Lkb', 'lkb'):
+    if indent is True or indent in ("LKB", "Lkb", "lkb"):
         _indent(elem, indent=0, maxdepth=2, level=0)
     elif indent is not False and indent is not None:
         _indent(elem, indent, maxdepth=3, level=0)
 
-    s = etree.tostring(elem, encoding='unicode').rstrip()
+    s = etree.tostring(elem, encoding="unicode").rstrip()
     return s
 
 
@@ -140,13 +136,14 @@ def encode(d, properties=True, lnk=True, indent=False):
 ##############################################################################
 # Decoding
 
+
 def _decode(fh):
     # <!ELEMENT dmrs-list (dmrs)*>
     # if memory becomes a big problem, consider catching start events,
     # get the root element (later start events can be ignored), and
     # root.clear() after decoding each mrs
-    for _, elem in etree.iterparse(fh, events=('end',)):
-        if elem.tag == 'dmrs':
+    for _, elem in etree.iterparse(fh, events=("end",)):
+        if elem.tag == "dmrs":
             yield _decode_dmrs(elem)
             elem.clear()
 
@@ -158,14 +155,16 @@ def _decode_dmrs(elem):
     #           cto   CDATA #REQUIRED
     #           surface   CDATA #IMPLIED
     #           ident     CDATA #IMPLIED >
-    elem = elem.find('.')  # in case elem is an ElementTree rather than Element
-    return DMRS(top=elem.get('top'),
-                index=elem.get('index'),
-                nodes=list(map(_decode_node, elem.iter('node'))),
-                links=list(map(_decode_link, elem.iter('link'))),
-                lnk=_decode_lnk(elem),
-                surface=elem.get('surface'),
-                identifier=elem.get('ident'))
+    elem = elem.find(".")  # in case elem is an ElementTree rather than Element
+    return DMRS(
+        top=elem.get("top"),
+        index=elem.get("index"),
+        nodes=list(map(_decode_node, elem.iter("node"))),
+        links=list(map(_decode_link, elem.iter("link"))),
+        lnk=_decode_lnk(elem),
+        surface=elem.get("surface"),
+        identifier=elem.get("ident"),
+    )
 
 
 def _decode_node(elem):
@@ -177,18 +176,20 @@ def _decode_node(elem):
     #           surface   CDATA #IMPLIED
     #           base      CDATA #IMPLIED
     #           carg CDATA #IMPLIED >
-    sortinfo = _decode_sortinfo(elem.find('sortinfo'))
+    sortinfo = _decode_sortinfo(elem.find("sortinfo"))
     type = None
     if CVARSORT in sortinfo:
         type = sortinfo.pop(CVARSORT).lower()
-    return Node(id=int(elem.get('nodeid')),
-                predicate=_decode_pred(elem.find('*[1]')),
-                type=type,
-                properties=sortinfo,  # without cvarsort; see above
-                lnk=_decode_lnk(elem),
-                surface=elem.get('surface'),
-                base=elem.get('base'),
-                carg=elem.get('carg'))
+    return Node(
+        id=int(elem.get("nodeid")),
+        predicate=_decode_pred(elem.find("*[1]")),
+        type=type,
+        properties=sortinfo,  # without cvarsort; see above
+        lnk=_decode_lnk(elem),
+        surface=elem.get("surface"),
+        base=elem.get("base"),
+        carg=elem.get("carg"),
+    )
 
 
 def _decode_pred(elem):
@@ -198,12 +199,10 @@ def _decode_pred(elem):
     #           pos (v|n|j|r|p|q|c|x|u|a|s) #REQUIRED
     #           sense CDATA #IMPLIED >
     # <!ELEMENT gpred (#PCDATA)>
-    if elem.tag == 'gpred':
+    if elem.tag == "gpred":
         pred = elem.text
-    elif elem.tag == 'realpred':
-        pred = predicate.create(elem.get('lemma'),
-                                elem.get('pos'),
-                                elem.get('sense'))
+    elif elem.tag == "realpred":
+        pred = predicate.create(elem.get("lemma"), elem.get("pos"), elem.get("sense"))
     return predicate.normalize(pred)
 
 
@@ -222,8 +221,10 @@ def _decode_sortinfo(elem):
     #           perf (plus|minus|u) #IMPLIED
     #           ind  (plus|minus|u) #IMPLIED >
     # note: Just accept any properties, since these are ERG-specific
-    return {(key.upper() if key != CVARSORT else key): val.lower()
-            for key, val in elem.attrib.items()}
+    return {
+        (key.upper() if key != CVARSORT else key): val.lower()
+        for key, val in elem.attrib.items()
+    }
 
 
 def _decode_link(elem):
@@ -233,14 +234,17 @@ def _decode_link(elem):
     #           to   CDATA #REQUIRED >
     # <!ELEMENT rargname (#PCDATA)>
     # <!ELEMENT post (#PCDATA)>
-    return Link(start=int(elem.get('from')),
-                end=int(elem.get('to')),
-                role=getattr(elem.find('rargname'), 'text', None),
-                post=getattr(elem.find('post'), 'text', None))
+    return Link(
+        start=int(elem.get("from")),
+        end=int(elem.get("to")),
+        role=getattr(elem.find("rargname"), "text", None),
+        post=getattr(elem.find("post"), "text", None),
+    )
 
 
 def _decode_lnk(elem):
-    return Lnk.charspan(elem.get('cfrom', '-1'), elem.get('cto', '-1'))
+    return Lnk.charspan(elem.get("cfrom", "-1"), elem.get("cto", "-1"))
+
 
 ##############################################################################
 ##############################################################################
@@ -248,32 +252,32 @@ def _decode_lnk(elem):
 
 
 def _encode(ds, properties, lnk, indent):
-    e = etree.Element('dmrs-list')
+    e = etree.Element("dmrs-list")
     for d in ds:
         e.append(_encode_dmrs(d, properties, lnk))
 
-    if indent is True or indent in ('LKB', 'Lkb', 'lkb'):
+    if indent is True or indent in ("LKB", "Lkb", "lkb"):
         _indent(e, indent=0, maxdepth=3, level=0)
     elif indent is not False and indent is not None:
         _indent(e, indent, maxdepth=4, level=0)
 
-    return etree.tostring(e, encoding='unicode').rstrip()
+    return etree.tostring(e, encoding="unicode").rstrip()
 
 
 def _encode_dmrs(d, properties, lnk):
     attributes = {}
     if lnk:
-        attributes['cfrom'] = str(d.cfrom)
-        attributes['cto'] = str(d.cto)
+        attributes["cfrom"] = str(d.cfrom)
+        attributes["cto"] = str(d.cto)
     if d.top is not None:
-        attributes['top'] = str(d.top)
+        attributes["top"] = str(d.top)
     if d.index is not None:
-        attributes['index'] = str(d.index)
+        attributes["index"] = str(d.index)
     if lnk and d.surface is not None:
-        attributes['surface'] = d.surface
+        attributes["surface"] = d.surface
     if d.identifier is not None:
-        attributes['ident'] = d.identifier
-    e = etree.Element('dmrs', attrib=attributes)
+        attributes["ident"] = d.identifier
+    e = etree.Element("dmrs", attrib=attributes)
     for node in d.nodes:
         e.append(_encode_node(node, properties, lnk))
     for link in d.links:
@@ -282,24 +286,23 @@ def _encode_dmrs(d, properties, lnk):
 
 
 def _encode_node(node, properties, lnk):
-    attributes = {'nodeid': str(node.id)}
+    attributes = {"nodeid": str(node.id)}
     if lnk:
-        attributes['cfrom'] = str(node.cfrom)
-        attributes['cto'] = str(node.cto)
+        attributes["cfrom"] = str(node.cfrom)
+        attributes["cto"] = str(node.cto)
         if node.surface is not None:
-            attributes['surface'] = node.surface
+            attributes["surface"] = node.surface
         if node.base is not None:
-            attributes['base'] = node.base
+            attributes["base"] = node.base
     if node.carg is not None:
-        attributes['carg'] = node.carg
-    e = etree.Element('node', attrib=attributes)
+        attributes["carg"] = node.carg
+    e = etree.Element("node", attrib=attributes)
     e.append(_encode_pred(node.predicate))
     if properties:
-        sortinfo = {key.lower(): val.lower()
-                    for key, val in node.sortinfo.items()}
+        sortinfo = {key.lower(): val.lower() for key, val in node.sortinfo.items()}
     else:
         sortinfo = {}
-    e.append(etree.Element('sortinfo', attrib=sortinfo))
+    e.append(etree.Element("sortinfo", attrib=sortinfo))
     return e
 
 
@@ -307,23 +310,21 @@ def _encode_pred(pred):
     pred = predicate.normalize(pred)
     if predicate.is_surface(pred):
         lemma, pos, sense = predicate.split(pred)
-        attributes = {'lemma': lemma, 'pos': pos}
+        attributes = {"lemma": lemma, "pos": pos}
         if sense:
-            attributes['sense'] = sense
-        e = etree.Element('realpred', attrib=attributes)
+            attributes["sense"] = sense
+        e = etree.Element("realpred", attrib=attributes)
     else:
-        e = etree.Element('gpred')
+        e = etree.Element("gpred")
         e.text = pred
     return e
 
 
 def _encode_link(link):
-    e = etree.Element('link',
-                      attrib={'from': str(link.start),
-                              'to': str(link.end)})
-    rargname = etree.Element('rargname')
+    e = etree.Element("link", attrib={"from": str(link.start), "to": str(link.end)})
+    rargname = etree.Element("rargname")
     rargname.text = link.role
-    post = etree.Element('post')
+    post = etree.Element("post")
     post.text = link.post
     e.append(rargname)
     e.append(post)
@@ -335,8 +336,8 @@ def _encode_link(link):
 def _indent(elem, indent, maxdepth, level):
     if level == maxdepth:
         return
-    curind = '\n' + ' ' * indent * level
-    nxtind = '\n' + ' ' * indent * (level + 1)
+    curind = "\n" + " " * indent * level
+    nxtind = "\n" + " " * indent * (level + 1)
     if len(elem):
         if not elem.text and level + 1 < maxdepth:
             elem.text = nxtind
@@ -346,6 +347,6 @@ def _indent(elem, indent, maxdepth, level):
         if level + 1 < maxdepth:
             elem.tail = curind
         else:
-            elem.tail = ''
+            elem.tail = ""
     else:
         elem.tail = curind
