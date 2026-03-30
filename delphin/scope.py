@@ -5,16 +5,15 @@ Structures and operations for quantifier scope in DELPH-IN semantics.
 from __future__ import annotations
 
 __all__ = [
+    "LEQ",  # for backward compatibility
+    "LHEQ",  # for backward compatibility
+    "OUTSCOPES",  # for backward compatibility
+    "QEQ",  # for backward compatibility
     "ScopeError",
+    "ScopingSemanticStructure",  # for backward compatibility
     "conjoin",
     "descendants",
     "representatives",
-    # below for backward compatibility
-    "LEQ",
-    "LHEQ",
-    "OUTSCOPES",
-    "QEQ",
-    "ScopingSemanticStructure",
 ]
 
 from collections.abc import Callable, Iterable

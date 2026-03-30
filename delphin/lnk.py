@@ -60,7 +60,7 @@ class Lnk:
         '<@1>'
     """
 
-    __slots__ = ("type", "_data")
+    __slots__ = ("_data", "type")
 
     type: int
     _data: tuple[int, ...]

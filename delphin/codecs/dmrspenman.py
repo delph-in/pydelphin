@@ -174,7 +174,7 @@ def to_triples(d, properties=True, lnk=True):
             _id = idmap[node.id]
             triples.append((_id, ":instance", node.predicate))
             if lnk and node.lnk is not None:
-                triples.append((_id, ":lnk", f'"{str(node.lnk)}"'))
+                triples.append((_id, ":lnk", f'"{node.lnk!s}"'))
             if node.carg is not None:
                 triples.append((_id, ":carg", f'"{node.carg}"'))
             if node.type:

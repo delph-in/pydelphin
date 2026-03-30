@@ -587,13 +587,13 @@ def _compile(pattern: str) -> Pattern[str]:
     try:
         return re.compile(pattern)
     except re.error:
-        if _regex_available and "[" in pattern or "]" in pattern:
+        if (_regex_available and "[" in pattern) or "]" in pattern:
             warnings.warn(
                 "Invalid regex in REPP; see warning log for details.",
                 REPPWarning,
                 stacklevel=2,
             )
-            logger.warn(
+            logger.warning(
                 "Possible unescaped brackets in %r; "
                 "attempting to parse in compatibility mode",
                 pattern,

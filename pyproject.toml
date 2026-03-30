@@ -100,6 +100,7 @@ select = [
   "W",    # pycodestyle warnings
   "UP",   # pyupgrade
   "ERA",  # eradicate dead code
+  "RUF",  # Ruff-specific rules
 ]
 
 [tool.ruff.lint.isort]

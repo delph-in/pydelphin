@@ -313,7 +313,7 @@ class Row(tsdb.Record):
         data: The raw column values.
     """
 
-    __slots__ = "fields", "data", "_field_index"
+    __slots__ = "_field_index", "data", "fields"
 
     def __init__(
         self,
@@ -357,13 +357,13 @@ class Row(tsdb.Record):
     @overload
     def __getitem__(self, key: int) -> tsdb.Value: ...
 
-    @overload  # noqa: F811
+    @overload
     def __getitem__(self, key: slice) -> tuple[tsdb.Value]: ...
 
-    @overload  # noqa: F811
+    @overload
     def __getitem__(self, key: str) -> tsdb.Value: ...
 
-    def __getitem__(self, key):  # noqa: F811
+    def __getitem__(self, key):
         if isinstance(key, slice):
             fields = self.fields[key]
             raw_values = self.data[key]
@@ -472,10 +472,10 @@ class Table(tsdb.Relation):
     @overload
     def __getitem__(self, index: int) -> Row: ...
 
-    @overload  # noqa: F811
+    @overload
     def __getitem__(self, index: slice) -> Rows: ...
 
-    def __getitem__(self, index):  # noqa: F811
+    def __getitem__(self, index):
         if isinstance(index, slice):
             return self._iterslice(index)
         else:
@@ -512,10 +512,10 @@ class Table(tsdb.Relation):
     @overload
     def __setitem__(self, index: int, value: Row) -> None: ...
 
-    @overload  # noqa: F811
+    @overload
     def __setitem__(self, index: slice, value: Iterable[Row]) -> None: ...
 
-    def __setitem__(self, index, value):  # noqa: F811
+    def __setitem__(self, index, value):
         # first normalize the arguments for slices and regular indices
         if isinstance(index, slice):
             values = list(value)

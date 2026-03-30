@@ -272,7 +272,7 @@ def _encode_dmrs(d, properties, lnk, indent):
     attrs = _encode_attrs(d, lnk)
     nodes = [_encode_node(node, properties, lnk) for node in d.nodes]
     links = [_encode_link(link) for link in d.links]
-    return delim.join([start] + attrs + nodes + links) + end
+    return delim.join([start, *attrs, *nodes, *links]) + end
 
 
 def _encode_attrs(d, lnk):

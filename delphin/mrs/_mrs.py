@@ -53,7 +53,7 @@ class EP(Predication[str]):
         base: base form
     """
 
-    __slots__ = ("label", "args")
+    __slots__ = ("args", "label")
 
     id: str  # further constrain for EPs
     label: str

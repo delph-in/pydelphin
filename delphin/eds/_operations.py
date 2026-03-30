@@ -94,7 +94,7 @@ def _mrs_args_to_basic_deps(m, hcmap, ivmap, reps):
     edges = {}
     for src, roleargs in m.arguments().items():
         if src in ivmap:
-            p, q = ivmap[src]
+            _, q = ivmap[src]
             # non-quantifier EPs
             edges[src] = {}
             for role, tgt in roleargs:

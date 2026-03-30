@@ -380,7 +380,7 @@ def _encode_rels(rels, varprops, lnk, indent):
         reltoks.append("]")
         tokens.append(" ".join(reltoks))
     if tokens:
-        tokens = ["RELS: <"] + [delim.join(tokens)] + [">"]
+        tokens = ["RELS: <", delim.join(tokens), ">"]
     return tokens
 
 
@@ -393,7 +393,7 @@ def _encode_predicate(predicate: str) -> str:
 def _encode_hcons(hcons):
     tokens = [f"{hc.hi} {hc.relation} {hc.lo}" for hc in hcons]
     if tokens:
-        tokens = ["HCONS: <"] + [" ".join(tokens)] + [">"]
+        tokens = ["HCONS: <", " ".join(tokens), ">"]
     return tokens
 
 
@@ -405,7 +405,7 @@ def _encode_icons(icons, varprops):
         for ic in icons
     ]
     if tokens:
-        tokens = ["ICONS: <"] + [" ".join(tokens)] + [">"]
+        tokens = ["ICONS: <", " ".join(tokens), ">"]
     return tokens
 
 

@@ -528,7 +528,7 @@ def _mkprof_summarize(destination, schema):
         return f"\x1b[1;31m{s}\x1b[0m" if isatty else s
 
     fmt = "{:>8} bytes\t{}"
-    for filename in ["relations"] + list(schema):
+    for filename in ["relations", *list(schema)]:
         path = destination.joinpath(filename)
         if path.is_file():
             stat = path.stat()

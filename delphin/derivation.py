@@ -573,7 +573,7 @@ def _to_udf(obj, indent, level, udx=False):
             if obj.type:
                 entity = f"{entity}@{obj.type}"
         dtrs = [_to_udf(dtr, indent, (level + 1), udx) for dtr in obj.daughters]
-        dtrs = delim.join([""] + dtrs)  # empty first item to force indent
+        dtrs = delim.join(["", *dtrs])  # empty first item to force indent
         if obj.id is None:
             return f"({entity}{dtrs})"
         else:
@@ -582,7 +582,7 @@ def _to_udf(obj, indent, level, udx=False):
     elif isinstance(obj, UDFTerminal):
         form = f'"{obj.form}"'
         tokens = [f'{t.id} "{t.tfs}"' for t in obj.tokens]
-        return f"({delim.join([form] + tokens)})"
+        return f"({delim.join([form, *tokens])})"
     else:
         raise TypeError(f"Invalid node: {obj!s}")
 

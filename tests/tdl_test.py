@@ -405,8 +405,8 @@ def test_parse_identifiers():
     assert tdlparse("a := b.").identifier == "a"
     assert tdlparse("*a* := b.").identifier == "*a*"
     assert tdlparse("Ⅲ := b.").identifier == "Ⅲ"
-    assert tdlparse("＊-marker := b.").identifier == "＊-marker"
-    assert tdlparse("，_c_1 := b.").identifier == "，_c_1"
+    assert tdlparse("＊-marker := b.").identifier == "＊-marker"  # noqa: RUF001
+    assert tdlparse("，_c_1 := b.").identifier == "，_c_1"  # noqa: RUF001
     assert tdlparse("_n_1 := b.").identifier == "_n_1"
     assert tdlparse("和_c_⚠ := b.").identifier == "和_c_⚠"
     assert tdlparse("格里姆斯比•罗伊洛特_n_1 := b.").identifier == (

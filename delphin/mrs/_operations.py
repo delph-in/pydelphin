@@ -188,7 +188,7 @@ def _make_mrs_isograph(x: mrs.MRS, properties: bool) -> util._IsoGraph:
         for role in args:
             if role != mrs.CONSTANT_ROLE:
                 # there may be multiple roles (e.g., L-INDEX, L-HNDL, etc.)
-                roles = g[id].get(args[role], "").split() + [role]
+                roles = [*g[id].get(args[role], "").split(), role]
                 g[id][args[role]] = " ".join(sorted(roles))
 
     # hcons

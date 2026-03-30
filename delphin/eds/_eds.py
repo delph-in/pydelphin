@@ -45,7 +45,7 @@ class Node(Predication[str]):
         base: base form
     """
 
-    __slots__ = ("edges", "properties", "carg")
+    __slots__ = ("carg", "edges", "properties")
 
     edges: dict[str, str]
     properties: dict[str, str]

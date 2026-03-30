@@ -82,7 +82,7 @@ class Term:
         if isinstance(other, Term):
             return Conjunction([self, other])
         elif isinstance(other, Conjunction):
-            return Conjunction([self] + other._terms)
+            return Conjunction([self, *other._terms])
         else:
             return NotImplemented
 
@@ -543,7 +543,7 @@ class Conjunction:
         if isinstance(other, Conjunction):
             return Conjunction(self._terms + other._terms)
         elif isinstance(other, Term):
-            return Conjunction(self._terms + [other])
+            return Conjunction([*self._terms, other])
         else:
             return NotImplemented
 
@@ -751,7 +751,7 @@ class TypeDefinition:
         """
         docs = (
             t.docstring
-            for t in list(self.conjunction.terms) + [self]
+            for t in [*list(self.conjunction.terms), self]
             if t.docstring is not None
         )
         if level.lower() == "first":
@@ -1016,11 +1016,11 @@ def _lex(stream):
                 gid = m.lastindex
                 if gid <= 2:  # potentially multiline patterns
                     if gid == 1:  # docstring
-                        s, start_line_no, line_no, line, pos = _bounded(
+                        s, _, line_no, line, pos = _bounded(
                             '"""', '"""', line, m.end(), line_no, lines
                         )
                     elif gid == 2:  # comment
-                        s, start_line_no, line_no, line, pos = _bounded(
+                        s, _, line_no, line, pos = _bounded(
                             "#|", "|#", line, m.end(), line_no, lines
                         )
                     yield (gid, s, line_no)
@@ -1218,12 +1218,12 @@ def _parse_letterset(token, line_no):
 
 
 def _parse_tdl_affixes(tokens):
-    gid, token, line_no, nextgid = _shift(tokens)
+    gid, token, _, nextgid = _shift(tokens)
     assert gid == 21
     affixtype = token
     affixes = []
     while nextgid == 22:
-        gid, token, line_no, nextgid = _shift(tokens)
+        gid, token, _, nextgid = _shift(tokens)
         match, replacement = token.split(None, 1)
         affixes.append((match, replacement))
     return affixtype, affixes

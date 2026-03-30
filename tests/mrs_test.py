@@ -177,7 +177,7 @@ def m2():
               [ _the_q<15:18> LBL: h9 ARG0: x8 RSTR: h10 BODY: h11 ]
               [ _dog_n_1<19:23> LBL: h12 ARG0: x8 ] >
       HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h12 > ]
-    """)  # noqa: E501
+    """)
 
 
 # "The dog chased the dogs."
@@ -193,7 +193,7 @@ def m2b():
               [ _the_q<15:18> LBL: h9 ARG0: x8 RSTR: h10 BODY: h11 ]
               [ _dog_n_1<19:23> LBL: h12 ARG0: x8 ] >
       HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h12 > ]
-    """)  # noqa: E501
+    """)
 
 
 # "Dogs and dogs chase dogs and dogs and chase dogs and dog"
@@ -227,7 +227,7 @@ def pathological1():
               [ udef_q_rel<53:58> LBL: h48 ARG0: x47 RSTR: h49 BODY: h50 ]
               [ "_dog_n_1_rel"<53:58> LBL: h51 ARG0: x47 ] >
       HCONS: < h0 qeq h1 h5 qeq h12 h9 qeq h11 h15 qeq h17 h22 qeq h29 h26 qeq h28 h32 qeq h34 h39 qeq h46 h43 qeq h45 h49 qeq h51 > ]
-    """)  # noqa: E501
+    """)
 
 
 # changed "dogs" to "dog" in a similar local position but different in the
@@ -259,7 +259,7 @@ def pathological2():
               [ udef_q_rel<53:58> LBL: h48 ARG0: x47 RSTR: h49 BODY: h50 ]
               [ "_dog_n_1_rel"<53:58> LBL: h51 ARG0: x47 ] >
       HCONS: < h0 qeq h1 h5 qeq h12 h9 qeq h11 h15 qeq h17 h22 qeq h29 h26 qeq h28 h32 qeq h34 h39 qeq h46 h43 qeq h45 h49 qeq h51 > ]
-    """)  # noqa: E501
+    """)
 
 
 def test_is_connected(m1, m1d, m2):
@@ -345,7 +345,7 @@ def test_is_isomorphic_recursive():
               [ neg<24:27> LBL: h20 ARG0: e21 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h22 ]
               [ _leave_v_1<28:34> LBL: h23 ARG0: e2 ARG1: x3 ARG2: i24 ] >
       HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h11 h13 qeq h14 h16 qeq h17 h19 qeq h20 h22 qeq h23 > ]
-    """)  # noqa: E501
+    """)
     assert mrs.is_isomorphic(m, m)
 
 

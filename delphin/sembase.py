@@ -3,13 +3,13 @@ Basic classes and functions for semantic representations.
 """
 
 __all__ = [
-    "role_priority",
-    "property_priority",
     "LnkMixin",
     "Predication",
-    "SemanticStructure",
-    "ScopingSemanticStructure",
     "ScopeRelation",
+    "ScopingSemanticStructure",
+    "SemanticStructure",
+    "property_priority",
+    "role_priority",
 ]
 
 from abc import ABC, abstractmethod
@@ -154,7 +154,7 @@ class Predication(LnkMixin, Generic[ID], ABC):
     identifiers and, if specified, different surface alignments.
     """
 
-    __slots__ = ("id", "predicate", "type", "base")
+    __slots__ = ("base", "id", "predicate", "type")
 
     def __init__(
         self,
@@ -207,7 +207,7 @@ class SemanticStructure(LnkMixin, Generic[ID, P], ABC):
         identifier: a discourse-utterance identifier
     """
 
-    __slots__ = ("top", "predications", "identifier", "_pidx")
+    __slots__ = ("_pidx", "identifier", "predications", "top")
 
     top: ID | None
     predications: list[P]

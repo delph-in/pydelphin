@@ -106,7 +106,7 @@ class Field:
             :func:`format`) when the value it describes is `None`.
     """
 
-    __slots__ = "name", "datatype", "flags", "comment", "is_key", "default"
+    __slots__ = "comment", "datatype", "default", "flags", "is_key", "name"
 
     def __init__(
         self,

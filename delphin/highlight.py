@@ -3,6 +3,7 @@ Pygments-based highlighting lexers for DELPH-IN formats.
 """
 
 import re
+from typing import ClassVar
 
 from pygments.lexer import RegexLexer, bygroups, include
 from pygments.style import Style
@@ -30,10 +31,10 @@ class TDLLexer(RegexLexer):
     """
 
     name = "TDL"
-    aliases = ["tdl"]
-    filenames = ["*.tdl"]
+    aliases: ClassVar[list[str]] = ["tdl"]
+    filenames: ClassVar[list[str]] = ["*.tdl"]
 
-    tokens = {
+    tokens: ClassVar = {
         "root": [
             (r"\s+", Text),
             include("comment"),
@@ -130,7 +131,7 @@ class TDLLexer(RegexLexer):
 
 
 class MRSStyle(Style):
-    styles = {
+    styles: ClassVar = {
         Text: "",
         Punctuation: "",
         Name.Attribute: "#757575",
@@ -156,10 +157,10 @@ class SimpleMRSLexer(RegexLexer):
     """
 
     name = "SimpleMRS"
-    aliases = ["mrs"]
-    filenames = ["*.mrs"]
+    aliases: ClassVar[list[str]] = ["mrs"]
+    filenames: ClassVar[list[str]] = ["*.mrs"]
 
-    tokens = {
+    tokens: ClassVar = {
         "root": [(r"\s+", Text), (r"\[", Punctuation, "mrs")],
         "mrs": [
             (r"\s+", Text),

@@ -278,7 +278,7 @@ def _SExpr_parse(s: str) -> SExprResult:
     while i < n:
         c = s[i]
         # numbers
-        if c.isdigit() or c == "-" and (i + 1 < n) and s[i + 1].isdigit():
+        if c.isdigit() or (c == "-" and (i + 1 < n) and s[i + 1].isdigit()):
             num, i = _SExpr_parse_number(s, i)
             vals.append(num)
         # quoted strings
@@ -488,7 +488,7 @@ class LookaheadLexer(LookaheadIterator):
 
     def accept(self, arg, skip=None, drop=False):
         ttype, tform = arg
-        gid, token, lineno, offset, line = self.peek(skip=skip, drop=drop)
+        gid, token, _, _, _ = self.peek(skip=skip, drop=drop)
         if (ttype is None or gid == ttype) and (tform is None or token == tform):
             self.next(skip=skip)
             return token

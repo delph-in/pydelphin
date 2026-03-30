@@ -55,7 +55,7 @@ class Node(Predication[int]):
         base: base form
     """
 
-    __slots__ = ("properties", "carg")
+    __slots__ = ("carg", "properties")
 
     properties: dict[str, str]
 
@@ -124,7 +124,7 @@ class Link:
             relationship between the start and end of the Link
     """
 
-    __slots__ = ("start", "end", "role", "post")
+    __slots__ = ("end", "post", "role", "start")
 
     def __init__(self, start: int, end: int, role: str, post: str) -> None:
         self.start = int(start)

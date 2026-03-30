@@ -24,12 +24,13 @@ from subprocess import (
 from typing import (
     IO,
     Any,
+    ClassVar,
 )
 
 from delphin import interface, util
 
 # Default modules need to import the PyDelphin version
-from delphin.__about__ import __version__  # noqa: F401
+from delphin.__about__ import __version__
 from delphin.exceptions import PyDelphinException
 
 logger = logging.getLogger(__name__)
@@ -74,8 +75,8 @@ class ACEProcess(interface.Processor):
         stderr (file): stream used for ACE's stderr
     """
 
-    _cmdargs: list[str] = []
-    _termini: list[Pattern[str]] = []
+    _cmdargs: tuple[str, ...] = ()
+    _termini: ClassVar[tuple[Pattern[str], ...]] = ()
 
     def __init__(
         self,
@@ -104,7 +105,7 @@ class ACEProcess(interface.Processor):
             self.cmdargs.extend(["--tsdb-stdout", "--report-labels"])
             self.receive = self._tsdb_receive
             if full_forest:
-                self._cmdargs.append("--itsdb-forest")
+                self._cmdargs = (*self._cmdargs, "--itsdb-forest")
         else:
             self.receive = self._default_receive
         self.env = env or os.environ
@@ -125,7 +126,7 @@ class ACEProcess(interface.Processor):
 
     def _open(self) -> None:
         self._p = Popen(
-            [self.executable, "-g", self.grm] + self._cmdargs + self.cmdargs,
+            [self.executable, "-g", self.grm, *self._cmdargs, *self.cmdargs],
             stdin=PIPE,
             stdout=PIPE,
             stderr=self._stderr,
@@ -162,7 +163,7 @@ class ACEProcess(interface.Processor):
         next_line = self._p.stdout.readline
 
         if termini is None:
-            termini = self._termini
+            termini = list(self._termini)
         i, end = 0, len(termini)
         cur_terminus = termini[i]
 
@@ -264,7 +265,7 @@ class ACEProcess(interface.Processor):
             self.send(validated)
             result = self.receive()
         else:
-            result, lines = _make_response(
+            result, _ = _make_response(
                 [
                     (
                         "NOTE: PyDelphin could not validate the input and "
@@ -328,7 +329,7 @@ class ACEParser(ACEProcess):
     """
 
     task = "parse"
-    _termini = [re.compile(r"^$"), re.compile(r"^$")]
+    _termini = (re.compile(r"^$"), re.compile(r"^$"))
 
     def _validate_input(self, datum: str):
         # valid input for parsing is non-empty
@@ -359,7 +360,7 @@ class ACETransferer(ACEProcess):
     """
 
     task = "transfer"
-    _termini = [re.compile(r"^$")]
+    _termini = (re.compile(r"^$"),)
 
     def __init__(
         self,
@@ -397,8 +398,8 @@ class ACEGenerator(ACEProcess):
     """
 
     task = "generate"
-    _cmdargs = ["-e", "--tsdb-notes"]
-    _termini = [re.compile(r"NOTE: tsdb parse: ")]
+    _cmdargs = ("-e", "--tsdb-notes")
+    _termini = (re.compile(r"NOTE: tsdb parse: "),)
 
     def __init__(
         self,
