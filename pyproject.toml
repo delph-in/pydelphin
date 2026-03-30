@@ -7,7 +7,7 @@ name = "PyDelphin"
 dynamic = ["version"]
 description = "Libraries and scripts for DELPH-IN data"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "MIT"
 authors = [
   {name = "Michael Wayne Goodman", email = "goodman.m.w@gmail.com"}
@@ -21,11 +21,11 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Information Analysis",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Text Processing :: Linguistic",
@@ -88,8 +88,8 @@ build = "make -C docs html"
 clean = "make -C docs clean"
 
 [tool.ruff]
-target-version = "py39"
-line-length = 79
+target-version = "py310"
+line-length = 88
 
 [tool.ruff.lint]
 select = [
@@ -98,14 +98,28 @@ select = [
   "I",    # isort
   "F",    # Pyflakes
   "W",    # pycodestyle warnings
+  "UP",   # pyupgrade
+  "ERA",  # eradicate dead code
+  "RUF",  # Ruff-specific rules
 ]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
 force-wrap-aliases = true
 
-[tool.ruff.format]
-quote-style = "single"
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "E501",  # test cases often have long strings
+  "ERA",   # commented out tests sometimes serve as documentation
+]
+"docs/conf.py" = [
+  "ERA",   # commented out parts of conf.py template
+]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
+
+[dependency-groups]
+dev = [
+    "ty>=0.0.21",
+]

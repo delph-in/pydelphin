@@ -1,4 +1,3 @@
-
 import pytest
 
 from delphin import mrs
@@ -8,18 +7,16 @@ from delphin.codecs import simplemrs
 @pytest.fixture
 def dogs_bark():
     return {
-        'top': 'h0',
-        'index': 'e2',
-        'rels': [mrs.EP('_bark_v_1', 'h1',
-                    args={'ARG0': 'e2', 'ARG1': 'x4'}),
-                 mrs.EP('udef_q', 'h3',
-                    args={'ARG0': 'x4', 'RSTR': 'h5', 'BODY': 'h7'}),
-                 mrs.EP('_dog_n_1', 'h6', args={'ARG0': 'x4'})],
-        'hcons': [mrs.HCons.qeq('h0', 'h1'),
-                  mrs.HCons.qeq('h5', 'h6')],
-        'variables': {
-            'e2': {'TENSE': 'pres'},
-            'x4': {'NUM': 'pl'}}}
+        "top": "h0",
+        "index": "e2",
+        "rels": [
+            mrs.EP("_bark_v_1", "h1", args={"ARG0": "e2", "ARG1": "x4"}),
+            mrs.EP("udef_q", "h3", args={"ARG0": "x4", "RSTR": "h5", "BODY": "h7"}),
+            mrs.EP("_dog_n_1", "h6", args={"ARG0": "x4"}),
+        ],
+        "hcons": [mrs.HCons.qeq("h0", "h1"), mrs.HCons.qeq("h5", "h6")],
+        "variables": {"e2": {"TENSE": "pres"}, "x4": {"NUM": "pl"}},
+    }
 
 
 # def test_empty_MRS():
@@ -32,32 +29,36 @@ def dogs_bark():
 #     assert m.variables == {}
 
 
-class TestEP():
+class TestEP:
     def test__init__(self):
         with pytest.raises(TypeError):
             mrs.EP()
         with pytest.raises(TypeError):
-            mrs.EP('_dog_n_1')
-        mrs.EP('_dog_n_1', 'h3')
+            mrs.EP("_dog_n_1")
+        mrs.EP("_dog_n_1", "h3")
 
     def test__eq__(self):
-        ep = mrs.EP('_dog_n_1', 'h3')
-        assert ep == mrs.EP('_dog_n_1', 'h3')
-        assert ep != mrs.EP('_dog_n_2', 'h3')
-        assert ep != mrs.EP('_dog_n_1', 'h4')
-        ep = mrs.EP('_chase_v_1', 'h1', {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
-        assert ep == mrs.EP('_chase_v_1', 'h1',
-                        {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
-        assert ep != mrs.EP('_chase_v_2', 'h1',
-                        {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
-        assert ep != mrs.EP('_chase_v_1', 'h2',
-                        {'ARG0': 'e2', 'ARG1': 'x4', 'ARG2': 'x6'})
-        assert ep != mrs.EP('_chase_v_1', 'h2',
-                        {'ARG0': 'e2', 'ARG1': 'x6', 'ARG2': 'x4'})
-        assert ep != mrs.EP('_chase_v_1', 'h2')
+        ep = mrs.EP("_dog_n_1", "h3")
+        assert ep == mrs.EP("_dog_n_1", "h3")
+        assert ep != mrs.EP("_dog_n_2", "h3")
+        assert ep != mrs.EP("_dog_n_1", "h4")
+        ep = mrs.EP("_chase_v_1", "h1", {"ARG0": "e2", "ARG1": "x4", "ARG2": "x6"})
+        assert ep == mrs.EP(
+            "_chase_v_1", "h1", {"ARG0": "e2", "ARG1": "x4", "ARG2": "x6"}
+        )
+        assert ep != mrs.EP(
+            "_chase_v_2", "h1", {"ARG0": "e2", "ARG1": "x4", "ARG2": "x6"}
+        )
+        assert ep != mrs.EP(
+            "_chase_v_1", "h2", {"ARG0": "e2", "ARG1": "x4", "ARG2": "x6"}
+        )
+        assert ep != mrs.EP(
+            "_chase_v_1", "h2", {"ARG0": "e2", "ARG1": "x6", "ARG2": "x4"}
+        )
+        assert ep != mrs.EP("_chase_v_1", "h2")
 
 
-class TestMRS():
+class TestMRS:
     def test__init__(self, dogs_bark):
         m = mrs.MRS()
         assert m.top is None
@@ -68,104 +69,105 @@ class TestMRS():
         assert m.variables == {}
 
         m = mrs.MRS(**dogs_bark)
-        assert m.top == 'h0'
-        assert m.index == 'e2'
+        assert m.top == "h0"
+        assert m.index == "e2"
         assert len(m.rels) == 3
         assert len(m.hcons) == 2
         assert len(m.icons) == 0
         assert m.variables == {
-            'h0': {},
-            'h1': {},
-            'e2': {'TENSE': 'pres'},
-            'h3': {},
-            'x4': {'NUM': 'pl'},
-            'h5': {},
-            'h6': {},
-            'h7': {}}
+            "h0": {},
+            "h1": {},
+            "e2": {"TENSE": "pres"},
+            "h3": {},
+            "x4": {"NUM": "pl"},
+            "h5": {},
+            "h6": {},
+            "h7": {},
+        }
 
 
 @pytest.fixture
 def m1():
     # "It rains."
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ LTOP: h0
       INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
       RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
       HCONS: < h0 qeq h1 > ]
-    ''')
+    """)
 
 
 # m1 but with different Lnk values
 @pytest.fixture
 def m1b():
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ LTOP: h0
       INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
       RELS: < [ "_rain_v_1_rel"<0:6> LBL: h1 ARG0: e2 ] >
       HCONS: < h0 qeq h1 > ]
-    ''')
+    """)
 
 
 # m1 but with different properties (TENSE)
 @pytest.fixture
 def m1c():
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ LTOP: h0
       INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
       RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
       HCONS: < h0 qeq h1 > ]
-    ''')
+    """)
 
 
 # m1 but with unlinked LTOP
 @pytest.fixture
 def m1d():
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ LTOP: h0
       INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
       RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
       HCONS: < > ]
-    ''')
+    """)
 
 
 # m1 but with equated LTOP
 @pytest.fixture
 def m1e():
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ LTOP: h1
       INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
       RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
       HCONS: < > ]
-    ''')
+    """)
 
 
 # "It snows." like m1, but with a different pred
 @pytest.fixture
 def m1f():
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ LTOP: h0
       INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
       RELS: < [ "_snow_v_1_rel"<3:9> LBL: h1 ARG0: e2 ] >
       HCONS: < h0 qeq h1 > ]
-    ''')
+    """)
 
 
 # "It rains (something)" like m1, but with a different arity (in the
 # ERG this might be a different _rain_ pred)
 @pytest.fixture
 def m1g():
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ LTOP: h0
       INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
       RELS: < [ "_rain_v_1_rel"<3:9> LBL: h1 ARG0: e2 ARG1: i6] >
       HCONS: < h0 qeq h1 > ]
-    ''')
+    """)
 
 
 # "The dogs chased the dog."
 @pytest.fixture
 def m2():
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ "The dogs chased the dog."
       TOP: h0
       INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
@@ -175,13 +177,13 @@ def m2():
               [ _the_q<15:18> LBL: h9 ARG0: x8 RSTR: h10 BODY: h11 ]
               [ _dog_n_1<19:23> LBL: h12 ARG0: x8 ] >
       HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h12 > ]
-    ''')  # noqa: E501
+    """)
 
 
 # "The dog chased the dogs."
 @pytest.fixture
 def m2b():
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ "The dog chased the dogs."
       TOP: h0
       INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
@@ -191,7 +193,7 @@ def m2b():
               [ _the_q<15:18> LBL: h9 ARG0: x8 RSTR: h10 BODY: h11 ]
               [ _dog_n_1<19:23> LBL: h12 ARG0: x8 ] >
       HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h12 > ]
-    ''')  # noqa: E501
+    """)
 
 
 # "Dogs and dogs chase dogs and dogs and chase dogs and dog"
@@ -201,7 +203,7 @@ def m2b():
 # get ignored when comparing overall structure
 @pytest.fixture
 def pathological1():
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
       RELS: < [ udef_q_rel<0:13> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: pl ] RSTR: h5 BODY: h6 ]
               [ udef_q_rel<0:4> LBL: h7 ARG0: x8 [ x PERS: 3 NUM: pl IND: + ] RSTR: h9 BODY: h10 ]
@@ -225,7 +227,7 @@ def pathological1():
               [ udef_q_rel<53:58> LBL: h48 ARG0: x47 RSTR: h49 BODY: h50 ]
               [ "_dog_n_1_rel"<53:58> LBL: h51 ARG0: x47 ] >
       HCONS: < h0 qeq h1 h5 qeq h12 h9 qeq h11 h15 qeq h17 h22 qeq h29 h26 qeq h28 h32 qeq h34 h39 qeq h46 h43 qeq h45 h49 qeq h51 > ]
-    ''')  # noqa: E501
+    """)
 
 
 # changed "dogs" to "dog" in a similar local position but different in the
@@ -233,7 +235,7 @@ def pathological1():
 # "Dogs and dogs chase dogs and dog and chase dogs and dogs"
 @pytest.fixture
 def pathological2():
-    return simplemrs.decode('''
+    return simplemrs.decode("""
     [ LTOP: h0 INDEX: e2 [ e SF: prop TENSE: pres MOOD: indicative PROG: - PERF: - ]
       RELS: < [ udef_q_rel<0:13> LBL: h4 ARG0: x3 [ x PERS: 3 NUM: pl ] RSTR: h5 BODY: h6 ]
               [ udef_q_rel<0:4> LBL: h7 ARG0: x8 [ x PERS: 3 NUM: pl IND: + ] RSTR: h9 BODY: h10 ]
@@ -257,14 +259,14 @@ def pathological2():
               [ udef_q_rel<53:58> LBL: h48 ARG0: x47 RSTR: h49 BODY: h50 ]
               [ "_dog_n_1_rel"<53:58> LBL: h51 ARG0: x47 ] >
       HCONS: < h0 qeq h1 h5 qeq h12 h9 qeq h11 h15 qeq h17 h22 qeq h29 h26 qeq h28 h32 qeq h34 h39 qeq h46 h43 qeq h45 h49 qeq h51 > ]
-    ''')  # noqa: E501
+    """)
 
 
 def test_is_connected(m1, m1d, m2):
     assert mrs.is_connected(m1)  # trivial; only one EP
     assert mrs.is_connected(m1d)  # top is not considered
     assert mrs.is_connected(m2)  # multiple EPs
-    disconnected = simplemrs.decode('''
+    disconnected = simplemrs.decode("""
     [ TOP: h0
       INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
       RELS: < [ _the_q<0:3> LBL: h4 ARG0: x3 RSTR: h5 BODY: h6 ]
@@ -273,7 +275,7 @@ def test_is_connected(m1, m1d, m2):
               [ _the_q<15:18> LBL: h9 ARG0: x8 RSTR: h10 BODY: h11 ]
               [ _dog_n_1<19:23> LBL: h12 ARG0: x8 ] >
       HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h12 > ]
-    ''')
+    """)
     assert not mrs.is_connected(disconnected)
 
 
@@ -330,7 +332,7 @@ def test_is_isomorphic_pathological2(pathological1, pathological2):
 
 
 def test_is_isomorphic_recursive():
-    m = simplemrs.decode('''
+    m = simplemrs.decode("""
     [ "Kim did not not not not not leave."
       TOP: h0
       INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
@@ -343,25 +345,27 @@ def test_is_isomorphic_recursive():
               [ neg<24:27> LBL: h20 ARG0: e21 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h22 ]
               [ _leave_v_1<28:34> LBL: h23 ARG0: e2 ARG1: x3 ARG2: i24 ] >
       HCONS: < h0 qeq h1 h5 qeq h7 h10 qeq h11 h13 qeq h14 h16 qeq h17 h19 qeq h20 h22 qeq h23 > ]
-    ''')  # noqa: E501
+    """)
     assert mrs.is_isomorphic(m, m)
 
 
 def test_from_dmrs(dogs_bark):
     from delphin import dmrs
+
     m = mrs.MRS(**dogs_bark)
     d = dmrs.DMRS(
         top=10002,
         index=10002,
         nodes=[
-            dmrs.Node(10000, 'udef_q'),
-            dmrs.Node(10001, '_dog_n_1', type='x',
-                      properties={'NUM': 'pl'}),
-            dmrs.Node(10002, '_bark_v_1', type='e',
-                      properties={'TENSE': 'pres'})],
+            dmrs.Node(10000, "udef_q"),
+            dmrs.Node(10001, "_dog_n_1", type="x", properties={"NUM": "pl"}),
+            dmrs.Node(10002, "_bark_v_1", type="e", properties={"TENSE": "pres"}),
+        ],
         links=[
-            dmrs.Link(10000, 10001, 'RSTR', 'H'),
-            dmrs.Link(10002, 10001, 'ARG1', 'NEQ')])
+            dmrs.Link(10000, 10001, "RSTR", "H"),
+            dmrs.Link(10002, 10001, "ARG1", "NEQ"),
+        ],
+    )
     _m = mrs.from_dmrs(d)
 
     # Issue #248

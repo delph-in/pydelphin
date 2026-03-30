@@ -1,9 +1,8 @@
-
 """
 Operations on MRS structures
 """
 
-from typing import Iterable, Union
+from collections.abc import Iterable
 
 from delphin import dmrs, mrs, predicate, scope, util, variable
 from delphin.sembase import ScopeMap, property_priority
@@ -18,7 +17,7 @@ def is_connected(m: mrs.MRS) -> bool:
     arguments (including qeqs), or label equalities.
     """
     ids = {ep.id for ep in m.rels}
-    g: dict[str, set[Union[str, None]]] = {id: set() for id in ids}
+    g: dict[str, set[str | None]] = {id: set() for id in ids}
     # first establish links from labels and intrinsic variables to EPs
     for ep in m.rels:
         id, lbl, iv = ep.id, ep.label, ep.iv
@@ -52,25 +51,21 @@ def has_intrinsic_variable_property(m: mrs.MRS) -> bool:
     intrinsic variable of exactly one non-quantifier EP, but this
     function does not check for that.
     """
-    return (has_complete_intrinsic_variables(m)
-            and has_unique_intrinsic_variables(m))
+    return has_complete_intrinsic_variables(m) and has_unique_intrinsic_variables(m)
 
 
 def has_complete_intrinsic_variables(m: mrs.MRS) -> bool:
     """
     Return `True` if all non-quantifier EPs have intrinsic variables.
     """
-    return all(ep.iv is not None
-               for ep in m.rels
-               if not ep.is_quantifier())
+    return all(ep.iv is not None for ep in m.rels if not ep.is_quantifier())
 
 
 def has_unique_intrinsic_variables(m: mrs.MRS) -> bool:
     """
     Return `True` if all intrinsic variables are unique to their EPs.
     """
-    ivs = [ep.iv for ep in m.rels
-           if not ep.is_quantifier() and ep.iv is not None]
+    ivs = [ep.iv for ep in m.rels if not ep.is_quantifier() and ep.iv is not None]
     return len(set(ivs)) == len(ivs)
 
 
@@ -89,9 +84,9 @@ def is_well_formed(m: mrs.MRS) -> bool:
     any immediate violations (e.g., a scopal argument selecting the
     label of its EP).
     """
-    return (is_connected(m)
-            and has_intrinsic_variable_property(m)
-            and plausibly_scopes(m))
+    return (
+        is_connected(m) and has_intrinsic_variable_property(m) and plausibly_scopes(m)
+    )
 
 
 def plausibly_scopes(m: mrs.MRS) -> bool:
@@ -113,7 +108,7 @@ def plausibly_scopes(m: mrs.MRS) -> bool:
     if m.top not in hcmap:
         return False
     seen = set([m.top])
-    for id, roleargs in m.arguments(types='h').items():
+    for id, roleargs in m.arguments(types="h").items():
         ep = m[id]
         for _, handle in roleargs:
             if handle == ep.label:
@@ -133,9 +128,7 @@ def plausibly_scopes(m: mrs.MRS) -> bool:
     return True
 
 
-def is_isomorphic(m1: mrs.MRS,
-                  m2: mrs.MRS,
-                  properties: bool = True) -> bool:
+def is_isomorphic(m1: mrs.MRS, m2: mrs.MRS, properties: bool = True) -> bool:
     """
     Return `True` if *m1* and *m2* are isomorphic MRSs.
 
@@ -152,10 +145,12 @@ def is_isomorphic(m1: mrs.MRS,
             equal for mapped predications
     """
     # simple tests
-    if (len(m1.rels) != len(m2.rels)
-            or len(m1.hcons) != len(m2.hcons)
-            or len(m1.icons) != len(m2.icons)
-            or len(m1.variables) != len(m2.variables)):
+    if (
+        len(m1.rels) != len(m2.rels)
+        or len(m1.hcons) != len(m2.hcons)
+        or len(m1.icons) != len(m2.icons)
+        or len(m1.variables) != len(m2.variables)
+    ):
         return False
 
     g1 = _make_mrs_isograph(m1, properties)
@@ -174,27 +169,27 @@ def _make_mrs_isograph(x: mrs.MRS, properties: bool) -> util._IsoGraph:
         # optimization: retrieve early to avoid successive lookup
         lbl = ep.label
         id = ep.id
-        props = x.variables.get(ep.iv or '')  # or '' for type consistency
+        props = x.variables.get(ep.iv or "")  # or '' for type consistency
         args = ep.args
         carg = ep.carg
         # scope labels (may be targets of arguments or hcons)
-        g[lbl][id] = 'eq-scope'
+        g[lbl][id] = "eq-scope"
         # predicate-argument structure
         s = predicate.normalize(ep.predicate)
         if carg is not None:
-            s += f'({carg})'
+            s += f"({carg})"
         elif properties and props:
             proplist = []
             for prop in sorted(props, key=property_priority):
                 val = props[prop]
-                proplist.append(f'{prop.upper()}={val.lower()}')
-            s += '{' + '|'.join(proplist) + '}'
+                proplist.append(f"{prop.upper()}={val.lower()}")
+            s += "{" + "|".join(proplist) + "}"
         g[id][None] = s
         for role in args:
             if role != mrs.CONSTANT_ROLE:
                 # there may be multiple roles (e.g., L-INDEX, L-HNDL, etc.)
-                roles = g[id].get(args[role], '').split() + [role]
-                g[id][args[role]] = ' '.join(sorted(roles))
+                roles = [*g[id].get(args[role], "").split(), role]
+                g[id][args[role]] = " ".join(sorted(roles))
 
     # hcons
     for hc in x.hcons:
@@ -207,10 +202,12 @@ def _make_mrs_isograph(x: mrs.MRS, properties: bool) -> util._IsoGraph:
     return g
 
 
-def compare_bags(testbag: Iterable[mrs.MRS],
-                 goldbag: Iterable[mrs.MRS],
-                 properties: bool = True,
-                 count_only: bool = True):
+def compare_bags(
+    testbag: Iterable[mrs.MRS],
+    goldbag: Iterable[mrs.MRS],
+    properties: bool = True,
+    count_only: bool = True,
+):
     """
     Compare two bags of MRS objects, returning a triple of
     (unique-in-test, shared, unique-in-gold).
@@ -269,7 +266,7 @@ def from_dmrs(d: dmrs.DMRS) -> mrs.MRS:
     # do d.scopes() once to avoid potential errors if label generation
     # is ever non-deterministic
     _top, scopes = d.scopes()
-    ns_args = d.arguments(types='xeipu')
+    ns_args = d.arguments(types="xeipu")
     sc_args = d.scopal_arguments(scopes=scopes)
 
     id_to_lbl, id_to_iv = _dmrs_build_maps(d, scopes, vfac)
@@ -299,7 +296,7 @@ def from_dmrs(d: dmrs.DMRS) -> mrs.MRS:
                 args[role] = hole
                 hcons.append(qeq(hole, tgt_label))
             else:
-                raise mrs.MRSError('DMRS-to-MRS: invalid scope constraint')
+                raise mrs.MRSError("DMRS-to-MRS: invalid scope constraint")
 
         if node.carg is not None:
             args[mrs.CONSTANT_ROLE] = node.carg

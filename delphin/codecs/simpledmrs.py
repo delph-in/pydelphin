@@ -15,13 +15,14 @@ from delphin.lnk import Lnk
 from delphin.util import Lexer
 
 CODEC_INFO = {
-    'representation': 'dmrs',
+    "representation": "dmrs",
 }
 
 
 ##############################################################################
 ##############################################################################
 # Pickle-API methods
+
 
 def load(source):
     """
@@ -32,7 +33,7 @@ def load(source):
     Returns:
         a list of DMRS objects
     """
-    if hasattr(source, 'read'):
+    if hasattr(source, "read"):
         ds = list(_decode(source))
     else:
         source = Path(source).expanduser()
@@ -41,7 +42,7 @@ def load(source):
     return ds
 
 
-def loads(s, encoding='utf-8'):
+def loads(s, encoding="utf-8"):
     """
     Deserialize SimpleDMRS string representations
 
@@ -54,8 +55,7 @@ def loads(s, encoding='utf-8'):
     return ds
 
 
-def dump(ds, destination, properties=True, lnk=True,
-         indent=False, encoding='utf-8'):
+def dump(ds, destination, properties=True, lnk=True, indent=False, encoding="utf-8"):
     """
     Serialize DMRS objects to SimpleDMRS and write to a file
 
@@ -70,11 +70,11 @@ def dump(ds, destination, properties=True, lnk=True,
             file with the given encoding; otherwise it is ignored
     """
     text = dumps(ds, properties=properties, lnk=lnk, indent=indent)
-    if hasattr(destination, 'write'):
+    if hasattr(destination, "write"):
         print(text, file=destination)
     else:
         destination = Path(destination).expanduser()
-        with destination.open('w', encoding=encoding) as fh:
+        with destination.open("w", encoding=encoding) as fh:
             print(text, file=fh)
 
 
@@ -124,38 +124,39 @@ def encode(d, properties=True, lnk=True, indent=False):
 
 _SimpleDMRSLexer = Lexer(
     tokens=[
-        (r'\{', 'LBRACE:{'),
-        (r'\}', 'RBRACE:}'),
-        (r'\[', 'LBRACKET:['),
-        (r'\]', 'RBRACKET:]'),
-        (r'\(', 'LPAREN:('),
-        (r'\)', 'RPAREN:)'),
-        (r'<(?:-?\d+[:#]-?\d+|@\d+|\d+(?: +\d+)*)>', 'LNK:a lnk value'),
-        (r'"([^"\\]*(?:\\.[^"\\]*)*)"', 'DQSTRING:a string'),
-        (r':', 'COLON::'),
-        (r'\/', 'SLASH:/'),
-        (r'=', 'EQUALS:='),
-        (r';', 'SEMICOLON:;'),
-        (r'(--|->)', 'ARROW:a link arrow'),
-        (r'[^\s"\'()\/:;<=>[\]{}]+', 'SYMBOL:a symbol'),
-        (r'[^\s]', 'UNEXPECTED')
+        (r"\{", "LBRACE:{"),
+        (r"\}", "RBRACE:}"),
+        (r"\[", "LBRACKET:["),
+        (r"\]", "RBRACKET:]"),
+        (r"\(", "LPAREN:("),
+        (r"\)", "RPAREN:)"),
+        (r"<(?:-?\d+[:#]-?\d+|@\d+|\d+(?: +\d+)*)>", "LNK:a lnk value"),
+        (r'"([^"\\]*(?:\\.[^"\\]*)*)"', "DQSTRING:a string"),
+        (r":", "COLON::"),
+        (r"\/", "SLASH:/"),
+        (r"=", "EQUALS:="),
+        (r";", "SEMICOLON:;"),
+        (r"(--|->)", "ARROW:a link arrow"),
+        (r'[^\s"\'()\/:;<=>[\]{}]+', "SYMBOL:a symbol"),
+        (r"[^\s]", "UNEXPECTED"),
     ],
-    error_class=DMRSSyntaxError)
+    error_class=DMRSSyntaxError,
+)
 
-LBRACE    = _SimpleDMRSLexer.tokentypes.LBRACE
-RBRACE    = _SimpleDMRSLexer.tokentypes.RBRACE
-LBRACKET  = _SimpleDMRSLexer.tokentypes.LBRACKET
-RBRACKET  = _SimpleDMRSLexer.tokentypes.RBRACKET
-LPAREN    = _SimpleDMRSLexer.tokentypes.LPAREN
-RPAREN    = _SimpleDMRSLexer.tokentypes.RPAREN
-LNK       = _SimpleDMRSLexer.tokentypes.LNK
-DQSTRING  = _SimpleDMRSLexer.tokentypes.DQSTRING
-COLON     = _SimpleDMRSLexer.tokentypes.COLON
-SLASH     = _SimpleDMRSLexer.tokentypes.SLASH
-EQUALS    = _SimpleDMRSLexer.tokentypes.EQUALS
+LBRACE = _SimpleDMRSLexer.tokentypes.LBRACE
+RBRACE = _SimpleDMRSLexer.tokentypes.RBRACE
+LBRACKET = _SimpleDMRSLexer.tokentypes.LBRACKET
+RBRACKET = _SimpleDMRSLexer.tokentypes.RBRACKET
+LPAREN = _SimpleDMRSLexer.tokentypes.LPAREN
+RPAREN = _SimpleDMRSLexer.tokentypes.RPAREN
+LNK = _SimpleDMRSLexer.tokentypes.LNK
+DQSTRING = _SimpleDMRSLexer.tokentypes.DQSTRING
+COLON = _SimpleDMRSLexer.tokentypes.COLON
+SLASH = _SimpleDMRSLexer.tokentypes.SLASH
+EQUALS = _SimpleDMRSLexer.tokentypes.EQUALS
 SEMICOLON = _SimpleDMRSLexer.tokentypes.SEMICOLON
-ARROW     = _SimpleDMRSLexer.tokentypes.ARROW
-SYMBOL    = _SimpleDMRSLexer.tokentypes.SYMBOL
+ARROW = _SimpleDMRSLexer.tokentypes.ARROW
+SYMBOL = _SimpleDMRSLexer.tokentypes.SYMBOL
 
 
 def _decode(lineiter):
@@ -169,15 +170,15 @@ def _decode(lineiter):
 
 def _decode_dmrs(lexer):
     top = index = lnk = surface = identifier = None
-    lexer.expect_form('dmrs')
+    lexer.expect_form("dmrs")
     identifier = lexer.accept_type(SYMBOL)
     lexer.expect_type(LBRACE)
     if lexer.accept_type(LBRACKET):
         lnk = _decode_lnk(lexer)
         surface = lexer.accept_type(DQSTRING)
         graphprops = dict(_decode_properties(lexer))
-        top = graphprops.get('TOP')
-        index = graphprops.get('INDEX')
+        top = graphprops.get("TOP")
+        index = graphprops.get("INDEX")
 
     nodes = []
     links = []
@@ -190,13 +191,15 @@ def _decode_dmrs(lexer):
             links.append(_decode_link(nodeid, lexer))
     lexer.expect_type(RBRACE)
 
-    return DMRS(top=int(top) if top is not None else None,
-                index=int(index) if index is not None else None,
-                nodes=nodes,
-                links=links,
-                lnk=lnk,
-                surface=surface,
-                identifier=identifier)
+    return DMRS(
+        top=int(top) if top is not None else None,
+        index=int(index) if index is not None else None,
+        nodes=nodes,
+        links=links,
+        lnk=lnk,
+        surface=surface,
+        identifier=identifier,
+    )
 
 
 def _decode_lnk(lexer):
@@ -224,14 +227,14 @@ def _decode_node(nodeid, lexer):
     nodetype = lexer.accept_type(SYMBOL)
     properties = dict(_decode_properties(lexer))
     lexer.expect_type(SEMICOLON)
-    return Node(int(nodeid), predicate, type=nodetype,
-                properties=properties, carg=carg, lnk=lnk)
+    return Node(
+        int(nodeid), predicate, type=nodetype, properties=properties, carg=carg, lnk=lnk
+    )
 
 
 def _decode_link(start, lexer):
     role = lexer.accept_type(SYMBOL)
-    _, post, _, end, _ = lexer.expect_type(
-        SLASH, SYMBOL, ARROW, SYMBOL, SEMICOLON)
+    _, post, _, end, _ = lexer.expect_type(SLASH, SYMBOL, ARROW, SYMBOL, SEMICOLON)
     return Link(int(start), int(end), role, post)
 
 
@@ -240,37 +243,36 @@ def _decode_link(start, lexer):
 # Encoding
 
 
-_node = '{nodeid} [{pred}{lnk}{carg}{sortinfo}];'
-_link = '{start}:{pre}/{post} {arrow} {end};'
+_node = "{nodeid} [{pred}{lnk}{carg}{sortinfo}];"
+_link = "{start}:{pre}/{post} {arrow} {end};"
 
 
 def _encode(ds, properties, lnk, indent):
     if indent is None or indent is False:
         indent = None  # normalize False to None
-        delim = ' '
+        delim = " "
     else:
         if indent is True:
             indent = 2
-        delim = '\n'
-    return delim.join(_encode_dmrs(d, properties, lnk, indent)
-                      for d in ds)
+        delim = "\n"
+    return delim.join(_encode_dmrs(d, properties, lnk, indent) for d in ds)
 
 
 def _encode_dmrs(d, properties, lnk, indent):
     if indent is None:
-        delim = ' '
-        end = ' }'
+        delim = " "
+        end = " }"
     else:
-        delim = '\n' + ' ' * indent
-        end = '\n}'
+        delim = "\n" + " " * indent
+        end = "\n}"
     if d.identifier is None:
-        start = 'dmrs {'
+        start = "dmrs {"
     else:
-        start = 'dmrs {} {{'.format(d.identifier)
+        start = f"dmrs {d.identifier} {{"
     attrs = _encode_attrs(d, lnk)
     nodes = [_encode_node(node, properties, lnk) for node in d.nodes]
     links = [_encode_link(link) for link in d.links]
-    return delim.join([start] + attrs + nodes + links) + end
+    return delim.join([start, *attrs, *nodes, *links]) + end
 
 
 def _encode_attrs(d, lnk):
@@ -279,13 +281,13 @@ def _encode_attrs(d, lnk):
         if d.lnk:
             attrs.append(str(d.lnk))
         if d.surface is not None:
-            attrs.append('"{}"'.format(d.surface))
+            attrs.append(f'"{d.surface}"')
     if d.top is not None:
-        attrs.append('top={}'.format(d.top))
+        attrs.append(f"top={d.top}")
     if d.index is not None:
-        attrs.append('index={}'.format(d.index))
+        attrs.append(f"index={d.index}")
     if attrs:
-        attrs = ['[{}]'.format(' '.join(attrs))]
+        attrs = ["[{}]".format(" ".join(attrs))]
     return attrs
 
 
@@ -293,28 +295,29 @@ def _encode_node(node, properties, lnk):
     return _node.format(
         nodeid=node.id,
         pred=node.predicate,
-        lnk=str(node.lnk) if lnk else '',
-        carg='' if node.carg is None else '("{}")'.format(node.carg),
-        sortinfo=_encode_sortinfo(node, properties))
+        lnk=str(node.lnk) if lnk else "",
+        carg="" if node.carg is None else f'("{node.carg}")',
+        sortinfo=_encode_sortinfo(node, properties),
+    )
 
 
 def _encode_sortinfo(node, properties):
     sortinfo = []
     # rather than node.sortinfo, construct manually so cvarsort appears first
-    if node.type is not None and node.type != 'u':
+    if node.type is not None and node.type != "u":
         sortinfo.append(node.type)
     if properties and node.properties:
-        sortinfo.extend('{}={}'.format(k, v)
-                        for k, v in node.properties.items())
+        sortinfo.extend(f"{k}={v}" for k, v in node.properties.items())
     if sortinfo:
-        return ' ' + ' '.join(sortinfo)
-    return ''
+        return " " + " ".join(sortinfo)
+    return ""
 
 
 def _encode_link(link):
     return _link.format(
         start=link.start,
-        pre=link.role or '',
+        pre=link.role or "",
         post=link.post,
-        arrow='->' if link.role or link.post != EQ_POST else '--',
-        end=link.end)
+        arrow="->" if link.role or link.post != EQ_POST else "--",
+        end=link.end,
+    )

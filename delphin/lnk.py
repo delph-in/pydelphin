@@ -9,7 +9,8 @@ __all__ = [
 ]
 
 import warnings
-from typing import Any, Iterable, Union, overload
+from collections.abc import Iterable
+from typing import Any, overload
 
 from delphin.__about__ import __version__  # noqa: F401
 from delphin.exceptions import PyDelphinException, PyDelphinWarning
@@ -47,22 +48,22 @@ class Lnk:
 
     Example:
 
-        >>> Lnk('<0:5>').data
+        >>> Lnk("<0:5>").data
         (0, 5)
-        >>> str(Lnk.charspan(0,5))
+        >>> str(Lnk.charspan(0, 5))
         '<0:5>'
-        >>> str(Lnk.chartspan(0,5))
+        >>> str(Lnk.chartspan(0, 5))
         '<0#5>'
-        >>> str(Lnk.tokens([0,1,2]))
+        >>> str(Lnk.tokens([0, 1, 2]))
         '<0 1 2>'
         >>> str(Lnk.edge(1))
         '<@1>'
     """
 
-    __slots__ = ('type', 'data')
+    __slots__ = ("_data", "type")
 
     type: int
-    data: Union[None, int, tuple[int, ...]]
+    _data: tuple[int, ...]
 
     # These types determine how a lnk on an EP or MRS are to be
     # interpreted, and thus determine the data type/structure of the
@@ -74,52 +75,61 @@ class Lnk:
     EDGE = 4  # An edge identifier: a number
 
     @overload
-    def __init__(self, arg: str, data: None = None) -> None:
-        ...
+    def __init__(self, arg: str, data: None = None) -> None: ...
 
     @overload
     def __init__(
         self,
         arg: int,
-        data: Union[None, int, tuple[int, ...]] = None,
-    ) -> None:
-        ...
+        data: None | int | tuple[int, ...] = None,
+    ) -> None: ...
 
     def __init__(
         self,
-        arg: Union[str, int],
-        data: Union[None, int, tuple[int, ...]] = None,
+        arg: str | int,
+        data: None | int | tuple[int, ...] = None,
     ) -> None:
         if isinstance(arg, str):
             if data is not None:
-                raise LnkError(
-                    'data argument should be None when arg is a string'
-                )
-            if (arg[:1], arg[-1:]) != ('<', '>'):
-                raise LnkError(f'invalid Lnk string: {arg!r}')
+                raise LnkError("data argument should be None when arg is a string")
+            if (arg[:1], arg[-1:]) != ("<", ">"):
+                raise LnkError(f"invalid Lnk string: {arg!r}")
             arg = arg[1:-1]
-            if arg.startswith('@'):
+            if arg.startswith("@"):
                 self.type = Lnk.EDGE
-                self.data = int(arg[1:])
-            elif ':' in arg:
-                cfrom, cto = arg.split(':')
+                self._data = (int(arg[1:]),)
+            elif ":" in arg:
+                cfrom, cto = arg.split(":")
                 self.type = Lnk.CHARSPAN
-                self.data = (int(cfrom), int(cto))
-            elif '#' in arg:
-                vfrom, vto = arg.split('#')
+                self._data = (int(cfrom), int(cto))
+            elif "#" in arg:
+                vfrom, vto = arg.split("#")
                 self.type = Lnk.CHARTSPAN
-                self.data = (int(vfrom), int(vto))
+                self._data = (int(vfrom), int(vto))
             else:
                 self.type = Lnk.TOKENS
-                self.data = tuple(map(int, arg.split()))
+                self._data = tuple(map(int, arg.split()))
         elif isinstance(arg, int):
-            if arg not in (Lnk.UNSPECIFIED, Lnk.CHARSPAN, Lnk.CHARTSPAN,
-                           Lnk.TOKENS, Lnk.EDGE):
-                raise LnkError(f'invalid Lnk type {arg!r}')
+            if arg not in (
+                Lnk.UNSPECIFIED,
+                Lnk.CHARSPAN,
+                Lnk.CHARTSPAN,
+                Lnk.TOKENS,
+                Lnk.EDGE,
+            ):
+                raise LnkError(f"invalid Lnk type {arg!r}")
             self.type = arg
-            self.data = data
+            match data:
+                case tuple():
+                    self._data = data
+                case int():
+                    self._data = (data,)
+                case None:
+                    self._data = ()
+                case _:
+                    raise LnkError(f"invalid Lnk data: f{data}")
         else:
-            raise LnkError('invalid Lnk: {!r}'.format((arg, data)))
+            raise LnkError(f"invalid Lnk: {(arg, data)!r}")
 
     @classmethod
     def default(cls):
@@ -129,7 +139,7 @@ class Lnk:
         return cls(Lnk.UNSPECIFIED)
 
     @classmethod
-    def charspan(cls, start: Union[str, int], end: Union[str, int]):
+    def charspan(cls, start: str | int, end: str | int):
         """
         Create a Lnk object for a character span.
 
@@ -140,7 +150,7 @@ class Lnk:
         return cls(Lnk.CHARSPAN, (int(start), int(end)))
 
     @classmethod
-    def chartspan(cls, start: Union[str, int], end: Union[str, int]):
+    def chartspan(cls, start: str | int, end: str | int):
         """
         Create a Lnk object for a chart span.
 
@@ -151,7 +161,7 @@ class Lnk:
         return cls(Lnk.CHARTSPAN, (int(start), int(end)))
 
     @classmethod
-    def tokens(cls, tokens: Iterable[Union[str, int]]):
+    def tokens(cls, tokens: Iterable[str | int]):
         """
         Create a Lnk object for a token range.
 
@@ -161,7 +171,7 @@ class Lnk:
         return cls(Lnk.TOKENS, tuple(map(int, tokens)))
 
     @classmethod
-    def edge(cls, edge: Union[str, int]):
+    def edge(cls, edge: str | int):
         """
         Create a Lnk object for an edge (used internally in generation).
 
@@ -170,28 +180,45 @@ class Lnk:
         """
         return cls(Lnk.EDGE, int(edge))
 
-    def __str__(self):
-        if self.type == Lnk.UNSPECIFIED:
-            return ''
-        elif self.type == Lnk.CHARSPAN:
-            return '<{}:{}>'.format(self.data[0], self.data[1])
-        elif self.type == Lnk.CHARTSPAN:
-            return '<{}#{}>'.format(self.data[0], self.data[1])
-        elif self.type == Lnk.EDGE:
-            return '<@{}>'.format(self.data)
-        elif self.type == Lnk.TOKENS:
-            return '<{}>'.format(' '.join(map(str, self.data)))
+    @property
+    def data(self) -> int | tuple[int, ...] | None:
+        match self.type:
+            case Lnk.UNSPECIFIED:
+                return None
+            case Lnk.CHARSPAN | Lnk.CHARTSPAN | Lnk.TOKENS:
+                return self._data
+            case Lnk.EDGE:
+                if len(self._data) != 1:
+                    raise LnkError(f"invalid data for edge-type Lnk: {self._data}")
+                return self._data[0]
+            case _:
+                raise LnkError("invalid Lnk type")
+
+    def __str__(self) -> str:
+        match self.type:
+            case Lnk.UNSPECIFIED:
+                return ""
+            case Lnk.CHARSPAN:
+                return f"<{self._data[0]}:{self._data[1]}>"
+            case Lnk.CHARTSPAN:
+                return f"<{self._data[0]}#{self._data[1]}>"
+            case Lnk.EDGE:
+                return f"<@{self._data[0]}>"
+            case Lnk.TOKENS:
+                return "<{}>".format(" ".join(map(str, self._data)))
+            case _:
+                raise LnkError("invalid Lnk type")
 
     def __repr__(self):
-        return f'<Lnk object {self!s} at {id(self)}>'
+        return f"<Lnk object {self!s} at {id(self)}>"
 
     def __eq__(self, other):
-        return self.type == other.type and self.data == other.data
+        return self.type == other.type and self._data == other._data
 
     def __bool__(self):
         if self.type == Lnk.UNSPECIFIED:
             return False
-        if self.type == Lnk.CHARSPAN and self.data == (-1, -1):
+        if self.type == Lnk.CHARSPAN and self._data == (-1, -1):
             return False
         return True
 
@@ -200,9 +227,11 @@ class Lnk:
 # compatibility and avoid circular imports, load it only when
 # requested.
 
+
 def __getattr__(name: str) -> Any:
-    if name == 'LnkMixin':
+    if name == "LnkMixin":
         from delphin.sembase import LnkMixin
+
         warnings.warn(
             "LnkMixin has been moved to delphin.sembase.LnkMixin",
             PyDelphinWarning,

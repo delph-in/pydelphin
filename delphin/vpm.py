@@ -1,4 +1,3 @@
-
 """
 Variable property mapping (VPM).
 """
@@ -12,10 +11,10 @@ from delphin import variable
 from delphin.__about__ import __version__  # noqa: F401
 from delphin.exceptions import PyDelphinSyntaxError
 
-_LR_OPS = set(['<>', '>>', '==', '=>'])
-_RL_OPS = set(['<>', '<<', '==', '<='])
-_SUBSUME_OPS = set(['<>', '<<', '>>'])
-_EQUAL_OPS = set(['==', '<=', '=>'])
+_LR_OPS = set(["<>", ">>", "==", "=>"])
+_RL_OPS = set(["<>", "<<", "==", "<="])
+# _SUBSUME_OPS = set(['<>', '<<', '>>'])  # (usused)  # noqa: ERA001
+_EQUAL_OPS = set(["==", "<=", "=>"])
 _ALL_OPS = _LR_OPS.union(_RL_OPS)
 
 
@@ -35,16 +34,16 @@ def load(source, semi=None):
     Returns:
         a :class:`VPM` instance
     """
-    if hasattr(source, 'read'):
+    if hasattr(source, "read"):
         return _load(source, semi)
     else:
         source = Path(source).expanduser()
-        with source.open('r') as fh:
+        with source.open("r") as fh:
             return _load(fh, semi)
 
 
 def _load(fh, semi):
-    filename = getattr(fh, 'name', '<stream>')
+    filename = getattr(fh, "name", "<stream>")
     typemap = []
     propmap = []
     curmap = typemap
@@ -52,42 +51,43 @@ def _load(fh, semi):
     for lineno, line in enumerate(fh, 1):
         line = line.lstrip()
 
-        if not line or line.startswith(';'):
+        if not line or line.startswith(";"):
             continue
 
-        match = re.match(r'(?P<lfeats>[^:]+):(?P<rfeats>.+)', line)
+        match = re.match(r"(?P<lfeats>[^:]+):(?P<rfeats>.+)", line)
         if match is not None:
-            lfeats = match.group('lfeats').split()
-            rfeats = match.group('rfeats').split()
+            lfeats = match.group("lfeats").split()
+            rfeats = match.group("rfeats").split()
             lh, rh = len(lfeats), len(rfeats)
             curmap = []
             propmap.append(((lfeats, rfeats), curmap))
             continue
 
-        match = re.match(r'(?P<lvals>.*)(?P<op>[<>=]{2})(?P<rvals>.*)$', line)
+        match = re.match(r"(?P<lvals>.*)(?P<op>[<>=]{2})(?P<rvals>.*)$", line)
         if match is not None:
-            lvals = match.group('lvals').split()
-            op = match.group('op')
-            rvals = match.group('rvals').split()
-            msg, offset = '', -1
+            lvals = match.group("lvals").split()
+            op = match.group("op")
+            rvals = match.group("rvals").split()
+            msg, offset = "", -1
             if len(lvals) != lh:
-                msg = 'wrong number of values on left side'
-                offset = match.end('lvals')
+                msg = "wrong number of values on left side"
+                offset = match.end("lvals")
             if op not in _ALL_OPS:
-                msg = 'invalid operator'
-                offset = match.end('op')
+                msg = "invalid operator"
+                offset = match.end("op")
             elif len(rvals) != rh:
-                msg = 'wrong number of values on right side'
-                offset = match.end('rvals')
+                msg = "wrong number of values on right side"
+                offset = match.end("rvals")
             if msg:
-                raise VPMSyntaxError(msg, filename=filename,
-                                     lineno=lineno, offset=offset,
-                                     text=line)
+                raise VPMSyntaxError(
+                    msg, filename=filename, lineno=lineno, offset=offset, text=line
+                )
             curmap.append((lvals, op, rvals))
             continue
 
-        raise VPMSyntaxError('invalid line in VPM file',
-                             filename=filename, lineno=lineno, text=line)
+        raise VPMSyntaxError(
+            "invalid line in VPM file", filename=filename, lineno=lineno, text=line
+        )
 
     return VPM(typemap, propmap, semi)
 
@@ -132,16 +132,17 @@ class VPM:
         """
         vs, vid = variable.split(var)
         if reverse:
-            # variable type mapping is disabled in reverse
-            # tms = [(b, op, a) for a, op, b in self._typemap if op in _RL_OPS]
+            # variable type mapping is disabled in reverse;
+            # otherwise this would be (b, op, a) for each (a, op, b) in
+            # self._typemap if the op is in _RL_OPS
             tms = []
         else:
             tms = [(a, op, b) for a, op, b in self._typemap if op in _LR_OPS]
         for src, op, tgt in tms:
-            if _valmatch([vs], src, op, None, self._semi, 'variables'):
-                vs = vs if tgt == ['*'] else tgt[0]
+            if _valmatch([vs], src, op, None, self._semi, "variables"):
+                vs = vs if tgt == ["*"] else tgt[0]
                 break
-        newvar = f'{vs}{vid}'
+        newvar = f"{vs}{vid}"
 
         newprops = {}
         for featsets, valmap in self._propmap:
@@ -153,13 +154,13 @@ class VPM:
                 pms = [(a, op, b) for a, op, b in valmap if op in _LR_OPS]
             vals = [props.get(f) for f in srcfeats]
             for srcvals, op, tgtvals in pms:
-                if _valmatch(vals, srcvals, op, vs, self._semi, 'properties'):
-                    for i, featval in enumerate(zip(tgtfeats, tgtvals)):
+                if _valmatch(vals, srcvals, op, vs, self._semi, "properties"):
+                    for i, featval in enumerate(zip(tgtfeats, tgtvals, strict=True)):
                         k, v = featval
-                        if v == '*':
+                        if v == "*":
                             if i < len(vals) and vals[i] is not None:
                                 newprops[k] = vals[i]
-                        elif v != '!':
+                        elif v != "!":
                             newprops[k] = v
                     break
 
@@ -178,15 +179,14 @@ def _valmatch(vs, ss, op, varsort, semi, section):
     if op in _EQUAL_OPS or semi is None:
         return all(
             s == v  # value equality
-            or (s == '*' and v is not None)  # non-null wildcard
+            or (s == "*" and v is not None)  # non-null wildcard
             or (
                 v is None
                 and (  # value is null (any or with matching varsort)
-                    s == '!'
-                    or (s[0], s[-1], s[1:-1]) == ('[', ']', varsort)
+                    s == "!" or (s[0], s[-1], s[1:-1]) == ("[", "]", varsort)
                 )
             )
-            for v, s in zip(vs, ss)
+            for v, s in zip(vs, ss, strict=False)
         )
     else:
         pass

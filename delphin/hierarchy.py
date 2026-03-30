@@ -1,16 +1,11 @@
-
 """
 Basic support for hierarchies.
 """
 
-from collections.abc import Hashable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from typing import (
     Any,
-    Callable,
     Generic,
-    Iterable,
-    Iterator,
-    Optional,
     TypeVar,
 )
 
@@ -56,35 +51,33 @@ class MultiHierarchy(Generic[H]):
     type of all node identifiers must be hashable and consistent
     within the hierarchy.
 
-    >>> h = MultiHierarchy('*top*', {'food': '*top*',
-    ...                              'utensil': '*top*'})
-    >>> th.update({'fruit': 'food', 'apple': 'fruit'})
-    >>> th['apple'] = 'info about apples'
-    >>> th.update({'knife': 'utensil'},
-    ...           data={'knife': 'info about knives'})
-    >>> th.update({'vegetable': 'food', 'tomato': 'fruit vegetable'})
+    >>> h = MultiHierarchy("*top*", {"food": "*top*", "utensil": "*top*"})
+    >>> th.update({"fruit": "food", "apple": "fruit"})
+    >>> th["apple"] = "info about apples"
+    >>> th.update({"knife": "utensil"}, data={"knife": "info about knives"})
+    >>> th.update({"vegetable": "food", "tomato": "fruit vegetable"})
 
     In some ways the MultiHierarchy behaves like a dictionary, but it
     is not a subclass of :py:class:`dict` and does not implement all
     its methods. Also note that some methods ignore the top node,
     which make certain actions easier:
 
-    >>> h = Hierarchy('*top*', {'a': '*top*', 'b': 'a', 'c': 'a'})
+    >>> h = Hierarchy("*top*", {"a": "*top*", "b": "a", "c": "a"})
     >>> len(h)
     3
     >>> list(h)
     ['a', 'b', 'c']
-    >>> Hierarchy('*top*', {id: h.parents(id) for id in h}) == h
+    >>> Hierarchy("*top*", {id: h.parents(id) for id in h}) == h
     True
 
     But others do not ignore the top node, namely those where you can
     request it specifically:
 
-    >>> '*top*' in h
+    >>> "*top*" in h
     True
-    >>> print(h['*top*'])
+    >>> print(h["*top*"])
     None
-    >>> h.children('*top*')
+    >>> h.children("*top*")
     {'a'}
 
     Args:
@@ -107,14 +100,14 @@ class MultiHierarchy(Generic[H]):
     def __init__(
         self,
         top: H,
-        hierarchy: Optional[HierarchyMap] = None,
-        data: Optional[DataMap] = None,
-        normalize_identifier: Optional[IdentifierNormalizer] = None,
+        hierarchy: HierarchyMap | None = None,
+        data: DataMap | None = None,
+        normalize_identifier: IdentifierNormalizer | None = None,
     ):
         if not normalize_identifier:
             self._norm = _norm_id
         elif not callable(normalize_identifier):
-            raise TypeError(f'not callable: {normalize_identifier!r}')
+            raise TypeError(f"not callable: {normalize_identifier!r}")
         else:
             self._norm = normalize_identifier
         top = self._norm(top)
@@ -151,15 +144,11 @@ class MultiHierarchy(Generic[H]):
     def __setitem__(self, identifier: H, data: Any) -> None:
         identifier = self._norm(identifier)
         if identifier not in self:
-            raise HierarchyError(
-                f'cannot set data; not in hierarchy: {identifier}')
+            raise HierarchyError(f"cannot set data; not in hierarchy: {identifier}")
         self._data[identifier] = data
 
     def __iter__(self) -> Iterator[H]:
-        return iter(
-            identifier for identifier in self._hier
-            if identifier != self._top
-        )
+        return iter(identifier for identifier in self._hier if identifier != self._top)
 
     def __contains__(self, identifier: H) -> bool:
         return self._norm(identifier) in self._hier
@@ -176,8 +165,8 @@ class MultiHierarchy(Generic[H]):
 
     def update(
         self,
-        subhierarchy: Optional[HierarchyMap] = None,
-        data: Optional[DataMap] = None,
+        subhierarchy: HierarchyMap | None = None,
+        data: DataMap | None = None,
     ) -> None:
         """
         Incorporate *subhierarchy* and *data* into the hierarchy.
@@ -197,11 +186,11 @@ class MultiHierarchy(Generic[H]):
             HierarchyError: when *subhierarchy* or *data* cannot be
                 incorporated into the hierarchy
         Examples:
-            >>> h = MultiHierarchy('*top*')
-            >>> h.update({'a': '*top*'})
-            >>> h.update({'b': '*top*'}, data={'b': 5})
-            >>> h.update(data={'a': 3})
-            >>> h['b'] - h['a']
+            >>> h = MultiHierarchy("*top*")
+            >>> h.update({"a": "*top*"})
+            >>> h.update({"b": "*top*"}, data={"b": 5})
+            >>> h.update(data={"a": 3})
+            >>> h["b"] - h["a"]
             2
         """
         subhierarchy, data = self.validate_update(subhierarchy, data)
@@ -263,16 +252,14 @@ class MultiHierarchy(Generic[H]):
             a: a node identifier
             b: a node identifier
         Examples:
-            >>> h = MultiHierarchy('*top*', {'a': '*top*',
-            ...                              'b': '*top*',
-            ...                              'c': 'b'})
+            >>> h = MultiHierarchy("*top*", {"a": "*top*", "b": "*top*", "c": "b"})
             >>> all(h.subsumes(h.top, x) for x in h)
             True
-            >>> h.subsumes('a', h.top)
+            >>> h.subsumes("a", h.top)
             False
-            >>> h.subsumes('a', 'b')
+            >>> h.subsumes("a", "b")
             False
-            >>> h.subsumes('b', 'c')
+            >>> h.subsumes("b", "c")
             True
         """
         norm = self._norm
@@ -293,12 +280,11 @@ class MultiHierarchy(Generic[H]):
             a: a node identifier
             b: a node identifier
         Examples:
-            >>> h = MultiHierarchy('*top*', {'a': '*top*',
-            ...                              'b': '*top*'})
-            >>> h.compatible('a', 'b')
+            >>> h = MultiHierarchy("*top*", {"a": "*top*", "b": "*top*"})
+            >>> h.compatible("a", "b")
             False
-            >>> h.update({'c': 'a b'})
-            >>> h.compatible('a', 'b')
+            >>> h.update({"c": "a b"})
+            >>> h.compatible("a", "b")
             True
         """
         norm = self._norm
@@ -309,8 +295,8 @@ class MultiHierarchy(Generic[H]):
 
     def validate_update(
         self,
-        subhierarchy: Optional[HierarchyMap],
-        data: Optional[DataMap],
+        subhierarchy: HierarchyMap | None,
+        data: DataMap | None,
     ) -> tuple[HierarchyDict, DataDict]:
         """
         Check if the update can apply to the current hierarchy.
@@ -326,13 +312,16 @@ class MultiHierarchy(Generic[H]):
         ids = set(self._hier).intersection(subhierarchy)
         if ids:
             raise HierarchyError(
-                'already in hierarchy: {}'.format(', '.join(map(str, ids))))
+                "already in hierarchy: {}".format(", ".join(map(str, ids)))
+            )
 
         ids = set(data).difference(set(self._hier).union(subhierarchy))
         if ids:
             raise HierarchyError(
-                'cannot update data; not in hierarchy: {}'
-                .format(', '.join(map(str, ids))))
+                "cannot update data; not in hierarchy: {}".format(
+                    ", ".join(map(str, ids))
+                )
+            )
         return subhierarchy, data
 
 
@@ -346,8 +335,8 @@ def _ancestors(id: H, hier: dict[H, tuple[H, ...]]) -> set[H]:
 
 def _normalize_update(
     norm: IdentifierNormalizer,
-    subhierarchy: Optional[HierarchyMap],
-    data: Optional[DataMap],
+    subhierarchy: HierarchyMap | None,
+    data: DataMap | None,
 ) -> tuple[HierarchyDict, DataDict]:
     sub: HierarchyDict = {}
     parents: Identifiers
@@ -368,12 +357,15 @@ def _get_eligible(
     hier: HierarchyDict,
     sub: HierarchyDict,
 ) -> list[H]:
-    eligible = [id for id, parents in sub.items()
-                if all(parent in hier for parent in parents)]
+    eligible = [
+        id for id, parents in sub.items() if all(parent in hier for parent in parents)
+    ]
     if not eligible:
         raise HierarchyError(
-            'disconnected or cyclic hierarchy; remaining: {}'
-            .format(', '.join(map(str, sub))))
+            "disconnected or cyclic hierarchy; remaining: {}".format(
+                ", ".join(map(str, sub))
+            )
+        )
     return eligible
 
 
@@ -388,31 +380,5 @@ def _validate_parentage(
     redundant = sorted(map(str, ancestors.intersection(parents)))
     if redundant:
         raise HierarchyError(
-            '{} has redundant parents: {}'
-            .format(id, ', '.join(redundant))
+            "{} has redundant parents: {}".format(id, ", ".join(redundant))
         )
-
-
-# single-parented hierarchy might be something like this:
-# class Hierarchy(MultiHierarchy):
-#     def parent(self, identifier):
-#         identifier = self._norm(identifier)
-#         parents = self._hier[identifier]
-#         if parents:
-#             parents = parents[0]
-#         return parents
-
-#     def validate_update(self, subhierarchy, data):
-#         """
-#         Check if the update can apply to the current hierarchy.
-
-#         Raises:
-#             HierarchyError: when the update is invalid
-#         """
-#         subhierarchy, data = super().validate_update(subhierarchy, data)
-#         for id, parents in subhierarchy.items():
-#             if len(parents) != 1:
-#                 raise HierarchyError(
-#                     '{} has more than one parent: {}'
-#                     .format(id, ', '.join(parents)))
-#         return subhierarchy, data

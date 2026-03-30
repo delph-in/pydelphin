@@ -11,7 +11,7 @@ from delphin.sembase import property_priority, role_priority
 from delphin.util import Lexer, _bfs
 
 CODEC_INFO = {
-    'representation': 'eds',
+    "representation": "eds",
 }
 
 
@@ -24,7 +24,7 @@ def load(source):
     Returns:
         a list of EDS objects
     """
-    if hasattr(source, 'read'):
+    if hasattr(source, "read"):
         data = list(_decode(source))
     else:
         source = Path(source).expanduser()
@@ -46,8 +46,15 @@ def loads(s):
     return data
 
 
-def dump(es, destination, properties=True, lnk=True, show_status=False,
-         indent=True, encoding='utf-8'):
+def dump(
+    es,
+    destination,
+    properties=True,
+    lnk=True,
+    show_status=False,
+    indent=True,
+    encoding="utf-8",
+):
     """Serialize EDS objects to an EDS file.
 
     Args:
@@ -63,13 +70,14 @@ def dump(es, destination, properties=True, lnk=True, show_status=False,
             file with the given encoding; otherwise it is ignored
 
     """
-    string = dumps(es, properties=properties, lnk=lnk,
-                   show_status=show_status, indent=indent)
-    if hasattr(destination, 'write'):
+    string = dumps(
+        es, properties=properties, lnk=lnk, show_status=show_status, indent=indent
+    )
+    if hasattr(destination, "write"):
         print(string, file=destination)
     else:
         destination = Path(destination).expanduser()
-        with destination.open('w', encoding=encoding) as fh:
+        with destination.open("w", encoding=encoding) as fh:
             print(string, file=fh)
 
 
@@ -89,13 +97,15 @@ def dumps(es, properties=True, lnk=True, show_status=False, indent=True):
         an EDS-serialization of the EDS objects
     """
     if indent is None or indent is False:
-        delim = ' '
+        delim = " "
     else:
-        delim = '\n\n'
+        delim = "\n\n"
     return delim.join(
-        encode(e, properties=properties, lnk=lnk,
-               show_status=show_status, indent=indent)
-        for e in es)
+        encode(
+            e, properties=properties, lnk=lnk, show_status=show_status, indent=indent
+        )
+        for e in es
+    )
 
 
 def decode(s):
@@ -133,34 +143,35 @@ def encode(e, properties=True, lnk=True, show_status=False, indent=True):
 
 _EDSLexer = Lexer(
     tokens=[
-        (r'\#([^\s\{]+)\s*(?=\{|$)', 'IDENTIFIER'),
-        (r'\{', 'LBRACE:{'),
-        (r'\}', 'RBRACE:}'),
-        (r'\((?:cyclic *)?(?:fragmented)?\)', 'GRAPHSTATUS'),
-        (r'\|', 'NODESTATUS:|'),
-        (r'<(?:-?\d+[:#]-?\d+|@\d+|\d+(?: +\d+)*)>', 'LNK:a lnk value'),
-        (r'\("([^"\\]*(?:\\.[^"\\]*)*)"\)', 'CARG:a string'),
-        (r':', 'COLON::'),
-        (r',', 'COMMA:,'),
-        (r'\[', 'LBRACKET:['),
-        (r'\]', 'RBRACKET:]'),
-        (r'[^ \n:,<\(\[\]\{\}]+', 'SYMBOL:a symbol'),
-        (r'[^\s]', 'UNEXPECTED')
+        (r"\#([^\s\{]+)\s*(?=\{|$)", "IDENTIFIER"),
+        (r"\{", "LBRACE:{"),
+        (r"\}", "RBRACE:}"),
+        (r"\((?:cyclic *)?(?:fragmented)?\)", "GRAPHSTATUS"),
+        (r"\|", "NODESTATUS:|"),
+        (r"<(?:-?\d+[:#]-?\d+|@\d+|\d+(?: +\d+)*)>", "LNK:a lnk value"),
+        (r'\("([^"\\]*(?:\\.[^"\\]*)*)"\)', "CARG:a string"),
+        (r":", "COLON::"),
+        (r",", "COMMA:,"),
+        (r"\[", "LBRACKET:["),
+        (r"\]", "RBRACKET:]"),
+        (r"[^ \n:,<\(\[\]\{\}]+", "SYMBOL:a symbol"),
+        (r"[^\s]", "UNEXPECTED"),
     ],
-    error_class=EDSSyntaxError)
+    error_class=EDSSyntaxError,
+)
 
-IDENTIFIER  = _EDSLexer.tokentypes.IDENTIFIER
-LBRACE      = _EDSLexer.tokentypes.LBRACE
-RBRACE      = _EDSLexer.tokentypes.RBRACE
+IDENTIFIER = _EDSLexer.tokentypes.IDENTIFIER
+LBRACE = _EDSLexer.tokentypes.LBRACE
+RBRACE = _EDSLexer.tokentypes.RBRACE
 GRAPHSTATUS = _EDSLexer.tokentypes.GRAPHSTATUS
-NODESTATUS  = _EDSLexer.tokentypes.NODESTATUS
-LNK         = _EDSLexer.tokentypes.LNK
-CARG        = _EDSLexer.tokentypes.CARG
-COLON       = _EDSLexer.tokentypes.COLON
-COMMA       = _EDSLexer.tokentypes.COMMA
-LBRACKET    = _EDSLexer.tokentypes.LBRACKET
-RBRACKET    = _EDSLexer.tokentypes.RBRACKET
-SYMBOL      = _EDSLexer.tokentypes.SYMBOL
+NODESTATUS = _EDSLexer.tokentypes.NODESTATUS
+LNK = _EDSLexer.tokentypes.LNK
+CARG = _EDSLexer.tokentypes.CARG
+COLON = _EDSLexer.tokentypes.COLON
+COMMA = _EDSLexer.tokentypes.COMMA
+LBRACKET = _EDSLexer.tokentypes.LBRACKET
+RBRACKET = _EDSLexer.tokentypes.RBRACKET
+SYMBOL = _EDSLexer.tokentypes.SYMBOL
 
 
 def _decode(lineiter):
@@ -189,8 +200,7 @@ def _decode_eds(lexer) -> EDS:
         top = None
         lexer.accept_type(COLON)
         lexer.accept_type(GRAPHSTATUS)
-    elif (lexer.peek(2)[0] in (GRAPHSTATUS, NODESTATUS)
-          or lexer.peek(3)[0] == COLON):
+    elif lexer.peek(2)[0] in (GRAPHSTATUS, NODESTATUS) or lexer.peek(3)[0] == COLON:
         top, _ = lexer.expect_type(SYMBOL, COLON)
         lexer.accept_type(GRAPHSTATUS)
     else:
@@ -249,19 +259,20 @@ def _decode_edges(start, lexer):
 ##############################################################################
 # Encoding
 
+
 def _encode_eds(e, properties, lnk, show_status, indent):
-    start = '{'
+    start = "{"
     if e.identifier:
-        start = f'#{e.identifier}' + ('\n' if indent else ' ') + '{'
-    end = '\n}' if indent else '}'
+        start = f"#{e.identifier}" + ("\n" if indent else " ") + "{"
+    end = "\n}" if indent else "}"
 
     # do something predictable for empty EDS
     if len(e.nodes) == 0:
         return start + end
 
-    delim = '\n' if indent else ' '
-    connected = ' ' if indent else ''
-    disconnected = '|' if show_status else ' '
+    delim = "\n" if indent else " "
+    connected = " " if indent else ""
+    disconnected = "|" if show_status else " "
 
     # determine if graph is connected
     g = {node.id: set() for node in e.nodes}
@@ -273,13 +284,13 @@ def _encode_eds(e, properties, lnk, show_status, indent):
 
     top_parts = []
     if e.top is not None:
-        top_parts.append(e.top + ':')
+        top_parts.append(e.top + ":")
     if show_status and nidgrp != set(g):
-        top_parts.append('(fragmented)')
+        top_parts.append("(fragmented)")
 
     parts = []
     if top_parts or indent:
-        parts.append(' '.join(top_parts))
+        parts.append(" ".join(top_parts))
 
     for node in e.nodes:
         membership = connected if node.id in nidgrp else disconnected
@@ -289,30 +300,31 @@ def _encode_eds(e, properties, lnk, show_status, indent):
 
 
 def _encode_node(node, properties, lnk):
-    parts = [node.id, ':', node.predicate]
+    parts = [node.id, ":", node.predicate]
 
     if lnk and node.lnk:
         parts.append(str(node.lnk))
 
     if node.carg is not None:
-        parts.append('("{}")'.format(node.carg))
+        parts.append(f'("{node.carg}")')
 
     if properties and (node.properties or node.type):
-        parts.append('{')
+        parts.append("{")
         parts.append(node.type or variable.UNSPECIFIC)
         if node.properties:
-            proplist = ['{} {}'.format(prop, node.properties[prop])
-                        for prop in sorted(node.properties,
-                                           key=property_priority)]
-            parts.append(' ' + ', '.join(proplist))
-        parts.append('}')
+            proplist = [
+                f"{prop} {node.properties[prop]}"
+                for prop in sorted(node.properties, key=property_priority)
+            ]
+            parts.append(" " + ", ".join(proplist))
+        parts.append("}")
 
-    parts.append('[')
+    parts.append("[")
     edgelist = []
     edges = node.edges
     for role in sorted(edges, key=role_priority):
-        edgelist.append('{} {}'.format(role, edges[role]))
-    parts.append(', '.join(edgelist))
-    parts.append(']')
+        edgelist.append(f"{role} {edges[role]}")
+    parts.append(", ".join(edgelist))
+    parts.append("]")
 
-    return ''.join(parts)
+    return "".join(parts)

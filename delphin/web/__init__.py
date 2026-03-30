@@ -1,4 +1,3 @@
-
 """
 Client interfaces and a server for the DELPH-IN Web API.
 """

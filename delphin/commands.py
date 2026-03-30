@@ -1,4 +1,3 @@
-
 """
 PyDelphin API counterparts to the ``delphin`` commands.
 """
@@ -7,8 +6,9 @@ import logging
 import sys
 import tempfile
 import warnings
+from collections.abc import Iterator
 from pathlib import Path
-from typing import IO, Any, Dict, Iterator, Optional, Union
+from typing import IO, Any
 
 from progress.bar import Bar as ProgressBar
 
@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 # EXCEPTIONS ##################################################################
 
+
 class CommandError(exceptions.PyDelphinException):
     """Raised on an invalid command call."""
 
@@ -35,17 +36,20 @@ class CommandError(exceptions.PyDelphinException):
 ###############################################################################
 # CONVERT #####################################################################
 
-def convert(path: Union[util.PathLike, IO[str]],
-            source_fmt: str,
-            target_fmt: str,
-            select: str = 'result.mrs',
-            properties: bool = True,
-            lnk: bool = True,
-            color: bool = False,
-            indent: Optional[int] = None,
-            show_status: bool = False,
-            predicate_modifiers: bool = False,
-            semi: Optional[Union[SemI, util.PathLike]] = None) -> str:
+
+def convert(
+    path: util.PathLike | IO[str],
+    source_fmt: str,
+    target_fmt: str,
+    select: str = "result.mrs",
+    properties: bool = True,
+    lnk: bool = True,
+    color: bool = False,
+    indent: int | None = None,
+    show_status: bool = False,
+    predicate_modifiers: bool = False,
+    semi: SemI | util.PathLike | None = None,
+) -> str:
     """
     Convert between various DELPH-IN Semantics representations.
 
@@ -94,22 +98,22 @@ def convert(path: Union[util.PathLike, IO[str]],
     target_codec = _get_codec(target_fmt)
     converter = _get_converter(source_codec, target_codec, predicate_modifiers)
 
-    if len(tsql.inspect_query('select ' + select)['projection']) != 1:
+    if len(tsql.inspect_query("select " + select)["projection"]) != 1:
         raise CommandError(
-            'Exactly 1 column must be given in selection query: '
-            '(e.g., result.mrs)')
+            "Exactly 1 column must be given in selection query: (e.g., result.mrs)"
+        )
 
     if semi is not None and not isinstance(semi, SemI):
         # lets ignore the SEM-I warnings until questions regarding
         # valid SEM-Is are resolved
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
+            warnings.simplefilter("ignore")
             semi = load_semi(semi)
 
     # read
-    kwargs: Dict[str, Any] = {}
-    if source_fmt == 'indexedmrs' and semi is not None:
-        kwargs['semi'] = semi
+    kwargs: dict[str, Any] = {}
+    if source_fmt == "indexedmrs" and semi is not None:
+        kwargs["semi"] = semi
     if source_lines:
         xs = _read_lines(path, source_codec, kwargs)
     else:
@@ -119,38 +123,37 @@ def convert(path: Union[util.PathLike, IO[str]],
     xs = _iter_convert(converter, xs)
 
     # write
-    kwargs = {'indent': indent}
-    if target_fmt == 'eds':
-        kwargs['show_status'] = show_status
-    if target_fmt == 'indexedmrs' and semi is not None:
-        kwargs['semi'] = semi
-    kwargs['properties'] = properties
-    kwargs['lnk'] = lnk
+    kwargs = {"indent": indent}
+    if target_fmt == "eds":
+        kwargs["show_status"] = show_status
+    if target_fmt == "indexedmrs" and semi is not None:
+        kwargs["semi"] = semi
+    kwargs["properties"] = properties
+    kwargs["lnk"] = lnk
     # Manually dealing with headers, joiners, and footers is to
     # accommodate streaming output. Otherwise it is the same as
-    # calling the following:
-    #     target_codec.dumps(xs, **kwargs)
+    # calling the following: target_codec.dumps(xs, **kwargs)
     if target_lines:
-        header = footer = ''
-        joiner = '\n'
-        kwargs['indent'] = None
+        header = footer = ""
+        joiner = "\n"
+        kwargs["indent"] = None
     else:
-        header = getattr(target_codec, 'HEADER', '')
-        joiner = getattr(target_codec, 'JOINER', ' ')
-        footer = getattr(target_codec, 'FOOTER', '')
+        header = getattr(target_codec, "HEADER", "")
+        joiner = getattr(target_codec, "JOINER", " ")
+        footer = getattr(target_codec, "FOOTER", "")
         if indent is not None:
             if header:
-                header += '\n'
-            joiner = joiner.strip() + '\n\n'
+                header += "\n"
+            joiner = joiner.strip() + "\n\n"
             if footer:
-                footer = '\n' + footer
+                footer = "\n" + footer
 
     parts = []
     for x in xs:
         try:
             s = target_codec.encode(x, **kwargs)
         except (PyDelphinException, KeyError, IndexError):
-            logger.exception('could not convert representation')
+            logger.exception("could not convert representation")
         else:
             parts.append(s)
 
@@ -162,16 +165,16 @@ def convert(path: Union[util.PathLike, IO[str]],
 def _parse_format_name(name):
     name = name.lower()
     lines = False
-    if name.endswith('-lines'):
+    if name.endswith("-lines"):
         lines = True
         name = name[:-6]
-    name = name.replace('-', '')
+    name = name.replace("-", "")
     return name, lines
 
 
 def _get_highlighter(color, target_fmt):
-    if color and target_fmt in ('simplemrs', 'simple-mrs'):
-        highlight = util.make_highlighter('simplemrs')
+    if color and target_fmt in ("simplemrs", "simple-mrs"):
+        highlight = util.make_highlighter("simplemrs")
     else:
         highlight = str
     return highlight
@@ -181,29 +184,29 @@ def _get_codec(name):
     try:
         codec = util.import_codec(name)
     except KeyError as exc:
-        raise CommandError(f'invalid codec: {name}') from exc
+        raise CommandError(f"invalid codec: {name}") from exc
     return codec
 
 
 def _get_converter(source_codec, target_codec, predicate_modifiers):
-    src_rep = source_codec.CODEC_INFO['representation'].lower()
-    tgt_rep = target_codec.CODEC_INFO['representation'].lower()
+    src_rep = source_codec.CODEC_INFO["representation"].lower()
+    tgt_rep = target_codec.CODEC_INFO["representation"].lower()
 
     # The following could be done dynamically by inspecting if the
     # target representation has a from_{src_rep} function, but that
     # seems like overkill, and it's not clear what to do about
     # EDS's predicate_modifiers argument in that case.
 
-    if (src_rep, tgt_rep) == ('mrs', 'dmrs'):
+    if (src_rep, tgt_rep) == ("mrs", "dmrs"):
         from delphin.dmrs import from_mrs
 
         def converter(m):
             return from_mrs(m, representative_priority=None)
 
-    elif (src_rep, tgt_rep) == ('dmrs', 'mrs'):
+    elif (src_rep, tgt_rep) == ("dmrs", "mrs"):
         from delphin.mrs import from_dmrs as converter
 
-    elif (src_rep, tgt_rep) == ('mrs', 'eds'):
+    elif (src_rep, tgt_rep) == ("mrs", "eds"):
         from delphin.eds import from_mrs
 
         def converter(m):
@@ -214,20 +217,19 @@ def _get_converter(source_codec, target_codec, predicate_modifiers):
 
     else:
         raise CommandError(
-            f'{src_rep.upper()} -> {tgt_rep.upper()}'
-            ' conversion is not supported')
+            f"{src_rep.upper()} -> {tgt_rep.upper()} conversion is not supported"
+        )
 
     return converter
 
 
 def _read(path, source_codec, select, kwargs):
-    if hasattr(path, 'read'):
+    if hasattr(path, "read"):
         xs = list(source_codec.load(path, **kwargs))
     else:
         path = Path(path).expanduser()
         if path.is_dir():
             db = tsdb.Database(path)
-            # ts = itsdb.TestSuite(path)
             xs = [
                 next(iter(source_codec.loads(r[0], **kwargs)), None)
                 for r in tsql.select(select, db)
@@ -238,7 +240,7 @@ def _read(path, source_codec, select, kwargs):
 
 
 def _read_lines(path, source_codec, kwargs):
-    if hasattr(path, 'read'):
+    if hasattr(path, "read"):
         yield from _read_file(path, source_codec, kwargs)
     else:
         path = Path(path).expanduser()
@@ -253,22 +255,23 @@ def _read_file(fh, source_codec, kwargs):
 
 def _iter_convert(converter, xs):
     if not converter:
-        logger.info('no conversion necessary')
+        logger.info("no conversion necessary")
         for i, x in enumerate(xs, 1):
-            logger.debug('item %d: %r', i, x)
+            logger.debug("item %d: %r", i, x)
             yield x
     else:
-        logger.info('converting...')
+        logger.info("converting...")
         for i, x in enumerate(xs, 1):
-            logger.debug('item %d: %r', i, x)
+            logger.debug("item %d: %r", i, x)
             try:
                 yield converter(x)
             except PyDelphinException:
-                logger.error('could not convert item %d', i)
+                logger.error("could not convert item %d", i)
 
 
 ###############################################################################
 # SELECT ######################################################################
+
 
 def select(query: str, path: util.PathLike, record_class=None):
     """
@@ -289,8 +292,19 @@ def select(query: str, path: util.PathLike, record_class=None):
 ###############################################################################
 # MKPROF ######################################################################
 
-def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
-           refresh=False, skeleton=False, full=False, gzip=False, quiet=False):
+
+def mkprof(
+    destination,
+    source=None,
+    schema=None,
+    where=None,
+    delimiter=None,
+    refresh=False,
+    skeleton=False,
+    full=False,
+    gzip=False,
+    quiet=False,
+):
     """
     Create [incr tsdb()] profiles or skeletons.
 
@@ -347,22 +361,19 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
 
     # input is sentences on stdin or a file of sentences
     elif source is None and not refresh:
-        _mkprof_from_lines(
-            destination, sys.stdin, schema, delimiter, gzip)
+        _mkprof_from_lines(destination, sys.stdin, schema, delimiter, gzip)
     elif source.is_file():
         with source.open() as fh:
-            _mkprof_from_lines(
-                destination, fh, schema, delimiter, gzip)
+            _mkprof_from_lines(destination, fh, schema, delimiter, gzip)
 
     # input is source testsuite
     elif source.is_dir():
         db = tsdb.Database(source)
         old_relation_files = list(db.schema)
-        _mkprof_from_database(
-            destination, db, schema, where, full, gzip)
+        _mkprof_from_database(destination, db, schema, where, full, gzip)
 
     else:
-        raise CommandError(f'invalid source for mkprof: {source!s}')
+        raise CommandError(f"invalid source for mkprof: {source!s}")
 
     _mkprof_cleanup(destination, skeleton, old_relation_files)
 
@@ -372,8 +383,7 @@ def mkprof(destination, source=None, schema=None, where=None, delimiter=None,
 
 def _mkprof_from_lines(destination, stream, schema, delimiter, gzip):
     if not schema:
-        raise CommandError(
-            'a schema is required to make a testsuite from text')
+        raise CommandError("a schema is required to make a testsuite from text")
 
     lineiter = iter(stream)
     colnames, split = _make_split(delimiter, lineiter)
@@ -381,63 +391,64 @@ def _mkprof_from_lines(destination, stream, schema, delimiter, gzip):
     # setup destination testsuite
     tsdb.initialize_database(destination, schema, files=True)
 
-    tsdb.write(destination,
-               'item',
-               _lines_to_records(lineiter, colnames, split, schema['item']),
-               fields=schema['item'],
-               gzip=gzip)
+    tsdb.write(
+        destination,
+        "item",
+        _lines_to_records(lineiter, colnames, split, schema["item"]),
+        fields=schema["item"],
+        gzip=gzip,
+    )
 
 
 def _lines_to_records(lineiter, colnames, split, fields):
-
     with_i_id = with_i_length = False
     for field in fields:
-        if field.name == 'i-id':
+        if field.name == "i-id":
             with_i_id = True
-        elif field.name == 'i-length':
+        elif field.name == "i-length":
             with_i_length = True
 
     i_ids = set()
     for i, line in enumerate(lineiter, 1):
-        colvals = split(line.rstrip('\n'))
+        colvals = split(line.rstrip("\n"))
         if len(colvals) != len(colnames):
             raise CommandError(
-                'line values do not match expected fields:\n'
-                f'  fields: {", ".join(colnames)}\n'
-                f'  values: {", ".join(colvals)}')
-        colmap = dict(zip(colnames, colvals))
+                "line values do not match expected fields:\n"
+                f"  fields: {', '.join(colnames)}\n"
+                f"  values: {', '.join(colvals)}"
+            )
+        colmap = dict(zip(colnames, colvals, strict=True))
 
         if with_i_id:
-            if 'i-id' not in colmap:
-                colmap['i-id'] = i
-            if colmap['i-id'] in i_ids:
-                raise CommandError(f'duplicate i-id: {colmap["i-id"]}')
-            i_ids.add(colmap['i-id'])
+            if "i-id" not in colmap:
+                colmap["i-id"] = i
+            if colmap["i-id"] in i_ids:
+                raise CommandError(f"duplicate i-id: {colmap['i-id']}")
+            i_ids.add(colmap["i-id"])
 
-        if with_i_length and 'i-length' not in colmap and 'i-input' in colmap:
-            colmap['i-length'] = len((colmap['i-input'] or '').split())
+        if with_i_length and "i-length" not in colmap and "i-input" in colmap:
+            colmap["i-length"] = len((colmap["i-input"] or "").split())
 
         yield tsdb.make_record(colmap, fields)
 
 
 def _make_split(delimiter, lineiter):
-
     if not delimiter:
 
         def split(line):
-            return (0, line[1:]) if line.startswith('*') else (1, line)
+            return (0, line[1:]) if line.startswith("*") else (1, line)
 
-        colnames = ('i-wf', 'i-input')
+        colnames = ("i-wf", "i-input")
 
     else:
-        if delimiter == '@':
+        if delimiter == "@":
             split = tsdb.split
         else:
 
             def split(line):
                 return line.split(delimiter)
 
-        colnames = split(next(lineiter).rstrip('\n'))
+        colnames = split(next(lineiter).rstrip("\n"))
 
     return colnames, split
 
@@ -450,7 +461,7 @@ def _mkprof_from_database(destination, db, schema, where, full, gzip):
     tsdb.write_schema(destination, schema)
 
     to_copy = set(schema if full else tsdb.TSDB_CORE_FILES)
-    where = '' if not where else 'where ' + where
+    where = "" if not where else "where " + where
 
     for table in schema:
         if table not in to_copy or _no_such_relation(db, table):
@@ -459,17 +470,12 @@ def _mkprof_from_database(destination, db, schema, where, full, gzip):
             # filter the data, but use all if the query fails
             # (e.g., if the filter and table cannot be joined)
             try:
-                records = _tsql_distinct(
-                    tsql.select(f'* from {table} {where}', db))
+                records = _tsql_distinct(tsql.select(f"* from {table} {where}", db))
             except tsql.TSQLError:
                 records = list(db[table])
         else:
             records = list(db[table])
-        tsdb.write(destination,
-                   table,
-                   records,
-                   schema[table],
-                   gzip=gzip)
+        tsdb.write(destination, table, records, schema[table], gzip=gzip)
 
 
 def _no_such_relation(db, name):
@@ -502,15 +508,15 @@ def _mkprof_cleanup(destination, skeleton, old_files):
     if skeleton:
         to_keep = to_keep.intersection(tsdb.TSDB_CORE_FILES)
     for name in set(schema).union(old_files):
-        tx_path = destination.joinpath(name).with_suffix('')
-        gz_path = destination.joinpath(name).with_suffix('.gz')
-        if (tx_path.is_file()
-            and (name not in to_keep
-                 or (skeleton and tx_path.stat().st_size == 0))):
+        tx_path = destination.joinpath(name).with_suffix("")
+        gz_path = destination.joinpath(name).with_suffix(".gz")
+        if tx_path.is_file() and (
+            name not in to_keep or (skeleton and tx_path.stat().st_size == 0)
+        ):
             tx_path.unlink()
-        if (gz_path.is_file()
-            and (name not in to_keep
-                 or (skeleton and gz_path.stat().st_size == 0))):
+        if gz_path.is_file() and (
+            name not in to_keep or (skeleton and gz_path.stat().st_size == 0)
+        ):
             gz_path.unlink()
 
 
@@ -519,26 +525,39 @@ def _mkprof_summarize(destination, schema):
     isatty = sys.stdout.isatty()
 
     def _red(s):
-        return f'\x1b[1;31m{s}\x1b[0m' if isatty else s
+        return f"\x1b[1;31m{s}\x1b[0m" if isatty else s
 
-    fmt = '{:>8} bytes\t{}'
-    for filename in ['relations'] + list(schema):
+    fmt = "{:>8} bytes\t{}"
+    for filename in ["relations", *list(schema)]:
         path = destination.joinpath(filename)
         if path.is_file():
             stat = path.stat()
             print(fmt.format(stat.st_size, filename))
-        elif path.with_suffix('.gz').is_file():
-            stat = path.with_suffix('.gz').stat()
-            print(fmt.format(stat.st_size, _red(filename + '.gz')))
+        elif path.with_suffix(".gz").is_file():
+            stat = path.with_suffix(".gz").stat()
+            print(fmt.format(stat.st_size, _red(filename + ".gz")))
 
 
 ###############################################################################
 # PROCESS #####################################################################
 
-def process(grammar, testsuite, source=None, select=None,
-            generate=False, transfer=False, full_forest=False,
-            options=None, all_items=False, result_id=None, gzip=False,
-            executable='ace', stderr=None, report_progress=True):
+
+def process(
+    grammar,
+    testsuite,
+    source=None,
+    select=None,
+    generate=False,
+    transfer=False,
+    full_forest=False,
+    options=None,
+    all_items=False,
+    result_id=None,
+    gzip=False,
+    executable="ace",
+    stderr=None,
+    report_progress=True,
+):
     """
     Process the [incr tsdb()] profile *testsuite* with *grammar*.
 
@@ -599,15 +618,16 @@ def process(grammar, testsuite, source=None, select=None,
     testsuite = Path(testsuite).expanduser()
 
     if not grammar.is_file():
-        raise CommandError(f'{grammar} is not a file')
+        raise CommandError(f"{grammar} is not a file")
 
     kwargs = {
-        'stderr': stderr,
-        'executable': executable,
+        "stderr": stderr,
+        "executable": executable,
     }
     if sum(1 if mode else 0 for mode in (generate, transfer, full_forest)) > 1:
-        raise CommandError("'generate', 'transfer', and 'full-forest' "
-                           "are mutually exclusive")
+        raise CommandError(
+            "'generate', 'transfer', and 'full-forest' are mutually exclusive"
+        )
 
     if source is None:
         source = _validate_tsdb(testsuite)
@@ -616,45 +636,45 @@ def process(grammar, testsuite, source=None, select=None,
         if not tsdb.is_database_directory(testsuite):
             if testsuite.exists():
                 raise CommandError(
-                    f'{testsuite} exists and is not a TSDB database; '
-                    'remove it or select a different destination path')
+                    f"{testsuite} exists and is not a TSDB database; "
+                    "remove it or select a different destination path"
+                )
             mkprof(testsuite, source=source, full=False, quiet=True)
         else:
             pass  # both source and testsuite are valid TSDB databases
 
     if select is None:
-        select = 'result.mrs' if (generate or transfer) else 'item.i-input'
+        select = "result.mrs" if (generate or transfer) else "item.i-input"
     if generate:
         processor = ace.ACEGenerator
     elif transfer:
         processor = ace.ACETransferer
     else:
         if full_forest:
-            kwargs['full_forest'] = True
+            kwargs["full_forest"] = True
         if not all_items:
-            select += ' where i-wf != 2'
+            select += " where i-wf != 2"
         processor = ace.ACEParser
     if result_id is not None:
-        select += f' where result-id == {result_id}'
+        select += f" where result-id == {result_id}"
 
     target = itsdb.TestSuite(testsuite)
     column, relation, condition = _interpret_selection(select, source)
 
     with tempfile.TemporaryDirectory() as dir:
         # use a temporary test suite directory for filtered inputs
-        mkprof(dir, source=source, where=condition,
-               full=True, gzip=True, quiet=True)
+        mkprof(dir, source=source, where=condition, full=True, gzip=True, quiet=True)
         tmp = itsdb.TestSuite(dir)
 
-        process_kwargs = {'selector': (relation, column),
-                          'source': tmp,
-                          'gzip': gzip}
+        process_kwargs = {"selector": (relation, column), "source": tmp, "gzip": gzip}
         bar = None
-        if (report_progress
-                and len(tmp[relation])
-                and not logger.isEnabledFor(logging.INFO)):
-            bar = ProgressBar('Processing', max=len(tmp[relation]))
-            process_kwargs['callback'] = lambda _: bar.next()
+        if (
+            report_progress
+            and len(tmp[relation])
+            and not logger.isEnabledFor(logging.INFO)
+        ):
+            bar = ProgressBar("Processing", max=len(tmp[relation]))
+            process_kwargs["callback"] = lambda _: bar.next()
 
         with processor(grammar, cmdargs=options, **kwargs) as cpu:
             target.process(cpu, **process_kwargs)
@@ -664,34 +684,37 @@ def process(grammar, testsuite, source=None, select=None,
 
 def _interpret_selection(select, source):
     schema = tsdb.read_schema(source)
-    queryobj = tsql.inspect_query('select ' + select)
-    projection = queryobj['projection']
-    if projection == '*' or len(projection) != 1:
+    queryobj = tsql.inspect_query("select " + select)
+    projection = queryobj["projection"]
+    if projection == "*" or len(projection) != 1:
         raise CommandError("select query must return a single column")
-    relation, _, column = projection[0].rpartition('.')
+    relation, _, column = projection[0].rpartition(".")
     if not relation:
         # query could be 'i-input from item' instead of 'item.i-input'
-        if len(queryobj['relations']) == 1:
-            relation = queryobj['relations'][0]
-        elif len(queryobj['relations']) > 1:
-            raise CommandError(
-                "select query may specify no more than 1 relation")
+        if len(queryobj["relations"]) == 1:
+            relation = queryobj["relations"][0]
+        elif len(queryobj["relations"]) > 1:
+            raise CommandError("select query may specify no more than 1 relation")
         # otherwise guess
         else:
             relation = next(
-                (table for table in schema
-                 if any(f.name == column for f in schema[table])),
-                None)
+                (
+                    table
+                    for table in schema
+                    if any(f.name == column for f in schema[table])
+                ),
+                None,
+            )
 
     if relation not in schema:
-        raise CommandError('invalid or missing relation in query')
+        raise CommandError("invalid or missing relation in query")
     elif not any(f.name == column for f in schema[relation]):
-        raise CommandError(f'invalid column in query: {column}')
+        raise CommandError(f"invalid column in query: {column}")
 
     try:
-        condition = select[select.index(' where ') + 7:]
+        condition = select[select.index(" where ") + 7 :]
     except ValueError:
-        condition = ''
+        condition = ""
     return column, relation, condition
 
 
@@ -699,8 +722,15 @@ def _interpret_selection(select, source):
 # REPP ########################################################################
 
 
-def repp(source, config=None, module=None, active=None,
-         format=None, color=False, trace_level=0):
+def repp(
+    source,
+    config=None,
+    module=None,
+    active=None,
+    format=None,
+    color=False,
+    trace_level=0,
+):
     """
     Tokenize with a Regular Expression PreProcessor (REPP).
 
@@ -729,7 +759,7 @@ def repp(source, config=None, module=None, active=None,
     from delphin.repp import REPP, REPPResult
 
     if color:
-        highlight = util.make_highlighter('diff')
+        highlight = util.make_highlighter("diff")
     else:
         highlight = str
 
@@ -745,43 +775,43 @@ def repp(source, config=None, module=None, active=None,
         r = REPP()  # just tokenize
 
     def _repp(line):
-        line = line.rstrip('\n')
+        line = line.rstrip("\n")
         if trace_level > 0:
             for step in r.trace(line, verbose=True):
                 if isinstance(step, REPPResult):
-                    print(f'Done:{step.string}')
-                elif hasattr(step.operation, 'pattern'):
+                    print(f"Done:{step.string}")
+                elif hasattr(step.operation, "pattern"):
                     if step.applied:
-                        print('Applied:', step.operation)
-                        print(highlight(f'-{step.input}\n+{step.output}'))
+                        print("Applied:", step.operation)
+                        print(highlight(f"-{step.input}\n+{step.output}"))
                     elif trace_level > 1:
-                        print('Did not apply:', step.operation)
+                        print("Did not apply:", step.operation)
         else:
             step = r.apply(line)
         res = r.tokenize_result(step)
-        if format == 'yy':
+        if format == "yy":
             print(res)
-        elif format == 'string':
-            print(' '.join(t.form for t in res.tokens))
-        elif format == 'line':
+        elif format == "string":
+            print(" ".join(t.form for t in res.tokens))
+        elif format == "line":
             for t in res.tokens:
                 print(t.form)
             print()
-        elif format == 'triple':
+        elif format == "triple":
             for t in res.tokens:
                 if t.lnk.type == Lnk.CHARSPAN:
                     cfrom, cto = t.lnk.data
                 else:
                     cfrom, cto = -1, -1
-                print(f'({cfrom}, {cto}, {t.form})')
+                print(f"({cfrom}, {cto}, {t.form})")
             print()
 
-    if hasattr(source, 'read'):
+    if hasattr(source, "read"):
         for line in source:
             _repp(line)
     else:
         source = Path(source).expanduser()
-        with source.open(encoding='utf-8') as fh:
+        with source.open(encoding="utf-8") as fh:
             for line in fh:
                 _repp(line)
 
@@ -789,9 +819,12 @@ def repp(source, config=None, module=None, active=None,
 ###############################################################################
 # COMPARE #####################################################################
 
-def compare(testsuite: Union[util.PathLike, itsdb.TestSuite],
-            gold: Union[util.PathLike, itsdb.TestSuite],
-            select: str = 'i-id i-input mrs') -> Iterator[Dict]:
+
+def compare(
+    testsuite: util.PathLike | itsdb.TestSuite,
+    gold: util.PathLike | itsdb.TestSuite,
+    select: str = "i-id i-input mrs",
+) -> Iterator[dict]:
     """
     Compare two [incr tsdb()] profiles.
 
@@ -805,11 +838,13 @@ def compare(testsuite: Union[util.PathLike, itsdb.TestSuite],
     Yields:
         dict: Comparison results as::
 
-            {"id": "item identifier",
-             "input": "input sentence",
-             "test": number_of_unique_results_in_test,
-             "shared": number_of_shared_results,
-             "gold": number_of_unique_results_in_gold}
+            {
+                "id": "item identifier",
+                "input": "input sentence",
+                "test": number_of_unique_results_in_test,
+                "shared": number_of_shared_results,
+                "gold": number_of_unique_results_in_gold,
+            }
     """
     from delphin import mrs
     from delphin.codecs import simplemrs
@@ -819,12 +854,11 @@ def compare(testsuite: Union[util.PathLike, itsdb.TestSuite],
     if not isinstance(gold, itsdb.TestSuite):
         gold = itsdb.TestSuite(_validate_tsdb(gold))
 
-    queryobj = tsql.inspect_query('select ' + select)
-    if len(queryobj['projection']) != 3:
-        raise CommandError('select does not return 3 fields: ' + select)
+    queryobj = tsql.inspect_query("select " + select)
+    if len(queryobj["projection"]) != 3:
+        raise CommandError("select does not return 3 fields: " + select)
 
-    input_select = '{} {}'.format(queryobj['projection'][0],
-                                  queryobj['projection'][1])
+    input_select = "{} {}".format(queryobj["projection"][0], queryobj["projection"][1])
     # typing of tsql.select() is complicated right now, so just ignore
     # it for the following calls. it may be easier after
     # https://github.com/delph-in/pydelphin/issues/258
@@ -832,25 +866,30 @@ def compare(testsuite: Union[util.PathLike, itsdb.TestSuite],
 
     matched_rows = itsdb.match_rows(
         tsql.select(select, testsuite),  # type: ignore
-        tsql.select(select, gold),       # type: ignore
-        0)
+        tsql.select(select, gold),  # type: ignore
+        0,
+    )
 
-    for (key, testrows, goldrows) in matched_rows:
+    for key, testrows, goldrows in matched_rows:
         (test_unique, shared, gold_unique) = mrs.compare_bags(
             [simplemrs.decode(row[2]) for row in testrows],
-            [simplemrs.decode(row[2]) for row in goldrows])
-        yield {'id': key,
-               'input': i_inputs.get(key),
-               'test': test_unique,
-               'shared': shared,
-               'gold': gold_unique}
+            [simplemrs.decode(row[2]) for row in goldrows],
+        )
+        yield {
+            "id": key,
+            "input": i_inputs.get(key),
+            "test": test_unique,
+            "shared": shared,
+            "gold": gold_unique,
+        }
 
 
 ###############################################################################
 # HELPERS #####################################################################
 
+
 def _validate_tsdb(path):
     path = Path(path).expanduser()
     if not tsdb.is_database_directory(path):
-        raise CommandError(f'{path} is not a valid TSDB database')
+        raise CommandError(f"{path} is not a valid TSDB database")
     return path

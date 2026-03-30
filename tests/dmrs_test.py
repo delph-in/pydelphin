@@ -1,4 +1,3 @@
-
 import pytest
 
 from delphin import dmrs
@@ -8,46 +7,51 @@ from delphin.codecs import simplemrs
 @pytest.fixture
 def dogs_bark():
     return {
-        'top': 10000,
-        'index': 10000,
-        'nodes': [dmrs.Node(10000, '_bark_v_1_rel', type='e'),
-                  dmrs.Node(10001, 'udef_q_rel'),
-                  dmrs.Node(10002, '_dog_n_1_rel', type='x')],
-        'links': [dmrs.Link(10000, 10002, 'ARG1', 'NEQ'),
-                  dmrs.Link(10001, 10002, 'RSTR', 'H')]}
+        "top": 10000,
+        "index": 10000,
+        "nodes": [
+            dmrs.Node(10000, "_bark_v_1_rel", type="e"),
+            dmrs.Node(10001, "udef_q_rel"),
+            dmrs.Node(10002, "_dog_n_1_rel", type="x"),
+        ],
+        "links": [
+            dmrs.Link(10000, 10002, "ARG1", "NEQ"),
+            dmrs.Link(10001, 10002, "RSTR", "H"),
+        ],
+    }
 
 
-class TestNode():
+class TestNode:
     def test_init(self):
         with pytest.raises(TypeError):
             dmrs.Node()
         with pytest.raises(TypeError):
             dmrs.Node(1)
-        dmrs.Node(1, '_dog_n_1')
-        dmrs.Node(1, '_dog_n_1', type='x')
-        dmrs.Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'})
-        dmrs.Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'}, carg='Dog')
-        dmrs.Node('1', '_dog_n_1')
+        dmrs.Node(1, "_dog_n_1")
+        dmrs.Node(1, "_dog_n_1", type="x")
+        dmrs.Node(1, "_dog_n_1", type="x", properties={"NUM": "sg"})
+        dmrs.Node(1, "_dog_n_1", type="x", properties={"NUM": "sg"}, carg="Dog")
+        dmrs.Node("1", "_dog_n_1")
 
     def test__eq__(self):
-        n = dmrs.Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'})
-        assert n == dmrs.Node(2, '_dog_n_1', type='x', properties={'NUM': 'sg'})
-        assert n != dmrs.Node(1, '_dog_n_2', type='x', properties={'NUM': 'sg'})
-        assert n != dmrs.Node(2, '_dog_n_1', type='e', properties={'NUM': 'sg'})
-        assert n != dmrs.Node(2, '_dog_n_1', type='x', properties={'NUM': 'pl'})
+        n = dmrs.Node(1, "_dog_n_1", type="x", properties={"NUM": "sg"})
+        assert n == dmrs.Node(2, "_dog_n_1", type="x", properties={"NUM": "sg"})
+        assert n != dmrs.Node(1, "_dog_n_2", type="x", properties={"NUM": "sg"})
+        assert n != dmrs.Node(2, "_dog_n_1", type="e", properties={"NUM": "sg"})
+        assert n != dmrs.Node(2, "_dog_n_1", type="x", properties={"NUM": "pl"})
 
     def test_sortinfo(self):
-        n = dmrs.Node(1, '_dog_n_1')
+        n = dmrs.Node(1, "_dog_n_1")
         assert n.sortinfo == {}
-        n = dmrs.Node(1, '_dog_n_1', type='x')
-        assert n.sortinfo == {'cvarsort': 'x'}
-        n = dmrs.Node(1, '_dog_n_1', properties={'NUM': 'sg'})
-        assert n.sortinfo == {'NUM': 'sg'}
-        n = dmrs.Node(1, '_dog_n_1', type='x', properties={'NUM': 'sg'})
-        assert n.sortinfo == {'cvarsort': 'x', 'NUM': 'sg'}
+        n = dmrs.Node(1, "_dog_n_1", type="x")
+        assert n.sortinfo == {"cvarsort": "x"}
+        n = dmrs.Node(1, "_dog_n_1", properties={"NUM": "sg"})
+        assert n.sortinfo == {"NUM": "sg"}
+        n = dmrs.Node(1, "_dog_n_1", type="x", properties={"NUM": "sg"})
+        assert n.sortinfo == {"cvarsort": "x", "NUM": "sg"}
 
 
-class TestLink():
+class TestLink:
     def test_init(self):
         with pytest.raises(TypeError):
             dmrs.Link()
@@ -56,20 +60,20 @@ class TestLink():
         with pytest.raises(TypeError):
             dmrs.Link(1, 2)
         with pytest.raises(TypeError):
-            dmrs.Link(1, 2, 'ARG1')
-        dmrs.Link(1, 2, 'ARG1', 'EQ')
-        dmrs.Link('1', 2, 'ARG1', 'EQ')
-        dmrs.Link(1, '2', 'ARG1', 'EQ')
+            dmrs.Link(1, 2, "ARG1")
+        dmrs.Link(1, 2, "ARG1", "EQ")
+        dmrs.Link("1", 2, "ARG1", "EQ")
+        dmrs.Link(1, "2", "ARG1", "EQ")
 
     def test__eq__(self):
-        link1 = dmrs.Link(1, 2, 'ARG1', 'EQ')
-        assert link1 == dmrs.Link(1, 2, 'ARG1', 'EQ')
-        assert link1 != dmrs.Link(2, 1, 'ARG1', 'EQ')
-        assert link1 != dmrs.Link(1, 2, 'ARG2', 'EQ')
-        assert link1 != dmrs.Link(1, 2, 'ARG1', 'NEQ')
+        link1 = dmrs.Link(1, 2, "ARG1", "EQ")
+        assert link1 == dmrs.Link(1, 2, "ARG1", "EQ")
+        assert link1 != dmrs.Link(2, 1, "ARG1", "EQ")
+        assert link1 != dmrs.Link(1, 2, "ARG2", "EQ")
+        assert link1 != dmrs.Link(1, 2, "ARG1", "NEQ")
 
 
-class TestDMRS():
+class TestDMRS:
     def test__init__(self, dogs_bark):
         d = dmrs.DMRS()
         assert d.top is None
@@ -81,41 +85,33 @@ class TestDMRS():
         assert d.top == 10000
         assert d.index == 10000
         assert len(d.nodes) == 3
-        assert d.nodes[0].predicate == '_bark_v_1_rel'
-        assert d.nodes[1].predicate == 'udef_q_rel'
-        assert d.nodes[2].predicate == '_dog_n_1_rel'
+        assert d.nodes[0].predicate == "_bark_v_1_rel"
+        assert d.nodes[1].predicate == "udef_q_rel"
+        assert d.nodes[2].predicate == "_dog_n_1_rel"
         assert len(d.links) == 2
-        assert d.links[0].role == 'ARG1'
-        assert d.links[1].role == 'RSTR'
+        assert d.links[0].role == "ARG1"
+        assert d.links[1].role == "RSTR"
 
         # make sure the old way of marking top still works
         dogs_bark2 = dict(dogs_bark)
-        dogs_bark2['links'].append(dmrs.Link(0, dogs_bark['top'], None, 'H'))
-        del dogs_bark2['top']
+        dogs_bark2["links"].append(dmrs.Link(0, dogs_bark["top"], None, "H"))
+        del dogs_bark2["top"]
         d2 = dmrs.DMRS(**dogs_bark2)
         assert d.top == d2.top
 
     def test_arguments(self, dogs_bark):
         d = dmrs.DMRS()
         assert d.arguments() == {}
-        assert d.arguments('h') == {}
+        assert d.arguments("h") == {}
 
         d = dmrs.DMRS(**dogs_bark)
         assert d.arguments() == {
-            10000: [('ARG1', 10002)],
-            10001: [('RSTR', 10002)],
-            10002: []
+            10000: [("ARG1", 10002)],
+            10001: [("RSTR", 10002)],
+            10002: [],
         }
-        assert d.arguments('h') == {
-            10000: [],
-            10001: [('RSTR', 10002)],
-            10002: []
-        }
-        assert d.arguments('xei') == {
-            10000: [('ARG1', 10002)],
-            10001: [],
-            10002: []
-        }
+        assert d.arguments("h") == {10000: [], 10001: [("RSTR", 10002)], 10002: []}
+        assert d.arguments("xei") == {10000: [("ARG1", 10002)], 10001: [], 10002: []}
 
     def test_scopal_arguments(self, dogs_bark):
         d = dmrs.DMRS()
@@ -129,30 +125,30 @@ class TestDMRS():
                 scopemap[node.id] = lbl
         assert d.scopal_arguments(scopes=scopes) == {
             10000: [],
-            10001: [('RSTR', 'qeq', scopemap[10002])],
-            10002: []
+            10001: [("RSTR", "qeq", scopemap[10002])],
+            10002: [],
         }
         assert d.scopal_arguments() == {
             10000: [],
-            10001: [('RSTR', 'qeq', scopemap[10002])],  # should be same
-            10002: []
+            10001: [("RSTR", "qeq", scopemap[10002])],  # should be same
+            10002: [],
         }
 
 
 def test_from_mrs_it_rains():
-    m = simplemrs.decode('''
+    m = simplemrs.decode("""
         [ TOP: h0 INDEX: e2 [e TENSE: pres]
           RELS: < [ _rain_v_1<3:8> LBL: h1 ARG0: e2 ] >
-          HCONS: < h0 qeq h1 > ]''')
+          HCONS: < h0 qeq h1 > ]""")
     d = dmrs.from_mrs(m)
     assert len(d.nodes) == 1
-    assert d.nodes[0].predicate == '_rain_v_1'
-    assert d.nodes[0].type == 'e'
-    assert d.nodes[0].properties == {'TENSE': 'pres'}
+    assert d.nodes[0].predicate == "_rain_v_1"
+    assert d.nodes[0].type == "e"
+    assert d.nodes[0].properties == {"TENSE": "pres"}
 
 
 def test_from_mrs_nearly_all_cats_were_chased_by_dogs():
-    m = simplemrs.decode('''
+    m = simplemrs.decode("""
         [ LTOP: h0
           INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
           RELS: < [ _nearly_x_deg<0:6> LBL: h4 ARG0: e5 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: u6 ]
@@ -162,44 +158,46 @@ def test_from_mrs_nearly_all_cats_were_chased_by_dogs():
                   [ udef_q<31:36> LBL: h11 ARG0: x10 RSTR: h12 BODY: h13 ]
                   [ _dog_n_1<31:36> LBL: h14 ARG0: x10 ] >
           HCONS: < h0 qeq h1 h7 qeq h9 h12 qeq h14 >
-          ICONS: < e2 topic x3 > ]''')
+          ICONS: < e2 topic x3 > ]""")
     d = dmrs.from_mrs(m)
     assert len(d.nodes) == 6
     n1 = d.nodes[0]
     n2 = d.nodes[1]
-    assert n1.predicate == '_nearly_x_deg'
-    assert n2.predicate == '_all_q'
-    assert any((l.start, l.end, l.role, l.post) == (n1.id, n2.id, 'MOD', 'EQ')
-               for l in d.links)
+    assert n1.predicate == "_nearly_x_deg"
+    assert n2.predicate == "_all_q"
+    assert any(
+        (link.start, link.end, link.role, link.post) == (n1.id, n2.id, "MOD", "EQ")
+        for link in d.links
+    )
 
 
 def test_from_mrs_issue_303():
     # https://github.com/delph-in/pydelphin/issues/303
-    m = simplemrs.decode('''
+    m = simplemrs.decode("""
         [ TOP: h0 INDEX: e2 [e TENSE: pres]
           RELS: < [ _rain_v_1<3:8> LBL: h1 ARG0: e2 ] >
-          HCONS: < > ]''')
+          HCONS: < > ]""")
     with pytest.warns(dmrs.DMRSWarning):
         d = dmrs.from_mrs(m)
         assert d.top is None
 
-    m = simplemrs.decode('''
+    m = simplemrs.decode("""
         [ TOP: h0 INDEX: e2 [e TENSE: pres]
           RELS: < [ _rain_v_1<3:8> LBL: h1 ARG0: e2 ] >
-          HCONS: < h0 qeq h3 > ]''')
+          HCONS: < h0 qeq h3 > ]""")
     with pytest.warns(dmrs.DMRSWarning):
         d = dmrs.from_mrs(m)
         assert d.top is None
 
-    m = simplemrs.decode('''
+    m = simplemrs.decode("""
         [ LTOP: h0
           INDEX: e2 [ e SF: prop TENSE: past MOOD: indicative PROG: - PERF: - ]
           RELS: < [ neg<7:10> LBL: h1 ARG0: e4 [ e SF: prop TENSE: untensed MOOD: indicative PROG: - PERF: - ] ARG1: h5 ]
                   [ _rain_v_1<11:16> LBL: h6 ARG0: e2 ] >
           HCONS: < h0 qeq h1 h5 qeq h7 >
-          ICONS: < > ]''')
+          ICONS: < > ]""")
     with pytest.warns(dmrs.DMRSWarning):
         d = dmrs.from_mrs(m)
         n = d.nodes[0]
-        assert n.predicate == 'neg'
-        assert 'ARG1' not in d.scopal_arguments()[n.id]
+        assert n.predicate == "neg"
+        assert "ARG1" not in d.scopal_arguments()[n.id]

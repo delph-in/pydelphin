@@ -6,10 +6,10 @@ from pathlib import Path
 
 from delphin import dmrs, predicate
 
-__version__ = '1.0.0'
+__version__ = "1.0.0"
 
 CODEC_INFO = {
-    'representation': 'dmrs',
+    "representation": "dmrs",
 }
 
 HEADER = """
@@ -42,7 +42,7 @@ HEADER = """
 
 \\begin{document}"""
 
-JOINER = '\n'
+JOINER = "\n"
 
 FOOTER = """
 \\end{document}
@@ -53,35 +53,26 @@ FOOTER = """
 
 # order matters here
 _LATEX_CHARMAP = [
-    ('\\', '\\textbackslash'),
-    ('&', '\\&'),
-    ('%', '\\%'),
-    ('$', '\\$'),
-    ('#', '\\#'),
-    ('_', '\\_'),
-    ('{', '\\{'),
-    ('}', '\\}'),
-    ('~', '\\textasciitilde'),
-    ('^', '\\textasciicircum'),
+    ("\\", "\\textbackslash"),
+    ("&", "\\&"),
+    ("%", "\\%"),
+    ("$", "\\$"),
+    ("#", "\\#"),
+    ("_", "\\_"),
+    ("{", "\\{"),
+    ("}", "\\}"),
+    ("~", "\\textasciitilde"),
+    ("^", "\\textasciicircum"),
 ]
 
 
 def _latex_escape(s):
-    # consider a re sub with a function. e.g.
-    # _character_unescapes = {
-    #   '\\s': _field_delimiter,
-    #   '\\n': '\n',
-    #   '\\\\': '\\'}
-    # _unescape_func = lambda m: _character_unescapes[m.group(0)]
-    # _unescape_re = re.compile(r'(\\s|\\n|\\\\)')
-    # _unescape_re.sub(_unescape_func, string, flags=re.UNICODE)
     for c, r in _LATEX_CHARMAP:
         s = s.replace(c, r)
     return s
 
 
-def dump(ds, destination, properties=True, lnk=True,
-         indent=False, encoding='utf-8'):
+def dump(ds, destination, properties=True, lnk=True, indent=False, encoding="utf-8"):
     """
     Serialize DMRS objects for LaTeX + tikz-dependency and write to a file.
 
@@ -95,11 +86,11 @@ def dump(ds, destination, properties=True, lnk=True,
             file with the given encoding; otherwise it is ignored
     """
     text = dumps(ds, properties=properties, lnk=lnk, indent=indent)
-    if hasattr(destination, 'write'):
+    if hasattr(destination, "write"):
         print(text, file=destination)
     else:
         destination = Path(destination).expanduser()
-        with destination.open('w', encoding=encoding) as fh:
+        with destination.open("w", encoding=encoding) as fh:
             print(text, file=fh)
 
 
@@ -142,41 +133,39 @@ def encode(d, properties=True, lnk=True, indent=True):
     for i, n in enumerate(ns):
         sep = "\\&" if (i < len(ns) - 1) else "\\\\"
         pred = _latex_escape(predicate.normalize(n.predicate))
-        pred = "\\named{}" if pred == 'named' else pred
+        pred = "\\named{}" if pred == "named" else pred
         if n.carg is not None:
             pred += "\\smaller ({})".format(n.carg.strip('"'))
-        lines.append("    \\spred{{{}}} {}     % node {}".format(
-            pred, sep, i+1))
+        lines.append(f"    \\spred{{{pred}}} {sep}     % node {i + 1}")
     lines.append("  \\end{deptext}")
     nodeidx = {n.id: i for i, n in enumerate(ns, 1)}
 
     # links
     if d.top is not None:
-        lines.append('  \\deproot[root]{{{}}}{{{}}}'
-                     .format(nodeidx[d.top], '\\srl{TOP}'))
-        # _latex_escape('/' + link.post)
+        lines.append(
+            "  \\deproot[root]{{{}}}{{{}}}".format(nodeidx[d.top], "\\srl{TOP}")
+        )
 
     for link in d.links:
-        lines.append('  \\depedge[{}]{{{}}}{{{}}}{{\\srl{{{}}}}}'.format(
-            _label_edge(link),
-            nodeidx[link.start],
-            nodeidx[link.end],
-            _latex_escape(_link_label(link))
-        ))
+        lines.append(
+            f"  \\depedge[{_label_edge(link)}]"
+            f"{{{nodeidx[link.start]}}}{{{nodeidx[link.end]}}}"
+            f"{{\\srl{{{_latex_escape(_link_label(link))}}}}}"
+        )
     # placeholder for icons
-    lines.append('%  \\depedge[icons]{f}{t}{FOCUS}')
-    lines.append('\\end{dependency}\n')
-    return '\n'.join(lines)
+    lines.append("%  \\depedge[icons]{f}{t}{FOCUS}")
+    lines.append("\\end{dependency}\n")
+    return "\n".join(lines)
 
 
 def _link_label(link):
-    return '{}/{}'.format(link.role or '', link.post)
+    return "{}/{}".format(link.role or "", link.post)
 
 
 def _label_edge(link):
     if link.post == dmrs.H_POST and link.role == dmrs.RESTRICTION_ROLE:
-        return 'rstr'
+        return "rstr"
     elif link.post == dmrs.EQ_POST:
-        return 'eq'
+        return "eq"
     else:
-        return 'arg'
+        return "arg"

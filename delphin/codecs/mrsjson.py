@@ -10,12 +10,12 @@ from delphin.lnk import Lnk
 from delphin.mrs import EP, MRS, HCons, ICons
 
 CODEC_INFO = {
-    'representation': 'mrs',
+    "representation": "mrs",
 }
 
-HEADER = '['
-JOINER = ','
-FOOTER = ']'
+HEADER = "["
+JOINER = ","
+FOOTER = "]"
 
 
 def load(source):
@@ -27,7 +27,7 @@ def load(source):
     Returns:
         a list of MRS objects
     """
-    if hasattr(source, 'read'):
+    if hasattr(source, "read"):
         data = json.load(source)
     else:
         source = Path(source).expanduser()
@@ -49,8 +49,7 @@ def loads(s):
     return [from_dict(d) for d in data]
 
 
-def dump(ms, destination, properties=True, lnk=True,
-         indent=False, encoding='utf-8'):
+def dump(ms, destination, properties=True, lnk=True, indent=False, encoding="utf-8"):
     """
     Serialize MRS objects to a MRS-JSON file.
 
@@ -71,11 +70,11 @@ def dump(ms, destination, properties=True, lnk=True,
     elif indent is True:
         indent = 2
     data = [to_dict(m, properties=properties, lnk=lnk) for m in ms]
-    if hasattr(destination, 'write'):
+    if hasattr(destination, "write"):
         json.dump(data, destination, indent=indent)
     else:
         destination = Path(destination).expanduser()
-        with destination.open('w', encoding=encoding) as fh:
+        with destination.open("w", encoding=encoding) as fh:
             json.dump(data, fh)
 
 
@@ -126,8 +125,7 @@ def encode(m, properties=True, lnk=True, indent=False):
         indent = None
     elif indent is True:
         indent = 2
-    return json.dumps(to_dict(m, properties=properties, lnk=lnk),
-                      indent=indent)
+    return json.dumps(to_dict(m, properties=properties, lnk=lnk), indent=indent)
 
 
 def to_dict(mrs, properties=True, lnk=True):
@@ -136,40 +134,36 @@ def to_dict(mrs, properties=True, lnk=True):
     """
 
     def _ep(ep):
-        d = {'label': ep.label,
-             'predicate': ep.predicate,
-             'arguments': ep.args}
+        d = {"label": ep.label, "predicate": ep.predicate, "arguments": ep.args}
         if lnk:
             if ep.lnk:
-                d['lnk'] = {'from': ep.cfrom, 'to': ep.cto}
+                d["lnk"] = {"from": ep.cfrom, "to": ep.cto}
             if ep.surface:
-                d['surface'] = ep.surface
+                d["surface"] = ep.surface
             if ep.base:
-                d['base'] = ep.base
+                d["base"] = ep.base
         return d
 
     def _hcons(hc):
-        return {'relation': hc.relation, 'high': hc.hi, 'low': hc.lo}
+        return {"relation": hc.relation, "high": hc.hi, "low": hc.lo}
 
     def _icons(ic):
-        return {'relation': ic.relation, 'left': ic.left, 'right': ic.right}
+        return {"relation": ic.relation, "left": ic.left, "right": ic.right}
 
     def _var(v):
-        d = {'type': variable.type(v)}
+        d = {"type": variable.type(v)}
         if properties and mrs.variables.get(v):
-            d['properties'] = dict(mrs.variables[v])
+            d["properties"] = dict(mrs.variables[v])
         return d
 
     d = dict(
         top=mrs.top,
         index=mrs.index,
         relations=list(map(_ep, mrs.rels)),
-        constraints=(list(map(_hcons, mrs.hcons))
-                     + list(map(_icons, mrs.icons))),
-        variables={v: _var(v) for v in mrs.variables})
-    # if mrs.lnk is not None: d['lnk'] = mrs.lnk
-    # if mrs.surface is not None: d['surface'] = mrs.surface
-    # if mrs.identifier is not None: d['identifier'] = mrs.identifier
+        constraints=(list(map(_hcons, mrs.hcons)) + list(map(_icons, mrs.icons))),
+        variables={v: _var(v) for v in mrs.variables},
+    )
+    # skipping mrs.lnk, mrs.surface, or mrs.identifier
     return d
 
 
@@ -179,36 +173,38 @@ def from_dict(d):
     """
 
     def _lnk(o):
-        return None if o is None else Lnk.charspan(o['from'], o['to'])
+        return None if o is None else Lnk.charspan(o["from"], o["to"])
 
     def _ep(_d):
         return EP(
-            _d['predicate'],
-            _d['label'],
-            args=_d.get('arguments', {}),
-            lnk=_lnk(_d.get('lnk')),
-            surface=_d.get('surface'),
-            base=_d.get('base'))
+            _d["predicate"],
+            _d["label"],
+            args=_d.get("arguments", {}),
+            lnk=_lnk(_d.get("lnk")),
+            surface=_d.get("surface"),
+            base=_d.get("base"),
+        )
 
     def _hcons(_d):
-        return HCons(_d['high'], _d['relation'], _d['low'])
+        return HCons(_d["high"], _d["relation"], _d["low"])
 
     def _icons(_d):
-        return ICons(_d['left'], _d['relation'], _d['right'])
+        return ICons(_d["left"], _d["relation"], _d["right"])
 
-    hcons = [c for c in d.get('constraints', []) if 'high' in c]
-    icons = [c for c in d.get('constraints', []) if 'left' in c]
-    variables = {var: data.get('properties', {})
-                 for var, data in d.get('variables', {}).items()}
+    hcons = [c for c in d.get("constraints", []) if "high" in c]
+    icons = [c for c in d.get("constraints", []) if "left" in c]
+    variables = {
+        var: data.get("properties", {}) for var, data in d.get("variables", {}).items()
+    }
 
     return MRS(
-        d['top'],
-        d.get('index'),
-        list(map(_ep, d.get('relations', []))),
+        d["top"],
+        d.get("index"),
+        list(map(_ep, d.get("relations", []))),
         list(map(_hcons, hcons)),
         icons=list(map(_icons, icons)),
         variables=variables,
-        lnk=_lnk(d.get('lnk')),
-        surface=d.get('surface'),
-        identifier=d.get('identifier')
+        lnk=_lnk(d.get("lnk")),
+        surface=d.get("surface"),
+        identifier=d.get("identifier"),
     )

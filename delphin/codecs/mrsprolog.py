@@ -8,12 +8,11 @@ from delphin.mrs import CONSTANT_ROLE
 from delphin.sembase import role_priority
 
 CODEC_INFO = {
-    'representation': 'mrs',
+    "representation": "mrs",
 }
 
 
-def dump(ms, destination, properties=True, lnk=True,
-         indent=False, encoding='utf-8'):
+def dump(ms, destination, properties=True, lnk=True, indent=False, encoding="utf-8"):
     """
     Serialize MRS objects to the Prolog representation and write to a file.
 
@@ -28,11 +27,11 @@ def dump(ms, destination, properties=True, lnk=True,
             file with the given encoding; otherwise it is ignored
     """
     text = dumps(ms, properties=properties, lnk=lnk, indent=indent)
-    if hasattr(destination, 'write'):
+    if hasattr(destination, "write"):
         print(text, file=destination)
     else:
         destination = Path(destination).expanduser()
-        with destination.open('w', encoding=encoding) as fh:
+        with destination.open("w", encoding=encoding) as fh:
             print(text, file=fh)
 
 
@@ -70,49 +69,48 @@ def encode(m, properties=True, lnk=True, indent=False):
 
 def _encode(ms, properties, lnk, indent):
     if indent is not None and indent is not False:
-        delim = '\n'
+        delim = "\n"
     else:
-        delim = ' '
+        delim = " "
     return delim.join(_encode_mrs(m, properties, lnk, indent) for m in ms)
 
 
 def _encode_mrs(m, properties, lnk, indent):
-    pl = 'psoa({topvars},{_}[{rels}],{_}hcons([{hcons}]){icons})'
-    plvc = '{reln}({left},{right})'
+    pl = "psoa({topvars},{_}[{rels}],{_}hcons([{hcons}]){icons})"
+    plvc = "{reln}({left},{right})"
     # pre-compute the various indent levels
     if indent is None or indent is False:
-        _, __, ___, ____ = '', ',', '', ','
+        _, __, ___, ____ = "", ",", "", ","
     else:
         if indent is True:
             indent = 2
-        _ = '\n' + (' ' * indent)
-        __ = ',' + _ + (' ' * len('['))
-        ___ = _ + (' ' * len('[rel('))
-        ____ = __ + (' ' * len('rel(['))
+        _ = "\n" + (" " * indent)
+        __ = "," + _ + (" " * len("["))
+        ___ = _ + (" " * len("[rel("))
+        ____ = __ + (" " * len("rel(["))
 
     topvars = [str(m.top)]
     if m.index is not None:
         topvars.append(str(m.index))
     rels = [_encode_rel(rel, ___, ____) for rel in m.rels]
-    icons = ''
+    icons = ""
     if m.icons:
-        icons = ',{_}icons([{ics}])'.format(
+        icons = ",{_}icons([{ics}])".format(
             _=_,
-            ics=','.join(
+            ics=",".join(
                 plvc.format(reln=ic.relation, left=ic.left, right=ic.right)
                 for ic in m.icons
-            )
+            ),
         )
     return pl.format(
-        topvars=','.join(topvars),
+        topvars=",".join(topvars),
         rels=__.join(rels),
-        hcons=','.join(
-            plvc.format(reln=hc.relation, left=hc.hi, right=hc.lo)
-            for hc in m.hcons
+        hcons=",".join(
+            plvc.format(reln=hc.relation, left=hc.hi, right=hc.lo) for hc in m.hcons
         ),
         icons=icons,
         _=_,
-        ___=___
+        ___=___,
     )
 
 
@@ -122,10 +120,6 @@ def _encode_rel(ep, ___, ____):
     for role in sorted(ep.args, key=role_priority):
         val = ep.args[role]
         if role == CONSTANT_ROLE:
-            val = "'{}'".format(val)
+            val = f"'{val}'"
         args.append(plav.format(role, val))
-    return "rel('{pred}',{lbl},{___}[{attrvals}])".format(
-        pred=ep.predicate,
-        lbl=ep.label,
-        ___=___,
-        attrvals=____.join(args))
+    return f"rel('{ep.predicate}',{ep.label},{___}[{____.join(args)}])"

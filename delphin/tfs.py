@@ -1,10 +1,9 @@
-
 """
 Basic classes for modeling feature structures.
 """
 
-from collections.abc import Mapping, Sequence
-from typing import Any, Callable, Iterable, Optional, Union
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import Any, TypeAlias
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -17,11 +16,11 @@ class TFSError(PyDelphinException):
 
 
 # generic input argument types
-FeatureSeq = Sequence[tuple[str, Any]]
-FeatureMap = Mapping[str, Any]
+FeatureSeq: TypeAlias = Sequence[tuple[str, Any]]
+FeatureMap: TypeAlias = Mapping[str, Any]
 # explicit types
-FeatureList = list[tuple[str, Any]]
-FeatureDict = dict[str, Any]
+FeatureList: TypeAlias = list[tuple[str, Any]]
+FeatureDict: TypeAlias = dict[str, Any]
 
 
 class FeatureStructure:
@@ -36,26 +35,26 @@ class FeatureStructure:
             to feature values
     """
 
-    __slots__ = '_avm',
+    __slots__ = ("_avm",)
 
     _avm: FeatureDict
 
     def __init__(
         self,
-        featvals: Union[FeatureSeq, FeatureMap, None] = None,
+        featvals: FeatureSeq | FeatureMap | None = None,
     ) -> None:
         self._avm = {}
-        if featvals and hasattr(featvals, 'items'):
+        if featvals and hasattr(featvals, "items"):
             featvals = list(featvals.items())
         for feat, val in list(featvals or []):
             self[feat] = val
 
     @classmethod
-    def _default(cls) -> 'FeatureStructure':
+    def _default(cls) -> "FeatureStructure":
         return cls(None)
 
     def __repr__(self) -> str:
-        return '<{} object at {}>'.format(self.__class__.__name__, id(self))
+        return f"<{self.__class__.__name__} object at {id(self)}>"
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, FeatureStructure):
@@ -71,23 +70,24 @@ class FeatureStructure:
         else:
             if subkey in avm:
                 subdef = avm[subkey]
-                if not hasattr(subdef, '__setitem__'):
+                if not hasattr(subdef, "__setitem__"):
                     raise TFSError(
-                        f'{type(subdef)!r} object at feature '
-                        f'{subkey} does not support item assignment')
+                        f"{type(subdef)!r} object at feature "
+                        f"{subkey} does not support item assignment"
+                    )
             else:
                 subdef = avm[subkey] = self._default()
             subdef[rest] = val
 
     def __getitem__(self, key: str) -> Any:
-        first, _, remainder = key.partition('.')
+        first, _, remainder = key.partition(".")
         val = self._avm[first.upper()]
         if remainder:
             val = val[remainder]
         return val
 
     def __delitem__(self, key: str) -> None:
-        first, _, remainder = key.partition('.')
+        first, _, remainder = key.partition(".")
         if remainder:
             fs = self._avm[first.upper()]
             del fs[remainder]
@@ -95,7 +95,7 @@ class FeatureStructure:
             del self._avm[first.upper()]
 
     def __contains__(self, key: str) -> bool:
-        subkeys = key.split('.', 1)
+        subkeys = key.split(".", 1)
         subkey = subkeys[0].upper()
         if subkey in self._avm:
             if len(subkeys) == 2:
@@ -130,7 +130,7 @@ class FeatureStructure:
         Args:
             expand (bool): if `True`, expand all feature paths
         Example:
-            >>> fs = FeatureStructure([('A.B', 1), ('A.C', 2)])
+            >>> fs = FeatureStructure([("A.B", 1), ("A.C", 2)])
             >>> fs.features()
             [('A', <FeatureStructure object at ...>)]
             >>> fs.features(expand=True)
@@ -144,7 +144,7 @@ class FeatureStructure:
                         fs.append((feat, val))
                     else:
                         for subfeat, subval in val.features(expand=expand):
-                            fs.append(('{}.{}'.format(feat, subfeat), subval))
+                            fs.append((f"{feat}.{subfeat}", subval))
                 else:
                     fs.append((feat, val))
         return fs
@@ -159,22 +159,21 @@ class TypedFeatureStructure(FeatureStructure):
         featvals (dict, list): a mapping or iterable of feature paths
             to feature values
     """
-    __slots__ = '_type'
+
+    __slots__ = "_type"
 
     _type: str
 
     def __init__(
         self,
         type: str,
-        featvals: Union[FeatureSeq, FeatureMap, None] = None,
+        featvals: FeatureSeq | FeatureMap | None = None,
     ) -> None:
         self._type = type
         super().__init__(featvals)
 
     def __repr__(self) -> str:
-        return '<TypedFeatureStructure object ({}) at {}>'.format(
-            self.type, id(self)
-        )
+        return f"<TypedFeatureStructure object ({self.type}) at {id(self)}>"
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, TypedFeatureStructure):
@@ -204,14 +203,13 @@ class TypeHierarchy(MultiHierarchy[str]):
         Checks for unique glbs is not yet implemented.
 
     >>> th = TypeHierarchy(
-    ...     '*top*',
-    ...     {'can-fly': '*top*', 'can-swim': '*top*', 'can-walk': '*top*'}
+    ...     "*top*", {"can-fly": "*top*", "can-swim": "*top*", "can-walk": "*top*"}
     ... )
-    >>> th.update({'butterfly': ('can-fly', 'can-walk')})
-    >>> th['butterfly'] = 'some info relating to butterflies'
+    >>> th.update({"butterfly": ("can-fly", "can-walk")})
+    >>> th["butterfly"] = "some info relating to butterflies"
     >>> th.update(
-    ...     {'duck': ('can-fly', 'can-swim', 'can-walk')},
-    ...     data={'duck': 'some info relating to ducks...'}
+    ...     {"duck": ("can-fly", "can-swim", "can-walk")},
+    ...     data={"duck": "some info relating to ducks..."},
     ... )
 
     """
@@ -219,9 +217,9 @@ class TypeHierarchy(MultiHierarchy[str]):
     def __init__(
         self,
         top: str,
-        hierarchy: Optional[Mapping[str, Iterable[str]]] = None,
-        data: Optional[Mapping[str, Any]] = None,
-        normalize_identifier: Optional[Callable[[str], str]] = None
+        hierarchy: Mapping[str, Iterable[str]] | None = None,
+        data: Mapping[str, Any] | None = None,
+        normalize_identifier: Callable[[str], str] | None = None,
     ) -> None:
         if not normalize_identifier:
             normalize_identifier = str.lower
@@ -229,5 +227,5 @@ class TypeHierarchy(MultiHierarchy[str]):
             top,
             hierarchy=hierarchy,
             data=data,
-            normalize_identifier=normalize_identifier
+            normalize_identifier=normalize_identifier,
         )

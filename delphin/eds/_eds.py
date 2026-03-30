@@ -1,20 +1,21 @@
-
 """
 Elementary Dependency Structures (EDS).
 """
 
-from typing import Any, Iterable, Optional
+from collections.abc import Iterable
+from typing import Any
 
 from delphin.lnk import Lnk
 from delphin.sembase import ArgumentStructure, Predication, SemanticStructure
 
-BOUND_VARIABLE_ROLE = 'BV'
-PREDICATE_MODIFIER_ROLE = 'ARG1'
+BOUND_VARIABLE_ROLE = "BV"
+PREDICATE_MODIFIER_ROLE = "ARG1"
 
 
 ##############################################################################
 ##############################################################################
 # EDS classes
+
 
 class Node(Predication[str]):
     """
@@ -44,25 +45,24 @@ class Node(Predication[str]):
         base: base form
     """
 
-    __slots__ = ('edges', 'properties', 'carg')
+    __slots__ = ("carg", "edges", "properties")
 
     edges: dict[str, str]
     properties: dict[str, str]
-    carg: Optional[str]
+    carg: str | None
 
     def __init__(
         self,
         id: str,
         predicate: str,
-        type: Optional[str] = None,
-        edges: Optional[dict[str, str]] = None,
-        properties: Optional[dict[str, str]] = None,
-        carg: Optional[str] = None,
-        lnk: Optional[Lnk] = None,
+        type: str | None = None,
+        edges: dict[str, str] | None = None,
+        properties: dict[str, str] | None = None,
+        carg: str | None = None,
+        lnk: Lnk | None = None,
         surface=None,
         base=None,
     ) -> None:
-
         if not edges:
             edges = {}
         if not properties:
@@ -77,11 +77,13 @@ class Node(Predication[str]):
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Node):
             return NotImplemented
-        return (self.predicate == other.predicate
-                and self.type == other.type
-                and self.edges == other.edges
-                and self.properties == other.properties
-                and self.carg == other.carg)
+        return (
+            self.predicate == other.predicate
+            and self.type == other.type
+            and self.edges == other.edges
+            and self.properties == other.properties
+            and self.carg == other.carg
+        )
 
 
 class EDS(SemanticStructure[str, Node]):
@@ -104,9 +106,9 @@ class EDS(SemanticStructure[str, Node]):
 
     def __init__(
         self,
-        top: Optional[str] = None,
-        nodes: Optional[Iterable[Node]] = None,
-        lnk: Optional[Lnk] = None,
+        top: str | None = None,
+        nodes: Iterable[Node] | None = None,
+        lnk: Lnk | None = None,
         surface=None,
         identifier=None,
     ) -> None:
@@ -117,8 +119,7 @@ class EDS(SemanticStructure[str, Node]):
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, EDS):
             return NotImplemented
-        return (self.top == other.top
-                and self.nodes == other.nodes)
+        return self.top == other.top and self.nodes == other.nodes
 
     @property
     def nodes(self) -> list[Node]:
@@ -130,16 +131,15 @@ class EDS(SemanticStructure[str, Node]):
         """The list of all edges."""
         edges: list[tuple[str, str, str]] = []
         for node in self.nodes:
-            edges.extend((node.id, role, target)
-                         for role, target in node.edges.items())
+            edges.extend((node.id, role, target) for role, target in node.edges.items())
         return edges
 
     # SemanticStructure methods
 
     def arguments(
         self,
-        types: Optional[Iterable[str]] = None,
-        expressed: Optional[bool] = None,
+        types: Iterable[str] | None = None,
+        expressed: bool | None = None,
     ) -> ArgumentStructure[str]:
         args: ArgumentStructure[str] = {}
         if types is not None:
@@ -154,10 +154,10 @@ class EDS(SemanticStructure[str, Node]):
                     args[node.id].append((role, target))
         return args
 
-    def properties(self, id: Optional[str]) -> dict[str, str]:
+    def properties(self, id: str | None) -> dict[str, str]:
         return self[id].properties
 
-    def is_quantifier(self, id: Optional[str]) -> bool:
+    def is_quantifier(self, id: str | None) -> bool:
         """
         Return `True` if *id* is the id of a quantifier node.
         """
@@ -165,7 +165,7 @@ class EDS(SemanticStructure[str, Node]):
 
     def quantification_pairs(
         self,
-    ) -> list[tuple[Optional[Node], Optional[Node]]]:
+    ) -> list[tuple[Node | None, Node | None]]:
         qs: set[str] = set()
         qmap: dict[str, Node] = {}
         for src, roleargs in self.arguments().items():
@@ -173,7 +173,7 @@ class EDS(SemanticStructure[str, Node]):
                 if role == BOUND_VARIABLE_ROLE:
                     qs.add(src)
                     qmap[tgt] = self[src]
-        pairs: list[tuple[Optional[Node], Optional[Node]]] = []
+        pairs: list[tuple[Node | None, Node | None]] = []
         # first pair non-quantifiers to their quantifier, if any
         for node in self.nodes:
             if node.id not in qs:

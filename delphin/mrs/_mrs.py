@@ -1,5 +1,5 @@
-from collections.abc import Sequence
-from typing import Iterable, Mapping, Optional, Union
+from collections.abc import Iterable, Mapping, Sequence
+from typing import TypeAlias
 
 from delphin import variable
 from delphin.lnk import Lnk
@@ -13,12 +13,12 @@ from delphin.sembase import (
 
 from ._exceptions import MRSError
 
-INTRINSIC_ROLE   = 'ARG0'
-RESTRICTION_ROLE = 'RSTR'
-BODY_ROLE        = 'BODY'
-CONSTANT_ROLE    = 'CARG'
+INTRINSIC_ROLE = "ARG0"
+RESTRICTION_ROLE = "RSTR"
+BODY_ROLE = "BODY"
+CONSTANT_ROLE = "CARG"
 # the following is only used internally
-_QUANTIFIER_TYPE = 'q'
+_QUANTIFIER_TYPE = "q"
 
 
 class EP(Predication[str]):
@@ -53,27 +53,29 @@ class EP(Predication[str]):
         base: base form
     """
 
-    __slots__ = ('label', 'args')
+    __slots__ = ("args", "label")
 
     id: str  # further constrain for EPs
     label: str
     args: dict[str, str]
 
-    def __init__(self,
-                 predicate: str,
-                 label: str,
-                 args: Optional[dict[str, str]] = None,
-                 lnk: Optional[Lnk] = None,
-                 surface=None,
-                 base=None):
+    def __init__(
+        self,
+        predicate: str,
+        label: str,
+        args: dict[str, str] | None = None,
+        lnk: Lnk | None = None,
+        surface=None,
+        base=None,
+    ):
         if args is None:
             args = {}
         # EPs formally do not have identifiers but they are very useful
         # note that the ARG0 may be unspecified, so use a default
-        iv = args.get(INTRINSIC_ROLE, '_0')
-        type: Optional[str]
+        iv = args.get(INTRINSIC_ROLE, "_0")
+        type: str | None
         type, vid = variable.split(iv)
-        if type == '_':
+        if type == "_":
             type = None
         if RESTRICTION_ROLE in args:
             id = _QUANTIFIER_TYPE + vid
@@ -87,27 +89,29 @@ class EP(Predication[str]):
         self.base = base
 
     def __eq__(self, other) -> bool:
-        return (self.predicate == other.predicate
-                and self.label == other.label
-                and self.args == other.args)
+        return (
+            self.predicate == other.predicate
+            and self.label == other.label
+            and self.args == other.args
+        )
 
     def __repr__(self) -> str:
-        return '<{} object ({}:{}({})) at {}>'.format(
+        return "<{} object ({}:{}({})) at {}>".format(
             self.__class__.__name__,
             self.label,
             self.predicate,
-            ', '.join('{} {}'.format(role, val)
-                      for role, val in self.args.items()),
-            id(self))
+            ", ".join(f"{role} {val}" for role, val in self.args.items()),
+            id(self),
+        )
 
     # Properties interpreted from roles
 
     @property
-    def iv(self) -> Optional[str]:
+    def iv(self) -> str | None:
         return self.args.get(INTRINSIC_ROLE, None)
 
     @property
-    def carg(self) -> Optional[str]:
+    def carg(self) -> str | None:
         return self.args.get(CONSTANT_ROLE, None)
 
     def is_quantifier(self) -> bool:
@@ -128,8 +132,9 @@ class _Constraint(tuple):
         return super().__new__(cls, (lhs, relation, rhs))
 
     def __repr__(self):
-        return '<{0} object ({1[0]!s} {1[1]!s} {1[2]!s}) at {2}>'.format(
-            self.__class__.__name__, self, id(self)
+        return (
+            f"<{self.__class__.__name__} object "
+            f"({self[0]!s} {self[1]!s} {self[2]!s}) at {id(self)}>"
         )
 
 
@@ -201,7 +206,7 @@ class ICons(_Constraint):
 
 
 # maps variables to either lists of (prop, val) tuples or a {prop: val} map
-_VarMap = Mapping[str, Union[Sequence[tuple[str, str]], Mapping[str, str]]]
+_VarMap: TypeAlias = Mapping[str, Sequence[tuple[str, str]] | Mapping[str, str]]
 
 
 class MRS(ScopingSemanticStructure[str, EP]):
@@ -232,23 +237,23 @@ class MRS(ScopingSemanticStructure[str, EP]):
         identifier: A discourse-utterance identifier.
     """
 
-    __slots__ = ('hcons', 'icons', 'variables')
+    __slots__ = ("hcons", "icons", "variables")
 
-    top: Optional[str]  # narrowed from supertype
-    index: Optional[str]  # narrowed from supertype
+    top: str | None  # narrowed from supertype
+    index: str | None  # narrowed from supertype
     hcons: list[HCons]
     icons: list[ICons]
     variables: dict[str, dict[str, str]]  # variable: {property: value}
 
     def __init__(
         self,
-        top: Optional[str] = None,
-        index: Optional[str] = None,
-        rels: Optional[Iterable[EP]] = None,
-        hcons: Optional[Iterable[HCons]] = None,
-        icons: Optional[Iterable[ICons]] = None,
-        variables: Optional[_VarMap] = None,
-        lnk: Optional[Lnk] = None,
+        top: str | None = None,
+        index: str | None = None,
+        rels: Iterable[EP] | None = None,
+        hcons: Iterable[HCons] | None = None,
+        icons: Iterable[ICons] | None = None,
+        variables: _VarMap | None = None,
+        lnk: Lnk | None = None,
         surface=None,
         identifier=None,
     ) -> None:
@@ -300,16 +305,18 @@ class MRS(ScopingSemanticStructure[str, EP]):
     def __eq__(self, other) -> bool:
         if not isinstance(other, MRS):
             return NotImplemented
-        return (self.top == other.top
-                and self.index == other.index
-                and self.rels == other.rels
-                and self.hcons == other.hcons
-                and self.icons == other.icons
-                and self.variables == other.variables)
+        return (
+            self.top == other.top
+            and self.index == other.index
+            and self.rels == other.rels
+            and self.hcons == other.hcons
+            and self.icons == other.icons
+            and self.variables == other.variables
+        )
 
     # SemanticStructure methods
 
-    def properties(self, id: Optional[str]) -> dict[str, str]:
+    def properties(self, id: str | None) -> dict[str, str]:
         """
         Return the properties associated with EP *id*.
 
@@ -320,20 +327,18 @@ class MRS(ScopingSemanticStructure[str, EP]):
         var = self[id].iv
         if var is None:
             raise MRSError(
-                f'EP {id} does not have properties as it does not have '
-                'an intrinsic variable'
+                f"EP {id} does not have properties as it does not have "
+                "an intrinsic variable"
             )
         return self.variables[var]
 
-    def is_quantifier(self, id: Optional[str]) -> bool:
+    def is_quantifier(self, id: str | None) -> bool:
         """Return `True` if *var* is the bound variable of a quantifier."""
         return RESTRICTION_ROLE in self[id].args
 
-    def quantification_pairs(self) -> list[tuple[Optional[EP], Optional[EP]]]:
-        qmap = {ep.iv: ep
-                for ep in self.rels
-                if ep.is_quantifier()}
-        pairs: list[tuple[Optional[EP], Optional[EP]]] = []
+    def quantification_pairs(self) -> list[tuple[EP | None, EP | None]]:
+        qmap = {ep.iv: ep for ep in self.rels if ep.is_quantifier()}
+        pairs: list[tuple[EP | None, EP | None]] = []
         # first pair non-quantifiers to their quantifier, if any
         for ep in self.rels:
             if not ep.is_quantifier():
@@ -350,8 +355,8 @@ class MRS(ScopingSemanticStructure[str, EP]):
 
     def arguments(
         self,
-        types: Optional[Iterable[str]] = None,
-        expressed: Optional[bool] = None,
+        types: Iterable[str] | None = None,
+        expressed: bool | None = None,
     ) -> ArgumentStructure[str]:
         ivs = {ep.iv for ep in self.rels}
         args: dict[str, list[tuple[str, str]]] = {}
@@ -375,7 +380,7 @@ class MRS(ScopingSemanticStructure[str, EP]):
 
     # ScopingSemanticStructure methods
 
-    def scopes(self) -> tuple[Optional[str], dict[str, list[EP]]]:
+    def scopes(self) -> tuple[str | None, dict[str, list[EP]]]:
         """
         Return a tuple containing the top label and the scope map.
 
@@ -390,15 +395,14 @@ class MRS(ScopingSemanticStructure[str, EP]):
         scopes: dict[str, list[EP]] = {}
         for ep in self.rels:
             scopes.setdefault(ep.label, []).append(ep)
-        top = next((hc.lo for hc in self.hcons if hc.hi == self.top),
-                   self.top)
+        top = next((hc.lo for hc in self.hcons if hc.hi == self.top), self.top)
         if top not in scopes:
             top = None
         return top, scopes
 
     def scopal_arguments(
         self,
-        scopes: Optional[Mapping[str, Sequence[EP]]] = None,
+        scopes: Mapping[str, Sequence[EP]] | None = None,
     ) -> ScopalArguments[str]:
         """
         Return a mapping of the scopal argument structure.
@@ -441,12 +445,12 @@ class MRS(ScopingSemanticStructure[str, EP]):
 
 # Helper functions
 
+
 def _uniquify_ids(rels: Iterable[EP]) -> None:
-    nextvid = max((variable.id(ep.iv) for ep in rels if ep.iv),
-                  default=0)
+    nextvid = max((variable.id(ep.iv) for ep in rels if ep.iv), default=0)
     ids = set()
     for ep in rels:
         if ep.id in ids:
-            ep.id = '_{}'.format(nextvid)
+            ep.id = f"_{nextvid}"
             nextvid += 1
         ids.add(ep.id)

@@ -1,10 +1,7 @@
-
-from typing import Tuple
-
 from delphin.codecs import eds
 from delphin.edm import compute
 
-golds = eds.loads('''
+golds = eds.loads("""
   {e2:
    _1:proper_q<0:3>[BV x3]
    x3:named<0:3>("Kim"){x PERS 3, NUM sg, IND +}[]
@@ -17,9 +14,9 @@ golds = eds.loads('''
    _3:pronoun_q<27:30>[BV x21]
    x21:pron<27:30>{x PERS 3, NUM sg, GEND f, PT std}[]
    x13:_test_n_of<31:36>{x PERS 3, NUM sg, IND +}[]}
-''')
+""")
 
-tests = eds.loads('''
+tests = eds.loads("""
   {e9:
    _1:proper_q<0:3>[BV x3]
    x3:named<0:3>("Kim"){x PERS 3, NUM sg, IND +}[]
@@ -32,10 +29,10 @@ tests = eds.loads('''
    _3:pronoun_q<27:30>[BV x19]
    x19:pron<27:30>{x PERS 3, NUM sg, GEND f, IND +, PT std}[]
    x12:_test_n_of<31:36>{x PERS 3, NUM sg, IND +}[]}
-''')
+""")
 
 
-def edm_sig3(*args, **kwargs) -> Tuple[float, float, float]:
+def edm_sig3(*args, **kwargs) -> tuple[float, float, float]:
     p, r, f = compute(*args, **kwargs)
     return round(p, 3), round(r, 3), round(f, 3)
 

@@ -4,15 +4,14 @@ Classes and functions related to derivation trees.
 
 import re
 from collections import namedtuple
-from collections.abc import Sequence
+from collections.abc import (
+    Iterable,
+    Sequence,
+    Sequence as SequenceType,
+)
 from typing import (
     Any,
-    Dict,
-    Iterable,
-    List,
     Optional,
-    Sequence as SequenceType,
-    Union,
 )
 
 # Default modules need to import the PyDelphin version
@@ -25,16 +24,16 @@ class DerivationSyntaxError(PyDelphinSyntaxError):
 
 
 _all_fields = (
-    'form',
-    'tokens',
-    'id',
-    'entity',
-    'score',
-    'start',
-    'end',
-    'daughters',
-    'head',
-    'type',
+    "form",
+    "tokens",
+    "id",
+    "entity",
+    "score",
+    "start",
+    "end",
+    "daughters",
+    "head",
+    "type",
 )
 
 
@@ -42,7 +41,8 @@ class _UDFNodeBase:
     """
     Base class for :class:`UDFNode` and :class:`UDFTerminal`.
     """
-    _parent: Optional['_UDFNodeBase']
+
+    _parent: Optional["_UDFNodeBase"]
 
     def __str__(self):
         return self.to_udf(indent=None)
@@ -54,7 +54,7 @@ class _UDFNodeBase:
         return not (self == other)
 
     @property
-    def parent(self) -> Optional['_UDFNodeBase']:
+    def parent(self) -> Optional["_UDFNodeBase"]:
         return self._parent
 
     def is_root(self):
@@ -86,10 +86,8 @@ class _UDFNodeBase:
         return _to_udf(self, indent, 1, udx=True)
 
     def to_dict(
-        self,
-        fields: Iterable[str] = _all_fields,
-        labels: Optional[SequenceType] = None
-    ) -> Dict[str, Any]:
+        self, fields: Iterable[str] = _all_fields, labels: SequenceType | None = None
+    ) -> dict[str, Any]:
         """
         Encode the node as a dictionary suitable for JSON serialization.
 
@@ -106,7 +104,7 @@ class _UDFNodeBase:
         return _to_dict(self, fields, labels)
 
 
-class UDFToken(namedtuple('UDFToken', 'id tfs')):
+class UDFToken(namedtuple("UDFToken", "id tfs")):
     """
     A token represenatation in derivations.
 
@@ -118,11 +116,12 @@ class UDFToken(namedtuple('UDFToken', 'id tfs')):
         id: token identifier
         tfs: the feature structure for the token
     """
-    def __new__(cls, id: Union[int, str], tfs: str):
-        return super(UDFToken, cls).__new__(cls, int(id), tfs)
+
+    def __new__(cls, id: int | str, tfs: str):
+        return super().__new__(cls, int(id), tfs)
 
     def __repr__(self):
-        return f'<UDFToken object ({self.id} {self.tfs!r}) at {id(self)}>'
+        return f"<UDFToken object ({self.id} {self.tfs!r}) at {id(self)}>"
 
     def __eq__(self, other):
         """
@@ -133,7 +132,7 @@ class UDFToken(namedtuple('UDFToken', 'id tfs')):
         return self.tfs == other.tfs
 
 
-class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', 'form tokens')):
+class UDFTerminal(_UDFNodeBase, namedtuple("UDFTerminal", "form tokens")):
     """
     Terminal nodes in the Unified Derivation Format.
 
@@ -147,19 +146,18 @@ class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', 'form tokens')):
         parent (UDFNode, optional): parent node in derivation
     """
 
-    def __new__(cls,
-                form: str,
-                tokens: Optional[SequenceType[UDFToken]] = None,
-                parent=None):
+    def __new__(
+        cls, form: str, tokens: SequenceType[UDFToken] | None = None, parent=None
+    ):
         if tokens is None:
             tokens = []
-        t = super(UDFTerminal, cls).__new__(cls, form, tokens)
+        t = super().__new__(cls, form, tokens)
         # internal bookkeeping
         t._parent = parent
         return t
 
     def __repr__(self):
-        return f'<UDFTerminal object ({self.form}) at {id(self)}>'
+        return f"<UDFTerminal object ({self.form}) at {id(self)}>"
 
     def __eq__(self, other):
         """
@@ -185,8 +183,9 @@ class UDFTerminal(_UDFNodeBase, namedtuple('UDFTerminal', 'form tokens')):
         return False
 
 
-class UDFNode(_UDFNodeBase,
-              namedtuple('UDFNode', 'id entity score start end daughters')):
+class UDFNode(
+    _UDFNodeBase, namedtuple("UDFNode", "id entity score start end daughters")
+):
     """
     Normal (non-leaf) nodes in the Unified Derivation Format.
 
@@ -208,19 +207,21 @@ class UDFNode(_UDFNodeBase,
         parent: parent node in derivation
     """
 
-    _head: Optional[bool]
-    type: Optional[str]
+    _head: bool | None
+    type: str | None
 
-    def __new__(cls,
-                id: Optional[int],
-                entity: str,
-                score: Optional[float] = None,
-                start: Optional[int] = None,
-                end: Optional[int] = None,
-                daughters: Optional[SequenceType[_UDFNodeBase]] = None,
-                head: Optional[bool] = None,
-                type: Optional[str] = None,
-                parent: Optional['UDFNode'] = None):
+    def __new__(
+        cls,
+        id: int | None,
+        entity: str,
+        score: float | None = None,
+        start: int | None = None,
+        end: int | None = None,
+        daughters: SequenceType[_UDFNodeBase] | None = None,
+        head: bool | None = None,
+        type: str | None = None,
+        parent: Optional["UDFNode"] = None,
+    ):
         # numeric fields can be underspecified as -1 if not a root
         if id is not None:
             id = int(id)
@@ -232,10 +233,8 @@ class UDFNode(_UDFNodeBase,
             daughters = []
         # make sure daughters are not roots (is this check unnecessary?)
         if any(dtr.is_root() for dtr in daughters):
-            raise ValueError('Daughter nodes cannot be roots.')
-        node = super(UDFNode, cls).__new__(
-            cls, id, entity, score, start, end, daughters
-        )
+            raise ValueError("Daughter nodes cannot be roots.")
+        node = super().__new__(cls, id, entity, score, start, end, daughters)
         # internal bookkeeping
         node._parent = parent
         node._head = head
@@ -243,8 +242,9 @@ class UDFNode(_UDFNodeBase,
         return node
 
     def __repr__(self):
-        return '<UDFNode object ({}, {}, {}, {}, {}) at {}>'.format(
-            self.id, self.entity, self.score, self.start, self.end, id(self)
+        return (
+            f"<UDFNode object ({self.id}, {self.entity}, {self.score},"
+            f"{self.start}, {self.end}) at {id(self)}>"
         )
 
     def __eq__(self, other):
@@ -265,7 +265,7 @@ class UDFNode(_UDFNodeBase,
             return False
         if len(self.daughters) != len(other.daughters):
             return False
-        if any(a != b for a, b in zip(self.daughters, other.daughters)):
+        if any(a != b for a, b in zip(self.daughters, other.daughters, strict=True)):
             return False
         # Return true if they're the same!
         return True
@@ -293,8 +293,11 @@ class UDFNode(_UDFNodeBase,
         returned.
 
         """
-        if (self._head or self.is_root()
-                or len(getattr(self._parent, 'daughters', [None])) == 1):
+        if (
+            self._head
+            or self.is_root()
+            or len(getattr(self._parent, "daughters", [None])) == 1
+        ):
             return True
         elif any(dtr._head for dtr in self._parent.daughters):
             return False
@@ -353,9 +356,18 @@ class Derivation(UDFNode):
     that it has only one node on its *daughters* list.
     """
 
-    def __init__(self, id, entity,
-                 score=None, start=None, end=None, daughters=None,
-                 head=None, type=None, parent=None):
+    def __init__(
+        self,
+        id,
+        entity,
+        score=None,
+        start=None,
+        end=None,
+        daughters=None,
+        head=None,
+        type=None,
+        parent=None,
+    ) -> None:
         # Note: Attribute assignment is done in UDFNode.__new__(), so
         #       this only checks the arguments.
         # If id is None, it is a root, and score, start, and end must
@@ -363,14 +375,17 @@ class Derivation(UDFNode):
         if id is None:
             if score is not None or start is not None or end is not None:
                 raise TypeError(
-                    'Root nodes (with id=None) of Derivation objects '
-                    'must have *score*, *start*, and *end* set to None.'
+                    "Root nodes (with id=None) of Derivation objects "
+                    "must have *score*, *start*, and *end* set to None."
                 )
-            if (daughters is None or len(daughters) != 1
-                    or not isinstance(daughters[0], UDFNode)):
+            if (
+                daughters is None
+                or len(daughters) != 1
+                or not isinstance(daughters[0], UDFNode)
+            ):
                 raise ValueError(
-                    'Root nodes (with id=None) of Derivation objects '
-                    'must have a single daughter node.'
+                    "Root nodes (with id=None) of Derivation objects "
+                    "must have a single daughter node."
                 )
 
 
@@ -390,7 +405,7 @@ def from_string(s: str) -> Derivation:
     return Derivation(*udfnode, head=udfnode._head, type=udfnode.type)
 
 
-def from_dict(d: Dict[str, Any]) -> Derivation:
+def from_dict(d: dict[str, Any]) -> Derivation:
     """
     Instantiate a Derivation from a dictionary representation.
 
@@ -432,115 +447,111 @@ _udf_re = re.compile(
     # root symbol
     r'|\s*(?P<root>{token})\s*\(?'
     .format(token=r'[^\s()]+', string=r'"[^"\\]*(?:\\.[^"\\]*)*"')
-)
+)  # fmt: skip
 
 
 def _from_string(s) -> UDFNode:
-    if not (s.startswith('(') and s.endswith(')')):
-        raise DerivationSyntaxError(
-            'missing opening or closing parentheses', text=s)
+    if not (s.startswith("(") and s.endswith(")")):
+        raise DerivationSyntaxError("missing opening or closing parentheses", text=s)
     s_ = s[1:]  # get rid of initial open-parenthesis
-    stack: List[UDFNode] = []
-    deriv: Optional[UDFNode] = None
+    stack: list[UDFNode] = []
+    deriv: UDFNode | None = None
     matches = _udf_re.finditer(s_)
     for match in matches:
-        if match.group('done'):
+        if match.group("done"):
             node = stack.pop()
             if len(stack) == 0:
                 deriv = node
                 break
             else:
                 stack[-1].daughters.append(node)
-        elif match.group('form'):
+        elif match.group("form"):
             gd = match.groupdict()
             # ignore LKB-style start/end data if it exists on gd
             term = UDFTerminal(
-                _unquote(gd['form']),
-                tokens=_udf_tokens(gd.get('tokens', '')),
-                parent=stack[-1] if stack else None
+                _unquote(gd["form"]),
+                tokens=_udf_tokens(gd.get("tokens", "")),
+                parent=stack[-1] if stack else None,
             )
             stack[-1].daughters.append(term)
-        elif match.group('id'):
+        elif match.group("id"):
             gd = match.groupdict()
             head = None
-            entity, _, type = gd['entity'].partition('@')
-            if entity[0] == '^':
+            entity, _, type = gd["entity"].partition("@")
+            if entity[0] == "^":
                 entity = entity[1:]
                 head = True
-            if type == '':
+            if type == "":
                 type = None
-            udf = UDFNode(int(gd['id']),
-                          entity,
-                          score=float(gd['score']) if gd['score'] else None,
-                          start=int(gd['start']) if gd['start'] else None,
-                          end=int(gd['end']) if gd['end'] else None,
-                          head=head,
-                          type=type,
-                          parent=stack[-1] if stack else None)
+            udf = UDFNode(
+                int(gd["id"]),
+                entity,
+                score=float(gd["score"]) if gd["score"] else None,
+                start=int(gd["start"]) if gd["start"] else None,
+                end=int(gd["end"]) if gd["end"] else None,
+                head=head,
+                type=type,
+                parent=stack[-1] if stack else None,
+            )
             stack.append(udf)
-        elif match.group('root'):
-            udf = UDFNode(None, match.group('root'))
+        elif match.group("root"):
+            udf = UDFNode(None, match.group("root"))
             stack.append(udf)
     if deriv is None:
         raise DerivationSyntaxError(text=s)
     elif stack:
-        raise DerivationSyntaxError(
-            'possibly unbalanced parentheses', text=s)
+        raise DerivationSyntaxError("possibly unbalanced parentheses", text=s)
     return deriv
 
 
 def _unquote(s: str) -> str:
     if s is not None:
-        return re.sub(r'^"(.*)"$', r'\1', s)
+        return re.sub(r'^"(.*)"$', r"\1", s)
     return None
 
 
-def _udf_tokens(tokenstring: str) -> List[UDFToken]:
-    tokens: List[UDFToken] = []
+def _udf_tokens(tokenstring: str) -> list[UDFToken]:
+    tokens: list[UDFToken] = []
     if tokenstring:
         toks = re.findall(
-            r'\s*({id})\s+({tfs})'
-            .format(id=r'\d+', tfs=r'"[^"\\]*(?:\\.[^"\\]*)*"'),
-            tokenstring
+            r"\s*({id})\s+({tfs})".format(id=r"\d+", tfs=r'"[^"\\]*(?:\\.[^"\\]*)*"'),
+            tokenstring,
         )
         for tid, tfs in toks:
             tokens.append(UDFToken(tid, _unquote(tfs)))
     return tokens
 
 
-def _from_dict(d: Dict[str, Any], parent: Optional[UDFNode] = None) -> UDFNode:
-    if 'daughters' in d:
+def _from_dict(d: dict[str, Any], parent: UDFNode | None = None) -> UDFNode:
+    if "daughters" in d:
         n = UDFNode(
-            d.get('id'),
-            d['entity'],
-            score=d.get('score'),
-            start=d.get('start'),
-            end=d.get('end'),
-            head=d.get('head'),
-            type=d.get('type'),
-            parent=parent
+            d.get("id"),
+            d["entity"],
+            score=d.get("score"),
+            start=d.get("start"),
+            end=d.get("end"),
+            head=d.get("head"),
+            type=d.get("type"),
+            parent=parent,
         )
-        n.daughters.extend(
-            _from_dict(dtr, parent=n) for dtr in d['daughters']
-        )
+        n.daughters.extend(_from_dict(dtr, parent=n) for dtr in d["daughters"])
         return n
-    elif 'form' in d:
+    elif "form" in d:
         n = UDFNode(
-            d.get('id'),
-            d['entity'],
-            score=d.get('score'),
-            start=d.get('start'),
-            end=d.get('end'),
-            head=d.get('head'),
-            type=d.get('type'),
-            parent=parent
+            d.get("id"),
+            d["entity"],
+            score=d.get("score"),
+            start=d.get("start"),
+            end=d.get("end"),
+            head=d.get("head"),
+            type=d.get("type"),
+            parent=parent,
         )
         n.daughters.append(
             UDFTerminal(
-                form=d['form'],
-                tokens=[UDFToken(t['id'], t['tfs'])
-                        for t in d.get('tokens', [])],
-                parent=n
+                form=d["form"],
+                tokens=[UDFToken(t["id"], t["tfs"]) for t in d.get("tokens", [])],
+                parent=n,
             )
         )
         return n
@@ -551,36 +562,29 @@ def _from_dict(d: Dict[str, Any], parent: Optional[UDFNode] = None) -> UDFNode:
 ###############################################################################
 # Serialization
 
+
 def _to_udf(obj, indent, level, udx=False):
-    delim = ' ' if indent is None else '\n' + ' ' * indent * level
+    delim = " " if indent is None else "\n" + " " * indent * level
     if isinstance(obj, UDFNode):
         entity = obj.entity
         if udx:
             if obj._head:
-                entity = '^' + entity
+                entity = "^" + entity
             if obj.type:
-                entity = f'{entity}@{obj.type}'
-        dtrs = [_to_udf(dtr, indent, (level + 1), udx)
-                for dtr in obj.daughters]
-        dtrs = delim.join([''] + dtrs)  # empty first item to force indent
+                entity = f"{entity}@{obj.type}"
+        dtrs = [_to_udf(dtr, indent, (level + 1), udx) for dtr in obj.daughters]
+        dtrs = delim.join(["", *dtrs])  # empty first item to force indent
         if obj.id is None:
-            return f'({entity}{dtrs})'
+            return f"({entity}{dtrs})"
         else:
             # :g for score makes -1.0 look like -1
-            return '({} {} {:g} {} {}{})'.format(
-                obj.id,
-                entity,
-                obj.score,
-                obj.start,
-                obj.end,
-                dtrs
-            )
+            return f"({obj.id} {entity} {obj.score:g} {obj.start} {obj.end}{dtrs})"
     elif isinstance(obj, UDFTerminal):
         form = f'"{obj.form}"'
         tokens = [f'{t.id} "{t.tfs}"' for t in obj.tokens]
-        return '({})'.format(delim.join([form] + tokens))
+        return f"({delim.join([form, *tokens])})"
     else:
-        raise TypeError(f'Invalid node: {obj!s}')
+        raise TypeError(f"Invalid node: {obj!s}")
 
 
 def _to_dict(obj, fields, labels):
@@ -591,9 +595,7 @@ def _to_dict(obj, fields, labels):
     elif labels is None:
         labels = {}
     if diff:
-        raise ValueError(
-            'Invalid field(s): {}'.format(', '.join(diff))
-        )
+        raise ValueError("Invalid field(s): {}".format(", ".join(diff)))
     return _to_dict_recursive(obj, fields, labels)
 
 
@@ -603,12 +605,12 @@ def _map_labels(drv, labels):
         return m
     if labels[0]:
         m[drv.id] = labels[0]
-    subds = getattr(drv, 'daughters', getattr(drv, 'tokens', []))
+    subds = getattr(drv, "daughters", getattr(drv, "tokens", []))
     sublbls = labels[1:]
-    if (sublbls and len(subds) != len(sublbls)):
-        raise ValueError('Labels do not match derivation structure.')
-    for d, lbls in zip(subds, sublbls):
-        if hasattr(d, 'id'):
+    if sublbls and len(subds) != len(sublbls):
+        raise ValueError("Labels do not match derivation structure.")
+    for d, lbls in zip(subds, sublbls, strict=True):
+        if hasattr(d, "id"):
             m.update(_map_labels(d, lbls))
     return m
 
@@ -616,21 +618,21 @@ def _map_labels(drv, labels):
 def _to_dict_recursive(obj, fields, labels):
     d = {}
     if isinstance(obj, UDFNode):
-        if 'entity' in fields:
-            d['entity'] = obj.entity
+        if "entity" in fields:
+            d["entity"] = obj.entity
         if obj.id is not None:
-            if 'id' in fields:
-                d['id'] = obj.id
-            if 'score' in fields:
-                d['score'] = obj.score
-            if 'start' in fields:
-                d['start'] = obj.start
-            if 'end' in fields:
-                d['end'] = obj.end
-            if 'type' in fields and obj.type:
-                d['type'] = obj.type
-            if 'head' in fields and obj._head:
-                d['head'] = obj._head
+            if "id" in fields:
+                d["id"] = obj.id
+            if "score" in fields:
+                d["score"] = obj.score
+            if "start" in fields:
+                d["start"] = obj.start
+            if "end" in fields:
+                d["end"] = obj.end
+            if "type" in fields and obj.type:
+                d["type"] = obj.type
+            if "head" in fields and obj._head:
+                d["head"] = obj._head
         dtrs = obj.daughters
         if dtrs:
             # terminals should always be single daughters
@@ -638,24 +640,23 @@ def _to_dict_recursive(obj, fields, labels):
                 # merge terminal daughter info into current node
                 d.update(_to_dict_recursive(dtrs[0], fields, labels))
             else:
-                d['daughters'] = [
+                d["daughters"] = [
                     _to_dict_recursive(dtr, fields, labels) for dtr in dtrs
                 ]
         if obj.id in labels:
-            d['label'] = labels[obj.id]
+            d["label"] = labels[obj.id]
     elif isinstance(obj, UDFTerminal):
-        d['form'] = obj.form
-        # d['from'] = min(t.tfs['+FROM'] for t in obj.tokens)
-        # d['to'] = max(t.tfs['+TO'] for t in obj.tokens)
-        if obj.tokens and 'tokens' in fields:
+        d["form"] = obj.form
+        # unused for now: d['from'] = min(t.tfs['+FROM'] for t in obj.tokens)
+        # unused for now: d['to'] = max(t.tfs['+TO'] for t in obj.tokens)
+        if obj.tokens and "tokens" in fields:
             tokens = []
             for tok in obj.tokens:
-                td = {'id': tok.id}
-                # td['from'] = tok.tfs['+FROM']
-                # td['to'] = tok.tfs['+TO']
-                td['tfs'] = tok.tfs
+                td = {"id": tok.id}
+                # unused for now: td['from'] = tok.tfs['+FROM']
+                # unused for now: td['to'] = tok.tfs['+TO']
+                td["tfs"] = tok.tfs
                 tokens.append(td)
-            d['tokens'] = tokens
-    # else:
-    #     raies TypeError()
+            d["tokens"] = tokens
+    # any else cases?
     return d

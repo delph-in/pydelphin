@@ -4,7 +4,6 @@ Serialization functions for the SimpleMRS format.
 
 import re
 from pathlib import Path
-from typing import Optional
 
 from delphin import predicate, variable
 from delphin.lnk import Lnk
@@ -13,11 +12,11 @@ from delphin.sembase import property_priority, role_priority
 from delphin.util import Lexer
 
 CODEC_INFO = {
-    'representation': 'mrs',
+    "representation": "mrs",
 }
 
 
-TOP_FEATURE = 'TOP'
+TOP_FEATURE = "TOP"
 
 
 ##############################################################################
@@ -34,7 +33,7 @@ def load(source):
     Returns:
         a list of MRS objects
     """
-    if hasattr(source, 'read'):
+    if hasattr(source, "read"):
         ms = list(_decode(source))
     else:
         source = Path(source).expanduser()
@@ -56,8 +55,7 @@ def loads(s):
     return ms
 
 
-def dump(ms, destination, properties=True, lnk=True,
-         indent=False, encoding='utf-8'):
+def dump(ms, destination, properties=True, lnk=True, indent=False, encoding="utf-8"):
     """
     Serialize MRS objects to SimpleMRS and write to a file
 
@@ -72,11 +70,11 @@ def dump(ms, destination, properties=True, lnk=True,
             file with the given encoding; otherwise it is ignored
     """
     text = dumps(ms, properties=properties, lnk=lnk, indent=indent)
-    if hasattr(destination, 'write'):
+    if hasattr(destination, "write"):
         print(text, file=destination)
     else:
         destination = Path(destination).expanduser()
-        with destination.open('w', encoding=encoding) as fh:
+        with destination.open("w", encoding=encoding) as fh:
             print(text, file=fh)
 
 
@@ -127,38 +125,47 @@ def encode(m, properties=True, lnk=True, indent=False):
 
 SimpleMRSLexer = Lexer(
     tokens=[
-        (r'\[', 'LBRACK:['),
-        (r'\]', 'RBRACK:]'),
-        (r'<(?:-?\d+[:#]-?\d+'
-         r'|@\d+'
-         r'|\d+(?: +\d+)*)>', 'LNK:a lnk value'),
-        (r'"([^"\\]*(?:\\.[^"\\]*)*)"', 'DQSTRING:a string'),
-        (r"'([^ \n:<>\[\]]+)", 'SQSYMBOL:a quoted symbol'),
-        (r'_[^\s_]+'  # lemma
-         r'_[nvajrscpqxud]'  # pos
-         r'(?:_(?:[^\s_<]|<(?![-0-9:#@ ]*>\s))+)?'  # optional sense
-         r'(?:_rel)?',  # optional suffix
-         'PREDICATE:a surface predicate'),
-        (r'<', 'LANGLE:<'),
-        (r'>', 'RANGLE:>'),
-        (r'([^\s:<>\[\]]+):', 'FEATURE:a feature'),
-        (r'(?:[^ \n\]<]+'
-         r'|<(?![-0-9:#@ ]*>\s))+', 'SYMBOL:a symbol'),
-        (r'[^\s]', 'UNEXPECTED'),
+        (r"\[", "LBRACK:["),
+        (r"\]", "RBRACK:]"),
+        (
+            r"<(?:-?\d+[:#]-?\d+"
+            r"|@\d+"
+            r"|\d+(?: +\d+)*)>",
+            "LNK:a lnk value",
+        ),
+        (r'"([^"\\]*(?:\\.[^"\\]*)*)"', "DQSTRING:a string"),
+        (r"'([^ \n:<>\[\]]+)", "SQSYMBOL:a quoted symbol"),
+        (
+            r"_[^\s_]+"  # lemma
+            r"_[nvajrscpqxud]"  # pos
+            r"(?:_(?:[^\s_<]|<(?![-0-9:#@ ]*>\s))+)?"  # optional sense
+            r"(?:_rel)?",  # optional suffix
+            "PREDICATE:a surface predicate",
+        ),
+        (r"<", "LANGLE:<"),
+        (r">", "RANGLE:>"),
+        (r"([^\s:<>\[\]]+):", "FEATURE:a feature"),
+        (
+            r"(?:[^ \n\]<]+"
+            r"|<(?![-0-9:#@ ]*>\s))+",
+            "SYMBOL:a symbol",
+        ),
+        (r"[^\s]", "UNEXPECTED"),
     ],
-    error_class=MRSSyntaxError)
+    error_class=MRSSyntaxError,
+)
 
 
-LBRACK    = SimpleMRSLexer.tokentypes.LBRACK
-RBRACK    = SimpleMRSLexer.tokentypes.RBRACK
-LNK       = SimpleMRSLexer.tokentypes.LNK
-DQSTRING  = SimpleMRSLexer.tokentypes.DQSTRING
-SQSYMBOL  = SimpleMRSLexer.tokentypes.SQSYMBOL
+LBRACK = SimpleMRSLexer.tokentypes.LBRACK
+RBRACK = SimpleMRSLexer.tokentypes.RBRACK
+LNK = SimpleMRSLexer.tokentypes.LNK
+DQSTRING = SimpleMRSLexer.tokentypes.DQSTRING
+SQSYMBOL = SimpleMRSLexer.tokentypes.SQSYMBOL
 PREDICATE = SimpleMRSLexer.tokentypes.PREDICATE
-LANGLE    = SimpleMRSLexer.tokentypes.LANGLE
-RANGLE    = SimpleMRSLexer.tokentypes.RANGLE
-FEATURE   = SimpleMRSLexer.tokentypes.FEATURE
-SYMBOL    = SimpleMRSLexer.tokentypes.SYMBOL
+LANGLE = SimpleMRSLexer.tokentypes.LANGLE
+RANGLE = SimpleMRSLexer.tokentypes.RANGLE
+FEATURE = SimpleMRSLexer.tokentypes.FEATURE
+SYMBOL = SimpleMRSLexer.tokentypes.SYMBOL
 
 
 def _decode(lineiter):
@@ -182,32 +189,40 @@ def _decode_mrs(lexer):
     feature = lexer.accept_type(FEATURE)
     while feature is not None:
         feature = feature.upper()
-        if feature in ('LTOP', 'TOP'):
+        if feature in ("LTOP", "TOP"):
             top = lexer.expect_type(SYMBOL).lower()
-        elif feature == 'INDEX':
+        elif feature == "INDEX":
             index = _decode_variable(lexer, variables)
-        elif feature == 'RELS':
+        elif feature == "RELS":
             lexer.expect_type(LANGLE)
             while lexer.peek()[0] == LBRACK:
                 rels.append(_decode_rel(lexer, variables))
             lexer.expect_type(RANGLE)
-        elif feature == 'HCONS':
+        elif feature == "HCONS":
             lexer.expect_type(LANGLE)
             while lexer.peek()[0] == SYMBOL:
                 hcons.append(_decode_cons(lexer, HCons, variables))
             lexer.expect_type(RANGLE)
-        elif feature == 'ICONS':
+        elif feature == "ICONS":
             lexer.expect_type(LANGLE)
             while lexer.peek()[0] == SYMBOL:
                 icons.append(_decode_cons(lexer, ICons, variables))
             lexer.expect_type(RANGLE)
         else:
-            raise ValueError('invalid feature: ' + feature)
+            raise ValueError("invalid feature: " + feature)
         feature = lexer.accept_type(FEATURE)
     lexer.expect_type(RBRACK)
-    return MRS(top, index, rels, hcons,
-               icons=icons, variables=variables,
-               lnk=lnk, surface=surface, identifier=identifier)
+    return MRS(
+        top,
+        index,
+        rels,
+        hcons,
+        icons=icons,
+        variables=variables,
+        lnk=lnk,
+        surface=surface,
+        identifier=identifier,
+    )
 
 
 def _decode_lnk(lexer):
@@ -217,7 +232,7 @@ def _decode_lnk(lexer):
     return lnk
 
 
-def _decode_dqstring(dqstring: Optional[str]) -> Optional[str]:
+def _decode_dqstring(dqstring: str | None) -> str | None:
     if dqstring is not None:
         dqstring = _unescape(dqstring)
     return dqstring
@@ -246,24 +261,19 @@ def _decode_rel(lexer, variables):
     pred = _decode_predicate(lexer)
     lnk = _decode_lnk(lexer)
     surface = _decode_dqstring(lexer.accept_type(DQSTRING))
-    _, label = lexer.expect((FEATURE, 'LBL'), (SYMBOL, None))
+    _, label = lexer.expect((FEATURE, "LBL"), (SYMBOL, None))
     # any remaining are arguments or a constant
     role = lexer.accept_type(FEATURE)
     while role is not None:
         role = role.upper()
-        if role == 'CARG':
+        if role == "CARG":
             value = _decode_dqstring(lexer.expect_type(DQSTRING))
         else:
             value = _decode_variable(lexer, variables)
         args[role] = value
         role = lexer.accept_type(FEATURE)
     lexer.expect_type(RBRACK)
-    return EP(pred,
-              label.lower(),
-              args=args,
-              lnk=lnk,
-              surface=surface,
-              base=None)
+    return EP(pred, label.lower(), args=args, lnk=lnk, surface=surface, base=None)
 
 
 def _decode_predicate(lexer) -> str:
@@ -286,18 +296,19 @@ def _decode_cons(lexer, cls, variables):
 ##############################################################################
 # Encoding
 
+
 def _encode(ms, properties, lnk, indent):
     if indent is None or indent is False:
         indent = False  # normalize None to False
-        delim = ' '
+        delim = " "
     else:
         indent = True  # normalize integers to True
-        delim = '\n'
+        delim = "\n"
     return delim.join(_encode_mrs(m, properties, lnk, indent) for m in ms)
 
 
 def _encode_mrs(m, properties, lnk, indent):
-    delim = '\n  ' if indent else ' '
+    delim = "\n  " if indent else " "
     if properties:
         varprops = dict(m.variables)
     else:
@@ -307,11 +318,9 @@ def _encode_mrs(m, properties, lnk, indent):
         _encode_hook(m, varprops, indent),
         _encode_rels(m.rels, varprops, lnk, indent),
         _encode_hcons(m.hcons),
-        _encode_icons(m.icons, varprops)
+        _encode_icons(m.icons, varprops),
     ]
-    return '[ {} ]'.format(
-        delim.join(
-            ' '.join(tokens) for tokens in parts if tokens))
+    return "[ {} ]".format(delim.join(" ".join(tokens) for tokens in parts if tokens))
 
 
 def _encode_surface_info(m, lnk):
@@ -320,17 +329,17 @@ def _encode_surface_info(m, lnk):
         if m.lnk:
             tokens.append(str(m.lnk))
         if m.surface is not None:
-            tokens.append('"{}"'.format(_escape(m.surface)))
+            tokens.append(f'"{_escape(m.surface)}"')
     return tokens
 
 
 def _encode_hook(m, varprops, indent):
-    delim = '\n  ' if indent else ' '
+    delim = "\n  " if indent else " "
     tokens = []
     if m.top is not None:
-        tokens.append('{}: {}'.format(TOP_FEATURE, m.top))
+        tokens.append(f"{TOP_FEATURE}: {m.top}")
     if m.index is not None:
-        tokens.append('INDEX: {}'.format(_encode_variable(m.index, varprops)))
+        tokens.append(f"INDEX: {_encode_variable(m.index, varprops)}")
     if tokens:
         tokens = [delim.join(tokens)]
     return tokens
@@ -339,39 +348,39 @@ def _encode_hook(m, varprops, indent):
 def _encode_variable(var, varprops):
     tokens = [var]
     if varprops.get(var):
-        tokens.append('[')
+        tokens.append("[")
         tokens.append(variable.type(var))
         for prop in sorted(varprops[var], key=property_priority):
             val = varprops[var][prop]
-            tokens.append(prop + ':')
+            tokens.append(prop + ":")
             tokens.append(val)
-        tokens.append(']')
+        tokens.append("]")
         del varprops[var]
-    return ' '.join(tokens)
+    return " ".join(tokens)
 
 
 def _encode_rels(rels, varprops, lnk, indent):
-    delim = ('\n  ' + ' ' * len('RELS: < ')) if indent else ' '
+    delim = ("\n  " + " " * len("RELS: < ")) if indent else " "
     tokens = []
     for rel in rels:
         pred = _encode_predicate(rel.predicate)
         if lnk:
             pred += str(rel.lnk)
-        reltoks = ['[', pred]
+        reltoks = ["[", pred]
         if lnk and rel.surface is not None:
-            reltoks.append('"{}"'.format(_escape(rel.surface)))
-        reltoks.extend(('LBL:', rel.label))
+            reltoks.append(f'"{_escape(rel.surface)}"')
+        reltoks.extend(("LBL:", rel.label))
         for role in sorted(rel.args, key=role_priority):
             arg = rel.args[role]
             if role == CONSTANT_ROLE:
-                arg = '"{}"'.format(_escape(arg))
+                arg = f'"{_escape(arg)}"'
             else:
                 arg = _encode_variable(arg, varprops)
-            reltoks.extend((role + ':', arg))
-        reltoks.append(']')
-        tokens.append(' '.join(reltoks))
+            reltoks.extend((role + ":", arg))
+        reltoks.append("]")
+        tokens.append(" ".join(reltoks))
     if tokens:
-        tokens = ['RELS: <'] + [delim.join(tokens)] + ['>']
+        tokens = ["RELS: <", delim.join(tokens), ">"]
     return tokens
 
 
@@ -382,20 +391,21 @@ def _encode_predicate(predicate: str) -> str:
 
 
 def _encode_hcons(hcons):
-    tokens = ['{} {} {}'.format(hc.hi, hc.relation, hc.lo)
-              for hc in hcons]
+    tokens = [f"{hc.hi} {hc.relation} {hc.lo}" for hc in hcons]
     if tokens:
-        tokens = ['HCONS: <'] + [' '.join(tokens)] + ['>']
+        tokens = ["HCONS: <", " ".join(tokens), ">"]
     return tokens
 
 
 def _encode_icons(icons, varprops):
-    tokens = ['{} {} {}'.format(_encode_variable(ic.left, varprops),
-                                ic.relation,
-                                _encode_variable(ic.right, varprops))
-              for ic in icons]
+    tokens = [
+        f"{_encode_variable(ic.left, varprops)} "
+        f"{ic.relation} "
+        f"{_encode_variable(ic.right, varprops)}"
+        for ic in icons
+    ]
     if tokens:
-        tokens = ['ICONS: <'] + [' '.join(tokens)] + ['>']
+        tokens = ["ICONS: <", " ".join(tokens), ">"]
     return tokens
 
 
@@ -403,13 +413,13 @@ def _encode_icons(icons, varprops):
 
 
 _ESCAPES = {
-    '\\': '\\\\',
+    "\\": "\\\\",
     '"': '\\"',
 }
 
 
 _UNESCAPES = {
-    '\\\\': '\\',
+    "\\\\": "\\",
     '\\"': '"',
 }
 
@@ -424,8 +434,8 @@ def _unescape(s: str) -> str:
     cs = []
     i = 0
     while i < len(s):
-        if s[i] == '\\' and (i + 1) < len(s):
-            cs.append(s[i+1])
+        if s[i] == "\\" and (i + 1) < len(s):
+            cs.append(s[i + 1])
             i += 2
         else:
             cs.append(s[i])

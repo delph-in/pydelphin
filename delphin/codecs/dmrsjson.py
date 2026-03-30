@@ -14,12 +14,12 @@ from delphin.dmrs import (
 from delphin.lnk import Lnk
 
 CODEC_INFO = {
-    'representation': 'dmrs',
+    "representation": "dmrs",
 }
 
-HEADER = '['
-JOINER = ','
-FOOTER = ']'
+HEADER = "["
+JOINER = ","
+FOOTER = "]"
 
 
 def load(source):
@@ -31,7 +31,7 @@ def load(source):
     Returns:
         a list of DMRS objects
     """
-    if hasattr(source, 'read'):
+    if hasattr(source, "read"):
         data = json.load(source)
     else:
         source = Path(source).expanduser()
@@ -53,8 +53,7 @@ def loads(s):
     return [from_dict(d) for d in data]
 
 
-def dump(ds, destination, properties=True, lnk=True,
-         indent=False, encoding='utf-8'):
+def dump(ds, destination, properties=True, lnk=True, indent=False, encoding="utf-8"):
     """
     Serialize DMRS objects to a DMRS-JSON file.
 
@@ -75,11 +74,11 @@ def dump(ds, destination, properties=True, lnk=True,
     elif indent is True:
         indent = 2
     data = [to_dict(d, properties=properties, lnk=lnk) for d in ds]
-    if hasattr(destination, 'write'):
+    if hasattr(destination, "write"):
         json.dump(data, destination, indent=indent)
     else:
         destination = Path(destination).expanduser()
-        with destination.open('w', encoding=encoding) as fh:
+        with destination.open("w", encoding=encoding) as fh:
             json.dump(data, fh)
 
 
@@ -130,8 +129,7 @@ def encode(d, properties=True, lnk=True, indent=False):
         indent = None
     elif indent is True:
         indent = 2
-    return json.dumps(to_dict(d, properties=properties, lnk=lnk),
-                      indent=indent)
+    return json.dumps(to_dict(d, properties=properties, lnk=lnk), indent=indent)
 
 
 def to_dict(d, properties=True, lnk=True):
@@ -140,38 +138,41 @@ def to_dict(d, properties=True, lnk=True):
     """
     nodes = []
     for node in d.nodes:
-        n = dict(nodeid=node.id,
-                 predicate=node.predicate)
+        n = dict(nodeid=node.id, predicate=node.predicate)
         if properties and node.sortinfo:
-            n['sortinfo'] = node.sortinfo
+            n["sortinfo"] = node.sortinfo
         if node.carg is not None:
-            n['carg'] = node.carg
+            n["carg"] = node.carg
         if lnk:
             if node.lnk:
-                n['lnk'] = {'from': node.cfrom, 'to': node.cto}
+                n["lnk"] = {"from": node.cfrom, "to": node.cto}
             if node.surface:
-                n['surface'] = node.surface
+                n["surface"] = node.surface
             if node.base:
-                n['base'] = node.base
+                n["base"] = node.base
         nodes.append(n)
     links = []
     for link in d.links:
-        links.append({
-            'from': link.start, 'to': link.end,
-            'rargname': link.role, 'post': link.post
-        })
+        links.append(
+            {
+                "from": link.start,
+                "to": link.end,
+                "rargname": link.role,
+                "post": link.post,
+            }
+        )
     data = dict(nodes=nodes, links=links)
     if d.top is not None:  # could be 0
-        data['top'] = d.top
+        data["top"] = d.top
     if d.index:
-        data['index'] = d.index
+        data["index"] = d.index
     if lnk:
         if d.lnk:
-            data['lnk'] = {'from': d.cfrom, 'to': d.cto}
+            data["lnk"] = {"from": d.cfrom, "to": d.cto}
         if d.surface:
-            data['surface'] = d.surface
+            data["surface"] = d.surface
     if d.identifier is not None:
-        data['identifier'] = d.identifier
+        data["identifier"] = d.identifier
     return data
 
 
@@ -179,45 +180,47 @@ def from_dict(d):
     """
     Decode a dictionary, as from :func:`to_dict`, into a DMRS object.
     """
+
     def _lnk(x):
-        return None if x is None else Lnk.charspan(x['from'], x['to'])
+        return None if x is None else Lnk.charspan(x["from"], x["to"])
+
     nodes = []
-    for node in d.get('nodes', []):
+    for node in d.get("nodes", []):
         properties = {
             str(key): str(val)  # ensure keys and values are strings
-            for key, val in node.get('sortinfo', {}).items()
+            for key, val in node.get("sortinfo", {}).items()
         }  # make a copy
         type = None
         if CVARSORT in properties:
             type = properties.pop(CVARSORT)
         nodes.append(
             Node(
-                node['nodeid'],
-                node['predicate'],
+                node["nodeid"],
+                node["predicate"],
                 type=type,
                 properties=properties,
-                carg=node.get('carg'),
-                lnk=_lnk(node.get('lnk')),
-                surface=node.get('surface'),
-                base=node.get('base'),
+                carg=node.get("carg"),
+                lnk=_lnk(node.get("lnk")),
+                surface=node.get("surface"),
+                base=node.get("base"),
             )
         )
     links = []
-    for link in d.get('links', []):
+    for link in d.get("links", []):
         links.append(
             Link(
-                link['from'],
-                link['to'],
-                link.get('rargname'),
-                link.get('post'),
+                link["from"],
+                link["to"],
+                link.get("rargname"),
+                link.get("post"),
             )
         )
     return DMRS(
-        top=d.get('top'),
-        index=d.get('index'),
+        top=d.get("top"),
+        index=d.get("index"),
         nodes=nodes,
         links=links,
-        lnk=_lnk(d.get('lnk')),
-        surface=d.get('surface'),
-        identifier=d.get('identifier')
+        lnk=_lnk(d.get("lnk")),
+        surface=d.get("surface"),
+        identifier=d.get("identifier"),
     )

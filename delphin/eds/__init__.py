@@ -1,4 +1,3 @@
-
 """
 Elementary Dependency Structures ([EDS]_)
 
@@ -10,7 +9,7 @@ Elementary Dependency Structures ([EDS]_)
   banking. In Proceedings of the 5th International Conference on
   Language Resources and Evaluation, pages 1250–1255, 2006.
 
-"""
+"""  # noqa: RUF002
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -32,14 +31,14 @@ from delphin.eds._operations import (
 )
 
 __all__ = [
-    'BOUND_VARIABLE_ROLE',
-    'PREDICATE_MODIFIER_ROLE',
-    'EDS',
-    'Node',
-    'from_mrs',
-    'find_predicate_modifiers',
-    'make_ids_unique',
-    'EDSError',
-    'EDSSyntaxError',
-    'EDSWarning',
+    "BOUND_VARIABLE_ROLE",
+    "EDS",
+    "PREDICATE_MODIFIER_ROLE",
+    "EDSError",
+    "EDSSyntaxError",
+    "EDSWarning",
+    "Node",
+    "find_predicate_modifiers",
+    "from_mrs",
+    "make_ids_unique",
 ]

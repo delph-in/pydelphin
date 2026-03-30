@@ -1,14 +1,14 @@
-
 """
 Elementary Dependency Matching
 """
 
-__all__ = ['compute']
+__all__ = ["compute"]
 
 import logging
 from collections import Counter
+from collections.abc import Iterable
 from itertools import zip_longest
-from typing import Any, Iterable, NamedTuple, Optional, TypeVar
+from typing import Any, NamedTuple, TypeVar
 
 # Default modules need to import the PyDelphin version
 from delphin.__about__ import __version__  # noqa: F401
@@ -19,7 +19,7 @@ from delphin.sembase import Predication
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
-SR = TypeVar('SR', EDS, DMRS)
+SR = TypeVar("SR", EDS, DMRS)
 _Span = tuple[int, int]
 _Triple = tuple[_Span, str, Any]
 
@@ -29,10 +29,12 @@ class _Count(NamedTuple):
     test: int
     both: int
 
-    def add(self, other: '_Count') -> '_Count':
-        return _Count(self.gold + other.gold,
-                      self.test + other.test,
-                      self.both + other.both)
+    def add(self, other: "_Count") -> "_Count":
+        return _Count(
+            self.gold + other.gold,
+            self.test + other.test,
+            self.both + other.both,
+        )
 
 
 class _Match(NamedTuple):
@@ -42,12 +44,14 @@ class _Match(NamedTuple):
     constant: _Count
     top: _Count
 
-    def add(self, other: '_Match') -> '_Match':
-        return _Match(self.name.add(other.name),
-                      self.argument.add(other.argument),
-                      self.property.add(other.property),
-                      self.constant.add(other.constant),
-                      self.top.add(other.top))
+    def add(self, other: "_Match") -> "_Match":
+        return _Match(
+            self.name.add(other.name),
+            self.argument.add(other.argument),
+            self.property.add(other.property),
+            self.constant.add(other.constant),
+            self.top.add(other.top),
+        )
 
 
 class _Score(NamedTuple):
@@ -97,7 +101,7 @@ def _constants(sr: SR) -> list[_Triple]:
     triples = []
     for node in sr.nodes:
         if node.carg:
-            triples.append((_span(node), 'carg', node.carg))
+            triples.append((_span(node), "carg", node.carg))
     return triples
 
 
@@ -108,29 +112,29 @@ def _match(gold: SR, test: SR) -> _Match:
     The counts are a list of lists of counts as follows::
 
         # gold test both
-        [[gn,  tn,  bn],  # name counts
-         [ga,  ta,  ba],  # argument counts
-         [gp,  tp,  bp],  # property counts
-         [gc,  tc,  bc],  # constant counts
-         [gt,  tt,  bt]]  # top counts
+        [
+            [gn, tn, bn],  # name counts
+            [ga, ta, ba],  # argument counts
+            [gp, tp, bp],  # property counts
+            [gc, tc, bc],  # constant counts
+            [gt, tt, bt],  # top counts
+        ]
     """
     gold_top = 1 if gold.top in gold else 0
     test_top = 1 if test.top in test else 0
-    if (
-        gold_top
-        and test_top
-        and _span(gold[gold.top]) == _span(test[test.top])
-    ):
+    if gold_top and test_top and _span(gold[gold.top]) == _span(test[test.top]):
         both_top = 1
     else:
         both_top = 0
     top_count = _Count(gold_top, test_top, both_top)
 
-    return _Match(_count(_names, gold, test),
-                  _count(_arguments, gold, test),
-                  _count(_properties, gold, test),
-                  _count(_constants, gold, test),
-                  top_count)
+    return _Match(
+        _count(_names, gold, test),
+        _count(_arguments, gold, test),
+        _count(_properties, gold, test),
+        _count(_constants, gold, test),
+        top_count,
+    )
 
 
 def _count(func, gold, test) -> _Count:
@@ -146,8 +150,8 @@ def _count(func, gold, test) -> _Count:
 
 
 def _accumulate(
-    golds: Iterable[Optional[SR]],
-    tests: Iterable[Optional[SR]],
+    golds: Iterable[SR | None],
+    tests: Iterable[SR | None],
     ignore_missing_gold: bool,
     ignore_missing_test: bool,
 ) -> _Match:
@@ -155,66 +159,64 @@ def _accumulate(
     Sum the matches for all *golds* and *tests*.
     """
     info = logger.isEnabledFor(logging.INFO)
-    totals = _Match(_Count(0, 0, 0),
-                    _Count(0, 0, 0),
-                    _Count(0, 0, 0),
-                    _Count(0, 0, 0),
-                    _Count(0, 0, 0))
+    totals = _Match(
+        _Count(0, 0, 0),
+        _Count(0, 0, 0),
+        _Count(0, 0, 0),
+        _Count(0, 0, 0),
+        _Count(0, 0, 0),
+    )
 
     for i, (gold, test) in enumerate(zip_longest(golds, tests), 1):
-        logger.info('pair %d', i)
+        logger.info("pair %d", i)
 
         if gold is None and test is None:
-            logger.info('no gold or test representation; skipping')
+            logger.info("no gold or test representation; skipping")
             continue
         elif gold is None:
             assert test is not None
             if ignore_missing_gold:
-                logger.info('no gold representation; skipping')
+                logger.info("no gold representation; skipping")
                 continue
             else:
-                logger.debug('missing gold representation')
+                logger.debug("missing gold representation")
                 gold = type(test)()
         elif test is None:
             assert gold is not None
             if ignore_missing_test:
-                logger.info('no test representation; skipping')
+                logger.info("no test representation; skipping")
                 continue
             else:
-                logger.debug('missing test representation')
+                logger.debug("missing test representation")
                 test = type(gold)()
 
         result = _match(gold, test)
 
         if info:
-            logger.info(
-                '             gold\ttest\tboth\tPrec.\tRec.\tF-Score')
-            fmt = '%11s: %4d\t%4d\t%4d\t%5.3f\t%5.3f\t%5.3f'
-            logger.info(
-                fmt, 'Names', *result.name, *_prf(*result.name))
-            logger.info(
-                fmt, 'Arguments', *result.argument, *_prf(*result.argument))
-            logger.info(
-                fmt, 'Properties', *result.property, *_prf(*result.property))
-            logger.info(
-                fmt, 'Constants', *result.constant, *_prf(*result.constant))
-            logger.info(
-                fmt, 'Tops', *result.top, *_prf(*result.top))
+            logger.info("             gold\ttest\tboth\tPrec.\tRec.\tF-Score")
+            fmt = "%11s: %4d\t%4d\t%4d\t%5.3f\t%5.3f\t%5.3f"
+            logger.info(fmt, "Names", *result.name, *_prf(*result.name))
+            logger.info(fmt, "Arguments", *result.argument, *_prf(*result.argument))
+            logger.info(fmt, "Properties", *result.property, *_prf(*result.property))
+            logger.info(fmt, "Constants", *result.constant, *_prf(*result.constant))
+            logger.info(fmt, "Tops", *result.top, *_prf(*result.top))
 
         totals = totals.add(result)
 
     return totals
 
 
-def compute(golds: Iterable[Optional[SR]],
-            tests: Iterable[Optional[SR]],
-            name_weight: float = 1.0,
-            argument_weight: float = 1.0,
-            property_weight: float = 1.0,
-            constant_weight: float = 1.0,
-            top_weight: float = 1.0,
-            ignore_missing_gold: bool = False,
-            ignore_missing_test: bool = False) -> _Score:
+def compute(
+    golds: Iterable[SR | None],
+    tests: Iterable[SR | None],
+    name_weight: float = 1.0,
+    argument_weight: float = 1.0,
+    property_weight: float = 1.0,
+    constant_weight: float = 1.0,
+    top_weight: float = 1.0,
+    ignore_missing_gold: bool = False,
+    ignore_missing_test: bool = False,
+) -> _Score:
     """
     Compute the precision, recall, and f-score for all pairs.
 
@@ -241,28 +243,37 @@ def compute(golds: Iterable[Optional[SR]],
     Returns:
         A tuple of (precision, recall, f-score)
     """
-    logger.info('Computing EDM (N=%g, A=%g, P=%g, T=%g)',
-                name_weight, argument_weight, property_weight, top_weight)
-
-    totals: _Match = _accumulate(
-        golds, tests, ignore_missing_gold, ignore_missing_test
+    logger.info(
+        "Computing EDM (N=%g, A=%g, P=%g, T=%g)",
+        name_weight,
+        argument_weight,
+        property_weight,
+        top_weight,
     )
 
-    gold_total = (totals.name.gold * name_weight
-                  + totals.argument.gold * argument_weight
-                  + totals.property.gold * property_weight
-                  + totals.constant.gold * constant_weight
-                  + totals.top.gold * top_weight)
-    test_total = (totals.name.test * name_weight
-                  + totals.argument.test * argument_weight
-                  + totals.property.test * property_weight
-                  + totals.constant.test * constant_weight
-                  + totals.top.test * top_weight)
-    both_total = (totals.name.both * name_weight
-                  + totals.argument.both * argument_weight
-                  + totals.property.both * property_weight
-                  + totals.constant.both * constant_weight
-                  + totals.top.both * top_weight)
+    totals: _Match = _accumulate(golds, tests, ignore_missing_gold, ignore_missing_test)
+
+    gold_total = (
+        totals.name.gold * name_weight
+        + totals.argument.gold * argument_weight
+        + totals.property.gold * property_weight
+        + totals.constant.gold * constant_weight
+        + totals.top.gold * top_weight
+    )
+    test_total = (
+        totals.name.test * name_weight
+        + totals.argument.test * argument_weight
+        + totals.property.test * property_weight
+        + totals.constant.test * constant_weight
+        + totals.top.test * top_weight
+    )
+    both_total = (
+        totals.name.both * name_weight
+        + totals.argument.both * argument_weight
+        + totals.property.both * property_weight
+        + totals.constant.both * constant_weight
+        + totals.top.both * top_weight
+    )
 
     return _prf(gold_total, test_total, both_total)
 

@@ -1,4 +1,3 @@
-
 """
 DELPH-IN Web API Client
 """
@@ -9,7 +8,7 @@ import httpx
 
 from delphin import interface
 
-DEFAULT_SERVER = 'http://erg.delph-in.net/rest/0.9/'
+DEFAULT_SERVER = "http://erg.delph-in.net/rest/0.9/"
 
 
 class _HTTPResponse(interface.Response):
@@ -17,13 +16,14 @@ class _HTTPResponse(interface.Response):
     This is a interim response object until the server returns a
     'tokens' key.
     """
+
     def __getitem__(self, key):
-        if key == 'tokens' and ('initial' in self or 'internal' in self):
+        if key == "tokens" and ("initial" in self or "internal" in self):
             d = {}
-            if 'initial' in self:
-                d['initial'] = self['initial']
-            if 'internal' in self:
-                d['internal'] = self['internal']
+            if "initial" in self:
+                d["initial"] = self["initial"]
+            if "internal" in self:
+                d["internal"] = self["internal"]
             return d
         else:
             return super().__getitem__(key)
@@ -64,9 +64,9 @@ class Client(interface.Processor):
         """
         if params is None:
             params = {}
-        params['input'] = datum
+        params["input"] = datum
 
-        hdrs = {'Accept': 'application/json'}
+        hdrs = {"Accept": "application/json"}
         if headers is not None:
             hdrs.update(headers)
 
@@ -95,9 +95,9 @@ class Client(interface.Processor):
         """
         response = self.interact(datum, params=params, headers=headers)
         if keys is not None:
-            response['keys'] = keys
-        if 'task' not in response and self.task is not None:
-            response['task'] = self.task
+            response["keys"] = keys
+        if "task" not in response and self.task is not None:
+            response["task"] = self.task
         return response
 
 
@@ -106,7 +106,7 @@ class Parser(Client):
     A class for managing parse requests to a Web API server.
     """
 
-    task = 'parse'
+    task = "parse"
 
 
 class Generator(Client):
@@ -114,7 +114,7 @@ class Generator(Client):
     A class for managing generate requests to a Web API server.
     """
 
-    task = 'generate'
+    task = "generate"
 
 
 def parse(input, server=DEFAULT_SERVER, params=None, headers=None):
@@ -136,11 +136,7 @@ def parse(input, server=DEFAULT_SERVER, params=None, headers=None):
     return next(parse_from_iterable([input], server, params, headers), None)
 
 
-def parse_from_iterable(
-        inputs,
-        server=DEFAULT_SERVER,
-        params=None,
-        headers=None):
+def parse_from_iterable(inputs, server=DEFAULT_SERVER, params=None, headers=None):
     """
     Request parses for all *inputs*.
 
@@ -180,11 +176,7 @@ def generate(input, server=DEFAULT_SERVER, params=None, headers=None):
     return next(generate_from_iterable([input], server, params, headers), None)
 
 
-def generate_from_iterable(
-        inputs,
-        server=DEFAULT_SERVER,
-        params=None,
-        headers=None):
+def generate_from_iterable(inputs, server=DEFAULT_SERVER, params=None, headers=None):
     """
     Request realizations for all *inputs*.
 

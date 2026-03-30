@@ -1,4 +1,3 @@
-
 """
 This command creates testsuites. There are four usage patterns:
 
@@ -26,10 +25,10 @@ from delphin.commands import mkprof
 parser = argparse.ArgumentParser(add_help=False)  # filled out below
 
 COMMAND_INFO = {
-    'name': 'mkprof',
-    'help': 'Create [incr tsdb()] test suites',
-    'description': __doc__,
-    'parser': parser
+    "name": "mkprof",
+    "help": "Create [incr tsdb()] test suites",
+    "description": __doc__,
+    "parser": parser,
 }
 
 
@@ -43,51 +42,58 @@ def call_mkprof(args):
         refresh=args.refresh,
         skeleton=args.skeleton,
         full=args.full,
-        gzip=args.gzip)
+        gzip=args.gzip,
+    )
 
 
 parser.set_defaults(func=call_mkprof)
-parser.add_argument(
-    'DEST', help='directory for the destination (output) testsuite')
+parser.add_argument("DEST", help="directory for the destination (output) testsuite")
 
 grp1 = parser.add_mutually_exclusive_group()
+grp1.add_argument("-s", "--source", metavar="DIR", help="path to a testsuite directory")
 grp1.add_argument(
-    '-s', '--source', metavar='DIR', help='path to a testsuite directory')
+    "--refresh",
+    action="store_true",
+    help="overwrite DEST (works with --relations or --gzip)",
+)
 grp1.add_argument(
-    '--refresh',
-    action='store_true',
-    help='overwrite DEST (works with --relations or --gzip)')
-grp1.add_argument(
-    '-i',
-    '--input',
-    metavar='TXT',
-    help='file of test sentences (* sents are ungrammatical)')
+    "-i",
+    "--input",
+    metavar="TXT",
+    help="file of test sentences (* sents are ungrammatical)",
+)
 
 parser.add_argument(
-    '--where', metavar='CONDITION',
-    help=('filter records in the testsuite with a TSQL condition '
-          '(e.g., \'i-length <= 10 && readings > 0\')'))
+    "--where",
+    metavar="CONDITION",
+    help=(
+        "filter records in the testsuite with a TSQL condition "
+        "(e.g., 'i-length <= 10 && readings > 0')"
+    ),
+)
 parser.add_argument(
-    '-r',
-    '--relations',
-    metavar='FILE',
-    help='relations file to use for destination testsuite')
+    "-r",
+    "--relations",
+    metavar="FILE",
+    help="relations file to use for destination testsuite",
+)
 parser.add_argument(
-    '--delimiter',
-    metavar='C',
-    help=('split input lines with delimiter C; if C="@", split as a '
-          'TSDB record; a header of field names is required')
+    "--delimiter",
+    metavar="C",
+    help=(
+        'split input lines with delimiter C; if C="@", split as a '
+        "TSDB record; a header of field names is required"
+    ),
 )
 
 grp2 = parser.add_mutually_exclusive_group()
 grp2.add_argument(
-    '--full',
-    action='store_true',
-    help='write all tables (must be used with --source)')
+    "--full", action="store_true", help="write all tables (must be used with --source)"
+)
 grp2.add_argument(
-    '--skeleton',
-    action='store_true',
-    help='write only tsdb-core files for skeletons')
+    "--skeleton", action="store_true", help="write only tsdb-core files for skeletons"
+)
 
 parser.add_argument(
-    '-z', '--gzip', action='store_true', help='compress table files with gzip')
+    "-z", "--gzip", action="store_true", help="compress table files with gzip"
+)
