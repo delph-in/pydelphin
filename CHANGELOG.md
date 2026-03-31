@@ -2,6 +2,11 @@
 
 ### Unreleased
 
+
+## [v1.11.0]
+
+**Release date: 2026-05-30**
+
 ### Python Versions
 
 * Removed Python 3.9 support ([#403])
